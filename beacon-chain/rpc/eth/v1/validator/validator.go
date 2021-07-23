@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -229,7 +229,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func attestationDependentRoot(s state2.BeaconState, epoch types.Epoch) ([]byte, error) {
+func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
@@ -249,7 +249,7 @@ func attestationDependentRoot(s state2.BeaconState, epoch types.Epoch) ([]byte, 
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state2.BeaconState, epoch types.Epoch) ([]byte, error) {
+func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -270,7 +270,7 @@ func proposalDependentRoot(s state2.BeaconState, epoch types.Epoch) ([]byte, err
 // advanceState advances state with empty transitions up to the requested epoch start slot.
 // In case 1 epoch ahead was requested, we take the start slot of the current epoch.
 // Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
-func advanceState(ctx context.Context, s state2.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state2.BeaconState, error) {
+func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
@@ -285,7 +285,7 @@ func advanceState(ctx context.Context, s state2.BeaconState, requestedEpoch, cur
 		}
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		s, err = core.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 		}

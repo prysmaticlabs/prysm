@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -97,7 +97,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
+	postState, err := core.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			// with a custom deadline, therefore using the background context instead.
 			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 			defer cancel()
-			if err := state.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			if err := core.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
 			}
 		}()
@@ -228,9 +228,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		Messages:   [][32]byte{},
 	}
 	var set *bls.SignatureSet
-	boundaries := make(map[[32]byte]state2.BeaconState)
+	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
+		set, preState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -314,14 +314,14 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state2.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
 			return err
 		}
 		copied := postState.Copy()
-		copied, err := state.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := core.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
 		}
@@ -354,7 +354,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state2.Beac
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
 func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte,
-	st state2.BeaconState) error {
+	st state.BeaconState) error {
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
 	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
@@ -392,7 +392,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state2.BeaconState, initSync bool) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {

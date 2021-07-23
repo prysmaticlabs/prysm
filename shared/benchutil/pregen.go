@@ -30,8 +30,8 @@ var GenesisFileName = fmt.Sprintf("bStateGenesis-%dAtts-%dVals.ssz", Attestation
 // BState1EpochFileName is the generated beacon state after 1 skipped epoch file name.
 var BState1EpochFileName = fmt.Sprintf("bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
-// BState2EpochFileName is the generated beacon state after 2 full epochs file name.
-var BState2EpochFileName = fmt.Sprintf("bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+// BstateEpochFileName is the generated beacon state after 2 full epochs file name.
+var BstateEpochFileName = fmt.Sprintf("bstateEpochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // FullBlockFileName is the generated full block file name.
 var FullBlockFileName = fmt.Sprintf("fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
@@ -57,9 +57,9 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	return v1.InitializeFromProto(beaconState)
 }
 
-// PreGenState2FullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
-func PreGenState2FullEpochs() (state.BeaconState, error) {
-	path, err := bazel.Runfile(filePath(BState2EpochFileName))
+// PreGenstateFullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
+func PreGenstateFullEpochs() (state.BeaconState, error) {
+	path, err := bazel.Runfile(filePath(BstateEpochFileName))
 	if err != nil {
 		return nil, err
 	}

@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -39,7 +39,7 @@ func main() {
 		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState1EpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState2EpochFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchutil.BstateEpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
 		if _, err := os.Stat(path.Join(*outputDir, benchutil.FullBlockFileName)); err == nil {
@@ -103,7 +103,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	s, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	s, err := core.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return errors.Wrap(err, "could not calculate state root")
 	}
@@ -158,7 +158,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	_, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+		beaconState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		if err != nil {
 			return err
 		}
@@ -203,10 +203,10 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
+	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BstateEpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (state2.BeaconState, error) {
+func genesisBeaconState() (state.BeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")

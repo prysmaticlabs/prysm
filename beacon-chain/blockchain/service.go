@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
@@ -271,14 +271,14 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState state2.BeaconState,
-	eth1data *ethpb.Eth1Data) (state2.BeaconState, error) {
+	preGenesisState state.BeaconState,
+	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	genesisState, err := state.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
+	genesisState, err := core.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize genesis state")
 	}
@@ -332,7 +332,7 @@ func (s *Service) Status() error {
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
-func (s *Service) saveGenesisData(ctx context.Context, genesisState state2.BeaconState) error {
+func (s *Service) saveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
 	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis data")
 	}
@@ -399,7 +399,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("no finalized epoch in the database")
 	}
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	var finalizedState state2.BeaconState
+	var finalizedState state.BeaconState
 
 	finalizedState, err = s.cfg.StateGen.Resume(ctx)
 	if err != nil {
