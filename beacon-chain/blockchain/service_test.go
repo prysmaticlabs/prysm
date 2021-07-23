@@ -26,7 +26,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -456,7 +456,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cfg:            &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		ctx:            ctx,
 		cancel:         cancel,
-		initSyncBlocks: make(map[[32]byte]block2.SignedBeaconBlock),
+		initSyncBlocks: make(map[[32]byte]block.SignedBeaconBlock),
 	}
 	block := testutil.NewBeaconBlock()
 	r, err := block.Block.HashTreeRoot()
