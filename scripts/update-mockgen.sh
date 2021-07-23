@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to update mock files after proto/beacon/rpc/v1/services.proto changes.
+# Script to update mock files after proto/prysm/v2/services.proto changes.
 # Use a space to separate mock destination from its interfaces.
 
 mock_path="shared/mock"
