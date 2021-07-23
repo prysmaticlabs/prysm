@@ -77,11 +77,11 @@ service Slasher {
 }
 
 message AttesterSlashingResponse {
-  ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
+  repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashings = 1;
 }
 
 message ProposerSlashingResponse {
-  ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+  repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashings = 1;
 }
 
 message HighestAttestationRequest { repeated uint64 validator_indices = 1; }

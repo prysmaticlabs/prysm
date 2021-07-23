@@ -39,17 +39,17 @@ var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
 var (
-	filter_BeaconChainAltair_ListBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+	filter_BeaconChain_ListBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChainAltair_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainAltairClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconChainAltair_ListBlocks_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconChain_ListBlocks_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -58,14 +58,14 @@ func request_BeaconChainAltair_ListBlocks_0(ctx context.Context, marshaler runti
 
 }
 
-func local_request_BeaconChainAltair_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainAltairServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconChainAltair_ListBlocks_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconChain_ListBlocks_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -74,24 +74,24 @@ func local_request_BeaconChainAltair_ListBlocks_0(ctx context.Context, marshaler
 
 }
 
-// RegisterBeaconChainAltairHandlerServer registers the http handlers for service BeaconChainAltair to "mux".
-// UnaryRPC     :call BeaconChainAltairServer directly.
+// RegisterBeaconChainHandlerServer registers the http handlers for service BeaconChain to "mux".
+// UnaryRPC     :call BeaconChainServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconChainAltairHandlerFromEndpoint instead.
-func RegisterBeaconChainAltairHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconChainAltairServer) error {
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconChainHandlerFromEndpoint instead.
+func RegisterBeaconChainHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconChainServer) error {
 
-	mux.Handle("GET", pattern_BeaconChainAltair_ListBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_ListBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconChainAltair/ListBlocks")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconChain/ListBlocks")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BeaconChainAltair_ListBlocks_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BeaconChain_ListBlocks_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -99,16 +99,16 @@ func RegisterBeaconChainAltairHandlerServer(ctx context.Context, mux *runtime.Se
 			return
 		}
 
-		forward_BeaconChainAltair_ListBlocks_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_ListBlocks_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
 	return nil
 }
 
-// RegisterBeaconChainAltairHandlerFromEndpoint is same as RegisterBeaconChainAltairHandler but
+// RegisterBeaconChainHandlerFromEndpoint is same as RegisterBeaconChainHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterBeaconChainAltairHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterBeaconChainHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -128,39 +128,39 @@ func RegisterBeaconChainAltairHandlerFromEndpoint(ctx context.Context, mux *runt
 		}()
 	}()
 
-	return RegisterBeaconChainAltairHandler(ctx, mux, conn)
+	return RegisterBeaconChainHandler(ctx, mux, conn)
 }
 
-// RegisterBeaconChainAltairHandler registers the http handlers for service BeaconChainAltair to "mux".
+// RegisterBeaconChainHandler registers the http handlers for service BeaconChain to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterBeaconChainAltairHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterBeaconChainAltairHandlerClient(ctx, mux, NewBeaconChainAltairClient(conn))
+func RegisterBeaconChainHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterBeaconChainHandlerClient(ctx, mux, NewBeaconChainClient(conn))
 }
 
-// RegisterBeaconChainAltairHandlerClient registers the http handlers for service BeaconChainAltair
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "BeaconChainAltairClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "BeaconChainAltairClient"
+// RegisterBeaconChainHandlerClient registers the http handlers for service BeaconChain
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "BeaconChainClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "BeaconChainClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "BeaconChainAltairClient" to call the correct interceptors.
-func RegisterBeaconChainAltairHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconChainAltairClient) error {
+// "BeaconChainClient" to call the correct interceptors.
+func RegisterBeaconChainHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconChainClient) error {
 
-	mux.Handle("GET", pattern_BeaconChainAltair_ListBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_ListBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconChainAltair/ListBlocks")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconChain/ListBlocks")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconChainAltair_ListBlocks_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconChain_ListBlocks_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconChainAltair_ListBlocks_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_ListBlocks_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -168,9 +168,9 @@ func RegisterBeaconChainAltairHandlerClient(ctx context.Context, mux *runtime.Se
 }
 
 var (
-	pattern_BeaconChainAltair_ListBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "beacon", "blocks"}, ""))
+	pattern_BeaconChain_ListBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "beacon", "blocks"}, ""))
 )
 
 var (
-	forward_BeaconChainAltair_ListBlocks_0 = runtime.ForwardResponseMessage
+	forward_BeaconChain_ListBlocks_0 = runtime.ForwardResponseMessage
 )

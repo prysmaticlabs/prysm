@@ -83,7 +83,6 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -111,7 +110,6 @@ go_proto_library(
     protos = [":proto"],
     visibility = ["//visibility:private"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

@@ -223,7 +223,7 @@ func (s *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Index
 			h = &slashpb.HighestAttestation{
 				HighestSourceEpoch: 0,
 				HighestTargetEpoch: 0,
-				ValidatorId:        idx,
+				ValidatorIndex:     idx,
 			}
 		}
 		update := false

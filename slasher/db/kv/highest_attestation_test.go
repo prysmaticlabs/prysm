@@ -23,7 +23,7 @@ func TestSaveHighestAttestation(t *testing.T) {
 				{
 					HighestTargetEpoch: 1,
 					HighestSourceEpoch: 0,
-					ValidatorId:        1,
+					ValidatorIndex:     1,
 				},
 			},
 			cacheEnabled: true,
@@ -34,7 +34,7 @@ func TestSaveHighestAttestation(t *testing.T) {
 				{
 					HighestTargetEpoch: 1,
 					HighestSourceEpoch: 0,
-					ValidatorId:        2,
+					ValidatorIndex:     2,
 				},
 			},
 			cacheEnabled: false,
@@ -48,10 +48,10 @@ func TestSaveHighestAttestation(t *testing.T) {
 
 				require.NoError(t, db.SaveHighestAttestation(ctx, att), "Save highest attestation failed")
 
-				found, err := db.HighestAttestation(ctx, att.ValidatorId)
+				found, err := db.HighestAttestation(ctx, att.ValidatorIndex)
 				require.NoError(t, err)
 				require.NotNil(t, found)
-				require.Equal(t, att.ValidatorId, found.ValidatorId)
+				require.Equal(t, att.ValidatorIndex, found.ValidatorIndex)
 				require.Equal(t, att.HighestSourceEpoch, found.HighestSourceEpoch)
 				require.Equal(t, att.HighestTargetEpoch, found.HighestTargetEpoch)
 			}

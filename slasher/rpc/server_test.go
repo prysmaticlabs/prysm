@@ -91,9 +91,9 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 			slashings, err := server.IsSlashableAttestation(ctx, iatt)
 			require.NoError(t, err, "Got error while trying to detect slashing")
 
-			if len(slashings.AttesterSlashing) == 0 && !wentThrough {
+			if len(slashings.AttesterSlashings) == 0 && !wentThrough {
 				wentThrough = true
-			} else if len(slashings.AttesterSlashing) == 0 && wentThrough {
+			} else if len(slashings.AttesterSlashings) == 0 && wentThrough {
 				t.Fatalf("Only one attestation should go through without slashing: %v", iatt)
 			}
 		}(i)
@@ -172,7 +172,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableAttestation(ctx, savedAttestation)
 	require.NoError(t, err, "Got error while trying to detect slashing")
-	require.Equal(t, 0, len(slashings.AttesterSlashing), "Found slashings while no slashing should have been found on first attestation")
+	require.Equal(t, 0, len(slashings.AttesterSlashings), "Found slashings while no slashing should have been found on first attestation")
 	sl, err := server.IsSlashableAttestationNoUpdate(ctx, incomingAtt)
 	require.NoError(t, err, "Got error while trying to detect slashing")
 	require.Equal(t, true, sl.Slashable, "Attestation should be found to be slashable")
@@ -243,9 +243,9 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			sbbh.Signature = keys[sbbh.Header.ProposerIndex].Sign(root[:]).Marshal()
 			slashings, err := server.IsSlashableBlock(ctx, sbbh)
 			require.NoError(t, err, "Got error while trying to detect slashing")
-			if len(slashings.ProposerSlashing) == 0 && !wentThrough {
+			if len(slashings.ProposerSlashings) == 0 && !wentThrough {
 				wentThrough = true
-			} else if len(slashings.ProposerSlashing) == 0 && wentThrough {
+			} else if len(slashings.ProposerSlashings) == 0 && wentThrough {
 				t.Fatalf("Only one block should go through without slashing: %v", sbbh)
 			}
 		}(i)
@@ -319,7 +319,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	server := Server{ctx: ctx, detector: ds, slasherDB: db, beaconClient: bs}
 	slashings, err := server.IsSlashableBlock(ctx, savedBlock)
 	require.NoError(t, err, "Got error while trying to detect slashing")
-	require.Equal(t, 0, len(slashings.ProposerSlashing), "Found slashings while no slashing should have been found on first block")
+	require.Equal(t, 0, len(slashings.ProposerSlashings), "Found slashings while no slashing should have been found on first block")
 	sl, err := server.IsSlashableBlockNoUpdate(ctx, incomingBlock)
 	require.NoError(t, err, "Got error while trying to detect slashing")
 	require.Equal(t, true, sl.Slashable, "Block should be found to be slashable")
