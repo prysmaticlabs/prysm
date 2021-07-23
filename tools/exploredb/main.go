@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
@@ -421,7 +421,7 @@ func sizeAndCountGeneric(genericItems interface{}, err error) (uint64, uint64) {
 			size += uint64(item.SizeSSZ())
 		}
 		count = uint64(len(items))
-	case []*pbp2p.PendingAttestation:
+	case []*statepb.PendingAttestation:
 		for _, item := range items {
 			size += uint64(item.SizeSSZ())
 		}

@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -33,7 +33,7 @@ type StateManager interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
 	StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error)
-	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
+	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st iface.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)

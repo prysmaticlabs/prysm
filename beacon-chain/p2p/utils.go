@@ -18,8 +18,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
@@ -109,7 +109,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 // TODO: Figure out how to do a v1/v2 check.
-func metaDataFromConfig(cfg *Config) (p2p.Metadata, error) {
+func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
@@ -119,7 +119,7 @@ func metaDataFromConfig(cfg *Config) (p2p.Metadata, error) {
 		return nil, err
 	}
 	if metaDataPath == "" && !defaultMetadataExist {
-		metaData := &pbp2p.MetaDataV0{
+		metaData := &pb.MetaDataV0{
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
@@ -140,7 +140,7 @@ func metaDataFromConfig(cfg *Config) (p2p.Metadata, error) {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
-	metaData := &pbp2p.MetaDataV0{}
+	metaData := &pb.MetaDataV0{}
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}

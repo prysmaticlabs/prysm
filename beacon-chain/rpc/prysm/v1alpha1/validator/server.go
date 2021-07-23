@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -43,7 +43,7 @@ type Server struct {
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	CanonicalStateChan     chan *pbp2p.BeaconState
+	CanonicalStateChan     chan *statepb.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher

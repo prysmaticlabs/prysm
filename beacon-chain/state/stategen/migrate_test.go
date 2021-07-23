@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -84,14 +84,14 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r1[:]}))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: 1, Root: r1[:]}))
 
 	b4, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 4)
 	require.NoError(t, err)
 	r4, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b4)))
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 4, Root: r4[:]}))
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: 4, Root: r4[:]}))
 	service.finalizedInfo = &finalizedInfo{
 		slot:  0,
 		root:  genesisStateRoot,

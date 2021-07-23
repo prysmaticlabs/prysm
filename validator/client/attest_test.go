@@ -448,7 +448,7 @@ func TestSignAttestation(t *testing.T) {
 	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
 	publicKey := secretKey.PublicKey()
-	wantedFork := &pb.Fork{
+	wantedFork := &statepb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c', 'd'},
 		CurrentVersion:  []byte{'d', 'e', 'f', 'f'},
 		Epoch:           0,

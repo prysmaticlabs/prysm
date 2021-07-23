@@ -53,7 +53,7 @@ func init() {
 		Chain: &mock.ChainService{
 			Root:                bytesutil.PadTo([]byte("root"), 32),
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
-			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
+			Fork:                &statepb.Fork{CurrentVersion: []byte("foo")},
 		},
 		StateNotifier:     (&mock.ChainService{}).StateNotifier(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),

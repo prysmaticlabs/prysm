@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +44,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -115,7 +115,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -206,7 +206,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -248,7 +248,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -303,7 +303,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},

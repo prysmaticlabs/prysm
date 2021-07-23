@@ -12,7 +12,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -127,7 +127,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &statepb.StateSummary{Root: br[:]}))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestGenesisTime_CanRetrieve(t *testing.T) {
 }
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
-	f := &pb.Fork{Epoch: 999}
+	f := &statepb.Fork{Epoch: 999}
 	s, err := v1.InitializeFromProto(&statepb.BeaconState{Fork: f})
 	require.NoError(t, err)
 	c := &Service{}
@@ -175,7 +175,7 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 }
 
 func TestCurrentFork_NilHeadSTate(t *testing.T) {
-	f := &pb.Fork{
+	f := &statepb.Fork{
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 	}

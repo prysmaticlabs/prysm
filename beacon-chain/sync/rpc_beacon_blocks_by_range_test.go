@@ -23,6 +23,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -634,7 +635,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			require.NoError(t, d.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[j])))
 			j++
 		}
-		stateSummaries := make([]*pb.StateSummary, len(blocks))
+		stateSummaries := make([]*statepb.StateSummary, len(blocks))
 
 		if finalized {
 			if chain.CanonicalRoots == nil {
@@ -643,7 +644,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			for i, b := range blocks {
 				bRoot, err := b.Block.HashTreeRoot()
 				require.NoError(t, err)
-				stateSummaries[i] = &pb.StateSummary{
+				stateSummaries[i] = &statepb.StateSummary{
 					Slot: b.Block.Slot,
 					Root: bRoot[:],
 				}
@@ -684,7 +685,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			require.NoError(t, d.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[j])))
 			j++
 		}
-		stateSummaries := make([]*pb.StateSummary, len(blocks))
+		stateSummaries := make([]*statepb.StateSummary, len(blocks))
 		if finalized {
 			if chain.CanonicalRoots == nil {
 				chain.CanonicalRoots = map[[32]byte]bool{}
@@ -692,7 +693,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			for i, b := range blocks {
 				bRoot, err := b.Block.HashTreeRoot()
 				require.NoError(t, err)
-				stateSummaries[i] = &pb.StateSummary{
+				stateSummaries[i] = &statepb.StateSummary{
 					Slot: b.Block.Slot,
 					Root: bRoot[:],
 				}

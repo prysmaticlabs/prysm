@@ -14,7 +14,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -279,7 +279,7 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
 	}); err != nil {

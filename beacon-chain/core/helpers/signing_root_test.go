@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -109,7 +109,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 
 func TestFuzzverifySigningRoot_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethereum_beacon_p2p_v1.BeaconState{}
+	state := &statepb.BeaconState{}
 	pubkey := [48]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}

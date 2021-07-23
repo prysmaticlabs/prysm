@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,7 +43,7 @@ func CreateForkDigest(
 // returns the active fork version during this epoch.
 func Fork(
 	targetEpoch types.Epoch,
-) (*pb.Fork, error) {
+) (*statepb.Fork, error) {
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
 	// fork version based on the requested epoch.
@@ -58,7 +58,7 @@ func Fork(
 			forkEpoch = epoch
 		}
 	}
-	return &pb.Fork{
+	return &statepb.Fork{
 		PreviousVersion: previousForkVersion,
 		CurrentVersion:  retrievedForkVersion,
 		Epoch:           forkEpoch,

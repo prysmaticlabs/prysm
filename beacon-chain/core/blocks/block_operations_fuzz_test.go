@@ -11,7 +11,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -437,7 +437,7 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 	ve := &eth.SignedVoluntaryExit{}
 	val, err := v1.NewValidator(&ethpb.Validator{})
 	_ = err
-	fork := &pb.Fork{}
+	fork := &statepb.Fork{}
 	var slot types.Slot
 
 	for i := 0; i < 10000; i++ {

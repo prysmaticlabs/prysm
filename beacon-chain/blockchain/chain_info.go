@@ -10,7 +10,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,7 +55,7 @@ type HeadFetcher interface {
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
-	CurrentFork() *pb.Fork
+	CurrentFork() *statepb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
@@ -239,12 +239,12 @@ func (s *Service) GenesisValidatorRoot() [32]byte {
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
-func (s *Service) CurrentFork() *pb.Fork {
+func (s *Service) CurrentFork() *statepb.Fork {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
-		return &pb.Fork{
+		return &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}

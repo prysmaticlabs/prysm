@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -740,7 +740,7 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	filteredBlocks, err := s.loadFinalizedBlocks(ctx, 0, 8)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(filteredBlocks))
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: roots[8][:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: roots[8][:]}))
 
 	require.NoError(t, s.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: roots[8][:]}))
 	filteredBlocks, err = s.loadFinalizedBlocks(ctx, 0, 8)

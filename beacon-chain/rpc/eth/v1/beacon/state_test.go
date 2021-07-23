@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
@@ -93,7 +93,7 @@ func TestGetStateRoot(t *testing.T) {
 
 func TestGetStateFork(t *testing.T) {
 	fillFork := func(state *statepb.BeaconState) error {
-		state.Fork = &pb.Fork{
+		state.Fork = &statepb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,

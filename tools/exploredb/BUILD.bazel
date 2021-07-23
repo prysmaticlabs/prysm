@@ -10,7 +10,7 @@ go_library(
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "@com_github_dustin_go_humanize//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

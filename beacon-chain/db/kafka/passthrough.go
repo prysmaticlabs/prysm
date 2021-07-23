@@ -70,7 +70,7 @@ func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconSt
 }
 
 // StateSummary -- passthrough.
-func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
 	return e.db.StateSummary(ctx, blockRoot)
 }
 
@@ -145,12 +145,12 @@ func (e Exporter) SaveState(ctx context.Context, st iface.ReadOnlyBeaconState, b
 }
 
 // SaveStateSummary -- passthrough.
-func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+func (e Exporter) SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error {
 	return e.db.SaveStateSummary(ctx, summary)
 }
 
 // SaveStateSummaries -- passthrough.
-func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error {
 	return e.db.SaveStateSummaries(ctx, summaries)
 }
 

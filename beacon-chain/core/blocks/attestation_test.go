@@ -12,7 +12,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -528,7 +528,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:       5,
 		Validators: validators,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -676,7 +676,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(35))
 	require.NoError(t, st.SetValidators(validators))
-	require.NoError(t, st.SetFork(&pb.Fork{
+	require.NoError(t, st.SetFork(&statepb.Fork{
 		Epoch:           1,
 		CurrentVersion:  []byte{0, 1, 2, 3},
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -803,7 +803,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(5))
 	require.NoError(t, st.SetValidators(validators))
-	require.NoError(t, st.SetFork(&pb.Fork{Epoch: 1, CurrentVersion: []byte{0, 1, 2, 3}, PreviousVersion: []byte{0, 1, 1, 1}}))
+	require.NoError(t, st.SetFork(&statepb.Fork{Epoch: 1, CurrentVersion: []byte{0, 1, 2, 3}, PreviousVersion: []byte{0, 1, 1, 1}}))
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)

@@ -10,7 +10,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -50,7 +50,7 @@ func PreGenState1Epoch() (iface.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconState := &pb.BeaconState{}
+	beaconState := &statepb.BeaconState{}
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func PreGenState2FullEpochs() (iface.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconState := &pb.BeaconState{}
+	beaconState := &statepb.BeaconState{}
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}

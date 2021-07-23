@@ -8,7 +8,7 @@ import (
 
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -214,7 +214,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	genesis := setupGenesisState(t, 64)
 	a, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	wantedFork := &pb.Fork{
+	wantedFork := &statepb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c'},
 		CurrentVersion:  []byte{'d', 'e', 'f'},
 		Epoch:           0,

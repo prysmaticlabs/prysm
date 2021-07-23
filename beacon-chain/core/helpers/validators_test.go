@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -416,7 +416,7 @@ func TestChurnLimit_OK(t *testing.T) {
 
 func TestDomain_OK(t *testing.T) {
 	state := &statepb.BeaconState{
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			Epoch:           3,
 			PreviousVersion: []byte{0, 0, 0, 2},
 			CurrentVersion:  []byte{0, 0, 0, 3},

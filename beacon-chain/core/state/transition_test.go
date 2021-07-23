@@ -15,7 +15,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -500,7 +500,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Root: []byte("hello-world"),
 		},
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
@@ -567,7 +567,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	binary.LittleEndian.PutUint64(buf, 0)
 	domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainRandao, s.GenesisValidatorRoot())
 	require.NoError(b, err)
-	ctr := &pb.SigningData{
+	ctr := &statepb.SigningData{
 		ObjectRoot: buf,
 		Domain:     domain,
 	}
