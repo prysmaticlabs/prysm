@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -80,7 +80,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st ifac
 	}
 
 	// On an intermediate slots, save state summary.
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+	if err := s.beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
 	}); err != nil {

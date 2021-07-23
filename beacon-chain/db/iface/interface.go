@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
@@ -36,7 +36,7 @@ type ReadOnlyDatabase interface {
 	State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
 	GenesisState(ctx context.Context) (iface.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
-	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
+	StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]iface.ReadOnlyBeaconState, error)
 	// Slashing operations.
@@ -73,8 +73,8 @@ type NoHeadAccessDatabase interface {
 	SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconState, blockRoots [][32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
-	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error
-	SaveStateSummaries(ctx context.Context, summaries []*ethereum_beacon_p2p_v1.StateSummary) error
+	SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error
+	SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
 	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error

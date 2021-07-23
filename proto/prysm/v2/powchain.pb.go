@@ -11,8 +11,8 @@ import (
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	state2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -35,7 +35,7 @@ type ETH1ChainData struct {
 
 	CurrentEth1Data   *LatestETH1Data     `protobuf:"bytes,1,opt,name=current_eth1_data,json=currentEth1Data,proto3" json:"current_eth1_data,omitempty"`
 	ChainstartData    *ChainStartData     `protobuf:"bytes,2,opt,name=chainstart_data,json=chainstartData,proto3" json:"chainstart_data,omitempty"`
-	BeaconState       *v1.BeaconState     `protobuf:"bytes,3,opt,name=beacon_state,json=beaconState,proto3" json:"beacon_state,omitempty"`
+	BeaconState       *state2.BeaconState `protobuf:"bytes,3,opt,name=beacon_state,json=beaconState,proto3" json:"beacon_state,omitempty"`
 	Trie              *SparseMerkleTrie   `protobuf:"bytes,4,opt,name=trie,proto3" json:"trie,omitempty"`
 	DepositContainers []*DepositContainer `protobuf:"bytes,5,rep,name=deposit_containers,json=depositContainers,proto3" json:"deposit_containers,omitempty"`
 }
@@ -86,7 +86,7 @@ func (x *ETH1ChainData) GetChainstartData() *ChainStartData {
 	return nil
 }
 
-func (x *ETH1ChainData) GetBeaconState() *v1.BeaconState {
+func (x *ETH1ChainData) GetBeaconState() *state2.BeaconState {
 	if x != nil {
 		return x.BeaconState
 	}
@@ -541,15 +541,15 @@ func file_proto_beacon_db_powchain_proto_rawDescGZIP() []byte {
 
 var file_proto_beacon_db_powchain_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_beacon_db_powchain_proto_goTypes = []interface{}{
-	(*ETH1ChainData)(nil),     // 0: prysm.beacon.db.ETH1ChainData
-	(*LatestETH1Data)(nil),    // 1: prysm.beacon.db.LatestETH1Data
-	(*ChainStartData)(nil),    // 2: prysm.beacon.db.ChainStartData
-	(*SparseMerkleTrie)(nil),  // 3: prysm.beacon.db.SparseMerkleTrie
-	(*TrieLayer)(nil),         // 4: prysm.beacon.db.TrieLayer
-	(*DepositContainer)(nil),  // 5: prysm.beacon.db.DepositContainer
-	(*v1.BeaconState)(nil),    // 6: ethereum.beacon.p2p.v1.BeaconState
-	(*v1alpha1.Eth1Data)(nil), // 7: ethereum.eth.v1alpha1.Eth1Data
-	(*v1alpha1.Deposit)(nil),  // 8: ethereum.eth.v1alpha1.Deposit
+	(*ETH1ChainData)(nil),      // 0: prysm.beacon.db.ETH1ChainData
+	(*LatestETH1Data)(nil),     // 1: prysm.beacon.db.LatestETH1Data
+	(*ChainStartData)(nil),     // 2: prysm.beacon.db.ChainStartData
+	(*SparseMerkleTrie)(nil),   // 3: prysm.beacon.db.SparseMerkleTrie
+	(*TrieLayer)(nil),          // 4: prysm.beacon.db.TrieLayer
+	(*DepositContainer)(nil),   // 5: prysm.beacon.db.DepositContainer
+	(*state2.BeaconState)(nil), // 6: ethereum.beacon.p2p.v1.BeaconState
+	(*v1alpha1.Eth1Data)(nil),  // 7: ethereum.eth.v1alpha1.Eth1Data
+	(*v1alpha1.Deposit)(nil),   // 8: ethereum.eth.v1alpha1.Deposit
 }
 var file_proto_beacon_db_powchain_proto_depIdxs = []int32{
 	1, // 0: prysm.beacon.db.ETH1ChainData.current_eth1_data:type_name -> prysm.beacon.db.LatestETH1Data
