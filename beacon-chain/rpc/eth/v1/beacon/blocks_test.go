@@ -268,7 +268,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 	req := testutil.NewBeaconBlock()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
-	v1Block, err := migration.V1Alpha1ToV1Block(req)
+	v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
 	blockReq := &ethpb.BeaconBlockContainer{
@@ -382,7 +382,7 @@ func TestServer_GetBlock(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			v1Block, err := migration.V1Alpha1ToV1Block(tt.want)
+			v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 			require.NoError(t, err)
 
 			if !reflect.DeepEqual(block.Data.Message, v1Block.Block) {
@@ -614,7 +614,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			v1Block, err := migration.V1Alpha1ToV1Block(tt.want)
+			v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 			require.NoError(t, err)
 
 			if !reflect.DeepEqual(block.Data, v1Block.Block.Body.Attestations) {
