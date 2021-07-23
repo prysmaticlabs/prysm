@@ -18,11 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -31,7 +31,7 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       iface.BeaconState
+	State                       state.BeaconState
 	Root                        []byte
 	Block                       interfaces.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
@@ -42,7 +42,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
 	CanonicalRoots              map[[32]byte]bool
-	Fork                        *pb.Fork
+	Fork                        *statepb.Fork
 	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
@@ -254,12 +254,12 @@ func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock,
 }
 
 // HeadState mocks HeadState method in chain service.
-func (s *ChainService) HeadState(context.Context) (iface.BeaconState, error) {
+func (s *ChainService) HeadState(context.Context) (state.BeaconState, error) {
 	return s.State, nil
 }
 
 // CurrentFork mocks HeadState method in chain service.
-func (s *ChainService) CurrentFork() *pb.Fork {
+func (s *ChainService) CurrentFork() *statepb.Fork {
 	return s.Fork
 }
 
@@ -289,7 +289,7 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.BeaconState, error) {
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (state.BeaconState, error) {
 	return s.State, nil
 }
 

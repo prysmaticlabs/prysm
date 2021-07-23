@@ -34,8 +34,8 @@ proto_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/beacon/p2p/v1:v1_proto",
         "//proto/eth/ext:proto",
+        "//proto/prysm/v2/state:v1_proto",
         "//proto/prysm/v1alpha1:proto",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_proto",
         "@com_google_protobuf//:any_proto",
@@ -66,6 +66,11 @@ ssz_gen_marshal(
         "SyncCommitteeContribution",
         "ContributionAndProof",
         "SignedContributionAndProof",
+        "BeaconBlocksByRangeRequest",
+        "ENRForkID",
+        "MetaDataV0",
+        "MetaDataV1",
+        "Status",
     ],
 )
 
@@ -80,6 +85,7 @@ go_proto_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
@@ -107,6 +113,7 @@ go_proto_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
@@ -133,7 +140,7 @@ go_library(
     deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
@@ -157,6 +164,7 @@ ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
         "beacon_block.proto",
+        "p2p_messages.proto",
         "sync_committee.proto",
     ],
     config = select({

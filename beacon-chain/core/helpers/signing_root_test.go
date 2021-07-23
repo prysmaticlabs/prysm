@@ -6,9 +6,9 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -47,19 +47,19 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
-		genState   func(t *testing.T) (iface.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
+		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
+		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
 		{
 			name: "block proposer",
-			genState: func(t *testing.T) (iface.BeaconState, []bls.SecretKey) {
+			genState: func(t *testing.T) (state.BeaconState, []bls.SecretKey) {
 				beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
+			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
 				block, err := testutil.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block
@@ -109,7 +109,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 
 func TestFuzzverifySigningRoot_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethereum_beacon_p2p_v1.BeaconState{}
+	state := &statepb.BeaconState{}
 	pubkey := [48]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}

@@ -3,6 +3,7 @@ package validator
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 )
 
@@ -13,4 +14,5 @@ type Server struct {
 	TimeFetcher      blockchain.TimeFetcher
 	SyncChecker      sync.Checker
 	AttestationsPool attestations.Pool
+	V1Alpha1Server   *v1alpha1validator.Server
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -56,7 +56,7 @@ import (
 //
 //    return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	state, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -114,13 +114,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
 
-	state := &pb.BeaconState{
+	state := &statepb.BeaconState{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -152,8 +152,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
 		Slashings:                 slashings,
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		CurrentEpochAttestations:  []*statepb.PendingAttestation{},
+		PreviousEpochAttestations: []*statepb.PendingAttestation{},
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
@@ -183,11 +183,11 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() (iface.BeaconState, error) {
-	state := &pb.BeaconState{
+func EmptyGenesisState() (state.BeaconState, error) {
+	state := &statepb.BeaconState{
 		// Misc fields.
 		Slot: 0,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -198,8 +198,8 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 
 		JustificationBits:         []byte{0},
 		HistoricalRoots:           [][]byte{},
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
+		CurrentEpochAttestations:  []*statepb.PendingAttestation{},
+		PreviousEpochAttestations: []*statepb.PendingAttestation{},
 
 		// Eth1 data.
 		Eth1Data:         &ethpb.Eth1Data{},

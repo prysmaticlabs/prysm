@@ -10,8 +10,8 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -48,9 +48,9 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*pb.BeaconState); ok {
+				if _, ok := object.(*statepb.BeaconState); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := v1.InitializeFromProto(s.(*pb.BeaconState))
+						beaconState, err := v1.InitializeFromProto(s.(*statepb.BeaconState))
 						require.NoError(t, err)
 						return beaconState.HashTreeRoot(context.Background())
 					}
@@ -109,13 +109,13 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		obj = &pb.BeaconState{}
+		obj = &statepb.BeaconState{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
 	case "DepositMessage":
-		obj = &pb.DepositMessage{}
+		obj = &statepb.DepositMessage{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
@@ -124,15 +124,15 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		t.Skip("Unused type")
 		return nil, nil
 	case "Fork":
-		obj = &pb.Fork{}
+		obj = &statepb.Fork{}
 	case "ForkData":
-		obj = &pb.ForkData{}
+		obj = &statepb.ForkData{}
 	case "HistoricalBatch":
-		obj = &pb.HistoricalBatch{}
+		obj = &statepb.HistoricalBatch{}
 	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
 	case "PendingAttestation":
-		obj = &pb.PendingAttestation{}
+		obj = &statepb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
@@ -144,7 +144,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedVoluntaryExit":
 		obj = &ethpb.SignedVoluntaryExit{}
 	case "SigningData":
-		obj = &pb.SigningData{}
+		obj = &statepb.SigningData{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":

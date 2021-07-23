@@ -1,14 +1,14 @@
-package iface
+package state
 
-import pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 
 // BeaconStateAltair has read and write access to beacon state methods.
 type BeaconStateAltair interface {
 	BeaconState
-	CurrentSyncCommittee() (*pbp2p.SyncCommittee, error)
-	NextSyncCommittee() (*pbp2p.SyncCommittee, error)
-	SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error
-	SetNextSyncCommittee(val *pbp2p.SyncCommittee) error
+	CurrentSyncCommittee() (*statepb.SyncCommittee, error)
+	NextSyncCommittee() (*statepb.SyncCommittee, error)
+	SetCurrentSyncCommittee(val *statepb.SyncCommittee) error
+	SetNextSyncCommittee(val *statepb.SyncCommittee) error
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
 	InactivityScores() ([]uint64, error)

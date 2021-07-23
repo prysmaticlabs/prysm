@@ -15,10 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -378,7 +378,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	validator := &eth.Validator{
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		return nil
 	})
@@ -493,7 +493,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 		PublicKey:         keys[0].PublicKey().Marshal(),
 		WithdrawableEpoch: eth2types.Epoch(1),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		return nil
 	})
@@ -593,7 +593,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		// Satisfy activity time required before exiting.
 		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
@@ -639,7 +639,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		return nil
 	})
@@ -674,7 +674,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		return nil
 	})
@@ -716,7 +716,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
@@ -821,7 +821,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
@@ -942,7 +942,7 @@ func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{

@@ -6,7 +6,7 @@ go_library(
         "altair.go",
         "phase0.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/interface",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",
@@ -22,9 +22,9 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

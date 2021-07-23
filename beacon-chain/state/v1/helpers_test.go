@@ -3,13 +3,13 @@ package v1
 import (
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
 func Test_handlePendingAttestation_OutOfRange(t *testing.T) {
-	items := make([]*pb.PendingAttestation, 1)
+	items := make([]*statepb.PendingAttestation, 1)
 	indices := []uint64{3}
 	_, err := handlePendingAttestation(items, indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of pending attestations 1", err)
