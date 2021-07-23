@@ -131,9 +131,12 @@ func (g *Gateway) Start() {
 	}
 
 	corsMux := g.corsMiddleware(g.mux)
-	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		g.muxHandler(corsMux, w, r)
-	})
+
+	if g.muxHandler != nil {
+		g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			g.muxHandler(corsMux, w, r)
+		})
+	}
 
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
