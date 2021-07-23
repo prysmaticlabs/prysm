@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,7 +17,7 @@ var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected
 var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
 
 func (v *validator) preBlockSignValidations(
-	ctx context.Context, pubKey [48]byte, block interfaces.BeaconBlock, signingRoot [32]byte,
+	ctx context.Context, pubKey [48]byte, block block.BeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -77,7 +77,7 @@ func (v *validator) preBlockSignValidations(
 func (v *validator) postBlockSignUpdate(
 	ctx context.Context,
 	pubKey [48]byte,
-	block interfaces.SignedBeaconBlock,
+	block block.SignedBeaconBlock,
 	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
@@ -106,7 +106,7 @@ func (v *validator) postBlockSignUpdate(
 	return nil
 }
 
-func blockLogFields(pubKey [48]byte, blk interfaces.BeaconBlock, sig []byte) logrus.Fields {
+func blockLogFields(pubKey [48]byte, blk block.BeaconBlock, sig []byte) logrus.Fields {
 	fields := logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
 		"proposerIndex":     blk.ProposerIndex(),
