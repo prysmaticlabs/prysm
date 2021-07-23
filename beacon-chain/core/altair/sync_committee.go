@@ -1,8 +1,6 @@
 package altair
 
 import (
-	"bytes"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -127,17 +125,6 @@ func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorI
 	return cIndices, nil
 }
 
-// SubnetsFromCommittee retrieves the relevant subnets for the chosen validator.
-func SubnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
-	positions := make([]uint64, 0)
-	for i, pkey := range comm.Pubkeys {
-		if bytes.Equal(pubkey, pkey) {
-			positions = append(positions, uint64(i)/(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount))
-		}
-	}
-	return positions
-}
-
 // SyncSubCommitteePubkeys returns the pubkeys participating in a sync subcommittee.
 //
 // def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[BLSPubkey]:
@@ -166,6 +153,7 @@ func SyncSubCommitteePubkeys(syncCommittee *pb.SyncCommittee, subComIdx types.Co
 
 // IsSyncCommitteeAggregator checks whether the provided signature is for a valid
 // aggregator.
+//
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0

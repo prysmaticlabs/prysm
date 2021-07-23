@@ -1,12 +1,12 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -288,7 +288,7 @@ func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubke
 	if syncPeriod != currPeriod && currEpoch < firstValidEpoch {
 		return
 	}
-	subs := altair.SubnetsFromCommittee(pubkey, syncCommittee)
+	subs := subnetsFromCommittee(pubkey, syncCommittee)
 	// Handle overflow in the event current epoch is less
 	// than end epoch. This is an impossible condition, so
 	// it is a defensive check.
@@ -299,4 +299,15 @@ func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubke
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey, startEpoch, subs, totalDuration)
+}
+
+// subnetsFromCommittee retrieves the relevant subnets for the chosen validator.
+func subnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
+	positions := make([]uint64, 0)
+	for i, pkey := range comm.Pubkeys {
+		if bytes.Equal(pubkey, pkey) {
+			positions = append(positions, uint64(i)/(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount))
+		}
+	}
+	return positions
 }

@@ -16,22 +16,6 @@ import (
 )
 
 func TestSyncCommitteeIndices_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
-		validators := make([]*ethpb.Validator, count)
-		for i := 0; i < len(validators); i++ {
-			validators[i] = &ethpb.Validator{
-				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
-			}
-		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
-			Validators:  validators,
-			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		})
-		require.NoError(t, err)
-		return state
-	}
-
 	type args struct {
 		state *stateAltair.BeaconState
 		epoch types.Epoch
@@ -91,22 +75,6 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 
 func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 	helpers.ClearCache()
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
-		validators := make([]*ethpb.Validator, count)
-		for i := 0; i < len(validators); i++ {
-			validators[i] = &ethpb.Validator{
-				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
-			}
-		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
-			Validators:  validators,
-			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		})
-		require.NoError(t, err)
-		return state
-	}
-
 	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	got1, err := altair.NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
@@ -125,25 +93,6 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 }
 
 func TestSyncCommittee_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
-		validators := make([]*ethpb.Validator, count)
-		for i := 0; i < len(validators); i++ {
-			blsKey, err := bls.RandKey()
-			require.NoError(t, err)
-			validators[i] = &ethpb.Validator{
-				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
-				PublicKey:        blsKey.PublicKey().Marshal(),
-			}
-		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
-			Validators:  validators,
-			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		})
-		require.NoError(t, err)
-		return state
-	}
-
 	type args struct {
 		state *stateAltair.BeaconState
 		epoch types.Epoch
@@ -252,4 +201,48 @@ func TestValidateNilSyncContribution(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSyncSubCommitteePubkeys_CanGet(t *testing.T) {
+	helpers.ClearCache()
+	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	com, err := altair.NextSyncCommittee(state)
+	require.NoError(t, err)
+	sub, err := altair.SyncSubCommitteePubkeys(com, 0)
+	require.NoError(t, err)
+	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	require.Equal(t, int(subCommSize), len(sub))
+	require.DeepSSZEqual(t, com.Pubkeys[0:subCommSize], sub)
+
+	sub, err = altair.SyncSubCommitteePubkeys(com, 1)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, com.Pubkeys[subCommSize:2*subCommSize], sub)
+
+	sub, err = altair.SyncSubCommitteePubkeys(com, 2)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, com.Pubkeys[2*subCommSize:3*subCommSize], sub)
+
+	sub, err = altair.SyncSubCommitteePubkeys(com, 3)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, com.Pubkeys[3*subCommSize:], sub)
+
+}
+
+func getState(t *testing.T, count uint64) *stateAltair.BeaconState {
+	validators := make([]*ethpb.Validator, count)
+	for i := 0; i < len(validators); i++ {
+		blsKey, err := bls.RandKey()
+		require.NoError(t, err)
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MinDepositAmount,
+			PublicKey:        blsKey.PublicKey().Marshal(),
+		}
+	}
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+	return state
 }
