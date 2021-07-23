@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -42,7 +42,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	assert.Equal(t, iface.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	assert.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {
@@ -363,7 +363,7 @@ func TestAltairState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	require.Equal(t, iface.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestAltairState_CanDelete(t *testing.T) {
@@ -382,5 +382,5 @@ func TestAltairState_CanDelete(t *testing.T) {
 	require.NoError(t, db.DeleteState(context.Background(), r))
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
-	require.Equal(t, iface.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }

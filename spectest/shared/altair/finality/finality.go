@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	core.SkipSlotCache.Disable()
 }
 
 type Config struct {
@@ -39,7 +39,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			beaconStateBase := &pb.BeaconStateAltair{}
+			beaconStateBase := &statepb.BeaconStateAltair{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := stateAltair.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
@@ -50,7 +50,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			metaYaml := &Config{}
 			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
-			var processedState iface.BeaconState
+			var processedState state.BeaconState
 			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz_snappy", i)
@@ -62,7 +62,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 				require.NoError(t, err)
-				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				processedState, err = core.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)
@@ -72,7 +72,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postBeaconState := &pb.BeaconStateAltair{}
+			postBeaconState := &statepb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 			pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 			require.NoError(t, err)

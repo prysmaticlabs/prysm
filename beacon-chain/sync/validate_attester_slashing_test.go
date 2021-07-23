@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, iface.BeaconState) {
+func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
 	state, privKeys := testutil.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {

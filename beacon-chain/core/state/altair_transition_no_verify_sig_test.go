@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
@@ -49,7 +49,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := core.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.SyncAggregate = syncAggregate
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := core.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -102,7 +102,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	set, _, err := core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := core.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := core.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -191,7 +191,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	_, _, err = core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
@@ -199,7 +199,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 	beaconState, block := createFullAltairBlockWithOperations(t)
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	set, _, err := core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()
@@ -207,7 +207,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 	require.Equal(t, true, verified, "Could not verify signature set")
 }
 
-func createFullAltairBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
+func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconStateAltair,
 	*prysmv2.SignedBeaconBlock) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(beaconState)

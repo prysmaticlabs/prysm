@@ -6,7 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,7 +41,7 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *prysmv2.SyncAggregate) (iface.BeaconStateAltair, error) {
+func ProcessSyncAggregate(state state.BeaconStateAltair, sync *prysmv2.SyncAggregate) (state.BeaconStateAltair, error) {
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, err

@@ -32,7 +32,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			base := &pb.BeaconStateAltair{}
+			base := &statepb.BeaconStateAltair{}
 			require.NoError(t, base.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := stateAltair.InitializeFromProto(base)
 			require.NoError(t, err)
@@ -47,7 +47,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postBeaconState := &pb.BeaconStateAltair{}
+			postBeaconState := &statepb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)

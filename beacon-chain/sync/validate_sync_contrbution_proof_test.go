@@ -15,14 +15,14 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -743,7 +743,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
+		_, testState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
 		assert.NoError(t, err)
 		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: i, Root: r[:]}))
@@ -754,7 +754,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	return hRoot, keys
 }
 
-func syncSelectionProofSigningRoot(st iface.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
+func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
 	dom, err := helpers.Domain(st.Fork(), helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
 	if err != nil {
 		return [32]byte{}, err

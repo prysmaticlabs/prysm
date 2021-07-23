@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
-func generateSyncAggregate(bState iface.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
-	st, ok := bState.(iface.BeaconStateAltair)
+func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
+	st, ok := bState.(state.BeaconStateAltair)
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
 	}

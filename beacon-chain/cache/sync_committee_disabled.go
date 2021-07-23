@@ -4,7 +4,7 @@ package cache
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // FakeSyncCommitteeCache is a fake `SyncCommitteeCache` to satisfy fuzzing.
@@ -27,6 +27,6 @@ func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx t
 }
 
 // UpdatePositionsInCommittee -- fake.
-func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state iface.BeaconStateAltair) error {
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconStateAltair) error {
 	return nil
 }

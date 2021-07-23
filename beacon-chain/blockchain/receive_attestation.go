@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +21,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.BeaconState, error)
+	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -43,7 +43,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 // AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.BeaconState, error) {
+func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
 	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return nil, err

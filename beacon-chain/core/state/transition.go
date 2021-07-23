@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -27,24 +27,24 @@ import (
 )
 
 // processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, iface.BeaconState, interfaces.SignedBeaconBlock) (iface.BeaconState, error)
+type processFunc func(context.Context, state.BeaconState, interfaces.SignedBeaconBlock) (state.BeaconState, error)
 
-var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+var processDepositsFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessDeposits(ctx, s, blk.Block().Body().Deposits())
 }
-var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+var processProposerSlashingFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessProposerSlashings(ctx, s, blk.Block().Body().ProposerSlashings(), v.SlashValidator)
 }
 
-var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+var processAttesterSlashingFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessAttesterSlashings(ctx, s, blk.Block().Body().AttesterSlashings(), v.SlashValidator)
 }
 
-var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+var processEth1DataFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessEth1DataInBlock(ctx, s, blk.Block().Body().Eth1Data())
 }
 
-var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+var processExitFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
@@ -82,9 +82,9 @@ var processingPipeline = []processFunc{
 //        assert block.state_root == hash_tree_root(state)
 func ExecuteStateTransition(
 	ctx context.Context,
-	state iface.BeaconState,
+	state state.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -125,7 +125,7 @@ func ExecuteStateTransition(
 //    # Cache block root
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state iface.BeaconState) (iface.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
@@ -168,9 +168,9 @@ func ProcessSlot(ctx context.Context, state iface.BeaconState) (iface.BeaconStat
 // ProcessSlotsUsingNextSlotCache processes slots by using next slot cache for higher efficiency.
 func ProcessSlotsUsingNextSlotCache(
 	ctx context.Context,
-	parentState iface.BeaconState,
+	parentState state.BeaconState,
 	parentRoot []byte,
-	slot types.Slot) (iface.BeaconState, error) {
+	slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
@@ -207,7 +207,7 @@ func ProcessSlotsUsingNextSlotCache(
 //        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //            process_epoch(state)
 //        state.slot = Slot(state.slot + 1)
-func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -328,9 +328,9 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 //    process_operations(state, block.body)
 func ProcessBlock(
 	ctx context.Context,
-	state iface.BeaconState,
+	state state.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
 
@@ -350,7 +350,7 @@ func ProcessBlock(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -409,13 +409,13 @@ func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b interf
 //
 // Spec pseudocode definition:
 //    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state iface.ReadOnlyBeaconState) bool {
+func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
 	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
-func ProcessEpochPrecompute(ctx context.Context, state iface.BeaconState) (iface.BeaconState, error) {
+func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))

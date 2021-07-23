@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -1238,8 +1238,8 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 	}
 }
 
-func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStateManager) (iface.BeaconState,
-	iface.BeaconState, iface.BeaconState, []bls.SecretKey) {
+func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStateManager) (state.BeaconState,
+	state.BeaconState, state.BeaconState, []bls.SecretKey) {
 	gs, keys := testutil.DeterministicGenesisState(t, 64)
 	hs := gs.Copy()
 	// Head State

@@ -8,7 +8,7 @@ import (
 	math2 "github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -38,7 +38,7 @@ func SlotToEpoch(slot types.Slot) types.Epoch {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_at_slot(state.slot)
-func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func CurrentEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }
 
@@ -53,7 +53,7 @@ func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 //    """
 //    current_epoch = get_current_epoch(state)
 //    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func PrevEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -63,7 +63,7 @@ func PrevEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot()) + 1
 }
 

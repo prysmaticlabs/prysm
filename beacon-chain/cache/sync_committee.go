@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -122,15 +122,15 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 // UpdatePositionsInCommittee updates caching of validators position in sync committee in respect to
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
-func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state iface.BeaconStateAltair) error {
-	csc, err := state.CurrentSyncCommittee()
+func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconStateAltair) error {
+	csc, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return err
 	}
 	positionsMap := make(map[types.ValidatorIndex]*positionInCommittee)
 	for i, pubkey := range csc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
+		validatorIndex, ok := st.ValidatorIndexByPubkey(p)
 		if !ok {
 			continue
 		}
@@ -142,13 +142,13 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 		}
 	}
 
-	nsc, err := state.NextSyncCommittee()
+	nsc, err := st.NextSyncCommittee()
 	if err != nil {
 		return err
 	}
 	for i, pubkey := range nsc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
+		validatorIndex, ok := st.ValidatorIndexByPubkey(p)
 		if !ok {
 			continue
 		}

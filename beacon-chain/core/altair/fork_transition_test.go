@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -19,12 +19,12 @@ import (
 
 func TestTranslateParticipation(t *testing.T) {
 	s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
-	state, ok := s.(*stateAltair.BeaconState)
+	st, ok := s.(*stateAltair.BeaconState)
 	require.Equal(t, true, ok)
-	require.NoError(t, state.SetSlot(state.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
+	require.NoError(t, st.SetSlot(st.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	var err error
-	newState, err := altair.TranslateParticipation(state, nil)
+	newState, err := altair.TranslateParticipation(st, nil)
 	require.NoError(t, err)
 	participation, err := newState.PreviousEpochParticipation()
 	require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestTranslateParticipation(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepNotSSZEqual(t, make([]byte, 64), participation)
 
-	committee, err := helpers.BeaconCommitteeFromState(state, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestationutil.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
@@ -67,17 +67,17 @@ func TestTranslateParticipation(t *testing.T) {
 }
 
 func TestUpgradeToAltair(t *testing.T) {
-	state, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	aState, err := altair.UpgradeToAltair(state)
+	st, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	aState, err := altair.UpgradeToAltair(st)
 	require.NoError(t, err)
-	_, ok := aState.(iface.BeaconStateAltair)
+	_, ok := aState.(state.BeaconStateAltair)
 	require.Equal(t, true, ok)
 
 	f := aState.Fork()
 	require.DeepSSZEqual(t, &statepb.Fork{
-		PreviousVersion: state.Fork().CurrentVersion,
+		PreviousVersion: st.Fork().CurrentVersion,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           helpers.CurrentEpoch(state),
+		Epoch:           helpers.CurrentEpoch(st),
 	}, f)
 	csc, err := aState.CurrentSyncCommittee()
 	require.NoError(t, err)

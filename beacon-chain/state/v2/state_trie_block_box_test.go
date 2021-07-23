@@ -5,7 +5,7 @@ import (
 	"context"
 	"testing"
 
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -106,20 +106,20 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	type test struct {
 		name        string
-		stateModify func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error)
+		stateModify func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -129,7 +129,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -176,20 +176,20 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 
 	type test struct {
 		name        string
-		stateModify func(iface.BeaconStateAltair) (iface.BeaconStateAltair, error)
+		stateModify func(state.BeaconStateAltair) (state.BeaconStateAltair, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -199,7 +199,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+			stateModify: func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err

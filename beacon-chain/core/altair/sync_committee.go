@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -43,7 +43,7 @@ func ValidateNilSyncContribution(s *prysmv2.SignedContributionAndProof) error {
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
 //    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
-func NextSyncCommittee(state iface.BeaconStateAltair) (*statepb.SyncCommittee, error) {
+func NextSyncCommittee(state state.BeaconStateAltair) (*statepb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(state)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func NextSyncCommittee(state iface.BeaconStateAltair) (*statepb.SyncCommittee, e
 //            sync_committee_indices.append(candidate_index)
 //        i += 1
 //    return sync_committee_indices
-func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorIndex, error) {
+func NextSyncCommitteeIndices(state state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
 	epoch := helpers.NextEpoch(state)
 	indices, err := helpers.ActiveValidatorIndices(state, epoch)
 	if err != nil {

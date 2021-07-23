@@ -65,7 +65,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
-	preBeaconStateBase := &pb.BeaconStateAltair{}
+	preBeaconStateBase := &statepb.BeaconStateAltair{}
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)

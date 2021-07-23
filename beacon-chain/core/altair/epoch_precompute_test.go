@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -250,7 +250,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
 	require.ErrorContains(t, "validator registries not the same length as state's validator registries", err)
 }
 
-func testState() (iface.BeaconState, error) {
+func testState() (state.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
 		for _, flag := range flags {

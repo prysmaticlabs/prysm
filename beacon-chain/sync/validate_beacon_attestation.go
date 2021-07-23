@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -133,7 +133,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // This validates beacon unaggregated attestation has correct topic string.
-func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attestation, bs iface.ReadOnlyBeaconState, t string) pubsub.ValidationResult {
+func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attestation, bs state.ReadOnlyBeaconState, t string) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
@@ -164,7 +164,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
 // and signature verification.
-func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.Attestation, bs iface.ReadOnlyBeaconState) pubsub.ValidationResult {
+func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.Attestation, bs state.ReadOnlyBeaconState) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -30,7 +30,7 @@ func RunDepositTest(t *testing.T, config string) {
 			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
 
 			body := &prysmv2.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
-			processDepositsFunc := func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}
 			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)

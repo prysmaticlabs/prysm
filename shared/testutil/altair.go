@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -25,7 +25,7 @@ import (
 )
 
 // DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic deposits.
-func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (iface.BeaconStateAltair, []bls.SecretKey) {
+func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.BeaconStateAltair, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -43,7 +43,7 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (iface.
 }
 
 // GenesisBeaconState returns the genesis beacon state.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
 	state, err := emptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -66,9 +66,9 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 // processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
 func processPreGenesisDeposits(
 	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
+	beaconState state.BeaconStateAltair,
 	deposits []*ethpb.Deposit,
-) (iface.BeaconStateAltair, error) {
+) (state.BeaconStateAltair, error) {
 	var err error
 	beaconState, err = altair.ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
@@ -81,7 +81,7 @@ func processPreGenesisDeposits(
 	return beaconState, nil
 }
 
-func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
+func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -215,7 +215,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltai
 	return stateAltair.InitializeFromProto(state)
 }
 
-func emptyGenesisState() (iface.BeaconStateAltair, error) {
+func emptyGenesisState() (state.BeaconStateAltair, error) {
 	state := &statepb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
@@ -272,7 +272,7 @@ func NewBeaconBlockAltair() *prysmv2.SignedBeaconBlock {
 
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
-	bState iface.BeaconStateAltair,
+	bState state.BeaconStateAltair,
 	block *prysmv2.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
@@ -281,7 +281,7 @@ func BlockSignatureAltair(
 	if err != nil {
 		return nil, err
 	}
-	s, err := state.CalculateStateRoot(context.Background(), bState, wsb)
+	s, err := core.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func BlockSignatureAltair(
 // GenerateFullBlockAltair generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlockAltair(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,

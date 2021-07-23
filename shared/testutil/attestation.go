@@ -9,8 +9,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -46,7 +46,7 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState iface.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
+	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
@@ -63,7 +63,7 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		var headState iface.BeaconState
+		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
 			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
@@ -74,7 +74,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = iface.BeaconState(genState)
+			headState = state.BeaconState(genState)
 		case version.Altair:
 			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
@@ -84,12 +84,12 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = iface.BeaconState(genState)
+			headState = state.BeaconState(genState)
 		default:
 			return nil, errors.New("state type isn't supported")
 		}
 
-		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
+		headState, err = core.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err
 		}

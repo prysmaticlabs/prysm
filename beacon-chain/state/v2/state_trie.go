@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -70,7 +70,7 @@ func InitializeFromProtoUnsafe(st *statepb.BeaconStateAltair) (*BeaconState, err
 }
 
 // Copy returns a deep copy of the beacon state.
-func (b *BeaconState) Copy() iface.BeaconState {
+func (b *BeaconState) Copy() state.BeaconState {
 	if !b.hasInnerState() {
 		return nil
 	}

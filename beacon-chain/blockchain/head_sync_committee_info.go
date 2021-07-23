@@ -8,8 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -122,8 +122,8 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
 // For the cache miss, it processes head state up to slot and fill the cache with `slot` as key.
-func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
-	var headState iface.BeaconState
+func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
+	var headState state.BeaconState
 	var err error
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
@@ -137,7 +137,7 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 			return nil, err
 		}
 		if slot > headState.Slot() {
-			headState, err = state.ProcessSlots(ctx, headState, slot)
+			headState, err = core.ProcessSlots(ctx, headState, slot)
 			if err != nil {
 				return nil, err
 			}
@@ -167,14 +167,14 @@ func newSyncCommitteeHeadState() *syncCommitteeHeadState {
 }
 
 // add `slot` as key and `state` as value onto the lru cache.
-func (c *syncCommitteeHeadState) add(slot types.Slot, state iface.BeaconState) {
+func (c *syncCommitteeHeadState) add(slot types.Slot, state state.BeaconState) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.cache.Add(slot, state)
 }
 
 // get `state` using `slot` as key. Return nil if nothing is found.
-func (c *syncCommitteeHeadState) get(slot types.Slot) iface.BeaconState {
+func (c *syncCommitteeHeadState) get(slot types.Slot) state.BeaconState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	val, exists := c.cache.Get(slot)

@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -215,7 +215,7 @@ func (bs *Server) ListValidators(
 		}
 		requestedEpoch = q.Epoch
 	}
-	var reqState iface.BeaconState
+	var reqState state.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
 		var s types.Slot
@@ -237,7 +237,7 @@ func (bs *Server) ListValidators(
 	}
 	if s > reqState.Slot() {
 		reqState = reqState.Copy()
-		reqState, err = state.ProcessSlots(ctx, reqState, s)
+		reqState, err = core.ProcessSlots(ctx, reqState, s)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -671,7 +671,7 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
-		headState, err = state.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
+		headState, err = core.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 		}

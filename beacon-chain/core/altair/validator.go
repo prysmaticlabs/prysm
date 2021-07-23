@@ -5,7 +5,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -34,7 +34,7 @@ import (
 //    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
-func SlashValidator(state iface.BeaconState, slashedIdx types.ValidatorIndex) (iface.BeaconState, error) {
+func SlashValidator(state state.BeaconState, slashedIdx types.ValidatorIndex) (state.BeaconState, error) {
 	state, err := validators.InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

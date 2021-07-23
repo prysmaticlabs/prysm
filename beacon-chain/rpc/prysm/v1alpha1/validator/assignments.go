@@ -302,7 +302,7 @@ func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubke
 }
 
 // subnetsFromCommittee retrieves the relevant subnets for the chosen validator.
-func subnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
+func subnetsFromCommittee(pubkey []byte, comm *statepb.SyncCommittee) []uint64 {
 	positions := make([]uint64, 0)
 	for i, pkey := range comm.Pubkeys {
 		if bytes.Equal(pubkey, pkey) {

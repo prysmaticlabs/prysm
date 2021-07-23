@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -27,7 +27,7 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 	}
 }
 
-func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st iface.BeaconState) (iface.BeaconState, error) {
+func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := altair.InitializeEpochValidators(ctx, st)
 	require.NoError(t, err)

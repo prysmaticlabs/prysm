@@ -49,9 +49,9 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*pb.BeaconStateAltair); ok {
+				if _, ok := object.(*statepb.BeaconStateAltair); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := stateAltair.InitializeFromProto(s.(*pb.BeaconStateAltair))
+						beaconState, err := stateAltair.InitializeFromProto(s.(*statepb.BeaconStateAltair))
 						require.NoError(t, err)
 						return beaconState.HashTreeRoot(context.Background())
 					}
@@ -110,13 +110,13 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		obj = &pb.BeaconStateAltair{}
+		obj = &statepb.BeaconStateAltair{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
 	case "DepositMessage":
-		obj = &pb.DepositMessage{}
+		obj = &statepb.DepositMessage{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
@@ -125,15 +125,15 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		t.Skip("Unused type")
 		return nil, nil
 	case "Fork":
-		obj = &pb.Fork{}
+		obj = &statepb.Fork{}
 	case "ForkData":
-		obj = &pb.ForkData{}
+		obj = &statepb.ForkData{}
 	case "HistoricalBatch":
-		obj = &pb.HistoricalBatch{}
+		obj = &statepb.HistoricalBatch{}
 	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
 	case "PendingAttestation":
-		obj = &pb.PendingAttestation{}
+		obj = &statepb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
@@ -145,7 +145,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedVoluntaryExit":
 		obj = &ethpb.SignedVoluntaryExit{}
 	case "SigningData":
-		obj = &pb.SigningData{}
+		obj = &statepb.SigningData{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":
@@ -161,7 +161,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SyncAggregate":
 		obj = &prysmv2.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
-		obj = &pb.SyncAggregatorSelectionData{}
+		obj = &statepb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":
 		t.Skip("TODO(8638): fssz bug, using custom HTR so state works")
 		return nil, nil

@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -25,9 +25,9 @@ type matchingHead bool
 // records.
 func ProcessAttestations(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -80,9 +80,9 @@ func ProcessAttestations(
 //    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 func ProcessAttestation(
 	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
+	beaconState state.BeaconStateAltair,
 	att *ethpb.Attestation,
-) (iface.BeaconStateAltair, error) {
+) (state.BeaconStateAltair, error) {
 	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
@@ -94,9 +94,9 @@ func ProcessAttestation(
 // records. The only difference would be that the attestation signature would not be verified.
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -115,9 +115,9 @@ func ProcessAttestationsNoVerifySignature(
 // method is used to validate attestations whose signatures have already been verified or will be verified later.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
+	beaconState state.BeaconStateAltair,
 	att *ethpb.Attestation,
-) (iface.BeaconStateAltair, error) {
+) (state.BeaconStateAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -206,7 +206,7 @@ func ProcessAttestationNoVerifySignature(
 }
 
 // This returns the matching statues for attestation data's source target and head.
-func matchingStatus(beaconState iface.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (s matchingSource, t matchingTarget, h matchingHead, err error) {
+func matchingStatus(beaconState state.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (s matchingSource, t matchingTarget, h matchingHead, err error) {
 	s = matchingSource(attestationutil.CheckPointIsEqual(data.Source, cp))
 
 	r, err := helpers.BlockRoot(beaconState, data.Target.Epoch)
@@ -224,7 +224,7 @@ func matchingStatus(beaconState iface.BeaconState, data *ethpb.AttestationData, 
 }
 
 // This rewards proposer by increasing proposer's balance with input reward numerator and calculated reward denominator.
-func rewardProposer(beaconState iface.BeaconState, proposerRewardNumerator uint64) error {
+func rewardProposer(beaconState state.BeaconState, proposerRewardNumerator uint64) error {
 	proposerRewardDenominator := (params.BeaconConfig().WeightDenominator - params.BeaconConfig().ProposerWeight) * params.BeaconConfig().WeightDenominator / params.BeaconConfig().ProposerWeight
 	proposerReward := proposerRewardNumerator / proposerRewardDenominator
 	i, err := helpers.BeaconProposerIndex(beaconState)
@@ -247,7 +247,7 @@ func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 
 // This retrieves a map of attestation scoring based on Altair's participation flag indices.
 // This is used to facilitate process attestation during state transition.
-func attestationParticipationFlagIndices(beaconState iface.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
+func attestationParticipationFlagIndices(beaconState state.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	var justifiedCheckpt *ethpb.Checkpoint
 	if data.Target.Epoch == currEpoch {

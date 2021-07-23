@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,7 +18,7 @@ import (
 //    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_next_sync_committee(state)
-func ProcessSyncCommitteeUpdates(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+func ProcessSyncCommitteeUpdates(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	nextEpoch := helpers.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		currentSyncCommittee, err := beaconState.NextSyncCommittee()
@@ -48,7 +48,7 @@ func ProcessSyncCommitteeUpdates(beaconState iface.BeaconStateAltair) (iface.Bea
 // def process_participation_flag_updates(state: BeaconState) -> None:
 //    state.previous_epoch_participation = state.current_epoch_participation
 //    state.current_epoch_participation = [ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
-func ProcessParticipationFlagUpdates(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+func ProcessParticipationFlagUpdates(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	c, err := beaconState.CurrentEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func ProcessParticipationFlagUpdates(beaconState iface.BeaconStateAltair) (iface
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
 //            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state iface.BeaconState) (iface.BeaconState, error) {
+func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {

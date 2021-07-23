@@ -2,7 +2,7 @@ package altair
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -10,7 +10,7 @@ import (
 )
 
 // UpgradeToAltair updates input state to return the version Altair state.
-func UpgradeToAltair(state iface.BeaconState) (iface.BeaconStateAltair, error) {
+func UpgradeToAltair(state state.BeaconState) (state.BeaconStateAltair, error) {
 	epoch := helpers.CurrentEpoch(state)
 
 	s := &statepb.BeaconStateAltair{

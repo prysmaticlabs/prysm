@@ -8,8 +8,8 @@ import (
 	"github.com/golang/snappy"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -85,7 +85,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			beaconStateBase := &pb.BeaconState{}
+			beaconStateBase := &statepb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
@@ -97,18 +97,18 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				state, err := state.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
+				st, err := core.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
 				require.NoError(t, err)
-				beaconState, ok = state.(*v1.BeaconState)
+				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			altairState := iface.BeaconStateAltair(beaconState)
+			altairState := state.BeaconStateAltair(beaconState)
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 				require.NoError(t, err)
-				state, err := state.ExecuteStateTransition(ctx, altairState, wsb)
+				st, err := core.ExecuteStateTransition(ctx, altairState, wsb)
 				require.NoError(t, err)
-				altairState, ok = state.(*stateAltair.BeaconState)
+				altairState, ok = st.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -116,7 +116,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postBeaconState := &pb.BeaconStateAltair{}
+			postBeaconState := &statepb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
 			pbState, err := stateAltair.ProtobufBeaconState(altairState.CloneInnerState())

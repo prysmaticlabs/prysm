@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"go.opencensus.io/trace"
 )
 
@@ -27,7 +27,7 @@ import (
 //    process_historical_roots_update(state)
 //    process_participation_flag_updates(state)  # [New in Altair]
 //    process_sync_committee_updates(state)  # [New in Altair]
-func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
+func ProcessEpoch(ctx context.Context, state state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpoch")
 	defer span.End()
 
