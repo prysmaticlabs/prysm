@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
@@ -270,7 +270,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			s, err := v1.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
+			s, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{Validators: validators})
 			require.NoError(t, err)
 			p.InsertVoluntaryExit(ctx, s, tt.args.exit)
 			if len(p.pending) != len(tt.want) {
@@ -521,7 +521,7 @@ func TestPool_PendingExits(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			s, err := v1.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
+			s, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
 			require.NoError(t, err)
 			if got := p.PendingExits(s, tt.args.slot, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)

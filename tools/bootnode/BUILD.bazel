@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/iputils:go_default_library",
         "//shared/logutil:go_default_library",

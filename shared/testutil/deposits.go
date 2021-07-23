@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -165,7 +165,7 @@ func signedDeposit(
 ) (*ethpb.Deposit, error) {
 	withdrawalCreds := hashutil.Hash(withdrawalKey)
 	withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
-	depositMessage := &pb.DepositMessage{
+	depositMessage := &statepb.DepositMessage{
 		PublicKey:             publicKey,
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds[:],
@@ -180,7 +180,7 @@ func signedDeposit(
 		return nil, errors.Wrap(err, "could not get signing root of deposit data")
 	}
 
-	sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
+	sigRoot, err := (&statepb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			withdrawalCreds := hashutil.Hash(publicKeys[1].Marshal())
 			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
-			depositMessage := &pb.DepositMessage{
+			depositMessage := &statepb.DepositMessage{
 				PublicKey:             publicKeys[1].Marshal(),
 				Amount:                params.BeaconConfig().MaxEffectiveBalance,
 				WithdrawalCredentials: withdrawalCreds[:],
@@ -343,7 +343,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			sigRoot, err := (&pb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
+			sigRoot, err := (&statepb.SigningData{ObjectRoot: root[:], Domain: domain}).HashTreeRoot()
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
 			}

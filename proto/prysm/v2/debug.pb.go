@@ -14,7 +14,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -648,7 +647,7 @@ type DebugPeerResponse struct {
 	PeerId             string                      `protobuf:"bytes,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
 	Enr                string                      `protobuf:"bytes,5,opt,name=enr,proto3" json:"enr,omitempty"`
 	PeerInfo           *DebugPeerResponse_PeerInfo `protobuf:"bytes,6,opt,name=peer_info,json=peerInfo,proto3" json:"peer_info,omitempty"`
-	PeerStatus         *v1.Status                  `protobuf:"bytes,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
+	PeerStatus         *Status                     `protobuf:"bytes,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
 	LastUpdated        uint64                      `protobuf:"varint,8,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
 	ScoreInfo          *ScoreInfo                  `protobuf:"bytes,9,opt,name=score_info,json=scoreInfo,proto3" json:"score_info,omitempty"`
 }
@@ -727,7 +726,7 @@ func (x *DebugPeerResponse) GetPeerInfo() *DebugPeerResponse_PeerInfo {
 	return nil
 }
 
-func (x *DebugPeerResponse) GetPeerStatus() *v1.Status {
+func (x *DebugPeerResponse) GetPeerStatus() *Status {
 	if x != nil {
 		return x.PeerStatus
 	}
@@ -919,13 +918,13 @@ type DebugPeerResponse_PeerInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MetadataV0      *v1.MetaDataV0 `protobuf:"bytes,1,opt,name=metadataV0,proto3" json:"metadataV0,omitempty"`
-	MetadataV1      *v1.MetaDataV1 `protobuf:"bytes,2,opt,name=metadataV1,proto3" json:"metadataV1,omitempty"`
-	Protocols       []string       `protobuf:"bytes,3,rep,name=protocols,proto3" json:"protocols,omitempty"`
-	FaultCount      uint64         `protobuf:"varint,4,opt,name=fault_count,json=faultCount,proto3" json:"fault_count,omitempty"`
-	ProtocolVersion string         `protobuf:"bytes,5,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
-	AgentVersion    string         `protobuf:"bytes,6,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
-	PeerLatency     uint64         `protobuf:"varint,7,opt,name=peer_latency,json=peerLatency,proto3" json:"peer_latency,omitempty"`
+	MetadataV0      *MetaDataV0 `protobuf:"bytes,1,opt,name=metadataV0,proto3" json:"metadataV0,omitempty"`
+	MetadataV1      *MetaDataV1 `protobuf:"bytes,2,opt,name=metadataV1,proto3" json:"metadataV1,omitempty"`
+	Protocols       []string    `protobuf:"bytes,3,rep,name=protocols,proto3" json:"protocols,omitempty"`
+	FaultCount      uint64      `protobuf:"varint,4,opt,name=fault_count,json=faultCount,proto3" json:"fault_count,omitempty"`
+	ProtocolVersion string      `protobuf:"bytes,5,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	AgentVersion    string      `protobuf:"bytes,6,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	PeerLatency     uint64      `protobuf:"varint,7,opt,name=peer_latency,json=peerLatency,proto3" json:"peer_latency,omitempty"`
 }
 
 func (x *DebugPeerResponse_PeerInfo) Reset() {
@@ -960,14 +959,14 @@ func (*DebugPeerResponse_PeerInfo) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v2_debug_proto_rawDescGZIP(), []int{9, 0}
 }
 
-func (x *DebugPeerResponse_PeerInfo) GetMetadataV0() *v1.MetaDataV0 {
+func (x *DebugPeerResponse_PeerInfo) GetMetadataV0() *MetaDataV0 {
 	if x != nil {
 		return x.MetadataV0
 	}
 	return nil
 }
 
-func (x *DebugPeerResponse_PeerInfo) GetMetadataV1() *v1.MetaDataV1 {
+func (x *DebugPeerResponse_PeerInfo) GetMetadataV1() *MetaDataV1 {
 	if x != nil {
 		return x.MetadataV1
 	}
@@ -1314,9 +1313,9 @@ var file_proto_prysm_v2_debug_proto_goTypes = []interface{}{
 	nil,                                  // 15: ethereum.prysm.v2.ScoreInfo.TopicScoresEntry
 	(v1alpha1.PeerDirection)(0),          // 16: ethereum.eth.v1alpha1.PeerDirection
 	(v1alpha1.ConnectionState)(0),        // 17: ethereum.eth.v1alpha1.ConnectionState
-	(*v1.Status)(nil),                    // 18: ethereum.beacon.p2p.v1.Status
-	(*v1.MetaDataV0)(nil),                // 19: ethereum.beacon.p2p.v1.MetaDataV0
-	(*v1.MetaDataV1)(nil),                // 20: ethereum.beacon.p2p.v1.MetaDataV1
+	(*Status)(nil),                       // 18: ethereum.beacon.p2p.v1.Status
+	(*MetaDataV0)(nil),                   // 19: ethereum.beacon.p2p.v1.MetaDataV0
+	(*MetaDataV1)(nil),                   // 20: ethereum.beacon.p2p.v1.MetaDataV1
 	(*empty.Empty)(nil),                  // 21: google.protobuf.Empty
 	(*v1alpha1.PeerRequest)(nil),         // 22: ethereum.eth.v1alpha1.PeerRequest
 }

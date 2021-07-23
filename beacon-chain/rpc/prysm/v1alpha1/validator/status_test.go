@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -45,7 +45,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher: depositCache,
@@ -88,7 +88,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey:                  pubKey1,
@@ -138,7 +138,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey:                  pubKey1,
@@ -253,7 +253,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &pbp2p.BeaconState{
+	state := &statepb.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
@@ -307,7 +307,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &pbp2p.BeaconState{
+	state := &statepb.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
@@ -365,7 +365,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &pbp2p.BeaconState{
+	state := &statepb.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
@@ -473,7 +473,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -498,7 +498,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -537,7 +537,7 @@ func TestActivationStatus_OK(t *testing.T) {
 
 	vs := &Server{
 		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
@@ -692,7 +692,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		deposits[4].Data.PublicKey,
 		deposits[5].Data.PublicKey,
 	}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -741,7 +741,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 	vs := &Server{
 		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
@@ -792,7 +792,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
-	beaconState := &pbp2p.BeaconState{
+	beaconState := &statepb.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -837,7 +837,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 
 	vs := &Server{
 		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
@@ -903,7 +903,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	stateObj, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher: depositCache,

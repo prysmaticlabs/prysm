@@ -5,7 +5,7 @@ import (
 
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -17,7 +17,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	assert.Equal(t, iface.BeaconState(nil), state)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)
