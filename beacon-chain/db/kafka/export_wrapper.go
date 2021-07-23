@@ -7,7 +7,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -41,7 +41,7 @@ func Wrap(db iface.Database) (iface.Database, error) {
 	return &Exporter{db: db, p: p}, nil
 }
 
-func (e Exporter) publish(ctx context.Context, topic string, msg interfaces.SignedBeaconBlock) error {
+func (e Exporter) publish(ctx context.Context, topic string, msg prysm.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "kafka.publish")
 	defer span.End()
 
@@ -83,7 +83,7 @@ func (e Exporter) Close() error {
 }
 
 // SaveBlock publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error {
+func (e Exporter) SaveBlock(ctx context.Context, block prysm.SignedBeaconBlock) error {
 	go func() {
 		if err := e.publish(ctx, "beacon_block", block); err != nil {
 			log.WithError(err).Error("Failed to publish block")
@@ -94,7 +94,7 @@ func (e Exporter) SaveBlock(ctx context.Context, block interfaces.SignedBeaconBl
 }
 
 // SaveBlocks publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error {
+func (e Exporter) SaveBlocks(ctx context.Context, blocks []prysm.SignedBeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
 			if err := e.publish(ctx, "beacon_block", block); err != nil {

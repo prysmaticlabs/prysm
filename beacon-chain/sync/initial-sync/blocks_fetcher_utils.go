@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +24,7 @@ import (
 // either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
-	blocks []interfaces.SignedBeaconBlock
+	blocks []prysm.SignedBeaconBlock
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -257,8 +257,8 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block interfaces.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := []interfaces.SignedBeaconBlock{block}
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block prysm.SignedBeaconBlock) (*forkData, error) {
+	outBlocks := []prysm.SignedBeaconBlock{block}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
 		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {

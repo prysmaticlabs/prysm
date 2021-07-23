@@ -3,7 +3,7 @@
 package block
 
 import (
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 )
 
 const (
@@ -13,5 +13,5 @@ const (
 
 // ReceivedBlockData is the data sent with ReceivedBlock events.
 type ReceivedBlockData struct {
-	SignedBlock interfaces.SignedBeaconBlock
+	SignedBlock prysm.SignedBeaconBlock
 }

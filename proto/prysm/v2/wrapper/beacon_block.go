@@ -3,7 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -13,9 +13,9 @@ import (
 
 // Interface conformance checks.
 var (
-	_ = interfaces.SignedBeaconBlock(&altairSignedBeaconBlock{})
-	_ = interfaces.BeaconBlock(&altairBeaconBlock{})
-	_ = interfaces.BeaconBlockBody(&altairBeaconBlockBody{})
+	_ = prysm.SignedBeaconBlock(&altairSignedBeaconBlock{})
+	_ = prysm.BeaconBlock(&altairBeaconBlock{})
+	_ = prysm.BeaconBlockBody(&altairBeaconBlockBody{})
 )
 
 var (
@@ -35,7 +35,7 @@ type altairSignedBeaconBlock struct {
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
-func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) (prysm.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -49,7 +49,7 @@ func (w altairSignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w altairSignedBeaconBlock) Block() interfaces.BeaconBlock {
+func (w altairSignedBeaconBlock) Block() prysm.BeaconBlock {
 	return altairBeaconBlock{b: w.b.Block}
 }
 
@@ -61,7 +61,7 @@ func (w altairSignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w altairSignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+func (w altairSignedBeaconBlock) Copy() prysm.SignedBeaconBlock {
 	return altairSignedBeaconBlock{b: copyutil.CopySignedBeaconBlockAltair(w.b)}
 }
 
@@ -116,7 +116,7 @@ type altairBeaconBlock struct {
 
 // WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) (interfaces.BeaconBlock, error) {
+func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) (prysm.BeaconBlock, error) {
 	w := altairBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -145,7 +145,7 @@ func (w altairBeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w altairBeaconBlock) Body() interfaces.BeaconBlockBody {
+func (w altairBeaconBlock) Body() prysm.BeaconBlockBody {
 	return altairBeaconBlockBody{b: w.b.Body}
 }
 
@@ -200,7 +200,7 @@ type altairBeaconBlockBody struct {
 
 // WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) (interfaces.BeaconBlockBody, error) {
+func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) (prysm.BeaconBlockBody, error) {
 	w := altairBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

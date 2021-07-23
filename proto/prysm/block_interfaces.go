@@ -1,4 +1,4 @@
-package interfaces
+package prysm
 
 import (
 	ssz "github.com/ferranbt/fastssz"

@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -41,7 +41,7 @@ import (
 func ProcessBlockHeader(
 	_ context.Context,
 	beaconState state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block prysm.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(block); err != nil {
 		return nil, err

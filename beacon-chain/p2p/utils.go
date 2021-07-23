@@ -18,7 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -109,7 +109,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 // TODO: Figure out how to do a v1/v2 check.
-func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
+func metaDataFromConfig(cfg *Config) (prysm.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 

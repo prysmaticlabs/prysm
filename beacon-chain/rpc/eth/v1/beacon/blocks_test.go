@@ -11,8 +11,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -33,7 +33,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]prysm.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb_alpha.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()

@@ -3,7 +3,7 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -13,7 +13,7 @@ import (
 func Test_logStateTransitionData(t *testing.T) {
 	tests := []struct {
 		name string
-		b    interfaces.BeaconBlock
+		b    prysm.BeaconBlock
 		want string
 	}{
 		{name: "empty block body",

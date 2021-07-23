@@ -20,7 +20,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	p2pInterfaces "github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -929,9 +929,9 @@ func TestShouldResync(t *testing.T) {
 	}
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []p2pInterfaces.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []prysm.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]p2pInterfaces.SignedBeaconBlock, n)
+	ifaceBlocks := make([]prysm.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])

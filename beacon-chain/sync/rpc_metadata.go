@@ -7,7 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 )
@@ -35,7 +35,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfaces.Metadata, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (prysm.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 

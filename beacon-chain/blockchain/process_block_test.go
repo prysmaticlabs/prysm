@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -155,7 +155,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []prysm.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {

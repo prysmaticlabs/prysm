@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -60,7 +60,7 @@ type Service struct {
 	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocks        map[[32]byte]prysm.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
@@ -95,7 +95,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
-		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
+		initSyncBlocks:       make(map[[32]byte]prysm.SignedBeaconBlock),
 		justifiedBalances:    make([]uint64, 0),
 	}, nil
 }

@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -27,7 +27,7 @@ func (s *Service) CurrentSlot() types.Slot {
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (state.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b prysm.BeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -58,7 +58,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b prysm.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
@@ -121,7 +121,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b prysm.BeaconBlock) error {
 	finalizedSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	var newJustifiedBlockSigned interfaces.SignedBeaconBlock
+	var newJustifiedBlockSigned prysm.SignedBeaconBlock
 	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if s.hasInitSyncBlock(justifiedRoot) {
@@ -163,7 +163,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if newJustifiedBlock.Slot() <= jSlot {
 		return false, nil
 	}
-	var justifiedBlockSigned interfaces.SignedBeaconBlock
+	var justifiedBlockSigned prysm.SignedBeaconBlock
 	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
@@ -364,9 +364,9 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk prysm.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]interfaces.BeaconBlock, 0)
+	pendingNodes := make([]prysm.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())

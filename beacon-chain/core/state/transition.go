@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -25,24 +25,24 @@ import (
 )
 
 // processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, state.BeaconState, interfaces.SignedBeaconBlock) (state.BeaconState, error)
+type processFunc func(context.Context, state.BeaconState, prysm.SignedBeaconBlock) (state.BeaconState, error)
 
-var processDepositsFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+var processDepositsFunc = func(ctx context.Context, s state.BeaconState, blk prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessDeposits(ctx, s, blk.Block().Body().Deposits())
 }
-var processProposerSlashingFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+var processProposerSlashingFunc = func(ctx context.Context, s state.BeaconState, blk prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessProposerSlashings(ctx, s, blk.Block().Body().ProposerSlashings(), v.SlashValidator)
 }
 
-var processAttesterSlashingFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+var processAttesterSlashingFunc = func(ctx context.Context, s state.BeaconState, blk prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessAttesterSlashings(ctx, s, blk.Block().Body().AttesterSlashings(), v.SlashValidator)
 }
 
-var processEth1DataFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+var processEth1DataFunc = func(ctx context.Context, s state.BeaconState, blk prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessEth1DataInBlock(ctx, s, blk.Block().Body().Eth1Data())
 }
 
-var processExitFunc = func(ctx context.Context, s state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+var processExitFunc = func(ctx context.Context, s state.BeaconState, blk prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
@@ -81,7 +81,7 @@ var processingPipeline = []processFunc{
 func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed prysm.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -308,7 +308,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 func ProcessBlock(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed prysm.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
@@ -329,7 +329,7 @@ func ProcessBlock(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b prysm.SignedBeaconBlock) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}

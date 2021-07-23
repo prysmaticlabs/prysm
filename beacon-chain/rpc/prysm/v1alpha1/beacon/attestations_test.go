@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -157,7 +157,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetRoot := [32]byte{7, 8, 9}
 	targetEpoch := types.Epoch(7)
 
-	blocks := []interfaces.SignedBeaconBlock{
+	blocks := []prysm.SignedBeaconBlock{
 		wrapper.WrappedPhase0SignedBeaconBlock(
 			testutil.HydrateSignedBeaconBlock(
 				&ethpb.SignedBeaconBlock{

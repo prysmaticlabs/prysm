@@ -1,4 +1,4 @@
-package interfaces
+package prysm
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"

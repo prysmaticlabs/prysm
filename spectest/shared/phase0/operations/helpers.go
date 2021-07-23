@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -22,7 +22,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, state.BeaconState, interfaces.SignedBeaconBlock) (state.BeaconState, error)
+type blockOperation func(context.Context, state.BeaconState, prysm.SignedBeaconBlock) (state.BeaconState, error)
 
 // RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
 // passed in block operation function and checks the post state with the expected post state.

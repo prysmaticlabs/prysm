@@ -16,7 +16,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -254,7 +254,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
-			processBlock := func(block interfaces.SignedBeaconBlock) error {
+			processBlock := func(block prysm.SignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
@@ -265,7 +265,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				return mc.ReceiveBlock(ctx, block, root)
 			}
 
-			var blocks []interfaces.SignedBeaconBlock
+			var blocks []prysm.SignedBeaconBlock
 			for data := range queue.fetchedData {
 				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
@@ -525,7 +525,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		response := &fetchRequestResponse{
 			pid: "abc",
-			blocks: []interfaces.SignedBeaconBlock{
+			blocks: []prysm.SignedBeaconBlock{
 				wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
 				wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
 			},
@@ -534,7 +534,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			state: stateScheduled,
 		}
 		assert.Equal(t, peer.ID(""), fsm.pid)
-		assert.DeepSSZEqual(t, []interfaces.SignedBeaconBlock(nil), fsm.blocks)
+		assert.DeepSSZEqual(t, []prysm.SignedBeaconBlock(nil), fsm.blocks)
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
@@ -621,7 +621,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.machines[256].pid = pidDataParsed
-		queue.smm.machines[256].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[256].blocks = []prysm.SignedBeaconBlock{
 			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
 		}
 
@@ -651,7 +651,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[320].blocks = []prysm.SignedBeaconBlock{
 			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
 		}
 
@@ -678,7 +678,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[320].blocks = []prysm.SignedBeaconBlock{
 			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
 		}
 
@@ -1299,7 +1299,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	})
 
 	require.NoError(t, queue.start())
-	isProcessedBlock := func(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
+	isProcessedBlock := func(ctx context.Context, blk prysm.SignedBeaconBlock, blkRoot [32]byte) bool {
 		finalizedSlot, err := helpers.StartSlot(mc.FinalizedCheckpt().Epoch)
 		if err != nil {
 			return false
