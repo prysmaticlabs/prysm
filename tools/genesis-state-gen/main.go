@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"

@@ -9,8 +9,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 // BeaconState has read and write access to beacon state methods.

@@ -3,7 +3,7 @@ package v1
 import (
 	"testing"
 
-	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 

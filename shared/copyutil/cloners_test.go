@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )

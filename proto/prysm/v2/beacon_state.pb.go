@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/proto/prysm/v2/types.proto
+// source: proto/prysm/v2/types.proto
 
 package v2
 

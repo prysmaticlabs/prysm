@@ -3,7 +3,7 @@ syntax = "proto3";
 package ethereum.prysm.v2;
 
 import "proto/prysm/v1alpha1/beacon_block.proto";
-import "proto/proto/prysm/v2/types.proto";
+import "proto/prysm/v2/types.proto";
 
 option csharp_namespace = "Ethereum.Prysm.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";

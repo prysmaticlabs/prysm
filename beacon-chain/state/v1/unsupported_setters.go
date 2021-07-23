@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 // AppendCurrentParticipationBits is not supported for phase 0 beacon state.

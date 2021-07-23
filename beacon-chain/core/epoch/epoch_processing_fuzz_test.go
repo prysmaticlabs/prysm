@@ -5,7 +5,7 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 

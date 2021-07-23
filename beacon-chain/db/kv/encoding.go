@@ -7,8 +7,8 @@ import (
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
-	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
