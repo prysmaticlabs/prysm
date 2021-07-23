@@ -12,7 +12,7 @@ go_library(
         "//fuzz:__pkg__",
     ],
     deps = [
-        "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/testutil:go_default_library",
     ],
 )

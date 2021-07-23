@@ -16,6 +16,7 @@ ssz_gen_marshal(
     srcs = ["inputs.go"],
     includes = [
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
@@ -66,6 +67,7 @@ go_fuzz_test(
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//proto/interfaces:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
@@ -107,6 +109,7 @@ go_fuzz_test(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
@@ -131,6 +134,7 @@ go_fuzz_test(
         "//beacon-chain/p2p/encoder:go_default_library",
         "//shared/params:go_default_library",
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
     ] + COMMON_DEPS,
 )
 
@@ -146,6 +150,7 @@ go_fuzz_test(
     max_len = 30000000,
     deps = [
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//shared/params:go_default_library",
@@ -187,6 +192,7 @@ go_library(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//fuzz/testing:go_default_library",
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -214,6 +220,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
     ] + SSZ_DEPS,  # keep
 )
