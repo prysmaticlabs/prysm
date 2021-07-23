@@ -43,7 +43,7 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 		},
 		}
 		return &slashpb.AttesterSlashingResponse{
-			AttesterSlashing: slashings,
+			AttesterSlashings: slashings,
 		}, nil
 	}
 	return nil, nil
@@ -73,7 +73,7 @@ func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBl
 		},
 		}
 		return &slashpb.ProposerSlashingResponse{
-			ProposerSlashing: slashings,
+			ProposerSlashings: slashings,
 		}, nil
 	}
 	return nil, nil
