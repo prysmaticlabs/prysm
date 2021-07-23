@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -26,7 +26,7 @@ func TestService_Send(t *testing.T) {
 		cfg:  &Config{},
 	}
 
-	msg := &pb.Fork{
+	msg := &statepb.Fork{
 		CurrentVersion:  []byte("fooo"),
 		PreviousVersion: []byte("barr"),
 		Epoch:           55,
@@ -36,12 +36,12 @@ func TestService_Send(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	topic := "/testing/1"
-	RPCTopicMappings[topic] = new(pb.Fork)
+	RPCTopicMappings[topic] = new(statepb.Fork)
 	defer func() {
 		delete(RPCTopicMappings, topic)
 	}()
 	p2.SetStreamHandler(topic+"/ssz_snappy", func(stream network.Stream) {
-		rcvd := &pb.Fork{}
+		rcvd := &statepb.Fork{}
 		require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
 		_, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd)
 		require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestService_Send(t *testing.T) {
 
 	testutil.WaitTimeout(&wg, 1*time.Second)
 
-	rcvd := &pb.Fork{}
+	rcvd := &statepb.Fork{}
 	require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
 	if !proto.Equal(rcvd, msg) {
 		t.Errorf("Expected identical message to be received. got %v want %v", rcvd, msg)

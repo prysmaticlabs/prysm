@@ -5,8 +5,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
 // MockStateManager is a fake implementation of StateManager.
@@ -86,7 +86,7 @@ func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (if
 func (m *MockStateManager) RecoverStateSummary(
 	ctx context.Context,
 	blockRoot [32]byte,
-) (*ethereum_beacon_p2p_v1.StateSummary, error) {
+) (*statepb.StateSummary, error) {
 	panic("implement me")
 }
 

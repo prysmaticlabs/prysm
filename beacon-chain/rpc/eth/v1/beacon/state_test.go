@@ -7,9 +7,9 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
@@ -92,8 +92,8 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetStateFork(t *testing.T) {
-	fillFork := func(state *pb.BeaconState) error {
-		state.Fork = &pb.Fork{
+	fillFork := func(state *statepb.BeaconState) error {
+		state.Fork = &statepb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
@@ -120,7 +120,7 @@ func TestGetStateFork(t *testing.T) {
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
-	fillCheckpoints := func(state *pb.BeaconState) error {
+	fillCheckpoints := func(state *statepb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,

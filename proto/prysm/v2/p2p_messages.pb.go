@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/beacon/p2p/v1/messages.proto
+// source: proto/prysm/v2/messages.proto
 
-package ethereum_beacon_p2p_v1
+package v2
 
 import (
 	reflect "reflect"

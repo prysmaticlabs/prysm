@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -25,7 +25,7 @@ import (
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
-	var st *pb.BeaconState
+	var st *statepb.BeaconState
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 		return cached, nil
 	}
 
-	var st *pb.BeaconState
+	var st *statepb.BeaconState
 	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
@@ -198,8 +198,8 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // creates state from marshaled proto state bytes.
-func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
-	protoState := &pb.BeaconState{}
+func createState(ctx context.Context, enc []byte) (*statepb.BeaconState, error) {
+	protoState := &statepb.BeaconState{}
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
@@ -267,7 +267,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 		}
 		return b.Block.Slot, nil
 	}
-	stateSummary := &pb.StateSummary{}
+	stateSummary := &statepb.StateSummary{}
 	if err := decode(ctx, enc, stateSummary); err != nil {
 		return 0, err
 	}

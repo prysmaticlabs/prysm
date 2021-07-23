@@ -5,19 +5,19 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *pbp2p.BeaconStateAltair) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconStateAltair))
+func InitializeFromProto(st *statepb.BeaconStateAltair) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*statepb.BeaconStateAltair))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *statepb.BeaconStateAltair) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}

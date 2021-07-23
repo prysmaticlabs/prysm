@@ -9,7 +9,7 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 go_proto_library(
     name = "v1_go_proto",
     compiler = "@prysm//:cast_proto_compiler",
-    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1",
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v2/state",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -34,11 +34,7 @@ ssz_gen_marshal(
         "//proto/prysm/v1alpha1:go_default_library",
     ],
     objs = [
-        "BeaconBlocksByRangeRequest",
         "DepositMessage",
-        "ENRForkID",
-        "MetaDataV0",
-        "MetaDataV1",
         "Fork",
         "ForkData",
         "HistoricalBatch",
@@ -62,8 +58,7 @@ go_library(
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
-        "messages.proto",
-        "types.proto",
+        "beacon_state.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

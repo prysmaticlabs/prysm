@@ -16,10 +16,10 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -394,7 +394,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	s, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
@@ -484,7 +484,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	s, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
