@@ -951,7 +951,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex >= totalEndpoints {
 		nextIndex = 0
 	}
-        s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
+	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
 	if nextIndex != currIndex {
 		log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 	}
