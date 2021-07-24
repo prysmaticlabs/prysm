@@ -2,7 +2,7 @@ package cache
 
 import (
 	lru "github.com/hashicorp/golang-lru"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 var (
@@ -40,10 +40,10 @@ func (c *HighestAttestationCache) Get(setKey uint64) (map[uint64]*slashpb.Highes
 func (c *HighestAttestationCache) Set(setKey uint64, highest *slashpb.HighestAttestation) {
 	set, ok := c.Get(setKey)
 	if ok {
-		set[highest.ValidatorId] = highest
+		set[highest.ValidatorIndex] = highest
 	} else {
 		set = map[uint64]*slashpb.HighestAttestation{
-			highest.ValidatorId: highest,
+			highest.ValidatorIndex: highest,
 		}
 		c.cache.Add(setKey, set)
 	}

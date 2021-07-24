@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -12,7 +12,7 @@ import (
 func TestInitializeFromProto(t *testing.T) {
 	type test struct {
 		name  string
-		state *pb.BeaconStateAltair
+		state *statepb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -23,14 +23,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pb.BeaconStateAltair{},
+			state: &statepb.BeaconStateAltair{},
 		},
 		// TODO: Add full state. Blocked by testutil migration.
 	}
@@ -49,7 +49,7 @@ func TestInitializeFromProto(t *testing.T) {
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	type test struct {
 		name  string
-		state *pb.BeaconStateAltair
+		state *statepb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -60,14 +60,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pb.BeaconStateAltair{},
+			state: &statepb.BeaconStateAltair{},
 		},
 		// TODO: Add full state. Blocked by testutil migration.
 	}

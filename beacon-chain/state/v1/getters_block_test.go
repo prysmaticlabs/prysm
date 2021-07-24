@@ -3,20 +3,20 @@ package v1
 import (
 	"testing"
 
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {
-	s, err := InitializeFromProto(&pbp2p.BeaconState{})
+	s, err := InitializeFromProto(&statepb.BeaconState{})
 	require.NoError(t, err)
 	got := s.LatestBlockHeader()
 	require.DeepEqual(t, (*v1alpha1.BeaconBlockHeader)(nil), got)
 
 	want := &v1alpha1.BeaconBlockHeader{Slot: 100}
-	s, err = InitializeFromProto(&pbp2p.BeaconState{LatestBlockHeader: want})
+	s, err = InitializeFromProto(&statepb.BeaconState{LatestBlockHeader: want})
 	require.NoError(t, err)
 	got = s.LatestBlockHeader()
 	require.DeepEqual(t, want, got)
@@ -27,13 +27,13 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 }
 
 func TestBeaconState_BlockRoots(t *testing.T) {
-	s, err := InitializeFromProto(&pbp2p.BeaconState{})
+	s, err := InitializeFromProto(&statepb.BeaconState{})
 	require.NoError(t, err)
 	got := s.BlockRoots()
 	require.DeepEqual(t, ([][]byte)(nil), got)
 
 	want := [][]byte{{'a'}}
-	s, err = InitializeFromProto(&pbp2p.BeaconState{BlockRoots: want})
+	s, err = InitializeFromProto(&statepb.BeaconState{BlockRoots: want})
 	require.NoError(t, err)
 	got = s.BlockRoots()
 	require.DeepEqual(t, want, got)
@@ -44,14 +44,14 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {
-	s, err := InitializeFromProto(&pbp2p.BeaconState{})
+	s, err := InitializeFromProto(&statepb.BeaconState{})
 	require.NoError(t, err)
 	got, err := s.BlockRootAtIndex(0)
 	require.NoError(t, err)
 	require.DeepEqual(t, ([]byte)(nil), got)
 
 	r := [][]byte{{'a'}}
-	s, err = InitializeFromProto(&pbp2p.BeaconState{BlockRoots: r})
+	s, err = InitializeFromProto(&statepb.BeaconState{BlockRoots: r})
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)

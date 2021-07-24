@@ -3,7 +3,7 @@ syntax = "proto3";
 package ethereum.prysm.v2;
 
 import "proto/prysm/v1alpha1/beacon_block.proto";
-import "proto/beacon/p2p/v1/types.proto";
+import "proto/prysm/v2/state/beacon_state.proto";
 
 option csharp_namespace = "Ethereum.Prysm.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
@@ -17,7 +17,7 @@ option php_namespace = "Ethereum\\Prysm\\v2";
 message ETH1ChainData {
     LatestETH1Data current_eth1_data = 1 ;
     ChainStartData chainstart_data = 2;
-    ethereum.beacon.p2p.v1.BeaconState beacon_state = 3;
+    ethereum.prysm.v2.state.BeaconState beacon_state = 3;
     SparseMerkleTrie trie = 4;
     repeated DepositContainer deposit_containers = 5;
 }

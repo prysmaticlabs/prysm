@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -13,7 +13,7 @@ import (
 
 // PendingAttRootWithHasher describes a method from which the hash tree root
 // of a pending attestation is returned.
-func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
+func PendingAttRootWithHasher(hasher htrutils.HashFn, att *statepb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte
 
 	// Bitfield.
@@ -43,7 +43,7 @@ func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation
 
 // PendingAttEncKey returns the encoded key in bytes of input `pendingAttestation`,
 // the returned key bytes can be used for caching purposes.
-func PendingAttEncKey(att *pb.PendingAttestation) []byte {
+func PendingAttEncKey(att *statepb.PendingAttestation) []byte {
 	enc := make([]byte, 2192)
 
 	if att != nil {

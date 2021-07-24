@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/golang/snappy"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -56,7 +56,7 @@ func migrateStateValidators(tx *bolt.Tx) error {
 	ctx := context.Background()
 	c := stateBkt.Cursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
-		state := &v1.BeaconState{}
+		state := &statepb.BeaconState{}
 		if decodeErr := decode(ctx, v, state); decodeErr != nil {
 			return decodeErr
 		}

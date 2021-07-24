@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,7 +42,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Misc fields checks.
 	assert.Equal(t, types.Slot(0), newState.Slot(), "Slot was not correctly initialized")
-	if !proto.Equal(newState.Fork(), &pb.Fork{
+	if !proto.Equal(newState.Fork(), &statepb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
 		Epoch:           genesisEpoch,
@@ -76,10 +76,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
 	currAtt, err := newState.CurrentEpochAttestations()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, currAtt, "CurrentEpochAttestations was not correctly initialized")
+	assert.DeepSSZEqual(t, []*statepb.PendingAttestation{}, currAtt, "CurrentEpochAttestations was not correctly initialized")
 	prevAtt, err := newState.CurrentEpochAttestations()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
+	assert.DeepSSZEqual(t, []*statepb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
@@ -96,16 +96,16 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	require.NoError(t, err)
 	state1, err := state.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	state2, err := state.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state, err := state.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
 	pbState1, err := v1.ProtobufBeaconState(state1.CloneInnerState())
 	require.NoError(t, err)
-	pbState2, err := v1.ProtobufBeaconState(state2.CloneInnerState())
+	pbstate, err := v1.ProtobufBeaconState(state.CloneInnerState())
 	require.NoError(t, err)
 
 	root1, err1 := hashutil.HashProto(pbState1)
-	root2, err2 := hashutil.HashProto(pbState2)
+	root2, err2 := hashutil.HashProto(pbstate)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)
