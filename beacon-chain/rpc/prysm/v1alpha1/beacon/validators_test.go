@@ -453,7 +453,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 	}
 	// request uses HeadFetcher to get reqState.
 	req1 := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
-	wanted := "requested state is nil"
+	wanted := "Requested state is nil"
 	_, err := bs.ListValidators(context.Background(), req1)
 	assert.ErrorContains(t, wanted, err)
 
