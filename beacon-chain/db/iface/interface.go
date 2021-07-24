@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
@@ -22,16 +22,16 @@ import (
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
 	// Block related methods.
-	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.SignedBeaconBlock, [][32]byte, error)
+	Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
+	Blocks(ctx context.Context, f *filters.QueryFilter) ([]block.SignedBeaconBlock, [][32]byte, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
-	BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []interfaces.SignedBeaconBlock, error)
+	BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []block.SignedBeaconBlock, error)
 	BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
-	GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
-	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
+	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	GenesisState(ctx context.Context) (state.BeaconState, error)
@@ -65,8 +65,8 @@ type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
 	// Block related methods.
-	SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error
-	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
+	SaveBlock(ctx context.Context, block block.SignedBeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
@@ -98,7 +98,7 @@ type HeadAccessDatabase interface {
 	NoHeadAccessDatabase
 
 	// Block related methods.
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 
 	// Genesis operations.

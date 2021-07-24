@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -184,7 +184,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 

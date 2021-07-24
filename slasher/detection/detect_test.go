@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
@@ -364,7 +364,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 		{
 			name: "update only target to higher",
 			savedHighest: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 1,
 				HighestTargetEpoch: 2,
 			},
@@ -378,7 +378,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 1,
 				HighestTargetEpoch: 4,
 			},
@@ -386,7 +386,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 		{
 			name: "update target and source to higher",
 			savedHighest: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 1,
 				HighestTargetEpoch: 2,
 			},
@@ -400,7 +400,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 3,
 				HighestTargetEpoch: 4,
 			},
@@ -408,7 +408,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 		{
 			name: "no update",
 			savedHighest: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 1,
 				HighestTargetEpoch: 2,
 			},
@@ -422,7 +422,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 1,
 				HighestTargetEpoch: 2,
 			},
@@ -430,7 +430,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 		{
 			name: "update target to higher when source is lower(should be a slashable attestation)",
 			savedHighest: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 5,
 				HighestTargetEpoch: 6,
 			},
@@ -444,7 +444,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 5,
 				HighestTargetEpoch: 8,
 			},
@@ -452,7 +452,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 		{
 			name: "update source to higher when target is same",
 			savedHighest: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 3,
 				HighestTargetEpoch: 6,
 			},
@@ -466,7 +466,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
-				ValidatorId:        1,
+				ValidatorIndex:     1,
 				HighestSourceEpoch: 4,
 				HighestTargetEpoch: 6,
 			},
@@ -486,7 +486,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 
 			// Update and assert.
 			require.NoError(t, ds.UpdateHighestAttestation(ctx, tt.incomingAtt))
-			h, err := db.HighestAttestation(ctx, tt.savedHighest.ValidatorId)
+			h, err := db.HighestAttestation(ctx, tt.savedHighest.ValidatorIndex)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected.HighestSourceEpoch, h.HighestSourceEpoch)
 			assert.Equal(t, tt.expected.HighestTargetEpoch, h.HighestTargetEpoch)

@@ -12,8 +12,8 @@ import (
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -83,7 +83,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 //            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
 //            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
 //                store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 
@@ -195,7 +195,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return s.handleEpochBoundary(ctx, postState)
 }
 
-func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock,
+func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock,
 	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
@@ -271,7 +271,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
-func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interfaces.SignedBeaconBlock,
+func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.SignedBeaconBlock,
 	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block()
 
@@ -353,7 +353,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte,
+func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock, root [32]byte,
 	st state.BeaconState) error {
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
@@ -375,7 +375,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	return nil
 }
 
-func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock,
+func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.BeaconBlock,
 	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
@@ -392,7 +392,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState, initSync bool) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.SignedBeaconBlock, st state.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {

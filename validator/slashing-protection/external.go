@@ -28,7 +28,7 @@ func (s *Service) CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeac
 		log.Errorf("External slashing block protection returned an error: %v", err)
 		return false, err
 	}
-	if ps != nil && ps.ProposerSlashing != nil {
+	if ps != nil && len(ps.ProposerSlashings) != 0 {
 		log.Warn("External slashing proposal protection found the block to be slashable")
 		return false, nil
 	}
@@ -57,7 +57,7 @@ func (s *Service) CommitAttestation(ctx context.Context, attestation *ethpb.Inde
 		log.Errorf("External slashing attestation protection returned an error: %v", err)
 		return false
 	}
-	if as != nil && as.AttesterSlashing != nil {
+	if as != nil && len(as.AttesterSlashings) != 0 {
 		log.Warnf("External slashing attestation protection found the attestation to be slashable: %v", as)
 		return false
 	}
