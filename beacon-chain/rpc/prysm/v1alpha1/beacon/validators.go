@@ -228,6 +228,9 @@ func (bs *Server) ListValidators(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get requested state: %v", err)
 	}
+	if reqState == nil || reqState.IsNil() {
+		return nil, status.Error(codes.Internal, "requested state is nil")
+	}
 
 	s, err := helpers.StartSlot(requestedEpoch)
 	if err != nil {

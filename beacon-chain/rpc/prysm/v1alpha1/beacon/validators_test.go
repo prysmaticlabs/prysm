@@ -433,6 +433,40 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	assert.ErrorContains(t, wanted, err)
 }
 
+func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
+	bs := &Server{
+		BeaconDB: beaconDB,
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 1.
+			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
+		},
+		HeadFetcher: &mock.ChainService{
+			State: nil,
+		},
+		StateGen: &stategen.MockStateManager{
+			StatesBySlot: map[types.Slot]state.BeaconState{
+				0: nil,
+			},
+		},
+	}
+	// request uses HeadFetcher to get reqState.
+	req1 := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	wanted := "requested state is nil"
+	_, err := bs.ListValidators(context.Background(), req1)
+	assert.ErrorContains(t, wanted, err)
+
+	// request uses StateGen to get reqState.
+	req2 := &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
+		PageToken:   strconv.Itoa(1),
+		PageSize:    100,
+	}
+	_, err = bs.ListValidators(context.Background(), req2)
+	assert.ErrorContains(t, wanted, err)
+}
+
 func TestServer_ListValidators_NoResults(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 
