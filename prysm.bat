@@ -76,7 +76,6 @@ if "%~1"=="beacon-chain" (
 		curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sig
     )
-	goto startprocess
 )
 
 if "%~1"=="validator" (
@@ -93,7 +92,6 @@ if "%~1"=="validator" (
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sig
     )
-	goto startprocess
 )
 
 if "%~1"=="client-stats" (
@@ -110,7 +108,6 @@ if "%~1"=="client-stats" (
         curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sig
     )
-	goto startprocess
 )
 
 if "%~1"=="slasher" (
@@ -118,7 +115,6 @@ if "%~1"=="slasher" (
     exit /b 1
 )
 
-:startprocess
 if "%~1"=="beacon-chain" ( set process=%BEACON_CHAIN_REAL%)
 if "%~1"=="validator" ( set process=%VALIDATOR_REAL%) 
 if "%~1"=="client-stats" ( set process=%CLIENT_STATS_REAL%)
