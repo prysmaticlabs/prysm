@@ -184,7 +184,21 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest)
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
 func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceAttestationData")
+	defer span.End()
+
+	v1alpha1req := &v1alpha1.AttestationDataRequest{
+		Slot:           req.Slot,
+		CommitteeIndex: req.CommitteeIndex,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetAttestationData(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	attData := migration.V1Alpha1AttDataToV1(v1alpha1resp)
+
+	return &v1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.

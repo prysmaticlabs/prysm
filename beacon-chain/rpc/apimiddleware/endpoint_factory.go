@@ -50,6 +50,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
+		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 	}
 }
@@ -258,6 +259,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			GetResponse:        &produceBlockResponseJson{},
 			RequestURLLiterals: []string{"slot"},
 			RequestQueryParams: []gateway.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/validator/attestation_data":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &produceAttestationDataResponseJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/validator/aggregate_attestation":
 		endpoint = gateway.Endpoint{
