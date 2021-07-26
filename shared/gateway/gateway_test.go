@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -91,4 +93,28 @@ func TestGateway_StartStop(t *testing.T) {
 
 	err := g.Stop()
 	require.NoError(t, err)
+}
+
+func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(&app, set, nil)
+
+	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
+	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
+	rpcHost := ctx.String(flags.RPCHost.Name)
+	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
+	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+
+	g := New(
+		ctx.Context,
+		[]PbMux{},
+		/* muxHandler */ nil,
+		selfAddress,
+		gatewayAddress,
+	)
+
+	writer := httptest.NewRecorder()
+	g.mux.ServeHTTP(writer, &http.Request{Method: "GET", Host: "localhost", URL: &url.URL{Path: "/foo"}})
+	assert.Equal(t, http.StatusNotFound, writer.Code)
 }
