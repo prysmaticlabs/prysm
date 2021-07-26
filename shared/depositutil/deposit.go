@@ -5,8 +5,8 @@ package depositutil
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -29,7 +29,7 @@ import (
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
-	depositMessage := &p2ppb.DepositMessage{
+	depositMessage := &statepb.DepositMessage{
 		PublicKey:             depositKey.PublicKey().Marshal(),
 		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
@@ -48,7 +48,7 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := (&p2ppb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
+	root, err := (&statepb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -93,7 +93,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	di := &p2ppb.DepositMessage{
+	di := &statepb.DepositMessage{
 		PublicKey:             ddCopy.PublicKey,
 		WithdrawalCredentials: ddCopy.WithdrawalCredentials,
 		Amount:                ddCopy.Amount,
@@ -102,7 +102,7 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	signingData := &p2ppb.SigningData{
+	signingData := &statepb.SigningData{
 		ObjectRoot: root[:],
 		Domain:     domain,
 	}

@@ -7,10 +7,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -24,7 +24,7 @@ func TestInitializeFromProto(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pbp2p.BeaconState
+		state *statepb.BeaconState
 		error string
 	}
 	initTests := []test{
@@ -35,14 +35,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pbp2p.BeaconState{
+			state: &statepb.BeaconState{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pbp2p.BeaconState{},
+			state: &statepb.BeaconState{},
 		},
 		{
 			name:  "full state",
@@ -67,7 +67,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pbp2p.BeaconState
+		state *statepb.BeaconState
 		error string
 	}
 	initTests := []test{
@@ -78,14 +78,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pbp2p.BeaconState{
+			state: &statepb.BeaconState{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pbp2p.BeaconState{},
+			state: &statepb.BeaconState{},
 		},
 		{
 			name:  "full state",
@@ -109,20 +109,20 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 
 	type test struct {
 		name        string
-		stateModify func(beaconState iface.BeaconState) (iface.BeaconState, error)
+		stateModify func(beaconState state.BeaconState) (state.BeaconState, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -132,7 +132,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -178,20 +178,20 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 
 	type test struct {
 		name        string
-		stateModify func(iface.BeaconState) (iface.BeaconState, error)
+		stateModify func(state.BeaconState) (state.BeaconState, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -201,7 +201,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+			stateModify: func(beaconState state.BeaconState) (state.BeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -256,11 +256,11 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 }
 
 func TestBeaconState_ToProto(t *testing.T) {
-	source, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, func(state *pbp2p.BeaconState) error {
+	source, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, func(state *statepb.BeaconState) error {
 		state.GenesisTime = 1
 		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
 		state.Slot = 2
-		state.Fork = &pbp2p.Fork{
+		state.Fork = &statepb.Fork{
 			PreviousVersion: bytesutil.PadTo([]byte("123"), 4),
 			CurrentVersion:  bytesutil.PadTo([]byte("456"), 4),
 			Epoch:           3,
@@ -299,7 +299,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 		state.Balances = []uint64{14}
 		state.RandaoMixes = [][]byte{bytesutil.PadTo([]byte("randaomixes"), 32)}
 		state.Slashings = []uint64{15}
-		state.PreviousEpochAttestations = []*pbp2p.PendingAttestation{{
+		state.PreviousEpochAttestations = []*statepb.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{16},
 			Data: &eth.AttestationData{
 				Slot:            17,
@@ -317,7 +317,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 			InclusionDelay: 21,
 			ProposerIndex:  22,
 		}}
-		state.CurrentEpochAttestations = []*pbp2p.PendingAttestation{{
+		state.CurrentEpochAttestations = []*statepb.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{23},
 			Data: &eth.AttestationData{
 				Slot:            24,

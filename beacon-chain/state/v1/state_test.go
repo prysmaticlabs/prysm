@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -60,7 +60,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&pb.BeaconState{
+	st, err := InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -102,6 +102,6 @@ func TestStateTrie_IsNil(t *testing.T) {
 	emptyProto := &BeaconState{state: nil}
 	assert.Equal(t, true, emptyProto.IsNil())
 
-	nonNilState := &BeaconState{state: &pb.BeaconState{}}
+	nonNilState := &BeaconState{state: &statepb.BeaconState{}}
 	assert.Equal(t, false, nonNilState.IsNil())
 }

@@ -3,8 +3,8 @@ package v1
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 var (
@@ -18,10 +18,10 @@ type readOnlyValidator struct {
 	validator *ethpb.Validator
 }
 
-var _ = iface.ReadOnlyValidator(&readOnlyValidator{})
+var _ = state.ReadOnlyValidator(&readOnlyValidator{})
 
 // NewValidator initializes the read only wrapper for validator.
-func NewValidator(v *ethpb.Validator) (iface.ReadOnlyValidator, error) {
+func NewValidator(v *ethpb.Validator) (state.ReadOnlyValidator, error) {
 	rov := &readOnlyValidator{
 		validator: v,
 	}

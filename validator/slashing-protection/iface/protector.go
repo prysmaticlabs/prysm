@@ -3,7 +3,7 @@ package iface
 import (
 	"context"
 
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // Protector interface defines the methods of the service that provides slashing protection.

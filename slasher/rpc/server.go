@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -39,7 +39,7 @@ func (s *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAt
 	defer span.End()
 
 	ret := make([]*slashpb.HighestAttestation, 0)
-	for _, id := range req.ValidatorIds {
+	for _, id := range req.ValidatorIndices {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -50,7 +50,7 @@ func (s *Server) HighestAttestations(ctx context.Context, req *slashpb.HighestAt
 		}
 		if res != nil {
 			ret = append(ret, &slashpb.HighestAttestation{
-				ValidatorId:        res.ValidatorId,
+				ValidatorIndex:     res.ValidatorIndex,
 				HighestTargetEpoch: res.HighestTargetEpoch,
 				HighestSourceEpoch: res.HighestSourceEpoch,
 			})
@@ -145,7 +145,7 @@ func (s *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedA
 		}
 	}
 	return &slashpb.AttesterSlashingResponse{
-		AttesterSlashing: slashings,
+		AttesterSlashings: slashings,
 	}, nil
 }
 
@@ -203,7 +203,7 @@ func (s *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBl
 	psr := &slashpb.ProposerSlashingResponse{}
 	if slashing != nil {
 		psr = &slashpb.ProposerSlashingResponse{
-			ProposerSlashing: []*ethpb.ProposerSlashing{slashing},
+			ProposerSlashings: []*ethpb.ProposerSlashing{slashing},
 		}
 	}
 	return psr, nil

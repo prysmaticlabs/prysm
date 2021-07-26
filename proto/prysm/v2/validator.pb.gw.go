@@ -18,7 +18,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -671,7 +671,7 @@ func RegisterBeaconNodeValidatorAltairHandlerClient(ctx context.Context, mux *ru
 }
 
 var (
-	pattern_BeaconNodeValidatorAltair_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v2prysm", "validator", "block"}, ""))
+	pattern_BeaconNodeValidatorAltair_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "block"}, ""))
 
 	pattern_BeaconNodeValidatorAltair_ProposeBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "block"}, ""))
 

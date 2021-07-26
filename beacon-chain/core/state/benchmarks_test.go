@@ -6,10 +6,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -61,7 +61,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PreGenState2FullEpochs()
+	beaconState, err := benchutil.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
@@ -81,7 +81,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 }
 
 func BenchmarkHashTreeRoot_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenState2FullEpochs()
+	beaconState, err := benchutil.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -92,7 +92,7 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 }
 
 func BenchmarkHashTreeRootState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenState2FullEpochs()
+	beaconState, err := benchutil.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	ctx := context.Background()
@@ -109,7 +109,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 }
 
 func BenchmarkMarshalState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenState2FullEpochs()
+	beaconState, err := benchutil.PreGenstateFullEpochs()
 	require.NoError(b, err)
 	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)
@@ -133,7 +133,7 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 }
 
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenState2FullEpochs()
+	beaconState, err := benchutil.PreGenstateFullEpochs()
 	require.NoError(b, err)
 	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)
@@ -146,7 +146,7 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			require.NoError(b, proto.Unmarshal(protoObject, &pb.BeaconState{}))
+			require.NoError(b, proto.Unmarshal(protoObject, &statepb.BeaconState{}))
 		}
 	})
 
@@ -154,14 +154,14 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			sszState := &pb.BeaconState{}
+			sszState := &statepb.BeaconState{}
 			require.NoError(b, sszState.UnmarshalSSZ(sszObject))
 		}
 	})
 }
 
-func clonedStates(beaconState iface.BeaconState) []iface.BeaconState {
-	clonedStates := make([]iface.BeaconState, runAmount)
+func clonedStates(beaconState state.BeaconState) []state.BeaconState {
+	clonedStates := make([]state.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
 		clonedStates[i] = beaconState.Copy()
 	}

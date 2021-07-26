@@ -26,15 +26,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
@@ -81,7 +81,7 @@ var (
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() iface.BeaconState
+	PreGenesisState() state.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -146,7 +146,7 @@ type Service struct {
 	chainStartData          *protodb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         iface.BeaconState
+	preGenesisState         state.BeaconState
 	bsUpdater               BeaconNodeStatsUpdater
 }
 
@@ -172,7 +172,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
-	genState, err := state.EmptyGenesisState()
+	genState, err := core.EmptyGenesisState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not setup genesis state")
 	}
@@ -295,7 +295,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() iface.BeaconState {
+func (s *Service) PreGenesisState() state.BeaconState {
 	return s.preGenesisState
 }
 
@@ -951,10 +951,10 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex >= totalEndpoints {
 		nextIndex = 0
 	}
+	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
 	if nextIndex != currIndex {
 		log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 	}
-	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
 }
 
 // initializes our service from the provided eth1data object by initializing all the relevant

@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -62,7 +62,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
-		genesisState := &pb.BeaconState{}
+		genesisState := &statepb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
@@ -132,7 +132,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() iface.BeaconState {
+func (s *Service) PreGenesisState() state.BeaconState {
 	return &v1.BeaconState{}
 }
 
@@ -161,7 +161,7 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 	return []*ethpb.Deposit{}
 }
 
-func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
+func (s *Service) saveGenesisState(ctx context.Context, genesisState state.BeaconState) error {
 	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
 	}

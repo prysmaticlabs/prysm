@@ -3,7 +3,7 @@ package migration
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func V1Alpha1ConnectionStateToV1(connState ethpb_alpha.ConnectionState) ethpb.ConnectionState {
