@@ -3,7 +3,9 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "deprecated_setters.go",
         "field_trie.go",
+        "setters.go",
         "state_trie.go",
         "types.go",
     ],
@@ -25,10 +27,16 @@ go_library(
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
+        "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v2/state:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/copyutil:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
@@ -36,6 +44,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "deprecated_setters_test.go",
         "field_trie_test.go",
         "state_trie_test.go",
     ],
