@@ -1,4 +1,4 @@
-package interfaces
+package metadata
 
 import (
 	ssz "github.com/ferranbt/fastssz"

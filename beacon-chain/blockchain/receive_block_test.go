@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -272,7 +272,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			blks := []interfaces.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block)}
+			blks := []block.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block)}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -296,7 +296,7 @@ func TestService_ReceiveBlockBatch_UpdateFinalizedCheckpoint(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 
 	// Generate 5 epochs worth of blocks.
-	var blks []interfaces.SignedBeaconBlock
+	var blks []block.SignedBeaconBlock
 	var roots [][32]byte
 	copied := genesis.Copy()
 	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {

@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "cloners.go",
         "deprecated_getters.go",
         "deprecated_setters.go",
         "field_root_eth1.go",

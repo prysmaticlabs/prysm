@@ -14,7 +14,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -52,7 +52,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.validateBlockLock.Lock()
 	defer s.validateBlockLock.Unlock()
 
-	blk, ok := m.(interfaces.SignedBeaconBlock)
+	blk, ok := m.(block.SignedBeaconBlock)
 	if !ok {
 		log.WithError(errors.New("msg is not ethpb.SignedBeaconBlock")).Debug("Rejected block")
 		return pubsub.ValidationReject
@@ -176,7 +176,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept
 }
 
-func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 

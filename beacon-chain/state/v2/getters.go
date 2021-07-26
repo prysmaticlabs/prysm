@@ -1168,3 +1168,14 @@ func ProtobufBeaconState(s interface{}) (*statepb.BeaconStateAltair, error) {
 func (b *BeaconState) Version() int {
 	return version.Altair
 }
+
+// CopySyncCommittee copies the provided sync committee object.
+func CopySyncCommittee(data *statepb.SyncCommittee) *statepb.SyncCommittee {
+	if data == nil {
+		return nil
+	}
+	return &statepb.SyncCommittee{
+		Pubkeys:         bytesutil.Copy2dBytes(data.Pubkeys),
+		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
+	}
+}

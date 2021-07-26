@@ -13,10 +13,10 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -387,7 +387,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *prysmv2.BeaconBlockContainerAltair) (interfaces.SignedBeaconBlock, error) {
+func convertToBlockInterface(obj *prysmv2.BeaconBlockContainerAltair) (block.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
 		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
 	}

@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -118,7 +118,7 @@ func TestBlockFromProto(t *testing.T) {
 	tests := []struct {
 		name       string
 		msgCreator func(t *testing.T) proto.Message
-		want       interfaces.SignedBeaconBlock
+		want       block.SignedBeaconBlock
 		wantErr    bool
 	}{
 		{
@@ -142,7 +142,7 @@ func TestBlockFromProto(t *testing.T) {
 			msgCreator: func(t *testing.T) proto.Message {
 				return &prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}
 			},
-			want: func() interfaces.SignedBeaconBlock {
+			want: func() block.SignedBeaconBlock {
 				wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}})
 				require.NoError(t, err)
 				return wsb

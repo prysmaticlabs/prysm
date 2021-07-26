@@ -14,9 +14,9 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -209,7 +209,7 @@ func (v *ValidatorService) Start() {
 	// the inner type of the feed before hand. So that
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
-	tempChan := make(chan interfaces.SignedBeaconBlock)
+	tempChan := make(chan block.SignedBeaconBlock)
 	sub := valStruct.blockFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)

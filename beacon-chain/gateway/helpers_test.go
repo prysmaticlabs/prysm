@@ -10,7 +10,6 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	t.Run("Without debug endpoints", func(t *testing.T) {
 		cfg := DefaultConfig(false)
-		assert.NotNil(t, cfg.Handler)
 		assert.NotNil(t, cfg.V1PbMux.Mux)
 		require.Equal(t, 1, len(cfg.V1PbMux.Patterns))
 		assert.Equal(t, "/eth/v1/", cfg.V1PbMux.Patterns[0])
@@ -23,7 +22,6 @@ func TestDefaultConfig(t *testing.T) {
 
 	t.Run("With debug endpoints", func(t *testing.T) {
 		cfg := DefaultConfig(true)
-		assert.NotNil(t, cfg.Handler)
 		assert.NotNil(t, cfg.V1PbMux.Mux)
 		require.Equal(t, 1, len(cfg.V1PbMux.Patterns))
 		assert.Equal(t, "/eth/v1/", cfg.V1PbMux.Patterns[0])

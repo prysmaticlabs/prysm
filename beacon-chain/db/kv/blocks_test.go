@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -70,9 +70,9 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]interfaces.SignedBeaconBlock, 0)
+	oddBlocks := make([]block.SignedBeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
@@ -107,7 +107,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
@@ -127,7 +127,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
@@ -200,7 +200,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	b8 := testutil.NewBeaconBlock()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
-	blocks := []interfaces.SignedBeaconBlock{
+	blocks := []block.SignedBeaconBlock{
 		wrapper.WrappedPhase0SignedBeaconBlock(b4),
 		wrapper.WrappedPhase0SignedBeaconBlock(b5),
 		wrapper.WrappedPhase0SignedBeaconBlock(b6),
@@ -296,7 +296,7 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
@@ -313,7 +313,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
+	totalBlocks := make([]block.SignedBeaconBlock, slots)
 	for i := types.Slot(0); i < slots; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
@@ -334,7 +334,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
@@ -416,7 +416,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b := make([]interfaces.SignedBeaconBlock, 500)
+	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
@@ -437,7 +437,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b := make([]interfaces.SignedBeaconBlock, 500)
+	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)

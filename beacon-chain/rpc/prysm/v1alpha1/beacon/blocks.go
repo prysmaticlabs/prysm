@@ -10,8 +10,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -25,7 +25,7 @@ import (
 // BlockContainer represents an instance of
 // block along with its relevant metadata.
 type BlockContainer struct {
-	Blk         interfaces.SignedBeaconBlock
+	Blk         block.SignedBeaconBlock
 	Root        [32]byte
 	IsCanonical bool
 }

@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -77,9 +77,9 @@ func TestStore_AltairBlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]interfaces.SignedBeaconBlock, 0)
+	oddBlocks := make([]block.SignedBeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
@@ -116,7 +116,7 @@ func TestStore_AltairBlocksHandleZeroCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
@@ -138,7 +138,7 @@ func TestStore_AltairBlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
 	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlockAltair()
@@ -201,7 +201,7 @@ func TestStore_AltairBlocks_FiltersCorrectly(t *testing.T) {
 	b8 := testutil.NewBeaconBlockAltair()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
-	blocks := make([]interfaces.SignedBeaconBlock, 0)
+	blocks := make([]block.SignedBeaconBlock, 0)
 	for _, b := range []*v2.SignedBeaconBlockAltair{b4, b5, b6, b7, b8} {
 		blk, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -299,7 +299,7 @@ func TestStore_AltairBlocks_VerifyBlockRoots(t *testing.T) {
 
 func TestStore_AltairBlocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
@@ -318,7 +318,7 @@ func TestStore_AltairBlocks_Retrieve_SlotRange(t *testing.T) {
 func TestStore_AltairBlocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
+	totalBlocks := make([]block.SignedBeaconBlock, slots)
 	for i := types.Slot(0); i < slots; i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = i
@@ -341,7 +341,7 @@ func TestStore_AltairBlocks_Retrieve_Epoch(t *testing.T) {
 
 func TestStore_AltairBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
@@ -433,7 +433,7 @@ func TestStore_SaveAltairBlocks_HasCachedBlocks(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	b := make([]interfaces.SignedBeaconBlock, 500)
+	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
@@ -456,7 +456,7 @@ func TestStore_SaveAltairBlocks_HasRootsMatched(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	b := make([]interfaces.SignedBeaconBlock, 500)
+	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)

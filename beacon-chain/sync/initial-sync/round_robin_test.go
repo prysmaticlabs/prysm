@@ -10,9 +10,9 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -360,7 +360,7 @@ func TestService_processBlock(t *testing.T) {
 
 		// Process block normally.
 		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -368,14 +368,14 @@ func TestService_processBlock(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk2), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -410,7 +410,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.SignedBeaconBlock
+		var batch []block.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := types.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -425,7 +425,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.SignedBeaconBlock
+		var batch2 []block.SignedBeaconBlock
 		for i := types.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := testutil.NewBeaconBlock()
@@ -441,7 +441,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -449,12 +449,12 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blocks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, "no good blocks in batch", err)
 
-		var badBatch2 []interfaces.SignedBeaconBlock
+		var badBatch2 []block.SignedBeaconBlock
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -465,7 +465,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Bad batch should fail because it is non linear
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		expectedSubErr := "expected linear block list"
@@ -473,7 +473,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
