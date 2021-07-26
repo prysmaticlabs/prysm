@@ -1,4 +1,4 @@
-package interfaces
+package metadata
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
