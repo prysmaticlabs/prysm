@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -15,7 +15,7 @@ import (
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []block.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
@@ -48,7 +48,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 func TestSortedObj_NoDuplicates(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []block.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)

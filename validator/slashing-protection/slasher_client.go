@@ -11,7 +11,7 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
+	ethsl "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
