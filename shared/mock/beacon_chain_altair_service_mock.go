@@ -37,10 +37,10 @@ func (m *MockBeaconChainAltairServer) EXPECT() *MockBeaconChainAltairServerMockR
 }
 
 // ListBlocks mocks base method
-func (m *MockBeaconChainAltairServer) ListBlocks(arg0 context.Context, arg1 *v1alpha1.ListBlocksRequest) (*v2.ListBlocksResponseAltair, error) {
+func (m *MockBeaconChainAltairServer) ListBlocks(arg0 context.Context, arg1 *v1alpha1.ListBlocksRequest) (*v2.ListBlocksResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListBlocks", arg0, arg1)
-	ret0, _ := ret[0].(*v2.ListBlocksResponseAltair)
+	ret0, _ := ret[0].(*v2.ListBlocksResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

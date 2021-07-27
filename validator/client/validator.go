@@ -83,7 +83,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	validatorClientV2                  prysmv2.BeaconNodeValidatorAltairClient
+	validatorClientV2                  prysmv2.BeaconNodeValidatorClient
 	protector                          slashingiface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte

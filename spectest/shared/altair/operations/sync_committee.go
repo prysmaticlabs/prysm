@@ -28,7 +28,7 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 			sc := &prysmv2.SyncAggregate{}
 			require.NoError(t, sc.UnmarshalSSZ(syncCommitteeSSZ), "Failed to unmarshal")
 
-			body := &prysmv2.BeaconBlockBody{SyncAggregate: sc}
+			body := &prysmv2.BeaconBlockBodyAltair{SyncAggregate: sc}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
 				return altair.ProcessSyncAggregate(s, body.SyncAggregate)
 			})

@@ -29,7 +29,7 @@ type blockOperation func(context.Context, state.BeaconState, block.SignedBeaconB
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *prysmv2.BeaconBlockBody,
+	body *prysmv2.BeaconBlockBodyAltair,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))

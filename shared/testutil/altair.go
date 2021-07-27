@@ -177,7 +177,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := (&prysmv2.BeaconBlockBody{
+	bodyRoot, err := (&prysmv2.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),
@@ -243,12 +243,12 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
-func NewBeaconBlockAltair() *prysmv2.SignedBeaconBlock {
-	return &prysmv2.SignedBeaconBlock{
-		Block: &prysmv2.BeaconBlock{
+func NewBeaconBlockAltair() *prysmv2.SignedBeaconBlockAltair {
+	return &prysmv2.SignedBeaconBlockAltair{
+		Block: &prysmv2.BeaconBlockAltair{
 			ParentRoot: make([]byte, 32),
 			StateRoot:  make([]byte, 32),
-			Body: &prysmv2.BeaconBlockBody{
+			Body: &prysmv2.BeaconBlockBodyAltair{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot: make([]byte, 32),
@@ -273,11 +273,11 @@ func NewBeaconBlockAltair() *prysmv2.SignedBeaconBlock {
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
 	bState state.BeaconStateAltair,
-	block *prysmv2.BeaconBlock,
+	block *prysmv2.BeaconBlockAltair,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: block})
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func GenerateFullBlockAltair(
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,
-) (*prysmv2.SignedBeaconBlock, error) {
+) (*prysmv2.SignedBeaconBlockAltair, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
 	if currentSlot > slot {
@@ -411,11 +411,11 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
-	block := &prysmv2.BeaconBlock{
+	block := &prysmv2.BeaconBlockAltair{
 		Slot:          slot,
 		ParentRoot:    parentRoot[:],
 		ProposerIndex: idx,
-		Body: &prysmv2.BeaconBlockBody{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Eth1Data:          eth1Data,
 			RandaoReveal:      reveal,
 			ProposerSlashings: pSlashings,
@@ -436,5 +436,5 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
-	return &prysmv2.SignedBeaconBlock{Block: block, Signature: signature.Marshal()}, nil
+	return &prysmv2.SignedBeaconBlockAltair{Block: block, Signature: signature.Marshal()}, nil
 }

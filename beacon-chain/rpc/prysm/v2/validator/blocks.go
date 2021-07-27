@@ -17,7 +17,7 @@ import (
 var log = logrus.WithField("prefix", "rpc")
 
 // StreamBlocks to clients every single time a block is received by the beacon node.
-func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconNodeValidatorAltair_StreamBlocksServer) error {
+func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconNodeValidator_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
 	if req.VerifiedOnly {

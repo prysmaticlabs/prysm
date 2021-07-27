@@ -20,6 +20,8 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 
+import "proto/prysm/v1alpha1/beacon_block.proto";
+
 import "proto/prysm/v2/beacon_block.proto";
 import "proto/prysm/v2/attestation.proto";
 import "proto/prysm/v2/validator.proto";
@@ -263,8 +265,8 @@ service BeaconChain {
     }
 }
 
-message ListBlocksResponseAltair {
-    repeated BeaconBlockContainerAltair blockContainers = 1;
+message ListBlocksResponse {
+    repeated BeaconBlockContainer blockContainers = 1;
 
     // A pagination token returned from a previous call to `ListBlocks`
     // that indicates from where listing should continue.
@@ -277,7 +279,7 @@ message ListBlocksResponseAltair {
 
 // A container that contains both the beacon block
 // and its corresponding root.
-message BeaconBlockContainerAltair {
+message BeaconBlockContainer {
     // 32 byte merkle tree root of contained beacon block.
     bytes block_root = 1;
 
@@ -287,7 +289,7 @@ message BeaconBlockContainerAltair {
     // The desired block to be returned back.
     oneof block {
         // Representing a phase 0 block.
-        SignedBeaconBlock phase0_block = 3;
+        ethereum.eth.v1alpha1.SignedBeaconBlock phase0_block = 3;
 
         // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;

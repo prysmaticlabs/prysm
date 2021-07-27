@@ -200,7 +200,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClientV2.GetBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClientV2.GetBlock(ctx, &prysmv2.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -230,7 +230,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		}
 		return
 	}
-	blk := &prysmv2.SignedBeaconBlock{
+	blk := &prysmv2.SignedBeaconBlockAltair{
 		Block:     b,
 		Signature: sig,
 	}
@@ -380,7 +380,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
-		block, ok := b.Proto().(*prysmv2.BeaconBlock)
+		block, ok := b.Proto().(*prysmv2.BeaconBlockAltair)
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}

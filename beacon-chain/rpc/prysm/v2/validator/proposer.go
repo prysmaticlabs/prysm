@@ -21,7 +21,7 @@ import (
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot. This is used by a validator
 // after the altair fork epoch has been encountered.
-func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysmv2.BeaconBlock, error) {
+func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysmv2.BeaconBlockAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
@@ -39,12 +39,12 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 		return nil, err
 	}
 
-	blk := &prysmv2.BeaconBlock{
+	blk := &prysmv2.BeaconBlockAltair{
 		Slot:          req.Slot,
 		ParentRoot:    blkData.ParentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: blkData.ProposerIdx,
-		Body: &prysmv2.BeaconBlockBody{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Eth1Data:          blkData.Eth1Data,
 			Deposits:          blkData.Deposits,
 			Attestations:      blkData.Attestations,
@@ -58,7 +58,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 	}
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
-		&prysmv2.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
+		&prysmv2.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (vs *Server) ProposeBlock(ctx context.Context, rBlk *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) ProposeBlock(ctx context.Context, rBlk *prysmv2.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
 	blk, err := wrapper.WrappedAltairSignedBeaconBlock(rBlk)
 	if err != nil {
 		return nil, err

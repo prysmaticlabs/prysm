@@ -21,7 +21,7 @@ import (
 // not return NOT_FOUND. Only one filter criteria should be used.
 func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
-) (*prysmv2.ListBlocksResponseAltair, error) {
+) (*prysmv2.ListBlocksResponse, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
@@ -37,7 +37,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.ListBlocksResponseAltair{
+		return &prysmv2.ListBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -51,7 +51,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.ListBlocksResponseAltair{
+		return &prysmv2.ListBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -66,7 +66,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.ListBlocksResponseAltair{
+		return &prysmv2.ListBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -80,7 +80,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.ListBlocksResponseAltair{
+		return &prysmv2.ListBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -90,8 +90,8 @@ func (bs *Server) ListBlocks(
 	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
-func convertFromV1Containers(ctrs []beaconv1.BlockContainer) ([]*prysmv2.BeaconBlockContainerAltair, error) {
-	protoCtrs := make([]*prysmv2.BeaconBlockContainerAltair, len(ctrs))
+func convertFromV1Containers(ctrs []beaconv1.BlockContainer) ([]*prysmv2.BeaconBlockContainer, error) {
+	protoCtrs := make([]*prysmv2.BeaconBlockContainer, len(ctrs))
 	var err error
 	for i, c := range ctrs {
 		protoCtrs[i], err = convertToBlockContainer(c.Blk, c.Root, c.IsCanonical)
@@ -102,8 +102,8 @@ func convertFromV1Containers(ctrs []beaconv1.BlockContainer) ([]*prysmv2.BeaconB
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*prysmv2.BeaconBlockContainerAltair, error) {
-	ctr := &prysmv2.BeaconBlockContainerAltair{
+func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*prysmv2.BeaconBlockContainer, error) {
+	ctr := &prysmv2.BeaconBlockContainer{
 		BlockRoot: root[:],
 		Canonical: isCanonical,
 	}
@@ -114,13 +114,13 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 		if err != nil {
 			return nil, err
 		}
-		ctr.Block = &prysmv2.BeaconBlockContainerAltair_Phase0Block{Phase0Block: rBlk}
+		ctr.Block = &prysmv2.BeaconBlockContainer_Phase0Block{Phase0Block: rBlk}
 	case version.Altair:
 		rBlk, err := blk.PbAltairBlock()
 		if err != nil {
 			return nil, err
 		}
-		ctr.Block = &prysmv2.BeaconBlockContainerAltair_AltairBlock{AltairBlock: rBlk}
+		ctr.Block = &prysmv2.BeaconBlockContainer_AltairBlock{AltairBlock: rBlk}
 	}
 	return ctr, nil
 }

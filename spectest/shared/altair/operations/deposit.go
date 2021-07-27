@@ -29,7 +29,7 @@ func RunDepositTest(t *testing.T, config string) {
 			deposit := &ethpb.Deposit{}
 			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
 
-			body := &prysmv2.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
+			body := &prysmv2.BeaconBlockBodyAltair{Deposits: []*ethpb.Deposit{deposit}}
 			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
 				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}

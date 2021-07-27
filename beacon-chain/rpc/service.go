@@ -319,8 +319,8 @@ func (s *Service) Start() {
 	}
 
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-	prysmv2.RegisterBeaconChainAltairServer(s.grpcServer, beaconChainServerV2)
-	prysmv2.RegisterBeaconNodeValidatorAltairServer(s.grpcServer, validatorServerV2)
+	prysmv2.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV2)
+	prysmv2.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServerV2)
 	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

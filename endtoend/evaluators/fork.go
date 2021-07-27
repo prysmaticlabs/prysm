@@ -23,7 +23,7 @@ var ForkTransition = types.Evaluator{
 
 func forkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := prysmv2.NewBeaconNodeValidatorAltairClient(conn)
+	client := prysmv2.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := client.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})

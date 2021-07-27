@@ -121,7 +121,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewNodeClient(conn)
-	altairClient := prysmv2.NewBeaconChainAltairClient(conn)
+	altairClient := prysmv2.NewBeaconChainClient(conn)
 	genesis, err := client.GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
@@ -133,7 +133,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if lowestBound < params.AltairE2EForkEpoch {
 		lowestBound = params.AltairE2EForkEpoch
 	}
-	blockCtrs, err := altairClient.ListBlocks(context.Background(), &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: lowestBound}})
+	blockCtrs, err := altairClient.ListBlocks(context.Background(), &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: lowestBound}})
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
@@ -162,7 +162,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if lowestBound == currEpoch {
 		return nil
 	}
-	blockCtrs, err = altairClient.ListBlocks(context.Background(), &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: currEpoch}})
+	blockCtrs, err = altairClient.ListBlocks(context.Background(), &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: currEpoch}})
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
 	}

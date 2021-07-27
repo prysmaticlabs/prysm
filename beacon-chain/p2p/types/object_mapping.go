@@ -43,7 +43,7 @@ func InitializeDataMaps() {
 			return wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}), nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}})
+			return wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}})
 		},
 	}
 

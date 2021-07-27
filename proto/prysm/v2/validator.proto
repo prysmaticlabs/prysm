@@ -304,7 +304,7 @@ service BeaconNodeValidator {
 
   // Server-side stream of all signed blocks as they are received by
   // the beacon chain node.
-  rpc StreamBlocksAltair(ethereum.eth.v1alpha1.StreamBlocksRequest) returns (stream StreamBlocksResponse) {
+  rpc StreamBlocks(ethereum.eth.v1alpha1.StreamBlocksRequest) returns (stream StreamBlocksResponse) {
     option (google.api.http) = {
             get: "/prysm/v2/validator/blocks/stream"
         };

@@ -139,14 +139,14 @@ func (mr *MockBeaconNodeValidatorAltairClientMockRecorder) ProposeBlock(arg0, ar
 }
 
 // StreamBlocks mocks base method
-func (m *MockBeaconNodeValidatorAltairClient) StreamBlocks(arg0 context.Context, arg1 *v1alpha1.StreamBlocksRequest, arg2 ...grpc.CallOption) (v2.BeaconNodeValidatorAltair_StreamBlocksClient, error) {
+func (m *MockBeaconNodeValidatorAltairClient) StreamBlocks(arg0 context.Context, arg1 *v1alpha1.StreamBlocksRequest, arg2 ...grpc.CallOption) (v2.BeaconNodeValidator_StreamBlocksClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "StreamBlocks", varargs...)
-	ret0, _ := ret[0].(v2.BeaconNodeValidatorAltair_StreamBlocksClient)
+	ret0, _ := ret[0].(v2.BeaconNodeValidator_StreamBlocksClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

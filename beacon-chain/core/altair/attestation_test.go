@@ -31,8 +31,8 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		}),
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &prysmv2.BeaconBlock{
-		Body: &prysmv2.BeaconBlockBody{
+	b.Block = &prysmv2.BeaconBlockAltair{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -57,8 +57,8 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: 0}}})
 
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &prysmv2.BeaconBlock{
-		Body: &prysmv2.BeaconBlockBody{
+	b.Block = &prysmv2.BeaconBlockAltair{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -92,8 +92,8 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &prysmv2.BeaconBlock{
-		Body: &prysmv2.BeaconBlockBody{
+	b.Block = &prysmv2.BeaconBlockAltair{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -132,8 +132,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &prysmv2.BeaconBlock{
-		Body: &prysmv2.BeaconBlockBody{
+	b.Block = &prysmv2.BeaconBlockAltair{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -170,8 +170,8 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	}
 
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &prysmv2.BeaconBlock{
-		Body: &prysmv2.BeaconBlockBody{
+	b.Block = &prysmv2.BeaconBlockAltair{
+		Body: &prysmv2.BeaconBlockBodyAltair{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -326,7 +326,7 @@ func TestValidatorFlag_AddHas(t *testing.T) {
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &statepb.BeaconStateAltair{}
-	b := &prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}}
+	b := &prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)

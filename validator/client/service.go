@@ -182,7 +182,7 @@ func (v *ValidatorService) Start() {
 	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
-		validatorClientV2:              prysmv2.NewBeaconNodeValidatorAltairClient(v.conn),
+		validatorClientV2:              prysmv2.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
