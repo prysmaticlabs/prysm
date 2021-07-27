@@ -79,7 +79,7 @@ var (
 )
 
 func request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, client DebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BlockRequest
+	var protoReq BlockRequestByRoot
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -95,7 +95,7 @@ func request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, 
 }
 
 func local_request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, server DebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BlockRequest
+	var protoReq BlockRequestByRoot
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -606,19 +606,19 @@ func RegisterDebugHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Debug_GetBeaconState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "state"}, ""))
+	pattern_Debug_GetBeaconState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "state"}, ""))
 
-	pattern_Debug_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "block"}, ""))
+	pattern_Debug_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "block"}, ""))
 
-	pattern_Debug_SetLoggingLevel_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "logging"}, ""))
+	pattern_Debug_SetLoggingLevel_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "logging"}, ""))
 
-	pattern_Debug_GetProtoArrayForkChoice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "forkchoice"}, ""))
+	pattern_Debug_GetProtoArrayForkChoice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "forkchoice"}, ""))
 
-	pattern_Debug_ListPeers_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "peers"}, ""))
+	pattern_Debug_ListPeers_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "peers"}, ""))
 
-	pattern_Debug_GetPeer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "peer"}, ""))
+	pattern_Debug_GetPeer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "peer"}, ""))
 
-	pattern_Debug_GetInclusionSlot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "debug", "inclusion"}, ""))
+	pattern_Debug_GetInclusionSlot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "debug", "inclusion"}, ""))
 )
 
 var (

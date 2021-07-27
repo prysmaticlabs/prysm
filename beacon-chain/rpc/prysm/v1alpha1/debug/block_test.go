@@ -31,7 +31,7 @@ func TestServer_GetBlock(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 	}
-	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequest{
+	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	// Checking for nil block.
 	blockRoot = [32]byte{}
-	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequest{
+	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)

@@ -28,7 +28,7 @@ service Debug {
         };
     }
     // Returns a beacon state by filter criteria from the beacon node.
-    rpc GetBlock(BlockRequest) returns (SSZResponse) {
+    rpc GetBlock(BlockRequestByRoot) returns (SSZResponse) {
         option (google.api.http) = {
             get: "/prysm/v1alpha1/debug/block"
         };
@@ -84,7 +84,7 @@ message BeaconStateRequest {
     }
 }
 
-message BlockRequest {
+message BlockRequestByRoot {
     bytes block_root = 1;
 }
 

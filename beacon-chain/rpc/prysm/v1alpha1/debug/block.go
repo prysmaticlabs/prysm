@@ -19,7 +19,7 @@ import (
 // GetBlock in an ssz-encoded format by block root.
 func (ds *Server) GetBlock(
 	ctx context.Context,
-	req *pbrpc.BlockRequest,
+	req *pbrpc.BlockRequestByRoot,
 ) (*pbrpc.SSZResponse, error) {
 	root := bytesutil.ToBytes32(req.BlockRoot)
 	signedBlock, err := ds.BeaconDB.Block(ctx, root)

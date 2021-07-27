@@ -113,22 +113,22 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 }
 
 // CopySignedBeaconBlockAltair copies the provided SignedBeaconBlock.
-func CopySignedBeaconBlockAltair(sigBlock *prysmv2.SignedBeaconBlock) *prysmv2.SignedBeaconBlock {
+func CopySignedBeaconBlockAltair(sigBlock *prysmv2.SignedBeaconBlockAltair) *prysmv2.SignedBeaconBlockAltair {
 	if sigBlock == nil {
 		return nil
 	}
-	return &prysmv2.SignedBeaconBlock{
+	return &prysmv2.SignedBeaconBlockAltair{
 		Block:     CopyBeaconBlockAltair(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
 // CopyBeaconBlockAltair copies the provided BeaconBlock.
-func CopyBeaconBlockAltair(block *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
+func CopyBeaconBlockAltair(block *prysmv2.BeaconBlockAltair) *prysmv2.BeaconBlockAltair {
 	if block == nil {
 		return nil
 	}
-	return &prysmv2.BeaconBlock{
+	return &prysmv2.BeaconBlockAltair{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
@@ -138,11 +138,11 @@ func CopyBeaconBlockAltair(block *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
 }
 
 // CopyBeaconBlockBodyAltair copies the provided BeaconBlockBody.
-func CopyBeaconBlockBodyAltair(body *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlockBody {
+func CopyBeaconBlockBodyAltair(body *prysmv2.BeaconBlockBodyAltair) *prysmv2.BeaconBlockBodyAltair {
 	if body == nil {
 		return nil
 	}
-	return &prysmv2.BeaconBlockBody{
+	return &prysmv2.BeaconBlockBodyAltair{
 		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
