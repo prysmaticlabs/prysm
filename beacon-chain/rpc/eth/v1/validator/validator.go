@@ -15,6 +15,9 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -232,7 +235,61 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.Aggregate
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	defer span.End()
+
+	for _, agg := range req.Data {
+		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
+			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
+		}
+		sigLen := params.BeaconConfig().BLSSignatureLength
+		emptySig := make([]byte, sigLen)
+		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) {
+			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
+		}
+		if len(agg.Signature) != sigLen {
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
+		}
+		rootLen := 32
+		attData := agg.Message.Aggregate.Data
+		if len(attData.BeaconBlockRoot) != rootLen {
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect beacon block root length. Expected %d bytes", rootLen)
+		}
+		if len(attData.Source.Root) != rootLen {
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect source root length. Expected %d bytes", rootLen)
+		}
+		if len(attData.Target.Root) != rootLen {
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect target root length. Expected %d bytes", rootLen)
+		}
+
+		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
+		if err := helpers.ValidateAttestationTime(agg.Message.Aggregate.Data.Slot,
+			vs.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
+		}
+	}
+
+	broadcastFailed := false
+	for _, agg := range req.Data {
+		if err := vs.P2P.Broadcast(ctx, agg); err != nil {
+			broadcastFailed = true
+		} else {
+			log.WithFields(logrus.Fields{
+				"slot":            agg.Message.Aggregate.Data.Slot,
+				"committeeIndex":  agg.Message.Aggregate.Data.Index,
+				"validatorIndex":  agg.Message.AggregatorIndex,
+				"aggregatedCount": agg.Message.Aggregate.AggregationBits.Count(),
+			}).Debug("Broadcasting aggregated attestation and proof")
+		}
+	}
+
+	if broadcastFailed {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not broadcast one or more signed aggregated attestations.")
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
