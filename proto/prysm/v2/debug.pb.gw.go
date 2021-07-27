@@ -79,7 +79,7 @@ var (
 )
 
 func request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, client DebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BlockRequest
+	var protoReq BlockRequestByRoot
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -95,7 +95,7 @@ func request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, 
 }
 
 func local_request_Debug_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, server DebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BlockRequest
+	var protoReq BlockRequestByRoot
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
