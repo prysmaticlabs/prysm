@@ -30,12 +30,12 @@ var (
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type altairSignedBeaconBlock struct {
-	b *prysmv2.SignedBeaconBlock
+	b *prysmv2.SignedBeaconBlockAltair
 }
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
-func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) (block.SignedBeaconBlock, error) {
+func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -95,7 +95,7 @@ func (w altairSignedBeaconBlock) Proto() proto.Message {
 }
 
 // PbAltairBlock returns the underlying protobuf object.
-func (w altairSignedBeaconBlock) PbAltairBlock() (*prysmv2.SignedBeaconBlock, error) {
+func (w altairSignedBeaconBlock) PbAltairBlock() (*prysmv2.SignedBeaconBlockAltair, error) {
 	return w.b, nil
 }
 
@@ -111,12 +111,12 @@ func (w altairSignedBeaconBlock) Version() int {
 
 // altairBeaconBlock is the wrapper for the actual block.
 type altairBeaconBlock struct {
-	b *prysmv2.BeaconBlock
+	b *prysmv2.BeaconBlockAltair
 }
 
 // WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) (block.BeaconBlock, error) {
+func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlockAltair) (block.BeaconBlock, error) {
 	w := altairBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -195,12 +195,12 @@ func (w altairBeaconBlock) Version() int {
 
 // altairBeaconBlockBody is a wrapper of a beacon block body.
 type altairBeaconBlockBody struct {
-	b *prysmv2.BeaconBlockBody
+	b *prysmv2.BeaconBlockBodyAltair
 }
 
 // WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) (block.BeaconBlockBody, error) {
+func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBodyAltair) (block.BeaconBlockBody, error) {
 	w := altairBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
