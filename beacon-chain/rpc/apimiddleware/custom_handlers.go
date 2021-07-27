@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/r3labs/sse"
+	log "github.com/sirupsen/logrus"
 )
 
 type sszConfig struct {
@@ -166,11 +167,13 @@ func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.Resp
 	// Because of this subscribing to streams doesn't work as intended, resulting in each event being handled by all subscriptions.
 	// To handle events properly, we subscribe just once using a placeholder value ('events') and handle all topics inside this subscription.
 	if err := sseClient.SubscribeChan("events", eventChan); err != nil {
+		log.Warn("Error subscribing")
 		gateway.WriteError(w, gateway.InternalServerError(err), nil)
 		sseClient.Unsubscribe(eventChan)
 		return
 	}
 
+	log.Warn("Receiving events")
 	errJson := receiveEvents(eventChan, w, req)
 	if errJson != nil {
 		gateway.WriteError(w, errJson, nil)
@@ -190,6 +193,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 			case events.HeadTopic:
 				data = &eventHeadJson{}
 			case events.BlockTopic:
+				log.Warn("Received block")
+				log.Warn(strings.TrimSpace(string(msg.Event)))
 				data = &receivedBlockDataJson{}
 			case events.AttestationTopic:
 				data = &attestationJson{}
@@ -234,14 +239,19 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 }
 
 func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway.ErrorJson {
+	log.Warn("Writing event")
 	if err := json.Unmarshal(msg.Data, data); err != nil {
+		log.Warn("Error unmarshaling")
+		log.Warn(string(msg.Data))
 		return gateway.InternalServerError(err)
 	}
 	if errJson := gateway.ProcessMiddlewareResponseFields(data); errJson != nil {
+		log.Warn("Error processing response fields")
 		return errJson
 	}
 	dataJson, errJson := gateway.SerializeMiddlewareResponseIntoJson(data)
 	if errJson != nil {
+		log.Warn("Error serializing middleware response")
 		return errJson
 	}
 
@@ -251,12 +261,14 @@ func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway
 		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write(msg.Event); err != nil {
+		log.Warn("Error writing event name")
 		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write([]byte("\ndata: ")); err != nil {
 		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write(dataJson); err != nil {
+		log.Warn("Error writing event data")
 		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write([]byte("\n\n")); err != nil {
