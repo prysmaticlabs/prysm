@@ -7,13 +7,13 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(iface.BeaconState, types.ValidatorIndex) (iface.BeaconState, error)
+type slashValidatorFunc func(state.BeaconState, types.ValidatorIndex) (state.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -42,10 +42,10 @@ type slashValidatorFunc func(iface.BeaconState, types.ValidatorIndex) (iface.Bea
 //    slash_validator(state, header_1.proposer_index)
 func ProcessProposerSlashings(
 	_ context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	var err error
 	for idx, slashing := range slashings {
 		if slashing == nil {
@@ -64,7 +64,7 @@ func ProcessProposerSlashings(
 
 // VerifyProposerSlashing verifies that the data provided from slashing is valid.
 func VerifyProposerSlashing(
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil || slashing.Header_2 == nil || slashing.Header_2.Header == nil {

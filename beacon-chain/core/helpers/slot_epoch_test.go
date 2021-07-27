@@ -7,7 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -42,7 +42,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
 	}
@@ -58,7 +58,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
 	}
@@ -76,7 +76,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, NextEpoch(state), "NextEpoch(%d)", state.Slot())
 	}
@@ -379,5 +379,37 @@ func TestPrevSlot(t *testing.T) {
 				t.Errorf("PrevSlot() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSyncCommitteePeriod(t *testing.T) {
+	tests := []struct {
+		epoch  types.Epoch
+		wanted uint64
+	}{
+		{epoch: 0, wanted: 0},
+		{epoch: 0, wanted: 0 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+		{epoch: 1, wanted: 1 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+		{epoch: 1000, wanted: 1000 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+	}
+	for _, test := range tests {
+		require.Equal(t, test.wanted, SyncCommitteePeriod(test.epoch))
+	}
+}
+
+func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
+	tests := []struct {
+		epoch  types.Epoch
+		wanted types.Epoch
+	}{
+		{epoch: 0, wanted: 0},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod*2 + 100, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod * 2},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod * params.BeaconConfig().EpochsPerSyncCommitteePeriod},
+	}
+	for _, test := range tests {
+		e, err := SyncCommitteePeriodStartEpoch(test.epoch)
+		require.NoError(t, err)
+		require.Equal(t, test.wanted, e)
 	}
 }

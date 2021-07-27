@@ -3,26 +3,26 @@ package kv
 import (
 	"sync"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
 const stateSummaryCachePruneCount = 128
 
 // stateSummaryCache caches state summary object.
 type stateSummaryCache struct {
-	initSyncStateSummaries     map[[32]byte]*pb.StateSummary
+	initSyncStateSummaries     map[[32]byte]*statepb.StateSummary
 	initSyncStateSummariesLock sync.RWMutex
 }
 
 // newStateSummaryCache creates a new state summary cache.
 func newStateSummaryCache() *stateSummaryCache {
 	return &stateSummaryCache{
-		initSyncStateSummaries: make(map[[32]byte]*pb.StateSummary),
+		initSyncStateSummaries: make(map[[32]byte]*statepb.StateSummary),
 	}
 }
 
 // put saves a state summary to the initial sync state summaries cache.
-func (c *stateSummaryCache) put(r [32]byte, b *pb.StateSummary) {
+func (c *stateSummaryCache) put(r [32]byte, b *statepb.StateSummary) {
 	c.initSyncStateSummariesLock.Lock()
 	defer c.initSyncStateSummariesLock.Unlock()
 	c.initSyncStateSummaries[r] = b
@@ -39,7 +39,7 @@ func (c *stateSummaryCache) has(r [32]byte) bool {
 
 // get retrieves a state summary from the initial sync state summaries cache using the root of
 // the block.
-func (c *stateSummaryCache) get(r [32]byte) *pb.StateSummary {
+func (c *stateSummaryCache) get(r [32]byte) *statepb.StateSummary {
 	c.initSyncStateSummariesLock.RLock()
 	defer c.initSyncStateSummariesLock.RUnlock()
 	b := c.initSyncStateSummaries[r]
@@ -55,11 +55,11 @@ func (c *stateSummaryCache) len() int {
 
 // GetAll retrieves all the beacon state summaries from the initial sync state summaries cache, the returned
 // state summaries are unordered.
-func (c *stateSummaryCache) getAll() []*pb.StateSummary {
+func (c *stateSummaryCache) getAll() []*statepb.StateSummary {
 	c.initSyncStateSummariesLock.RLock()
 	defer c.initSyncStateSummariesLock.RUnlock()
 
-	summaries := make([]*pb.StateSummary, 0, len(c.initSyncStateSummaries))
+	summaries := make([]*statepb.StateSummary, 0, len(c.initSyncStateSummaries))
 	for _, b := range c.initSyncStateSummaries {
 		summaries = append(summaries, b)
 	}
@@ -70,5 +70,5 @@ func (c *stateSummaryCache) getAll() []*pb.StateSummary {
 func (c *stateSummaryCache) clear() {
 	c.initSyncStateSummariesLock.Lock()
 	defer c.initSyncStateSummariesLock.Unlock()
-	c.initSyncStateSummaries = make(map[[32]byte]*pb.StateSummary)
+	c.initSyncStateSummaries = make(map[[32]byte]*statepb.StateSummary)
 }

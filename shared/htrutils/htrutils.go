@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +26,7 @@ func Uint64Root(val uint64) [32]byte {
 // ForkRoot computes the HashTreeRoot Merkleization of
 // a Fork struct value according to the Ethereum
 // Simple Serialize specification.
-func ForkRoot(fork *pb.Fork) ([32]byte, error) {
+func ForkRoot(fork *statepb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	if fork != nil {
 		prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)

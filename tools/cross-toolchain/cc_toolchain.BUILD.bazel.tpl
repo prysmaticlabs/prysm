@@ -4,7 +4,6 @@ load(":cc_toolchain_config_osx.bzl", "osx_cc_toolchain_config")
 load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
 load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 
-
 cc_toolchain_suite(
     name = "multiarch_toolchain",
     toolchains = {
@@ -15,6 +14,7 @@ cc_toolchain_suite(
         "aarch64": ":cc-clang-arm64",
         "k8|mingw-w64": ":cc-mingw-amd64",
     },
+    tags = ["manual"],
 )
 
 cc_toolchain_suite(
@@ -22,11 +22,13 @@ cc_toolchain_suite(
     toolchains = {
         "k8": "cc-clang-amd64",
     },
+    tags = ["manual"],
 )
 
 filegroup(
     name = "empty",
     srcs = [],
+    tags = ["manual"],
 )
 
 config_setting(
@@ -35,6 +37,7 @@ config_setting(
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
     ],
+    tags = ["manual"],
 )
 
 config_setting(
@@ -43,6 +46,7 @@ config_setting(
         "@platforms//os:linux",
         "@platforms//cpu:aarch64",
     ],
+    tags = ["manual"],
 )
 
 config_setting(
@@ -51,6 +55,7 @@ config_setting(
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
+    tags = ["manual"],
 )
 
 config_setting(
@@ -59,26 +64,31 @@ config_setting(
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
     ],
+    tags = ["manual"],
 )
 
 arm64_cc_toolchain_config(
     name = "local-arm64",
     target = "aarch64-linux-gnu",
+    tags = ["manual"],
 )
 
 arm64_cc_toolchain_config(
     name = "local-amd64",
     target = "x86_64-unknown-linux-gnu",
+    tags = ["manual"],
 )
 
 osx_cc_toolchain_config(
     name = "local-osxcross",
     target = "darwin_x86_64",
+    tags = ["manual"],
 )
 
 windows_cc_toolchain_config(
     name = "local-windows",
     target = "x86_64-w64",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -93,6 +103,7 @@ cc_toolchain(
     strip_files = ":empty",
     supports_param_files = 0,
     toolchain_config = ":local-windows",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -105,6 +116,7 @@ cc_toolchain(
     strip_files = ":empty",
     supports_param_files = 1,
     toolchain_config = ":local-arm64",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -117,6 +129,7 @@ cc_toolchain(
     strip_files = ":empty",
     supports_param_files = 1,
     toolchain_config = ":local-osxcross",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -129,6 +142,7 @@ cc_toolchain(
     strip_files = ":empty",
     supports_param_files = 1,
     toolchain_config = ":local-amd64",
+    tags = ["manual"],
 )
 
 toolchain(
@@ -145,4 +159,5 @@ toolchain(
         ":windows_amd64": ":cc-mingw-amd64",
     }),
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+    tags = ["manual"],
 )

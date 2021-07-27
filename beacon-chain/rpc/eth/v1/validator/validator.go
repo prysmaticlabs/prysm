@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"sort"
 
@@ -8,10 +9,12 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -157,18 +160,74 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest) (*v1.ProduceBlockResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceBlock")
+	defer span.End()
+
+	v1alpha1req := &v1alpha1.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	block, err := migration.V1Alpha1ToV1Block(v1alpha1resp)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+	}
+
+	return &v1.ProduceBlockResponse{Data: block}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
 func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceAttestationData")
+	defer span.End()
+
+	v1alpha1req := &v1alpha1.AttestationDataRequest{
+		Slot:           req.Slot,
+		CommitteeIndex: req.CommitteeIndex,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetAttestationData(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	attData := migration.V1Alpha1AttDataToV1(v1alpha1resp)
+
+	return &v1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.AggregateAttestationRequest) (*v1.AggregateAttestationResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	defer span.End()
+
+	allAtts := vs.AttestationsPool.AggregatedAttestations()
+	var bestMatchingAtt *v1alpha1.Attestation
+	for _, att := range allAtts {
+		if att.Data.Slot == req.Slot {
+			root, err := att.Data.HashTreeRoot()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get attestation data root: %v", err)
+			}
+			if bytes.Equal(root[:], req.AttestationDataRoot) {
+				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
+					bestMatchingAtt = att
+				}
+			}
+		}
+	}
+
+	if bestMatchingAtt == nil {
+		return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
+	}
+	return &v1.AggregateAttestationResponse{
+		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
+	}, nil
 }
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
@@ -184,7 +243,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func attestationDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
+func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
@@ -204,7 +263,7 @@ func attestationDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
+func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -225,7 +284,7 @@ func proposalDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, erro
 // advanceState advances state with empty transitions up to the requested epoch start slot.
 // In case 1 epoch ahead was requested, we take the start slot of the current epoch.
 // Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
-func advanceState(ctx context.Context, s iface.BeaconState, requestedEpoch types.Epoch, currentEpoch types.Epoch) (iface.BeaconState, error) {
+func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
@@ -240,7 +299,7 @@ func advanceState(ctx context.Context, s iface.BeaconState, requestedEpoch types
 		}
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		s, err = core.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 		}

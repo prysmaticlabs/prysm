@@ -191,6 +191,21 @@ type proposerDutiesResponseJson struct {
 	Data          []*proposerDutyJson `json:"data"`
 }
 
+// produceBlockResponseJson is used in /validator/blocks/{slot} API endpoint.
+type produceBlockResponseJson struct {
+	Data *beaconBlockJson `json:"data"`
+}
+
+// produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
+type produceAttestationDataResponseJson struct {
+	Data *attestationDataJson `json:"data"`
+}
+
+// aggregateAttestationResponseJson is used in /validator/aggregate_attestation API endpoint.
+type aggregateAttestationResponseJson struct {
+	Data *attestationJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------

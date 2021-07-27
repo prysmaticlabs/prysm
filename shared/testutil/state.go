@@ -6,16 +6,16 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // FillRootsNaturalOpt is meant to be used as an option when calling NewBeaconState.
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
-func FillRootsNaturalOpt(state *pb.BeaconState) error {
+func FillRootsNaturalOpt(state *statepb.BeaconState) error {
 	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 	roots := make([][]byte, rootsLen)
 	for i := types.Slot(0); i < rootsLen; i++ {
@@ -36,8 +36,8 @@ func FillRootsNaturalOpt(state *pb.BeaconState) error {
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *pb.BeaconState) error) (*v1.BeaconState, error) {
-	seed := &pb.BeaconState{
+func NewBeaconState(options ...func(state *statepb.BeaconState) error) (*v1.BeaconState, error) {
+	seed := &statepb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
@@ -48,7 +48,7 @@ func NewBeaconState(options ...func(state *pb.BeaconState) error) (*v1.BeaconSta
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
 		},
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: make([]byte, 4),
 			CurrentVersion:  make([]byte, 4),
 		},
@@ -57,8 +57,8 @@ func NewBeaconState(options ...func(state *pb.BeaconState) error) (*v1.BeaconSta
 		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		PreviousEpochAttestations:   make([]*pb.PendingAttestation, 0),
-		CurrentEpochAttestations:    make([]*pb.PendingAttestation, 0),
+		PreviousEpochAttestations:   make([]*statepb.PendingAttestation, 0),
+		CurrentEpochAttestations:    make([]*statepb.PendingAttestation, 0),
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 

@@ -1,9 +1,9 @@
 package copyutil
 
 import (
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -20,12 +20,12 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 }
 
 // CopyPendingAttestation copies the provided pending attestation object.
-func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
+func CopyPendingAttestation(att *state.PendingAttestation) *state.PendingAttestation {
 	if att == nil {
 		return nil
 	}
 	data := CopyAttestationData(att.Data)
-	return &pbp2p.PendingAttestation{
+	return &state.PendingAttestation{
 		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
 		Data:            data,
 		InclusionDelay:  att.InclusionDelay,

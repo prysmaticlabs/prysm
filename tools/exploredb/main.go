@@ -19,9 +19,9 @@ import (
 	"github.com/dustin/go-humanize"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
@@ -51,7 +51,7 @@ type bucketStat struct {
 
 // used to parallelize state bucket processing
 type modifiedState struct {
-	state     iface.BeaconState
+	state     state.BeaconState
 	key       []byte
 	valueSize uint64
 	rowCount  uint64
@@ -421,7 +421,7 @@ func sizeAndCountGeneric(genericItems interface{}, err error) (uint64, uint64) {
 			size += uint64(item.SizeSSZ())
 		}
 		count = uint64(len(items))
-	case []*pbp2p.PendingAttestation:
+	case []*statepb.PendingAttestation:
 		for _, item := range items {
 			size += uint64(item.SizeSSZ())
 		}

@@ -3,17 +3,17 @@ package testutil
 import (
 	"context"
 
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // MockFetcher is a fake implementation of statefetcher.Fetcher.
 type MockFetcher struct {
-	BeaconState     iface.BeaconState
+	BeaconState     state.BeaconState
 	BeaconStateRoot []byte
 }
 
 // State --
-func (m *MockFetcher) State(context.Context, []byte) (iface.BeaconState, error) {
+func (m *MockFetcher) State(context.Context, []byte) (state.BeaconState, error) {
 	return m.BeaconState, nil
 }
 
