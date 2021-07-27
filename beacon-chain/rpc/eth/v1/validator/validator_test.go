@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -15,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -28,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
@@ -314,7 +318,7 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
-func TestGetBlock(t *testing.T) {
+func TestProduceBlock(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -403,6 +407,82 @@ func TestGetBlock(t *testing.T) {
 		expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
 	}
 	assert.DeepEqual(t, expectedAttSlashings, resp.Data.Body.AttesterSlashings)
+}
+
+func TestProduceAttestationData(t *testing.T) {
+	block := testutil.NewBeaconBlock()
+	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+	targetBlock := testutil.NewBeaconBlock()
+	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
+	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+	blockRoot, err := block.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not hash beacon block")
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root for justified block")
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root for target block")
+	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
+	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  justifiedRoot[:],
+	})
+	require.NoError(t, err)
+
+	blockRoots := beaconState.BlockRoots()
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
+	chainService := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
+	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	v1Alpha1Server := &v1alpha1validator.Server{
+		P2P:              &mockp2p.MockBroadcaster{},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttestationCache: cache.NewAttestationCache(),
+		HeadFetcher: &mockChain.ChainService{
+			State: beaconState, Root: blockRoot[:],
+		},
+		FinalizationFetcher: &mockChain.ChainService{
+			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
+		},
+		TimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+		},
+		StateNotifier: chainService.StateNotifier(),
+	}
+	v1Server := &Server{
+		V1Alpha1Server: v1Alpha1Server,
+	}
+
+	req := &v1.ProduceAttestationDataRequest{
+		CommitteeIndex: 0,
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
+	}
+	res, err := v1Server.ProduceAttestationData(context.Background(), req)
+	require.NoError(t, err, "Could not get attestation info at slot")
+
+	expectedInfo := &v1.AttestationData{
+		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+		BeaconBlockRoot: blockRoot[:],
+		Source: &v1.Checkpoint{
+			Epoch: 2,
+			Root:  justifiedRoot[:],
+		},
+		Target: &v1.Checkpoint{
+			Epoch: 3,
+			Root:  blockRoot[:],
+		},
+	}
+
+	if !proto.Equal(res.Data, expectedInfo) {
+		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
+	}
 }
 
 func TestGetAggregateAttestation(t *testing.T) {
