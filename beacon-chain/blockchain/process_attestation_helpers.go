@@ -54,18 +54,13 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 			}
 		}
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-		return baseState, nil
 	}
-
 	// Sharing the same state across caches is perfectly fine here, the fetching
 	// of attestation prestate is by far the most accessed state fetching pattern in
 	// the beacon node. An extra state instance cached isn't an issue in the bigger
 	// picture.
 	if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		return nil, errors.Wrap(err, "could not save checkpoint state to cache")
 	}
 	return baseState, nil
 
