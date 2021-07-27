@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -15,9 +15,9 @@ import (
 // ProcessDeposits processes validator deposits for beacon state Altair.
 func ProcessDeposits(
 	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
+	beaconState state.BeaconStateAltair,
 	deposits []*ethpb.Deposit,
-) (iface.BeaconStateAltair, error) {
+) (state.BeaconStateAltair, error) {
 	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func ProcessDeposits(
 }
 
 // ProcessDeposit processes validator deposit for beacon state Altair.
-func ProcessDeposit(ctx context.Context, beaconState iface.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconStateAltair, error) {
+func ProcessDeposit(ctx context.Context, beaconState state.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconStateAltair, error) {
 	beaconState, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
 	if err != nil {
 		return nil, err
