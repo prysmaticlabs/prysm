@@ -6,6 +6,7 @@ import (
 	beaconv1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
@@ -101,7 +102,7 @@ func convertFromV1Containers(ctrs []beaconv1.BlockContainer) ([]*prysmv2.BeaconB
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, isCanonical bool) (*prysmv2.BeaconBlockContainerAltair, error) {
+func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*prysmv2.BeaconBlockContainerAltair, error) {
 	ctr := &prysmv2.BeaconBlockContainerAltair{
 		BlockRoot: root[:],
 		Canonical: isCanonical,

@@ -132,7 +132,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.

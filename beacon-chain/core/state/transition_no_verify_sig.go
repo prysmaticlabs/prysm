@@ -336,7 +336,7 @@ func ProcessBlockForStateRoot(
 func altairOperations(
 	ctx context.Context,
 	state state.BeaconState,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), altair.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
@@ -356,7 +356,7 @@ func altairOperations(
 func phase0Operations(
 	ctx context.Context,
 	state state.BeaconStateAltair,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
