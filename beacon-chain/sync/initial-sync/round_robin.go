@@ -13,7 +13,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
+	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
@@ -24,10 +24,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
+type blockReceiverFn func(ctx context.Context, block block2.SignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []block.SignedBeaconBlock, roots [][32]byte) error
+type batchBlockReceiverFn func(ctx context.Context, blks []block2.SignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -178,7 +178,7 @@ func (s *Service) highestFinalizedEpoch() types.Epoch {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk block.BeaconBlock, blkRoot [32]byte) {
+func (s *Service) logSyncStatus(genesis time.Time, blk block2.BeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(1)
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -198,7 +198,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk block.BeaconBlock, blkRoo
 }
 
 // logBatchSyncStatus and increments the block processing counter.
-func (s *Service) logBatchSyncStatus(genesis time.Time, blks []block.SignedBeaconBlock, blkRoot [32]byte) {
+func (s *Service) logBatchSyncStatus(genesis time.Time, blks []block2.SignedBeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(int64(len(blks)))
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -220,7 +220,7 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, blks []block.SignedBeaco
 func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
-	blk block.SignedBeaconBlock,
+	blk block2.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
 	blkRoot, err := blk.Block().HashTreeRoot()
@@ -240,7 +240,7 @@ func (s *Service) processBlock(
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []block.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []block2.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -299,7 +299,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 }
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
-func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBlock, blkRoot [32]byte) bool {
+func (s *Service) isProcessedBlock(ctx context.Context, blk block2.SignedBeaconBlock, blkRoot [32]byte) bool {
 	finalizedSlot, err := helpers.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		return false

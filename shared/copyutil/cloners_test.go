@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -335,8 +334,8 @@ func genEth1Data() *ethpb.Eth1Data {
 	}
 }
 
-func genPendingAttestation() *state.PendingAttestation {
-	return &state.PendingAttestation{
+func genPendingAttestation() *ethpb.PendingAttestation {
+	return &ethpb.PendingAttestation{
 		AggregationBits: bytes(),
 		Data:            genAttData(),
 		InclusionDelay:  3,

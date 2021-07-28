@@ -11,8 +11,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -26,8 +26,8 @@ type StateManager interface {
 	Resume(ctx context.Context) (state.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []block.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]block.SignedBeaconBlock, error)
+	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []block2.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]block2.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)

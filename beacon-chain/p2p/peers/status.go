@@ -38,8 +38,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	metadata2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -230,7 +230,7 @@ func (p *Status) InboundLimit() int {
 }
 
 // SetMetadata sets the metadata of the given remote peer.
-func (p *Status) SetMetadata(pid peer.ID, metaData metadata.Metadata) {
+func (p *Status) SetMetadata(pid peer.ID, metaData metadata2.Metadata) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -240,7 +240,7 @@ func (p *Status) SetMetadata(pid peer.ID, metaData metadata.Metadata) {
 
 // Metadata returns a copy of the metadata corresponding to the provided
 // peer id.
-func (p *Status) Metadata(pid peer.ID) (metadata.Metadata, error) {
+func (p *Status) Metadata(pid peer.ID) (metadata2.Metadata, error) {
 	p.store.RLock()
 	defer p.store.RUnlock()
 

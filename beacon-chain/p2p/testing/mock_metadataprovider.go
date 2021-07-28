@@ -1,16 +1,16 @@
 package testing
 
 import (
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
+	metadata2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 )
 
 // MockMetadataProvider is a fake implementation of the MetadataProvider interface.
 type MockMetadataProvider struct {
-	Data metadata.Metadata
+	Data metadata2.Metadata
 }
 
 // Metadata --
-func (m *MockMetadataProvider) Metadata() metadata.Metadata {
+func (m *MockMetadataProvider) Metadata() metadata2.Metadata {
 	return m.Data
 }
 

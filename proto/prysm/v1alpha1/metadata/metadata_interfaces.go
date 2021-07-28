@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // Metadata returns the interface of a p2p metadata type.
