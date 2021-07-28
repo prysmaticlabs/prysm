@@ -59,6 +59,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		return nil
 	}
 
+	log.Infof("Performing a one-time migration to a more efficient database schema for %s. It will take few minutes", stateBucket)
 	if err := db.Update(func(tx *bolt.Tx) error {
 		stateBkt := tx.Bucket(stateBucket)
 		if stateBkt == nil {
@@ -86,6 +87,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	}); err != nil {
 		return err
 	}
+	log.Infof("migration done for bucket %s.", stateBucket)
 	return nil
 }
 
@@ -103,11 +105,15 @@ func readStateEntriesFromBucket(ctx context.Context, stateBkt *bolt.Bucket, work
 		count++
 
 		select {
-		case <-errC:
+		case err := <-errC:
+			log.Errorf("received error during sending : %s", err.Error())
 			break
 		case <-ctx.Done():
+			log.Errorf("received context canceled during sending")
 			errC <- ctx.Err()
 			break
+		default:
+			return nil
 		}
 		return nil
 	}); forEachErr != nil {
@@ -120,6 +126,7 @@ func storeValidatorEntriesSeparately(ctx context.Context, stateBkt *bolt.Bucket,
 	defer func() {
 		doneC <- true
 	}()
+	count := uint64(0)
 	for mRow := range workC {
 		state := &statepb.BeaconState{}
 		if decodeErr := decode(ctx, mRow.value, state); decodeErr != nil {
@@ -164,12 +171,21 @@ func storeValidatorEntriesSeparately(ctx context.Context, stateBkt *bolt.Bucket,
 		if stateErr := stateBkt.Put(mRow.key, stateBytes); stateErr != nil {
 			errC <- stateErr
 		}
+
+		count++
 		select {
-		case <-errC:
+		case err := <-errC:
+			log.Errorf("received error during inserting : %s", err.Error())
 			break
 		case <-ctx.Done():
+			log.Errorf("received context canceled during inserting")
 			errC <- ctx.Err()
 			break
+		default:
+			if count%batchSize == 0 {
+				log.Infof("migrated %d rows", count)
+			}
+			continue
 		}
 	}
 }
