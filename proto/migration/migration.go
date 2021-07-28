@@ -350,13 +350,3 @@ func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpb.SignedBeaconBlock,
 
 	return v1Block, nil
 }
-
-func V1SignedAggregateAttToV1Alpha1(v1Alpha1Agg *ethpb.SignedAggregateAttestationAndProof) *ethpb_alpha.SignedAggregateAttestationAndProof {
-	if v1Alpha1Agg == nil {
-		return &ethpb_alpha.SignedAggregateAttestationAndProof{}
-	}
-	return &ethpb_alpha.SignedAggregateAttestationAndProof{
-		Message:   nil,
-		Signature: nil,
-	}
-}
