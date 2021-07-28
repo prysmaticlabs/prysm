@@ -141,7 +141,6 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	enableHistoricalSpaceRepresentation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
