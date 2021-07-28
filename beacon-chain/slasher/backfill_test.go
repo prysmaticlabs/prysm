@@ -120,10 +120,8 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 		// Create a realistic looking block for the slot.
 		slot := types.Slot(i)
 		require.NoError(tb, beaconState.SetSlot(slot))
-		parentRoot := make([]byte, 32)
-		if i == 0 {
-			parentRoot = genesisRoot[:]
-		} else {
+		parentRoot := genesisRoot[:]
+		if i > 0 {
 			parentRoot = blocks[i-1].Block().ParentRoot()
 		}
 
@@ -212,7 +210,7 @@ func generateBlock(
 	var blk *ethpb.SignedBeaconBlock
 	if slashable {
 		slashableGraffiti := make([]byte, 32)
-		copy(slashableGraffiti[:], "slashme")
+		copy(slashableGraffiti, "slashme")
 		blk = testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
 				Slot:          slot,
@@ -227,7 +225,7 @@ func generateBlock(
 			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
 				Slot:          slot,
 				ProposerIndex: valIdx,
-				ParentRoot:    parentRoot[:],
+				ParentRoot:    parentRoot,
 			}),
 		})
 	}
