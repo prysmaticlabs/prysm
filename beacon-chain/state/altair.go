@@ -1,6 +1,6 @@
 package state
 
-import statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+import statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 // BeaconStateAltair has read and write access to beacon state methods.
 type BeaconStateAltair interface {

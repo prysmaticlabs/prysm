@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // HydrateSyncCommittee hydrates the provided sync committee message.

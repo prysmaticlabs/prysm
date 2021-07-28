@@ -5,7 +5,7 @@ package fuzz
 import (
 	ssz "github.com/ferranbt/fastssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // MarshalSSZ ssz marshals the InputBlockWithPrestate object

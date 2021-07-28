@@ -34,16 +34,13 @@ import (
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
-	beaconv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/beacon"
-	nodev2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/node"
-	validatorv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -303,9 +300,6 @@ func (s *Service) Start() {
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
-	prysmv2.RegisterBeaconChainServer(s.grpcServer, &beaconv2.Server{})
-	prysmv2.RegisterBeaconNodeValidatorServer(s.grpcServer, &validatorv2.Server{})
-	prysmv2.RegisterNodeServer(s.grpcServer, &nodev2.Server{})
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 

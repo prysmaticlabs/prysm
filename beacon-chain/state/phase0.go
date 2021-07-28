@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // BeaconState has read and write access to beacon state methods.

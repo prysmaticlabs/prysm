@@ -2,8 +2,8 @@ package wrapper
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	metadata "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
