@@ -20,6 +20,17 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+        "//proto/testing:__subpackages__",
+        "//shared/aggregation:__subpackages__",
+        "//shared/benchutil:__pkg__",
+        "//shared/depositutil:__subpackages__",
+        "//shared/interop:__subpackages__",
+        "//shared/testutil:__pkg__",
+        "//slasher/rpc:__subpackages__",
+        "//spectest:__subpackages__",
+        "//tools/benchmark-files-gen:__pkg__",
+        "//tools/pcli:__pkg__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",

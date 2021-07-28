@@ -42,7 +42,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 		return nil, valErr
 	}
 
-	return s.unmarshalState(ctx, enc,valEntries)
+	return s.unmarshalState(ctx, enc, valEntries)
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -79,7 +79,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 		}
 
 		var crtErr error
-		st, err = s.unmarshalState(ctx, enc,valEntries)
+		st, err = s.unmarshalState(ctx, enc, valEntries)
 		return crtErr
 	})
 	if err != nil {
@@ -144,8 +144,8 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string]*v1alpha.Validator)    // It's a map to make sure that you store only new validator entries.
-	validatorKeys := make([][]byte, len(states))                // For every state, this stores a compressed list of validator keys.
+	validatorsEntries := make(map[string]*ethpb.Validator)    // It's a map to make sure that you store only new validator entries.
+	validatorKeys := make([][]byte, len(states))              // For every state, this stores a compressed list of validator keys.
 	realValidators := make([][]*ethpb.Validator, len(states)) // It's temporary structure to restore state in memory after persisting it.
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
@@ -338,7 +338,7 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // unmarshal state from marshaled proto state bytes to versioned state struct type.
-func(s *Store) unmarshalState(ctx context.Context, enc []byte,validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
+func (s *Store) unmarshalState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -404,10 +404,9 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 	}
 }
 
-
 // Retrieve the validator entries for a given block root. These entries are stored in a
 // separate bucket to reduce state size.
-func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*v1alpha.Validator, error) {
+func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*ethpb.Validator, error) {
 	ok, err := s.isStateValidatorMigrationOver()
 	if err != nil {
 		return nil, err
@@ -514,7 +513,7 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 				return 0, errors.New("state enc can't be nil")
 			}
 			// no need to construct the validator entries as it is not used here.
-			s, err := s.unmarshalState(ctx, enc,nil)
+			s, err := s.unmarshalState(ctx, enc, nil)
 			if err != nil {
 				return 0, err
 			}
