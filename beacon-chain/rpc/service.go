@@ -37,6 +37,7 @@ import (
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	beaconv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/beacon"
 	validatorv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/validator"
+	nodev2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -321,6 +322,7 @@ func (s *Service) Start() {
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	prysmv2.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV2)
 	prysmv2.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServerV2)
+	prysmv2.RegisterNodeServer(s.grpcServer, &nodev2.Server{})
 	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

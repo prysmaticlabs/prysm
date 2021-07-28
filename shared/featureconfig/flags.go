@@ -128,6 +128,12 @@ var (
 			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
 			" vulnerable if it is being run in unsafe configurations.",
 	}
+	enableHistoricalSpaceRepresentation = &cli.BoolFlag{
+		Name: "enable-historical-state-representation",
+		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +
+			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
+			"there is no going back. At worst, your entire database might get corrupted.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -187,6 +193,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableUpdateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
+	enableHistoricalSpaceRepresentation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
