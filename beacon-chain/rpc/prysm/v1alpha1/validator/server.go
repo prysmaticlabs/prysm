@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -61,6 +62,38 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
+}
+
+func (vs *Server) GetBlockAltair(ctx context.Context, request *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) ProposeBlockAltair(ctx context.Context, altair *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, empty *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) SubmitSyncMessage(ctx context.Context, message *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, request *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, request *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) SubmitSignedContributionAndProof(ctx context.Context, proof *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func (vs *Server) StreamBlocksAltair(request *ethpb.StreamBlocksRequest, server ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
+	return status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
