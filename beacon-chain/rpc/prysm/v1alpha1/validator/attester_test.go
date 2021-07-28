@@ -339,15 +339,15 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = slot
-	block := testutil.NewBeaconBlock()
-	block.Block.Slot = slot - 1
+	block2 := testutil.NewBeaconBlock()
+	block2.Block.Slot = slot - 1
 	targetBlock := testutil.NewBeaconBlock()
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
-	blockRoot2, err := block.HashTreeRoot()
+	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
