@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "enums.go",
-        "migration.go",
+        "v1alpha1_to_v1.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/migration",
     visibility = ["//visibility:public"],
@@ -21,7 +21,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "enums_test.go",
-        "migration_test.go",
+        "v1alpha1_to_v1_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
