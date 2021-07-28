@@ -8,8 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -360,9 +360,9 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	block1 := testutil.NewBeaconBlock()
 	block1.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block1)))
-	block := testutil.NewBeaconBlock()
-	block.Block.Slot = 10
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
+	block2 := testutil.NewBeaconBlock()
+	block2.Block.Slot = 10
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block2)))
 	block3 := testutil.NewBeaconBlock()
 	block3.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block3)))
@@ -374,7 +374,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
 	require.NoError(t, err)
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-	assert.Equal(t, true, proto.Equal(block, highestAt[0].Proto()), "Wanted: %v, received: %v", block, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	require.NoError(t, err)
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
@@ -386,7 +386,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, highestAt[0].Proto()), "Wanted: %v, received: %v", block, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 }
 
 func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
