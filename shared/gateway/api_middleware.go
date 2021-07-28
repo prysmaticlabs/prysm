@@ -141,7 +141,7 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 		if endpoint.Err.Msg() != "" {
 			HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
 			return
-		} else if !GrpcResponseIsStatusCodeOnly(req, endpoint.GetResponse) {
+		} else if !GrpcResponseIsStatusCodeOnly(endpoint.GetResponse) {
 			var response interface{}
 			if req.Method == "GET" {
 				response = endpoint.GetResponse

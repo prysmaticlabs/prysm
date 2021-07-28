@@ -197,23 +197,13 @@ func TestHandleGrpcResponseError(t *testing.T) {
 }
 
 func TestGrpcResponseIsStatusCodeOnly(t *testing.T) {
-	var body bytes.Buffer
-
 	t.Run("status_code_only", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, nil)
+		result := GrpcResponseIsStatusCodeOnly(nil)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("different_method", func(t *testing.T) {
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, nil)
-		assert.Equal(t, false, result)
-	})
-
 	t.Run("non_empty_response", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, &testRequestContainer{})
+		result := GrpcResponseIsStatusCodeOnly(&testRequestContainer{})
 		assert.Equal(t, false, result)
 	})
 }

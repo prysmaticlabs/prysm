@@ -111,8 +111,8 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, w http.Resp
 }
 
 // GrpcResponseIsStatusCodeOnly checks whether a grpc-gateway's response contained no body.
-func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface{}) bool {
-	return req.Method == "GET" && responseContainer == nil
+func GrpcResponseIsStatusCodeOnly(responseContainer interface{}) bool {
+	return responseContainer == nil
 }
 
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.

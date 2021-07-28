@@ -95,6 +95,21 @@ func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *ethpb_alpha.AggregateAttestat
 	}
 }
 
+// V1SignedAggregateAttAndProofToV1Alpha1 converts a v1 signed aggregate attestation and proof to v1alpha1.
+func V1SignedAggregateAttAndProofToV1Alpha1(v1Att *ethpb.SignedAggregateAttestationAndProof) *ethpb_alpha.SignedAggregateAttestationAndProof {
+	if v1Att == nil {
+		return &ethpb_alpha.SignedAggregateAttestationAndProof{}
+	}
+	return &ethpb_alpha.SignedAggregateAttestationAndProof{
+		Message: &ethpb_alpha.AggregateAttestationAndProof{
+			AggregatorIndex: v1Att.Message.AggregatorIndex,
+			Aggregate:       V1AttestationToV1Alpha1(v1Att.Message.Aggregate),
+			SelectionProof:  v1Att.Message.SelectionProof,
+		},
+		Signature: v1Att.Signature,
+	}
+}
+
 // V1Alpha1IndexedAttToV1 converts a v1alpha1 indexed attestation to v1.
 func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.IndexedAttestation {
 	if v1alpha1Att == nil {
@@ -116,6 +131,18 @@ func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attest
 		AggregationBits: v1alpha1Att.AggregationBits,
 		Data:            V1Alpha1AttDataToV1(v1alpha1Att.Data),
 		Signature:       v1alpha1Att.Signature,
+	}
+}
+
+// V1AttestationToV1Alpha1 converts a v1 attestation to v1alpha1.
+func V1AttestationToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
+	if v1Att == nil {
+		return &ethpb_alpha.Attestation{}
+	}
+	return &ethpb_alpha.Attestation{
+		AggregationBits: v1Att.AggregationBits,
+		Data:            V1AttDataToV1Alpha1(v1Att.Data),
+		Signature:       v1Att.Signature,
 	}
 }
 
@@ -322,4 +349,14 @@ func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpb.SignedBeaconBlock,
 	}
 
 	return v1Block, nil
+}
+
+func V1SignedAggregateAttToV1Alpha1(v1Alpha1Agg *ethpb.SignedAggregateAttestationAndProof) *ethpb_alpha.SignedAggregateAttestationAndProof {
+	if v1Alpha1Agg == nil {
+		return &ethpb_alpha.SignedAggregateAttestationAndProof{}
+	}
+	return &ethpb_alpha.SignedAggregateAttestationAndProof{
+		Message:   nil,
+		Signature: nil,
+	}
 }

@@ -271,7 +271,8 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 
 	broadcastFailed := false
 	for _, agg := range req.Data {
-		if err := vs.P2P.Broadcast(ctx, agg); err != nil {
+		v1alpha1Agg := migration.V1SignedAggregateAttAndProofToV1Alpha1(agg)
+		if err := vs.P2P.Broadcast(ctx, v1alpha1Agg); err != nil {
 			broadcastFailed = true
 		} else {
 			log.WithFields(logrus.Fields{
