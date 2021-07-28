@@ -124,6 +124,11 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationIgnore
 	}
 	bVector := m.Message.Contribution.AggregationBits
+	// In the event no bit is set for the
+	// sync contribution, we reject the message.
+	if bVector.Count() == 0 {
+		return pubsub.ValidationReject
+	}
 	for i, pk := range syncPubkeys {
 		if bVector.BitAt(uint64(i)) {
 			pubK, err := bls.PublicKeyFromBytes(pk)
