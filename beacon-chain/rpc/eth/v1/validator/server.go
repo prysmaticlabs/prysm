@@ -15,6 +15,6 @@ type Server struct {
 	TimeFetcher      blockchain.TimeFetcher
 	SyncChecker      sync.Checker
 	AttestationsPool attestations.Pool
-	P2P              p2p.Broadcaster
+	Broadcaster      p2p.Broadcaster
 	V1Alpha1Server   *v1alpha1validator.Server
 }

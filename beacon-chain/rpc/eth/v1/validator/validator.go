@@ -247,19 +247,8 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) {
 			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
 		}
-		if len(agg.Signature) != sigLen {
+		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {
 			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
-		}
-		rootLen := 32
-		attData := agg.Message.Aggregate.Data
-		if len(attData.BeaconBlockRoot) != rootLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect beacon block root length. Expected %d bytes", rootLen)
-		}
-		if len(attData.Source.Root) != rootLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect source root length. Expected %d bytes", rootLen)
-		}
-		if len(attData.Target.Root) != rootLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect target root length. Expected %d bytes", rootLen)
 		}
 
 		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
@@ -272,7 +261,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 	broadcastFailed := false
 	for _, agg := range req.Data {
 		v1alpha1Agg := migration.V1SignedAggregateAttAndProofToV1Alpha1(agg)
-		if err := vs.P2P.Broadcast(ctx, v1alpha1Agg); err != nil {
+		if err := vs.Broadcaster.Broadcast(ctx, v1alpha1Agg); err != nil {
 			broadcastFailed = true
 		} else {
 			log.WithFields(logrus.Fields{
