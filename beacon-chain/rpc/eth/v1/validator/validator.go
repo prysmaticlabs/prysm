@@ -276,7 +276,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 	if broadcastFailed {
 		return nil, status.Errorf(
 			codes.Internal,
-			"Could not broadcast one or more signed aggregated attestations.")
+			"Could not broadcast one or more signed aggregated attestations")
 	}
 
 	return &emptypb.Empty{}, nil
