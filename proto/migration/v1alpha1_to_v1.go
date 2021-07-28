@@ -4,12 +4,12 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"google.golang.org/protobuf/proto"
 )
 
 // BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
-func BlockIfaceToV1BlockHeader(block block2.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+func BlockIfaceToV1BlockHeader(block block.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
@@ -307,7 +307,7 @@ func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator 
 }
 
 // SignedBeaconBlock converts a signed beacon block interface to a v1alpha1 block.
-func SignedBeaconBlock(block block2.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
+func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
 	if block == nil || block.IsNil() {
 		return nil, errors.New("could not find requested block")
 	}

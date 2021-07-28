@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -41,7 +41,7 @@ import (
 func ProcessBlockHeader(
 	_ context.Context,
 	beaconState state.BeaconState,
-	block block2.SignedBeaconBlock,
+	block block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(block); err != nil {
 		return nil, err

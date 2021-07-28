@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -13,7 +13,7 @@ import (
 func Test_logStateTransitionData(t *testing.T) {
 	tests := []struct {
 		name string
-		b    block2.BeaconBlock
+		b    block.BeaconBlock
 		want string
 	}{
 		{name: "empty block body",

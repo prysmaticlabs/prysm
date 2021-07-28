@@ -515,7 +515,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 
 	// Add block1 for slot1
 	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(b1), b1Root))
-	// Add block2 for slot2
+	// Add block for slot2
 	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(b2), b2Root))
 	// Add block3 for slot3
 	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(b3), b3Root))

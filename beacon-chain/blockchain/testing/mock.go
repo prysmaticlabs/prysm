@@ -22,7 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,11 +33,11 @@ import (
 type ChainService struct {
 	State                       state.BeaconState
 	Root                        []byte
-	Block                       block2.SignedBeaconBlock
+	Block                       block.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []block2.SignedBeaconBlock
+	BlocksReceived              []block.SignedBeaconBlock
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
@@ -150,7 +150,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block2.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
 		s.State = &v1.BeaconState{}
 	}
@@ -177,7 +177,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block2
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block2.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
 		s.State = &v1.BeaconState{}
 	}
@@ -206,7 +206,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block2.Sign
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block block2.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
 		s.State = &v1.BeaconState{}
 	}
@@ -249,7 +249,7 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (block2.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (block.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
