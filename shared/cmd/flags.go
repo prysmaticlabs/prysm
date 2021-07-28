@@ -258,8 +258,23 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 // This function should be used in the app.Before, whenever the application supports a default command.
 func ValidateNoArgs(ctx *cli.Context) error {
 	commandList := ctx.App.Commands
+	isParamForFlag := false
 	for _, a := range ctx.Args().Slice() {
+		// We don't validate further if
+		// the following value is actually
+		// a parameter for a flag.
+		if isParamForFlag {
+			isParamForFlag = false
+			continue
+		}
 		if strings.HasPrefix(a, "-") {
+			// In the event our flag doesn't specify
+			// the relevant argument with an equal
+			// sign, we can assume the next argument
+			// is the relevant value for the flag.
+			if !strings.Contains(a, "=") {
+				isParamForFlag = true
+			}
 			continue
 		}
 		c := checkCommandList(commandList, a)

@@ -125,3 +125,87 @@ func TestValidateNoArgs(t *testing.T) {
 	err = app.Run([]string{"command", "bar", "subComm2", "subComm4"})
 	require.NoError(t, err)
 }
+
+func TestValidateNoArgs_SubcommandFlags(t *testing.T) {
+	app := &cli.App{
+		Before: ValidateNoArgs,
+		Action: func(c *cli.Context) error {
+			return nil
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name: "foo",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name: "bar",
+				Subcommands: []*cli.Command{
+					{
+						Name: "subComm1",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm3",
+							},
+						},
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "barfoo2",
+							},
+						},
+					},
+					{
+						Name: "subComm2",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm4",
+							},
+						},
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "barfoo3",
+							},
+						},
+					},
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "barfoo1",
+					},
+				},
+			},
+		},
+	}
+
+	// It should not work with a bogus argument
+	err := app.Run([]string{"command", "foo"})
+	require.ErrorContains(t, "unrecognized argument: foo", err)
+	// It should work with registered flags
+	err = app.Run([]string{"command", "--foo=bar"})
+	require.NoError(t, err)
+
+	// It should work with registered flags with spaces.
+	err = app.Run([]string{"command", "--foo", "bar"})
+	require.NoError(t, err)
+
+	// Handle Nested Subcommands and its flags
+
+	err = app.Run([]string{"command", "bar", "--barfoo1=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "--barfoo1", "xyz"})
+	require.NoError(t, err)
+
+	// Should pass with correct nested double subcommands.
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo2=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo2", "xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo3=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo3", "xyz"})
+	require.NoError(t, err)
+}
