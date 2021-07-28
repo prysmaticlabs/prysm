@@ -278,6 +278,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint = gateway.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 			Err:         &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				OnPostStart: []gateway.Hook{wrapSignedAggregateAndProofArray},
+			},
 		}
 	default:
 		return nil, errors.New("invalid path")
