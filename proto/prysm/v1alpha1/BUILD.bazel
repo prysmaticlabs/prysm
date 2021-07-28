@@ -21,11 +21,10 @@ load("@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2:defs.bzl"
 proto_library(
     name = "proto",
     srcs = [
-        "attestation.proto",
-        "beacon_block.proto",
         "beacon_chain.proto",
         "node.proto",
         "validator.proto",
+        ":ssz_proto_files",
 #        ":generated_swagger_proto",
     ],
     visibility = ["//visibility:public"],
@@ -167,3 +166,17 @@ go_library(
 #    cmd = "$(location //tools/replacer) $(location swagger.proto) description=$(location swagger_description.md) > $(@)",
 #    tools = ["//tools/replacer"],
 #)
+
+ssz_proto_files(
+    name = "ssz_proto_files",
+    srcs = [
+        "attestation.proto",
+        "beacon_block.proto",
+        "sync_committee.proto",
+    ],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
+)

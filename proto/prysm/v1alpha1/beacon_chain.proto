@@ -104,6 +104,19 @@ service BeaconChain {
         };
     }
 
+    // Retrieve blocks by root, slot, or epoch.
+    //
+    // The server may return multiple blocks in the case that a slot or epoch is
+    // provided as the filter criteria. The server may return an empty list when
+    // no blocks in their database match the filter criteria. This RPC should
+    // not return NOT_FOUND. Only one filter criteria should be used. This endpoint
+    // allows for retrieval of genesis information via a boolean query filter.
+    rpc ListBlocksAltair(ListBlocksRequest) returns (ListBlocksResponseAltair) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/blocks/altair"
+        };
+    }
+
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
     rpc StreamBlocks(StreamBlocksRequest) returns (stream SignedBeaconBlock) {
@@ -395,9 +408,36 @@ message ListBlocksResponse {
     int32 total_size = 3;
 }
 
-// Request to only return blocks that is verified by the beacon node.
-message StreamBlocksRequest {
-    bool verified_only = 1;
+
+message ListBlocksResponseAltair {
+    repeated BeaconBlockContainerAltair blockContainers = 1;
+
+    // A pagination token returned from a previous call to `ListBlocks`
+    // that indicates from where listing should continue.
+    // This field is optional.
+    string next_page_token = 2;
+
+    // Total count of Blocks matching the request filter.
+    int32 total_size = 3;
+}
+
+// A container that contains both the beacon block
+// and its corresponding root.
+message BeaconBlockContainerAltair {
+    // 32 byte merkle tree root of contained beacon block.
+    bytes block_root = 1;
+
+    // Boolean indicating whether the block is canonical.
+    bool canonical = 2;
+
+    // The desired block to be returned.
+    oneof block {
+        // Representing a phase 0 block.
+        SignedBeaconBlock phase0_block = 3;
+
+        // Representing an altair block.
+        SignedBeaconBlockAltair altair_block = 4;
+    }
 }
 
 // A container that contains both the beacon block
