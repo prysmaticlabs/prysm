@@ -17,6 +17,7 @@ type FieldTrie struct {
 	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
 	field       fieldIndex
+	length      uint64
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
@@ -28,6 +29,7 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 			field:     field,
 			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
+			length:    length,
 		}, nil
 	}
 	datType, ok := fieldMap[field]
@@ -36,6 +38,9 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	}
 	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateElements(field, elements, length); err != nil {
 		return nil, err
 	}
 	switch datType {
@@ -75,6 +80,9 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	}
 	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
 	if err != nil {
+		return [32]byte{}, err
+	}
+	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
 	switch datType {
@@ -163,4 +171,21 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
+}
+
+func (f *FieldTrie) validateIndices(idxs []uint64) error {
+	for _, idx := range idxs {
+		if idx >= f.length {
+			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(), idx, f.length)
+		}
+	}
+	return nil
+}
+
+func validateElements(field fieldIndex, elements interface{}, length uint64) error {
+	val := reflect.ValueOf(elements)
+	if val.Len() > int(length) {
+		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), val.Len(), length)
+	}
+	return nil
 }

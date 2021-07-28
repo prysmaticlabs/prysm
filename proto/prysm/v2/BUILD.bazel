@@ -21,6 +21,7 @@ load("@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2:defs.bzl"
 proto_library(
     name = "proto",
     srcs = [
+        "node.proto",
         "beacon_chain.proto",
         "debug.proto",
         "finalized_block_root_container.proto",
@@ -71,6 +72,25 @@ ssz_gen_marshal(
         "MetaDataV0",
         "MetaDataV1",
         "Status",
+        "AggregateAttestationAndProof",
+        "Attestation",
+        "AttestationData",
+        "AttesterSlashing",
+        "BeaconBlock",
+        "BeaconBlockHeader",
+        "Checkpoint",
+        "Deposit",
+        "Eth1Data",
+        "IndexedAttestation",
+        "ProposerSlashing",
+        "SignedAggregateAttestationAndProof",
+        "SignedBeaconBlock",
+        "SignedBeaconBlockHeader",
+        "SignedVoluntaryExit",
+        "Validator",
+        "VoluntaryExit",
+        "ContributionAndProof",
+        "SignedContributionAndProof",
     ],
 )
 
@@ -125,7 +145,6 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
-        "aliases.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",
         ":ssz_generated_files",  # keep
@@ -161,6 +180,7 @@ go_library(
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
+        "attestation.proto",
         "beacon_block.proto",
         "p2p_messages.proto",
         "sync_committee.proto",
