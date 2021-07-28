@@ -140,14 +140,8 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 	s.depositTrie.Insert(depositHash[:], int(index))
 
-	proof, err := s.depositTrie.MerkleProof(int(index))
-	if err != nil {
-		return errors.Wrap(err, "Unable to generate merkle proof for deposit")
-	}
-
 	deposit := &ethpb.Deposit{
-		Data:  depositData,
-		Proof: proof,
+		Data: depositData,
 	}
 
 	// We always store all historical deposits in the DB.
