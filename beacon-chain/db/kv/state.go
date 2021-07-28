@@ -151,23 +151,18 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	if states == nil {
 		return errors.New("nil state")
 	}
-	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string]*v1alpha.Validator)    // It's a map to make sure that you store only new validator entries.
-	validatorKeys := make([][]byte, len(states))                // For every state, this stores a compressed list of validator keys.
-	realValidators := make([][]*v1alpha.Validator, len(states)) // It's temporary structure to restore state in memory after persisting it.
+	validatorsEntries := make(map[string]*v1alpha.Validator) // It's a map to make sure that you store only new validator entries.
+	validatorKeys := make([][]byte, len(states))             // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
-		// store the real validators to restore the in memory state later.
-		realValidators[i] = pbState.Validators
 
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
 		for _, val := range pbState.Validators {
 			// create the unique hash for that validator entry.
-			//hash := hashutil.Hash(valBytes)
 			hash, hashErr := val.HashTreeRoot()
 			if hashErr != nil {
 				return hashErr
@@ -178,15 +173,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			hashStr := string(hash[:])
 			validatorsEntries[hashStr] = val
 		}
-
-		// zero out the validators List from the state bucket so that it is not stored as part of it.
-		pbState.Validators = make([]*v1alpha.Validator, 0)
-
 		validatorKeys[i] = snappy.Encode(nil, hashes)
-		multipleEncs[i], err = encode(ctx, pbState)
-		if err != nil {
-			return err
-		}
 	}
 
 	if err := s.db.Update(func(tx *bolt.Tx) error {
@@ -197,9 +184,27 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
+
+			// There is a gap when the states that are passed are used outside this
+			// thread. But while storing the state object, we should not store the
+			// validator entries.To bring the gap closer, we empty the validators
+			// just before Put() and repopulate that state with original validators.
+			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
+			pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
+			if err != nil {
 				return err
 			}
+			valEntries := pbState.Validators
+			pbState.Validators = make([]*v1alpha.Validator, 0)
+			encodedState, err := encode(ctx, pbState)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(rt[:], encodedState); err != nil {
+				return err
+			}
+			pbState.Validators = valEntries
+
 			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 				return err
 			}
@@ -232,14 +237,6 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		return err
 	}
 
-	// restore the state in memory with the original validators
-	for i, vals := range realValidators {
-		pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
-		if err != nil {
-			return err
-		}
-		pbState.Validators = vals
-	}
 	return nil
 }
 
