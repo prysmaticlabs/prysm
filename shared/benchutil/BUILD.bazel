@@ -10,7 +10,6 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/params:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],

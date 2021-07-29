@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 
@@ -10,12 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,15 +64,32 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		pbState, err := statev1.ProtobufBeaconState(bState.CloneInnerState())
-		if err != nil {
-			return nil, err
+		var headState state.BeaconState
+		switch bState.Version() {
+		case version.Phase0:
+			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := v1.InitializeFromProtoUnsafe(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = state.BeaconState(genState)
+		case version.Altair:
+			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := v2.InitializeFromProtoUnsafe(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = state.BeaconState(genState)
+		default:
+			return nil, errors.New("state type isn't supported")
 		}
-		genState, err := statev1.InitializeFromProtoUnsafe(pbState)
-		if err != nil {
-			return nil, err
-		}
-		headState := state.BeaconState(genState)
+
 		headState, err = core.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err

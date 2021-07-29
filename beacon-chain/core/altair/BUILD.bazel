@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["deposit.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/state:go_default_library",
@@ -27,7 +30,6 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
