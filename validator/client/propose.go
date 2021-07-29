@@ -10,11 +10,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -200,7 +198,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClientV2.GetBlock(ctx, &prysmv2.BlockRequest{
+	b, err := v.validatorClientV2.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -214,7 +212,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapperv2.WrappedAltairBeaconBlock(b)
+	wb, err := wrapper.WrappedAltairBeaconBlock(b)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -230,7 +228,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		}
 		return
 	}
-	blk := &prysmv2.SignedBeaconBlockAltair{
+	blk := &ethpb.SignedBeaconBlockAltair{
 		Block:     b,
 		Signature: sig,
 	}
@@ -380,7 +378,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
-		block, ok := b.Proto().(*prysmv2.BeaconBlockAltair)
+		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}

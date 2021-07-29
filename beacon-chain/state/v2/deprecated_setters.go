@@ -3,7 +3,7 @@ package v2
 import (
 	"github.com/pkg/errors"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SetPreviousEpochAttestations is not supported for HF1 beacon state.

@@ -12,8 +12,6 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -74,7 +72,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	return keys, nil
 }
 
-func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (m *mockKeymanager) Sign(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
@@ -662,11 +660,11 @@ func TestRolesAt_OK(t *testing.T) {
 
 	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
 			Slot:      1,
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
@@ -697,11 +695,11 @@ func TestRolesAt_OK(t *testing.T) {
 
 	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
 			Slot:      31,
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
 	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
 	require.NoError(t, err)
@@ -986,7 +984,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
-		&prysmv2.StreamBlocksResponse{Block: &prysmv2.StreamBlocksResponse_Phase0Block{
+		&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_Phase0Block{
 			Phase0Block: &ethpb.SignedBeaconBlock{}}},
 		nil,
 	).Do(func() {
@@ -1015,8 +1013,8 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	slot := types.Slot(100)
 	stream.EXPECT().Recv().Return(
-		&prysmv2.StreamBlocksResponse{
-			Block: &prysmv2.StreamBlocksResponse_Phase0Block{
+		&ethpb.StreamBlocksResponse{
+			Block: &ethpb.StreamBlocksResponse_Phase0Block{
 				Phase0Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}}},
 		},
 		nil,

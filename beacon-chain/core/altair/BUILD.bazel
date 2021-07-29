@@ -18,9 +18,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
-        "//shared/testutil/altair:__pkg__",
-        "//spectest:__subpackages__",
-        "//validator:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
@@ -70,10 +67,6 @@ go_test(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
-        "//proto/prysm/v2/wrapper:go_default_library",
-        "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",

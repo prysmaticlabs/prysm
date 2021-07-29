@@ -12,10 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -34,7 +31,7 @@ type mocks struct {
 	validatorClient   *mock.MockBeaconNodeValidatorClient
 	validatorClientV2 *mock.MockBeaconNodeValidatorAltairClient
 	nodeClient        *mock.MockNodeClient
-	signExitFunc      func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	signExitFunc      func(context.Context, *ethpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -73,7 +70,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		validatorClient:   mock.NewMockBeaconNodeValidatorClient(ctrl),
 		validatorClientV2: mock.NewMockBeaconNodeValidatorAltairClient(ctrl),
 		nodeClient:        mock.NewMockNodeClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+		signExitFunc: func(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}
@@ -247,7 +244,7 @@ func TestProposeBlockV2_ProposeBlockFailed(t *testing.T) {
 
 	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, pubKey)
@@ -352,7 +349,7 @@ func TestProposeBlockV2_BlocksDoubleProposal(t *testing.T) {
 
 	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
@@ -607,12 +604,12 @@ func TestProposeBlockV2_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	var sentBlock *prysmv2.SignedBeaconBlock
+	var sentBlock *ethpb.SignedBeaconBlock
 
 	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
-	).DoAndReturn(func(ctx context.Context, block *prysmv2.SignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+	).DoAndReturn(func(ctx context.Context, block *ethpb.SignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
 		sentBlock = block
 		return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 	})
@@ -827,7 +824,7 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wrapperv1.WrappedPhase0BeaconBlock(blk.Block))
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wrapper.WrappedPhase0BeaconBlock(blk.Block))
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
