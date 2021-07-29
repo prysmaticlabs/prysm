@@ -152,7 +152,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
-	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
+	sig, err := validator.keyManager.Sign(context.Background(), &ethpb.SignRequest{
 		PublicKey:   validatorKey.PublicKey().Marshal(),
 		SigningRoot: root[:],
 	})

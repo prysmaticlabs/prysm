@@ -1948,12 +1948,9 @@ var (
 
 	pattern_BeaconNodeValidator_ProposeExit_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "validator", "exit"}, ""))
 
-	pattern_BeaconNodeValidator_SubscribeCommitteeSubnets_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "validator", "subnet", "subscribe"}, ""))
+	pattern_BeaconNodeValidator_SubscribeCommitteeSubnets_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "validator", "subnet", "subscribe"}, ""))
 
-<<<<<<< HEAD
 	pattern_BeaconNodeValidator_CheckDoppelGanger_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "validator", "doppelganger"}, ""))
-=======
-	pattern_BeaconNodeValidator_CheckDoppelGanger_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "doppelganger"}, ""))
 
 	pattern_BeaconNodeValidator_GetBlockAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "block"}, ""))
 
@@ -1970,7 +1967,6 @@ var (
 	pattern_BeaconNodeValidator_SubmitSignedContributionAndProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "signed_contribution_and_proof"}, ""))
 
 	pattern_BeaconNodeValidator_StreamBlocksAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "validator", "blocks", "stream"}, ""))
->>>>>>> develop
 )
 
 var (

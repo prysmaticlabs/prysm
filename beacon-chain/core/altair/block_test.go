@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -41,7 +41,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 		sigs[i] = sig
 	}
 	aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
-	syncAggregate := &prysmv2.SyncAggregate{
+	syncAggregate := &ethpb.SyncAggregate{
 		SyncCommitteeBits:      syncBits,
 		SyncCommitteeSignature: aggregatedSig,
 	}

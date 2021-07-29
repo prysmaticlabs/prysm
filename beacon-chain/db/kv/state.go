@@ -142,10 +142,8 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	if states == nil {
 		return errors.New("nil state")
 	}
-	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string]*ethpb.Validator)    // It's a map to make sure that you store only new validator entries.
-	validatorKeys := make([][]byte, len(states))              // For every state, this stores a compressed list of validator keys.
-	realValidators := make([][]*ethpb.Validator, len(states)) // It's temporary structure to restore state in memory after persisting it.
+	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
+	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
@@ -191,7 +189,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				return err
 			}
 			valEntries := pbState.Validators
-			pbState.Validators = make([]*v1alpha.Validator, 0)
+			pbState.Validators = make([]*ethpb.Validator, 0)
 			encodedState, err := encode(ctx, pbState)
 			if err != nil {
 				return err

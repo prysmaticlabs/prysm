@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -96,13 +96,13 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
 	blks, err := altairClient.ListBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
@@ -130,14 +130,14 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
 	blks, err := altairClient.ListBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
@@ -339,13 +339,13 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
 	blks, err := altairClient.ListBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
@@ -387,7 +387,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *prysmv2.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
+func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
 		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
 	}

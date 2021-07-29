@@ -16,7 +16,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -128,13 +127,13 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err != nil {
 		return nil, err
 	}
-	state := &statepb.BeaconStateAltair{
+	state := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -202,11 +201,11 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	state.CurrentSyncCommittee = &statepb.SyncCommittee{
+	state.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	state.NextSyncCommittee = &statepb.SyncCommittee{
+	state.NextSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
@@ -215,10 +214,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 }
 
 func emptyGenesisState() (state.BeaconStateAltair, error) {
-	state := &statepb.BeaconStateAltair{
+	state := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           0,

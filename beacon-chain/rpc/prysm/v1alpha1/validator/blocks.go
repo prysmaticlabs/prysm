@@ -6,24 +6,20 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var log = logrus.WithField("prefix", "rpc")
-
-// StreamBlocks to clients every single time a block is received by the beacon node.
-func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconNodeValidator_StreamBlocksServer) error {
+// StreamBlocksAltair to clients every single time a block is received by the beacon node.
+func (bs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
 	if req.VerifiedOnly {
-		blockSub = bs.V1Server.StateNotifier.StateFeed().Subscribe(blocksChannel)
+		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
 	} else {
-		blockSub = bs.V1Server.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
 	}
 	defer blockSub.Unsubscribe()
 
@@ -36,7 +32,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconN
 					if !ok || data == nil {
 						continue
 					}
-					b := &v2.StreamBlocksResponse{}
+					b := &ethpb.StreamBlocksResponse{}
 					switch data.SignedBlock.Version() {
 					case version.Phase0:
 						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
@@ -44,14 +40,14 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconN
 							log.Warn("Mismatch between version and block type, was expecting *ethpb.SignedBeaconBlock")
 							continue
 						}
-						b.Block = &v2.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
+						b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 					case version.Altair:
-						phBlk, ok := data.SignedBlock.Proto().(*v2.SignedBeaconBlockAltair)
+						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
 						if !ok {
 							log.Warn("Mismatch between version and block type, was expecting *v2.SignedBeaconBlockAltair")
 							continue
 						}
-						b.Block = &v2.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
+						b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
 					}
 
 					if err := stream.Send(b); err != nil {
@@ -79,7 +75,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconN
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not verify block signature")
 						continue
 					}
-					b := &v2.StreamBlocksResponse{}
+					b := &ethpb.StreamBlocksResponse{}
 					switch data.SignedBlock.Version() {
 					case version.Phase0:
 						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
@@ -87,14 +83,14 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream v2.BeaconN
 							log.Warn("Mismatch between version and block type, was expecting *ethpb.SignedBeaconBlock")
 							continue
 						}
-						b.Block = &v2.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
+						b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 					case version.Altair:
-						phBlk, ok := data.SignedBlock.Proto().(*v2.SignedBeaconBlockAltair)
+						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
 						if !ok {
 							log.Warn("Mismatch between version and block type, was expecting *v2.SignedBeaconBlockAltair")
 							continue
 						}
-						b.Block = &v2.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
+						b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
 					}
 					if err := stream.Send(b); err != nil {
 						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)

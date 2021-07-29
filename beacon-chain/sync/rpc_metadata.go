@@ -9,8 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -24,7 +28,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 
 	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
 		nilErr := errors.New("nil metadata stored for host")
-		resp, err := s.generateErrorResponse(responseCodeServerError, pb.ErrGeneric.Error())
+		resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if err != nil {
 			log.WithError(err).Debug("Could not generate a response error")
 		} else if _, err := stream.Write(resp); err != nil {
@@ -40,7 +44,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		topicVersion = p2p.SchemaVersionV2
 	}
 	if err := validateVersion(topicVersion, stream); err != nil {
-		resp, genErr := s.generateErrorResponse(responseCodeServerError, pb.ErrGeneric.Error())
+		resp, genErr := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if genErr != nil {
 			log.WithError(genErr).Debug("Could not generate a response error")
 		} else if _, wErr := stream.Write(resp); wErr != nil {
@@ -108,7 +112,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 
 func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (metadata.Metadata, error) {
 	if len(digest) == 0 {
-		mdFunc, ok := pb.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {
 			return nil, errors.New("no metadata type exists for the genesis fork version.")
 		}
@@ -118,7 +122,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", digestLength, len(digest))
 	}
 	vRoot := chain.GenesisValidatorRoot()
-	for k, mdFunc := range pb.MetaDataMap {
+	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err

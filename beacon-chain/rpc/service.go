@@ -39,9 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -63,8 +61,8 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *statepb.BeaconState
-	incomingAttestation  chan *ethpbv1alpha1.Attestation
+	canonicalStateChan   chan *ethpb.BeaconState
+	incomingAttestation  chan *ethpb.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
 	clientConnectionLock sync.Mutex
@@ -118,8 +116,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *statepb.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:  make(chan *ethpb.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 }
@@ -173,7 +171,6 @@ func (s *Service) Start() {
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
-		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
 		ForkFetcher:            s.cfg.ForkFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
@@ -194,14 +191,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
-	}
-
-	validatorServerV2 := &validatorv2.Server{
-		V1Server:          validatorServer,
-		Ctx:               s.ctx,
-		HeadFetcher:       s.cfg.HeadFetcher,
-		P2P:               s.cfg.Broadcaster,
-		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 	}
 
 	validatorServerV1 := &validator.Server{
@@ -255,12 +245,8 @@ func (s *Service) Start() {
 		Broadcaster:                 s.cfg.Broadcaster,
 		StateGen:                    s.cfg.StateGen,
 		SyncChecker:                 s.cfg.SyncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
-		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
-	}
-	beaconChainServerV2 := &beaconv2.Server{
-		Ctx:      s.ctx,
-		V1Server: beaconChainServer,
+		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
@@ -280,10 +266,10 @@ func (s *Service) Start() {
 		},
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
-	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	prysmv2.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpb.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
@@ -312,11 +298,11 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		prysmv2.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpb.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 
-	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

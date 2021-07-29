@@ -658,7 +658,7 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
 		&ethpb.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
@@ -693,7 +693,7 @@ func TestRolesAt_OK(t *testing.T) {
 		},
 	}
 
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
 		&ethpb.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
@@ -973,8 +973,8 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	defer ctrl.Finish()
 	valClient := mock.NewMockBeaconNodeValidatorAltairClient(ctrl)
 	v := validator{
-		blockFeed:         new(event.Feed),
-		validatorClientV2: valClient,
+		blockFeed:       new(event.Feed),
+		validatorClient: valClient,
 	}
 	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1001,8 +1001,8 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorAltairClient(ctrl)
 
 	v := validator{
-		validatorClientV2: client,
-		blockFeed:         new(event.Feed),
+		validatorClient: client,
+		blockFeed:       new(event.Feed),
 	}
 	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())

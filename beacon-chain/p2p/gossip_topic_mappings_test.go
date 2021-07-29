@@ -6,7 +6,6 @@ import (
 
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -37,6 +36,6 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 
 	// After Fork
 	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, forkEpoch)
-	_, ok = pMessage.(*prysmv2.SignedBeaconBlock)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlock)
 	assert.Equal(t, true, ok)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,7 +40,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
@@ -70,7 +69,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
@@ -100,7 +99,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
@@ -769,7 +768,7 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	filteredBlocks, err := s.loadFinalizedBlocks(ctx, 0, 8)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(filteredBlocks))
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: roots[8][:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: roots[8][:]}))
 
 	require.NoError(t, s.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: roots[8][:]}))
 	filteredBlocks, err = s.loadFinalizedBlocks(ctx, 0, 8)

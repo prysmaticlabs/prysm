@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
@@ -23,7 +23,7 @@ var ForkTransition = types.Evaluator{
 
 func forkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := prysmv2.NewBeaconNodeValidatorClient(conn)
+	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stream, err := client.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})

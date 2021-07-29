@@ -12,7 +12,6 @@ go_library(
         "beacon_chain_service_mock.go",
         "beacon_service_mock.go",
         "beacon_validator_client_mock.go",
-        "beacon_validator_client_v2_mock.go",
         "beacon_validator_server_mock.go",
         "event_service_mock.go",
         "keymanager_mock.go",

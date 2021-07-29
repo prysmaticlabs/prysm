@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -108,6 +109,118 @@ func (bs *Server) ListBlocks(
 	}
 
 	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
+}
+
+// ListBlocksAltair retrieves blocks by root, slot, or epoch.
+//
+// The server may return multiple blocks in the case that a slot or epoch is
+// provided as the filter criteria. The server may return an empty list when
+// no blocks in their database match the filter criteria. This RPC should
+// not return NOT_FOUND. Only one filter criteria should be used.
+func (bs *Server) ListBlocksAltair(
+	ctx context.Context, req *ethpb.ListBlocksRequest,
+) (*ethpb.ListBlocksResponseAltair, error) {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
+		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
+			req.PageSize, cmd.Get().MaxRPCPageSize)
+	}
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListBlocksRequest_Epoch:
+		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForEpoch(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+		altCtrs, err := convertFromV1Containers(ctrs)
+		if err != nil {
+			return nil, err
+		}
+		return &ethpb.ListBlocksResponseAltair{
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
+		}, nil
+	case *ethpb.ListBlocksRequest_Root:
+		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForRoot(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+		altCtrs, err := convertFromV1Containers(ctrs)
+		if err != nil {
+			return nil, err
+		}
+		return &ethpb.ListBlocksResponseAltair{
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
+		}, nil
+
+	case *ethpb.ListBlocksRequest_Slot:
+		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForSlot(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+		altCtrs, err := convertFromV1Containers(ctrs)
+		if err != nil {
+			return nil, err
+		}
+		return &ethpb.ListBlocksResponseAltair{
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
+		}, nil
+	case *ethpb.ListBlocksRequest_Genesis:
+		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForGenesis(ctx, req, q)
+		if err != nil {
+			return nil, err
+		}
+		altCtrs, err := convertFromV1Containers(ctrs)
+		if err != nil {
+			return nil, err
+		}
+		return &ethpb.ListBlocksResponseAltair{
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
+		}, nil
+	}
+
+	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
+}
+
+func convertFromV1Containers(ctrs []BlockContainer) ([]*ethpb.BeaconBlockContainerAltair, error) {
+	protoCtrs := make([]*ethpb.BeaconBlockContainerAltair, len(ctrs))
+	var err error
+	for i, c := range ctrs {
+		protoCtrs[i], err = convertToBlockContainer(c.Blk, c.Root, c.IsCanonical)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
+		}
+	}
+	return protoCtrs, nil
+}
+
+func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainerAltair, error) {
+	ctr := &ethpb.BeaconBlockContainerAltair{
+		BlockRoot: root[:],
+		Canonical: isCanonical,
+	}
+
+	switch blk.Version() {
+	case version.Phase0:
+		rBlk, err := blk.PbPhase0Block()
+		if err != nil {
+			return nil, err
+		}
+		ctr.Block = &ethpb.BeaconBlockContainerAltair_Phase0Block{Phase0Block: rBlk}
+	case version.Altair:
+		rBlk, err := blk.PbAltairBlock()
+		if err != nil {
+			return nil, err
+		}
+		ctr.Block = &ethpb.BeaconBlockContainerAltair_AltairBlock{AltairBlock: rBlk}
+	}
+	return ctr, nil
 }
 
 // ListBlocksForEpoch retrieves all blocks for the provided epoch.

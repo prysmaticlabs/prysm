@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -20,20 +20,20 @@ import (
 // GetSyncMessageBlockRoot retrieves the sync committee block root of the beacon chain.
 func (vs *Server) GetSyncMessageBlockRoot(
 	ctx context.Context, _ *emptypb.Empty,
-) (*prysmv2.SyncMessageBlockRootResponse, error) {
+) (*ethpb.SyncMessageBlockRootResponse, error) {
 	r, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
 
-	return &prysmv2.SyncMessageBlockRootResponse{
+	return &ethpb.SyncMessageBlockRootResponse{
 		Root: r,
 	}, nil
 }
 
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
-func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommitteeMessage) (*emptypb.Empty, error) {
+func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	idxResp, err := vs.syncSubcommitteeIndex(ctx, msg.ValidatorIndex, msg.Slot)
@@ -44,7 +44,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommit
 	// This broadcasts for all subnets.
 	for _, id := range idxResp.Indices {
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := uint64(id) / subCommitteeSize
+		subnet := id / subCommitteeSize
 		errs.Go(func() error {
 			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
 		})
@@ -62,8 +62,8 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommit
 // GetSyncSubcommitteeIndex is called by a sync committee participant to get
 // its subcommittee index for sync message aggregation duty.
 func (vs *Server) GetSyncSubcommitteeIndex(
-	ctx context.Context, req *prysmv2.SyncSubcommitteeIndexRequest,
-) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
+	ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest,
+) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, errors.New("public key does not exist in state")
@@ -78,7 +78,7 @@ func (vs *Server) GetSyncSubcommitteeIndex(
 // syncSubcommitteeIndex returns a list of subcommittee index of a validator and slot for sync message aggregation duty.
 func (vs *Server) syncSubcommitteeIndex(
 	ctx context.Context, index types.ValidatorIndex, slot types.Slot,
-) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
+) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 
 	nextSlotEpoch := helpers.SlotToEpoch(slot + 1)
 	currentEpoch := helpers.SlotToEpoch(slot)
@@ -89,8 +89,12 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.SyncSubcommitteeIndexResponse{
-			Indices: indices,
+		indicesList := make([]uint64, len(indices))
+		for i, idx := range indices {
+			indicesList[i] = uint64(idx)
+		}
+		return &ethpb.SyncSubcommitteeIndexResponse{
+			Indices: indicesList,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
 	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
@@ -98,8 +102,12 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		return &prysmv2.SyncSubcommitteeIndexResponse{
-			Indices: indices,
+		indicesList := make([]uint64, len(indices))
+		for i, idx := range indices {
+			indicesList[i] = uint64(idx)
+		}
+		return &ethpb.SyncSubcommitteeIndexResponse{
+			Indices: indicesList,
 		}, nil
 	default:
 		// Impossible condition.
@@ -110,8 +118,8 @@ func (vs *Server) syncSubcommitteeIndex(
 // GetSyncCommitteeContribution is called by a sync committee aggregator
 // to retrieve sync committee contribution object.
 func (vs *Server) GetSyncCommitteeContribution(
-	ctx context.Context, req *prysmv2.SyncCommitteeContributionRequest,
-) (*prysmv2.SyncCommitteeContribution, error) {
+	ctx context.Context, req *ethpb.SyncCommitteeContributionRequest,
+) (*ethpb.SyncCommitteeContribution, error) {
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
@@ -123,7 +131,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([]bls.Signature, 0, subCommitteeSize)
-	bits := prysmv2.NewSyncCommitteeAggregationBits()
+	bits := ethpb.NewSyncCommitteeAggregationBits()
 	for _, msg := range msgs {
 		if bytes.Equal(headRoot, msg.BlockRoot) {
 			idxResp, err := vs.syncSubcommitteeIndex(ctx, msg.ValidatorIndex, req.Slot)
@@ -153,7 +161,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if len(sigs) != 0 {
 		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
 	}
-	contribution := &prysmv2.SyncCommitteeContribution{
+	contribution := &ethpb.SyncCommitteeContribution{
 		Slot:              req.Slot,
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,
@@ -167,7 +175,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 // SubmitSignedContributionAndProof is called by a sync committee aggregator
 // to submit signed contribution and proof object.
 func (vs *Server) SubmitSignedContributionAndProof(
-	ctx context.Context, s *prysmv2.SignedContributionAndProof,
+	ctx context.Context, s *ethpb.SignedContributionAndProof,
 ) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 

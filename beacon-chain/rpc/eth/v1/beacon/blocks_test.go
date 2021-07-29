@@ -10,10 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpb_alpha.SignedBeaconBlock, []*ethpb_alpha.BeaconBlockContainer) {
+func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpb.SignedBeaconBlock, []*ethpb.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := testutil.NewBeaconBlock()
 	genBlk.Block.ParentRoot = parentRoot[:]
@@ -34,7 +33,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 
 	count := types.Slot(100)
 	blks := make([]block.SignedBeaconBlock, count)
-	blkContainers := make([]*ethpb_alpha.BeaconBlockContainer, count)
+	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
@@ -45,15 +44,15 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 		att2 := testutil.NewAttestation()
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
+		b.Block.Body.Attestations = []*ethpb.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
-		blkContainers[i] = &ethpb_alpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
 	}
 	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
 	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
-	summary := &statepb.StateSummary{
+	summary := &ethpb.StateSummary{
 		Root: headRoot[:],
 		Slot: blkContainers[len(blks)-1].Block.Block.Slot,
 	}
@@ -86,14 +85,14 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
 	tests := []struct {
 		name    string
 		blockID []byte
-		want    *ethpb_alpha.SignedBeaconBlock
+		want    *ethpb.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -139,7 +138,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			header, err := bs.GetBlockHeader(ctx, &ethpb.BlockRequest{
+			header, err := bs.GetBlockHeader(ctx, &eth.BlockRequest{
 				BlockId: tt.blockID,
 			})
 			if !tt.wantErr {
@@ -171,7 +170,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
@@ -196,13 +195,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		name       string
 		slot       types.Slot
 		parentRoot []byte
-		want       []*ethpb_alpha.SignedBeaconBlock
+		want       []*ethpb.SignedBeaconBlock
 		wantErr    bool
 	}{
 		{
 			name: "slot",
 			slot: types.Slot(30),
-			want: []*ethpb_alpha.SignedBeaconBlock{
+			want: []*ethpb.SignedBeaconBlock{
 				blkContainers[30].Block,
 				b2,
 				b3,
@@ -211,7 +210,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		{
 			name:       "parent root",
 			parentRoot: b2.Block.ParentRoot,
-			want: []*ethpb_alpha.SignedBeaconBlock{
+			want: []*ethpb.SignedBeaconBlock{
 				blkContainers[1].Block,
 				b2,
 				b4,
@@ -221,7 +220,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
+			headers, err := bs.ListBlockHeaders(ctx, &eth.BlockHeadersRequest{
 				Slot:       &tt.slot,
 				ParentRoot: tt.parentRoot,
 			})
@@ -271,7 +270,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 	v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
-	blockReq := &ethpb.BeaconBlockContainer{
+	blockReq := &eth.BeaconBlockContainer{
 		Message:   v1Block.Block,
 		Signature: v1Block.Signature,
 	}
@@ -301,7 +300,7 @@ func TestServer_GetBlock(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
@@ -312,7 +311,7 @@ func TestServer_GetBlock(t *testing.T) {
 	tests := []struct {
 		name    string
 		blockID []byte
-		want    *ethpb_alpha.SignedBeaconBlock
+		want    *ethpb.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -373,7 +372,7 @@ func TestServer_GetBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			block, err := bs.GetBlock(ctx, &ethpb.BlockRequest{
+			block, err := bs.GetBlock(ctx, &eth.BlockRequest{
 				BlockId: tt.blockID,
 			})
 			if tt.wantErr {
@@ -410,7 +409,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
@@ -420,7 +419,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 	sszBlock, err := blocks[0].MarshalSSZ()
 	require.NoError(t, err)
 
-	resp, err := bs.GetBlockSSZ(ctx, &ethpb.BlockRequest{BlockId: []byte("30")})
+	resp, err := bs.GetBlockSSZ(ctx, &eth.BlockRequest{BlockId: []byte("30")})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.DeepEqual(t, sszBlock, resp.Data)
@@ -447,7 +446,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
@@ -513,7 +512,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			blockRootResp, err := bs.GetBlockRoot(ctx, &ethpb.BlockRequest{
+			blockRootResp, err := bs.GetBlockRoot(ctx, &eth.BlockRequest{
 				BlockId: tt.blockID,
 			})
 			if tt.wantErr {
@@ -538,7 +537,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			DB:                  beaconDB,
 			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
 			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpb_alpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
 	}
 
@@ -549,7 +548,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 	tests := []struct {
 		name    string
 		blockID []byte
-		want    *ethpb_alpha.SignedBeaconBlock
+		want    *ethpb.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -605,7 +604,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			block, err := bs.ListBlockAttestations(ctx, &ethpb.BlockRequest{
+			block, err := bs.ListBlockAttestations(ctx, &eth.BlockRequest{
 				BlockId: tt.blockID,
 			})
 			if tt.wantErr {

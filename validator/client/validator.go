@@ -21,10 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -83,7 +82,6 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	validatorClientV2                  prysmv2.BeaconNodeValidatorClient
 	protector                          slashingiface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
@@ -262,7 +260,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.validatorClientV2.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	stream, err := v.validatorClient.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream, " + iface.ErrConnectionIssue.Error())
 		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
@@ -715,7 +713,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
-	res, err := v.validatorClientV2.GetSyncSubcommitteeIndex(ctx, &prysmv2.SyncSubcommitteeIndexRequest{
+	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})

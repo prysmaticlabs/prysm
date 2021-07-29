@@ -1874,13 +1874,9 @@ var (
 
 	pattern_BeaconChain_ListBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v1alpha1", "beacon", "blocks"}, ""))
 
-<<<<<<< HEAD
-	pattern_BeaconChain_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "beacon", "blocks", "stream"}, ""))
-=======
 	pattern_BeaconChain_ListBlocksAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "beacon", "blocks", "altair"}, ""))
 
-	pattern_BeaconChain_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "beacon", "blocks", "stream"}, ""))
->>>>>>> develop
+	pattern_BeaconChain_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "beacon", "blocks", "stream"}, ""))
 
 	pattern_BeaconChain_StreamChainHead_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "beacon", "chainhead", "stream"}, ""))
 

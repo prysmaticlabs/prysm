@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -21,8 +21,8 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	}
 	tests := []struct {
 		name                 string
-		currentSyncCommittee *statepb.SyncCommittee
-		nextSyncCommittee    *statepb.SyncCommittee
+		currentSyncCommittee *ethpb.SyncCommittee
+		nextSyncCommittee    *ethpb.SyncCommittee
 		currentSyncMap       map[types.ValidatorIndex][]types.CommitteeIndex
 		nextSyncMap          map[types.ValidatorIndex][]types.CommitteeIndex
 	}{
@@ -205,7 +205,7 @@ func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func convertToCommittee(inputKeys [][]byte) *statepb.SyncCommittee {
+func convertToCommittee(inputKeys [][]byte) *ethpb.SyncCommittee {
 	var pubKeys [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if i < uint64(len(inputKeys)) {
@@ -215,7 +215,7 @@ func convertToCommittee(inputKeys [][]byte) *statepb.SyncCommittee {
 		}
 	}
 
-	return &statepb.SyncCommittee{
+	return &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}

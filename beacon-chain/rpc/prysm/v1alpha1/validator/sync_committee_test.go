@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -35,7 +35,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 			State: st,
 		},
 	}
-	msg := &prysmv2.SyncCommitteeMessage{
+	msg := &ethpb.SyncCommitteeMessage{
 		Slot:           1,
 		ValidatorIndex: 2,
 	}
@@ -43,7 +43,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 	require.NoError(t, err)
 	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeMessages(1)
 	require.NoError(t, err)
-	require.DeepEqual(t, []*prysmv2.SyncCommitteeMessage{msg}, savedMsgs)
+	require.DeepEqual(t, []*ethpb.SyncCommitteeMessage{msg}, savedMsgs)
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	}
 	pubKey := [48]byte{}
 	// Request slot 0, should get the index 0 for validator 0.
-	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &prysmv2.SyncSubcommitteeIndexRequest{
+	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:], Slot: types.Slot(0),
 	})
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 	// Request at period boundary, should get index 1 for validator 0.
 	periodBoundary := types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1
-	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &prysmv2.SyncSubcommitteeIndexRequest{
+	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:], Slot: periodBoundary,
 	})
 	require.NoError(t, err)
@@ -80,9 +80,9 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 	}
-	contribution := &prysmv2.SignedContributionAndProof{
-		Message: &prysmv2.ContributionAndProof{
-			Contribution: &prysmv2.SyncCommitteeContribution{
+	contribution := &ethpb.SignedContributionAndProof{
+		Message: &ethpb.ContributionAndProof{
+			Contribution: &ethpb.SyncCommitteeContribution{
 				Slot:              1,
 				SubcommitteeIndex: 2,
 			},
@@ -92,5 +92,5 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	require.NoError(t, err)
 	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeContributions(1)
 	require.NoError(t, err)
-	require.DeepEqual(t, []*prysmv2.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
+	require.DeepEqual(t, []*ethpb.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
 }

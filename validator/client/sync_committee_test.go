@@ -10,7 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -26,10 +26,10 @@ func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) 
 	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{}}
 	defer finish()
 
-	m.validatorClientV2.EXPECT().GetSyncMessageBlockRoot(
+	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
-	).Return(&prysmv2.SyncMessageBlockRootResponse{
+	).Return(&ethpb.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo([]byte{}, 32),
 	}, nil)
 
@@ -54,10 +54,10 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 	}}
 
 	r := []byte{'a'}
-	m.validatorClientV2.EXPECT().GetSyncMessageBlockRoot(
+	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
-	).Return(&prysmv2.SyncMessageBlockRootResponse{
+	).Return(&ethpb.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
 
@@ -86,10 +86,10 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	}}
 
 	r := []byte{'a'}
-	m.validatorClientV2.EXPECT().GetSyncMessageBlockRoot(
+	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
-	).Return(&prysmv2.SyncMessageBlockRootResponse{
+	).Return(&ethpb.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
 
@@ -100,9 +100,9 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().SubmitSyncMessage(
+	m.validatorClient.EXPECT().SubmitSyncMessage(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SyncCommitteeMessage{}),
+		gomock.AssignableToTypeOf(&ethpb.SyncCommitteeMessage{}),
 	).Return(&emptypb.Empty{}, errors.New("uh oh") /* error */)
 
 	pubKey := [48]byte{}
@@ -127,10 +127,10 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	}}
 
 	r := []byte{'a'}
-	m.validatorClientV2.EXPECT().GetSyncMessageBlockRoot(
+	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
-	).Return(&prysmv2.SyncMessageBlockRootResponse{
+	).Return(&ethpb.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
 
@@ -141,11 +141,11 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	var generatedMsg *prysmv2.SyncCommitteeMessage
-	m.validatorClientV2.EXPECT().SubmitSyncMessage(
+	var generatedMsg *ethpb.SyncCommitteeMessage
+	m.validatorClient.EXPECT().SubmitSyncMessage(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SyncCommitteeMessage{}),
-	).Do(func(_ context.Context, msg *prysmv2.SyncCommitteeMessage, opts ...grpc.CallOption) {
+		gomock.AssignableToTypeOf(&ethpb.SyncCommitteeMessage{}),
+	).Do(func(_ context.Context, msg *ethpb.SyncCommitteeMessage, opts ...grpc.CallOption) {
 		generatedMsg = msg
 	}).Return(&emptypb.Empty{}, nil /* error */)
 
@@ -187,13 +187,13 @@ func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *tes
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{}, errors.New("Bad index"))
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, errors.New("Bad index"))
 
 	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Could not get sync subcommittee index")
@@ -215,13 +215,13 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{}}, nil)
 
 	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Empty subcommittee index list, do nothing")
@@ -243,13 +243,13 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -284,13 +284,13 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -299,9 +299,9 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().GetSyncCommitteeContribution(
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
 		gomock.Any(), // ctx
-		&prysmv2.SyncCommitteeContributionRequest{
+		&ethpb.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 			SubnetId:  0,
@@ -334,13 +334,13 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -349,14 +349,14 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().GetSyncCommitteeContribution(
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
 		gomock.Any(), // ctx
-		&prysmv2.SyncCommitteeContributionRequest{
+		&ethpb.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 			SubnetId:  0,
 		},
-	).Return(&prysmv2.SyncCommitteeContribution{
+	).Return(&ethpb.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
 		Signature:       make([]byte, 96),
 		AggregationBits: bitfield.NewBitvector128(),
@@ -369,12 +369,12 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().SubmitSignedContributionAndProof(
+	m.validatorClient.EXPECT().SubmitSignedContributionAndProof(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SignedContributionAndProof{
-			Message: &prysmv2.ContributionAndProof{
+		gomock.AssignableToTypeOf(&ethpb.SignedContributionAndProof{
+			Message: &ethpb.ContributionAndProof{
 				AggregatorIndex: 7,
-				Contribution: &prysmv2.SyncCommitteeContribution{
+				Contribution: &ethpb.SyncCommitteeContribution{
 					BlockRoot:         make([]byte, 32),
 					Signature:         make([]byte, 96),
 					AggregationBits:   bitfield.NewBitvector128(),
@@ -410,13 +410,13 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&prysmv2.SyncSubcommitteeIndexRequest{
+		&ethpb.SyncSubcommitteeIndexRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&prysmv2.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -425,14 +425,14 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().GetSyncCommitteeContribution(
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
 		gomock.Any(), // ctx
-		&prysmv2.SyncCommitteeContributionRequest{
+		&ethpb.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
 			SubnetId:  0,
 		},
-	).Return(&prysmv2.SyncCommitteeContribution{
+	).Return(&ethpb.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
 		Signature:       make([]byte, 96),
 		AggregationBits: bitfield.NewBitvector128(),
@@ -445,12 +445,12 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
-	m.validatorClientV2.EXPECT().SubmitSignedContributionAndProof(
+	m.validatorClient.EXPECT().SubmitSignedContributionAndProof(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&prysmv2.SignedContributionAndProof{
-			Message: &prysmv2.ContributionAndProof{
+		gomock.AssignableToTypeOf(&ethpb.SignedContributionAndProof{
+			Message: &ethpb.ContributionAndProof{
 				AggregatorIndex: 7,
-				Contribution: &prysmv2.SyncCommitteeContribution{
+				Contribution: &ethpb.SyncCommitteeContribution{
 					BlockRoot:         make([]byte, 32),
 					Signature:         make([]byte, 96),
 					AggregationBits:   bitfield.NewBitvector128(),

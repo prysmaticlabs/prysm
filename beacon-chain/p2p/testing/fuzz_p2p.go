@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -140,7 +139,7 @@ func (p *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 }
 
 // BroadcastSyncCommitteeMessage -- fake.
-func (b *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *prysmv2.SyncCommitteeMessage) error {
+func (b *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	return nil
 }
 

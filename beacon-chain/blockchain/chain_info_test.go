@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -105,7 +104,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
 	assert.Equal(t, types.Slot(100), c.HeadSlot())
@@ -127,7 +126,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &statepb.StateSummary{Root: br[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:]}))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -137,7 +136,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{block: wrapper.WrappedPhase0SignedBeaconBlock(b), state: s}
@@ -148,7 +147,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -164,8 +163,8 @@ func TestGenesisTime_CanRetrieve(t *testing.T) {
 }
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
-	f := &statepb.Fork{Epoch: 999}
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{Fork: f})
+	f := &ethpb.Fork{Epoch: 999}
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{Fork: f})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -175,7 +174,7 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 }
 
 func TestCurrentFork_NilHeadSTate(t *testing.T) {
-	f := &statepb.Fork{
+	f := &ethpb.Fork{
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 	}
@@ -190,7 +189,7 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
 
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
 	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
@@ -204,7 +203,7 @@ func TestHeadETH1Data_Nil(t *testing.T) {
 
 func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 	d := &ethpb.Eth1Data{DepositCount: 999}
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{Eth1Data: d})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{Eth1Data: d})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}

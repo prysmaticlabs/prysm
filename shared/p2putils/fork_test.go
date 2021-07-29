@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -18,14 +18,14 @@ func TestFork(t *testing.T) {
 	tests := []struct {
 		name        string
 		targetEpoch types.Epoch
-		want        *statepb.Fork
+		want        *ethpb.Fork
 		wantErr     bool
 		setConfg    func()
 	}{
 		{
 			name:        "genesis fork",
 			targetEpoch: 0,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           0,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'D'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
@@ -43,7 +43,7 @@ func TestFork(t *testing.T) {
 		{
 			name:        "altair pre-fork",
 			targetEpoch: 0,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           0,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'D'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
@@ -63,7 +63,7 @@ func TestFork(t *testing.T) {
 		{
 			name:        "altair on fork",
 			targetEpoch: 10,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           10,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'F'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
@@ -84,7 +84,7 @@ func TestFork(t *testing.T) {
 		{
 			name:        "altair post fork",
 			targetEpoch: 10,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           10,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'F'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
@@ -105,7 +105,7 @@ func TestFork(t *testing.T) {
 		{
 			name:        "3 forks, pre-fork",
 			targetEpoch: 20,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           10,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'F'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
@@ -125,7 +125,7 @@ func TestFork(t *testing.T) {
 		{
 			name:        "3 forks, on fork",
 			targetEpoch: 100,
-			want: &statepb.Fork{
+			want: &ethpb.Fork{
 				Epoch:           100,
 				CurrentVersion:  []byte{'A', 'B', 'C', 'Z'},
 				PreviousVersion: []byte{'A', 'B', 'C', 'F'},

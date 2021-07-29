@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	wrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -41,7 +41,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	currEpoch := helpers.SlotToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
-		v.proposeBlockV2(ctx, slot, pubKey)
+		v.proposeBlockAltair(ctx, slot, pubKey)
 	default:
 		v.proposeBlock(ctx, slot, pubKey)
 	}
@@ -96,7 +96,7 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapperv1.WrappedPhase0BeaconBlock(b))
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapper.WrappedPhase0BeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -118,16 +118,16 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, wrapper.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), nil),
+			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, wrapperv1.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), sig),
+			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -163,7 +163,7 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 }
 
 // This is a routine to propose altair compatible beacon blocks.
-func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -198,7 +198,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClientV2.GetBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClient.GetBlockAltair(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -249,7 +249,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		return
 	}
 
-	wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(blk)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
 		if v.emitAccountMetrics {
@@ -265,7 +265,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Propose and broadcast block via beacon node
-	blkResp, err := v.validatorClientV2.ProposeBlock(ctx, blk)
+	blkResp, err := v.validatorClient.ProposeBlockAltair(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
