@@ -44,7 +44,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 	// This broadcasts for all subnets.
 	for _, id := range idxResp.Indices {
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := id / subCommitteeSize
+		subnet := uint64(id) / subCommitteeSize
 		errs.Go(func() error {
 			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
 		})
@@ -89,9 +89,9 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		indicesList := make([]uint64, len(indices))
+		indicesList := make([]types.CommitteeIndex, len(indices))
 		for i, idx := range indices {
-			indicesList[i] = uint64(idx)
+			indicesList[i] = idx
 		}
 		return &ethpb.SyncSubcommitteeIndexResponse{
 			Indices: indicesList,
@@ -102,9 +102,9 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		indicesList := make([]uint64, len(indices))
+		indicesList := make([]types.CommitteeIndex, len(indices))
 		for i, idx := range indices {
-			indicesList[i] = uint64(idx)
+			indicesList[i] = idx
 		}
 		return &ethpb.SyncSubcommitteeIndexResponse{
 			Indices: indicesList,

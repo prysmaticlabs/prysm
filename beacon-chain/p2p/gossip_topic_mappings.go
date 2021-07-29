@@ -4,8 +4,8 @@ import (
 	"reflect"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )

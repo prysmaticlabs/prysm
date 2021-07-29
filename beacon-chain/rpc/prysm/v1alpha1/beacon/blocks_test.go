@@ -759,7 +759,7 @@ func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
 		TotalSize:       int32(0),
 		NextPageToken:   strconv.Itoa(0),
 	}
-	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	res, err := bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Slot{
 			Slot: 0,
 		},
@@ -768,7 +768,7 @@ func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	res, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	res, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Slot{
 			Slot: 0,
 		},
@@ -777,7 +777,7 @@ func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	res, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	res, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Root{
 			Root: make([]byte, 32),
 		},
@@ -819,7 +819,7 @@ func TestServer_ListBlocksAltair_Genesis(t *testing.T) {
 		NextPageToken:   "0",
 		TotalSize:       1,
 	}
-	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	res, err := bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
@@ -857,7 +857,7 @@ func TestServer_ListBlocksAltair_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
 	// Should throw an error if more than one blk returned.
-	_, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+	_, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
@@ -993,7 +993,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			res, err := bs.ListBlocks(ctx, test.req)
+			res, err := bs.ListBlocksAltair(ctx, test.req)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, res, test.res)
 		})
@@ -1016,29 +1016,29 @@ func TestServer_ListBlocksAltair_Errors(t *testing.T) {
 
 	wanted = "Must specify a filter criteria for fetching"
 	req = &ethpb.ListBlocksRequest{}
-	_, err = bs.ListBlocks(ctx, req)
+	_, err = bs.ListBlocksAltair(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 0}}
-	res, err := bs.ListBlocks(ctx, req)
+	res, err := bs.ListBlocksAltair(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
-	res, err = bs.ListBlocks(ctx, req)
+	res, err = bs.ListBlocksAltair(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBlocks(ctx, req)
+	res, err = bs.ListBlocksAltair(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBlocks(ctx, req)
+	res, err = bs.ListBlocksAltair(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")

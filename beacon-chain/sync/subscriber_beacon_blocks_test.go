@@ -138,7 +138,7 @@ func TestBlockFromProto(t *testing.T) {
 		{
 			name: "altair type provided",
 			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
+				return &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}}
 			},
 			want: func() block.SignedBeaconBlock {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}})
