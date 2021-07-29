@@ -67,7 +67,6 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
-		validatorClient: mock.NewMockBeaconNodeValidatorAltairClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
@@ -85,7 +84,6 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	validator := &validator{
 		db:                             valDB,
 		keyManager:                     km,
-		validatorClient:                m.validatorClient,
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),

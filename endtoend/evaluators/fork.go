@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
@@ -26,7 +25,7 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	stream, err := client.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
