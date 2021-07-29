@@ -244,7 +244,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 		}
 		sigLen := params.BeaconConfig().BLSSignatureLength
 		emptySig := make([]byte, sigLen)
-		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) {
+		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) || bytes.Equal(agg.Message.Aggregate.Signature, emptySig) {
 			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
 		}
 		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {

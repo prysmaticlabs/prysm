@@ -792,6 +792,45 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, false, broadcaster.BroadcastCalled)
 	})
 
+	t.Run("zero message signature", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate: &v1.Attestation{
+							AggregationBits: []byte{0, 1},
+							Data: &v1.AttestationData{
+								Slot:            1,
+								Index:           1,
+								BeaconBlockRoot: root,
+								Source: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+								Target: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+							},
+							Signature: make([]byte, 96),
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
 	t.Run("wrong signature length", func(t *testing.T) {
 		broadcaster := &p2pMock.MockBroadcaster{}
 		vs := Server{
