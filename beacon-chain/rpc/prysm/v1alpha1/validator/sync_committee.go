@@ -89,12 +89,8 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		indicesList := make([]types.CommitteeIndex, len(indices))
-		for i, idx := range indices {
-			indicesList[i] = idx
-		}
 		return &ethpb.SyncSubcommitteeIndexResponse{
-			Indices: indicesList,
+			Indices: indices,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
 	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
@@ -102,12 +98,8 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		indicesList := make([]types.CommitteeIndex, len(indices))
-		for i, idx := range indices {
-			indicesList[i] = idx
-		}
 		return &ethpb.SyncSubcommitteeIndexResponse{
-			Indices: indicesList,
+			Indices: indices,
 		}, nil
 	default:
 		// Impossible condition.
