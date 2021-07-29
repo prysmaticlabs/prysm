@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )

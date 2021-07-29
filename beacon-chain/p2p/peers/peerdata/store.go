@@ -10,9 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 )
 
 var (
@@ -49,7 +49,7 @@ type PeerData struct {
 	Enr           *enr.Record
 	NextValidTime time.Time
 	// Chain related data.
-	MetaData                  interfaces.Metadata
+	MetaData                  metadata.Metadata
 	ChainState                *pb.Status
 	ChainStateLastUpdated     time.Time
 	ChainStateValidationError error

@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -361,7 +361,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 //    total_balance = get_total_active_balance(state)
 //    effective_balance = state.validators[index].effective_balance
 //    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
-func baseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+func baseReward(state state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")

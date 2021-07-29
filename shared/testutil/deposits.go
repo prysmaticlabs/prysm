@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -247,7 +247,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 }
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
-func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.BeaconState, []bls.SecretKey) {
+func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
@@ -257,7 +257,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.Beacon
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
-	beaconState, err := state.GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
+	beaconState, err := core.GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}

@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -63,7 +63,7 @@ func (bs *Server) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []block.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_GenesisEpoch:
@@ -117,7 +117,7 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []block.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:

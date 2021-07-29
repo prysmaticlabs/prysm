@@ -13,17 +13,17 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -69,7 +69,7 @@ func TestStore_OnBlock(t *testing.T) {
 	tests := []struct {
 		name          string
 		blk           *ethpb.SignedBeaconBlock
-		s             iface.BeaconState
+		s             state.BeaconState
 		time          uint64
 		wantErrString string
 	}{
@@ -155,13 +155,13 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []block.SignedBeaconBlock
 	var blkRoots [][32]byte
-	var firstState iface.BeaconState
+	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {
 		b, err := testutil.GenerateFullBlock(bState, keys, testutil.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		bState, err = state.ExecuteStateTransition(ctx, bState, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		bState, err = core.ExecuteStateTransition(ctx, bState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		require.NoError(t, err)
 		if i == 1 {
 			firstState = bState.Copy()

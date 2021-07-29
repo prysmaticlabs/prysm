@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -206,7 +206,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	assert.Equal(t, 0, len(aggregatedAtts), "Wanted aggregated attestation")
 }
 
-func generateAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
+func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
@@ -244,7 +244,7 @@ func generateAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	return att, nil
 }
 
-func generateUnaggregatedAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
+func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := testutil.HydrateAttestation(&ethpb.Attestation{

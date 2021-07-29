@@ -12,7 +12,6 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/slashing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/p2putils:go_default_library",

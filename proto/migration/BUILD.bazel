@@ -4,14 +4,14 @@ go_library(
     name = "go_default_library",
     srcs = [
         "enums.go",
-        "migration.go",
+        "v1alpha1_to_v1.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/migration",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v1:go_default_library",
-        "//proto/interfaces:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
@@ -21,7 +21,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "enums_test.go",
-        "migration_test.go",
+        "v1alpha1_to_v1_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

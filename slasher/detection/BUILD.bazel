@@ -13,7 +13,6 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/slashing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -48,7 +47,6 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/slashing:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/slashutil:go_default_library",

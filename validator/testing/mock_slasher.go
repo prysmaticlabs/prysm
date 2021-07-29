@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -43,7 +43,7 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 		},
 		}
 		return &slashpb.AttesterSlashingResponse{
-			AttesterSlashing: slashings,
+			AttesterSlashings: slashings,
 		}, nil
 	}
 	return nil, nil
@@ -73,7 +73,7 @@ func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBl
 		},
 		}
 		return &slashpb.ProposerSlashingResponse{
-			ProposerSlashing: slashings,
+			ProposerSlashings: slashings,
 		}, nil
 	}
 	return nil, nil

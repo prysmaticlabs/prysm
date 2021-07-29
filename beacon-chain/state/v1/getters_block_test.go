@@ -3,8 +3,8 @@ package v1
 import (
 	"testing"
 
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

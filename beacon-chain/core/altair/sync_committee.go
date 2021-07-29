@@ -4,9 +4,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statev2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -16,7 +15,7 @@ import (
 
 // ValidateNilSyncContribution validates that the signed contribution
 // is not nil.
-func ValidateNilSyncContribution(s *prysmv2.SignedContributionAndProof) error {
+func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 	if s == nil {
 		return errors.New("signed message can't be nil")
 	}
@@ -43,7 +42,7 @@ func ValidateNilSyncContribution(s *prysmv2.SignedContributionAndProof) error {
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
 //    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
-func NextSyncCommittee(state iface.BeaconStateAltair) (*statev2.SyncCommittee, error) {
+func NextSyncCommittee(state state.BeaconStateAltair) (*ethpb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(state)
 	if err != nil {
 		return nil, err
@@ -57,7 +56,7 @@ func NextSyncCommittee(state iface.BeaconStateAltair) (*statev2.SyncCommittee, e
 	if err != nil {
 		return nil, err
 	}
-	return &statev2.SyncCommittee{
+	return &ethpb.SyncCommittee{
 		Pubkeys:         pubkeys,
 		AggregatePubkey: aggregated.Marshal(),
 	}, nil
@@ -87,7 +86,7 @@ func NextSyncCommittee(state iface.BeaconStateAltair) (*statev2.SyncCommittee, e
 //            sync_committee_indices.append(candidate_index)
 //        i += 1
 //    return sync_committee_indices
-func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorIndex, error) {
+func NextSyncCommitteeIndices(state state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
 	epoch := helpers.NextEpoch(state)
 	indices, err := helpers.ActiveValidatorIndices(state, epoch)
 	if err != nil {
@@ -140,7 +139,7 @@ func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorI
 //    sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
 //    i = subcommittee_index * sync_subcommittee_size
 //    return sync_committee.pubkeys[i:i + sync_subcommittee_size]
-func SyncSubCommitteePubkeys(syncCommittee *statev2.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
+func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
 	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	i := uint64(subComIdx) * subCommSize
 	endOfSubCom := i + subCommSize

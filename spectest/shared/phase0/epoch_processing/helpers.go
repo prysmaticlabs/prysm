@@ -8,16 +8,16 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type epochOperation func(*testing.T, iface.BeaconState) (iface.BeaconState, error)
+type epochOperation func(*testing.T, state.BeaconState) (state.BeaconState, error)
 
 // RunEpochOperationTest takes in the prestate and processes it through the
 // passed in epoch operation function and checks the post state with the expected post state.

@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -80,7 +80,7 @@ func InitializeFromProtoUnsafe(st *statepb.BeaconState) (*BeaconState, error) {
 }
 
 // Copy returns a deep copy of the beacon state.
-func (b *BeaconState) Copy() iface.BeaconState {
+func (b *BeaconState) Copy() state.BeaconState {
 	if !b.hasInnerState() {
 		return nil
 	}

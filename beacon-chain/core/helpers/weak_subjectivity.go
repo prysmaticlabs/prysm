@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -51,7 +51,7 @@ import (
 //        )
 //
 //    return ws_period
-func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
+func ComputeWeakSubjectivityPeriod(st state.ReadOnlyBeaconState) (types.Epoch, error) {
 	// Weak subjectivity period cannot be smaller than withdrawal delay.
 	wsp := uint64(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 
@@ -119,7 +119,7 @@ func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, e
 //    current_epoch = compute_epoch_at_slot(get_current_slot(store))
 //    return current_epoch <= ws_state_epoch + ws_period
 func IsWithinWeakSubjectivityPeriod(
-	currentEpoch types.Epoch, wsState iface.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
+	currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
 	// Make sure that incoming objects are not nil.
 	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
 		return false, errors.New("invalid weak subjectivity state or checkpoint")
@@ -150,7 +150,7 @@ func IsWithinWeakSubjectivityPeriod(
 // Within the weak subjectivity period, if two conflicting blocks are finalized, 1/3 - D (D := safety decay)
 // of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
 // period is protected by this safety margin.
-func LatestWeakSubjectivityEpoch(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
+func LatestWeakSubjectivityEpoch(st state.ReadOnlyBeaconState) (types.Epoch, error) {
 	wsPeriod, err := ComputeWeakSubjectivityPeriod(st)
 	if err != nil {
 		return 0, err

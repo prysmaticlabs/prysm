@@ -7,9 +7,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -121,7 +121,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheck
 }
 
 // reportEpochMetrics reports epoch related metrics.
-func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconState) error {
+func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconState) error {
 	currentEpoch := types.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
@@ -228,7 +228,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk interfaces.BeaconBlock) {
+func reportAttestationInclusion(blk block.BeaconBlock) {
 	for _, att := range blk.Body().Attestations() {
 		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}

@@ -4,9 +4,9 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,7 +23,7 @@ const DomainByteLength = 4
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
-func ComputeDomainAndSign(st iface.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
+func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
-func ComputeDomainVerifySigningRoot(st iface.BeaconState, index types.ValidatorIndex, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
+func ComputeDomainVerifySigningRoot(st state.BeaconState, index types.ValidatorIndex, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
 	v, err := st.ValidatorAtIndex(index)
 	if err != nil {
 		return err

@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
@@ -35,7 +35,7 @@ func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, enc
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (interfaces.SignedBeaconBlock, error) {
+func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (block.SignedBeaconBlock, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, chain, p2p)
@@ -49,7 +49,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (interfaces.SignedBeaconBlock, error) {
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (block.SignedBeaconBlock, error) {
 	blk := &eth.SignedBeaconBlock{}
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {

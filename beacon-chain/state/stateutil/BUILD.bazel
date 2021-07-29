@@ -28,7 +28,6 @@ go_library(
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/htrutils:go_default_library",
@@ -53,7 +52,6 @@ go_test(
     deps = [
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
