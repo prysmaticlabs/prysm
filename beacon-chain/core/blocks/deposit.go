@@ -180,7 +180,6 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *statepb.Deposit, ver
 				return beaconState, newValidator, nil
 			}
 		}
-		newValidator = true
 
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
@@ -197,6 +196,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *statepb.Deposit, ver
 		}); err != nil {
 			return nil, newValidator, err
 		}
+		newValidator = true
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, newValidator, err
 		}
