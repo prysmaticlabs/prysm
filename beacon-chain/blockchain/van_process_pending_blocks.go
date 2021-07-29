@@ -7,6 +7,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	vanTypes "github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -36,7 +38,21 @@ type PendingBlocksFetcher interface {
 type blockRoot [32]byte
 
 // publishAndWaitForOrcConfirmation publish the block to orchestrator and store the block into pending queue cache
-func (s *Service) publishAndWaitForOrcConfirmation(ctx context.Context, pendingBlk *ethpb.SignedBeaconBlock) error {
+func (s *Service) publishAndWaitForOrcConfirmation(
+	ctx context.Context,
+	pendingBlk *ethpb.SignedBeaconBlock,
+	curState iface.BeaconState,
+) error {
+
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockVerified,
+		Data: &statefeed.BlockPreVerifiedData{
+			Slot:         pendingBlk.Block.Slot,
+			CurrentState: curState.Copy(),
+		},
+	})
+
 	// Send the incoming block acknowledge to orchestrator and store the pending block to cache
 	if err := s.publishAndStorePendingBlock(ctx, pendingBlk.Block); err != nil {
 		log.WithError(err).Warn("could not publish un-confirmed block or cache it")

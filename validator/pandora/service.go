@@ -40,7 +40,8 @@ type PandoraExtraDataSig struct {
 // producing catalyst block and insert pandora block.
 type PandoraService interface {
 	// GetShardBlockHeader gets the new block header and hash of pandora client
-	GetShardBlockHeader(ctx context.Context, parentHash common.Hash, nextBlockNumber uint64) (*eth1Types.Header, common.Hash, *ExtraData, error)
+	GetShardBlockHeader(ctx context.Context, parentHash common.Hash,
+		nextBlockNumber uint64, slot uint64, epoch uint64) (*eth1Types.Header, common.Hash, *ExtraData, error)
 	// SubmitShardBlockHeader submits the header hash and signature of pandora block header
 	SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [96]byte) (bool, error)
 }
@@ -183,13 +184,15 @@ func (s *Service) GetShardBlockHeader(
 	ctx context.Context,
 	parentHash common.Hash,
 	nextBlockNumber uint64,
+	slot uint64,
+	epoch uint64,
 ) (*eth1Types.Header, common.Hash, *ExtraData, error) {
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
 		return nil, common.Hash{}, nil, ConnectionError
 	}
 
-	response, err := s.pandoraClient.GetShardBlockHeader(ctx, parentHash, nextBlockNumber)
+	response, err := s.pandoraClient.GetShardBlockHeader(ctx, parentHash, nextBlockNumber, slot, epoch)
 	if err != nil {
 		log.WithError(err).Error("Pandora block preparation failed")
 		return nil, common.Hash{}, nil, err

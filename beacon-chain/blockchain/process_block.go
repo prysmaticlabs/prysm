@@ -108,8 +108,8 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	// Vanguard: Validated by vanguard node. Now intercepting the execution and publishing the block
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
-		if err := s.publishAndWaitForOrcConfirmation(ctx, signed); err != nil {
-			return err
+		if err := s.publishAndWaitForOrcConfirmation(ctx, signed, preState); err != nil {
+			return errors.Wrap(err, "could not publish and verified by orchestrator client onBlock")
 		}
 	}
 
@@ -256,8 +256,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
 		for _, b := range blks {
-			if err := s.publishAndWaitForOrcConfirmation(ctx, b); err != nil {
-				return nil, nil, err
+			if err := s.publishAndWaitForOrcConfirmation(ctx, b, preState); err != nil {
+				return nil, nil, errors.Wrap(err, "could not publish and verified by orchestrator client onBlockBatch")
 			}
 		}
 	}

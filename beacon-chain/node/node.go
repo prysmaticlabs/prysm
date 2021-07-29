@@ -523,6 +523,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		StateNotifier:      b,
 		StateGen:           b.stateGen,
 		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+		EnableVanguardNode: b.cliCtx.Bool(cmd.VanguardNetwork.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {

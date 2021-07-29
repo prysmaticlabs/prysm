@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//proto/interfaces:go_default_library",
         "//shared/event:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

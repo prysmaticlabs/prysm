@@ -91,6 +91,8 @@ func TestProcessPandoraShardHeader(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // parentHash
 		gomock.Any(), // next block number
+		gomock.Any(), // slot
+		gomock.Any(), // epoch
 	).Return(header, headerHash, extraData, nil) // nil - error
 
 	m.pandoraService.EXPECT().SubmitShardBlockHeader(
@@ -109,6 +111,8 @@ func TestProcessPandoraShardHeader(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // parentHash
 		gomock.Any(), // next block number
+		gomock.Any(), // slot
+		gomock.Any(), // epoch
 	).Return(nil, common.Hash{}, nil, ErrRlpDecoding)
 	err = validator.processPandoraShardHeader(context.Background(), beaconBlkWithShard.Block, beaconBlkWithShard.Block.Slot, epoch, pubKey)
 	require.ErrorContains(t, "rlp: input contains more than one value", err)
@@ -143,6 +147,8 @@ func TestValidator_ProposeBlock_Failed_WhenSubmitShardInfoFails(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // parentHash
 		gomock.Any(), // next block number
+		gomock.Any(), // slot
+		gomock.Any(), // epoch
 	).Return(header, headerHash, extraData, nil) // nil - error
 
 	m.pandoraService.EXPECT().SubmitShardBlockHeader(

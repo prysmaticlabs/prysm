@@ -418,6 +418,16 @@ func ProposerAssignments(
 	state iface.BeaconState,
 	epoch types.Epoch,
 ) ([]*ethpb.ValidatorAssignments_CommitteeAssignment, error) {
+
+	nextEpoch := NextEpoch(state)
+	if epoch > nextEpoch {
+		return nil, fmt.Errorf(
+			"epoch %d can't be greater than next epoch %d",
+			epoch,
+			nextEpoch,
+		)
+	}
+
 	// We determine the slots in which proposers are supposed to act.
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
@@ -425,45 +435,30 @@ func ProposerAssignments(
 	if err != nil {
 		return nil, err
 	}
+	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
+	proposerAssignmentInfo := make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0)
 
-	sliceRange := int(params.BeaconConfig().SlotsPerEpoch)
-	if types.Epoch(0) == epoch {
-		sliceRange = int(params.BeaconConfig().SlotsPerEpoch) - 1
-	}
-	proposerIndexToSlots := make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0)
-
-	rangeSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-
-	for slot := startSlot; slot < rangeSlot; slot++ {
+	// Proposal epochs do not have a look ahead, so we skip them over here.
+	//validProposalEpoch := epoch < nextEpoch
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
 			continue
 		}
-
 		if err := state.SetSlot(slot); err != nil {
 			return nil, err
 		}
-
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
-
+		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
 		pubKey := state.PubkeyAtIndex(i)
-		proposerSlots := make([]types.Slot, 0)
-		proposerSlots = append(proposerSlots, slot)
-		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			ProposerSlots:  proposerSlots,
+		proposerAssignmentInfo = append(proposerAssignmentInfo, &ethpb.ValidatorAssignments_CommitteeAssignment{
+			ProposerSlots:  proposerIndexToSlots[i],
 			PublicKey:      pubKey[:],
 			ValidatorIndex: i,
-		}
-
-		proposerIndexToSlots = append(proposerIndexToSlots, assign)
-
-		if len(proposerIndexToSlots) > sliceRange {
-			return nil, errors.Wrap(err, fmt.Sprintf("to many assignments proposed - DEBUG: slot: %v, rangeSlot: %v, startSlot: %v, sliceRange: %v, ValidatorIndex: %v, len(proposerIndexToSlots): %v", slot, rangeSlot, startSlot, sliceRange, i, len(proposerIndexToSlots)))
-		}
+		})
 	}
-
-	return proposerIndexToSlots, nil
+	return proposerAssignmentInfo, nil
 }

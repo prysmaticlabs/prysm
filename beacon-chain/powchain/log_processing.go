@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"time"
 
@@ -12,14 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,6 +31,7 @@ var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
+const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
@@ -110,13 +112,25 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
 	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+
+	log.WithField("index", index).
+		WithField("pubKey", hexutil.Encode(pubkey)).
+		WithField("lastReceivedMerkleIndex", s.lastReceivedMerkleIndex).
+		Debug("merkel index checking in ProcessDepositLog")
+
 	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		return errors.Errorf("received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
+		if s.requestingOldLogs {
+			return errors.New("received incorrect merkle index")
+		}
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, index-1); err != nil {
+			return errors.Wrap(err, "could not get correct merkle index")
+		}
+
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -134,28 +148,43 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
 
-	// Defensive check to validate incoming index.
-	if s.depositTrie.NumOfItems() != int(index) {
-		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
-	}
 	s.depositTrie.Insert(depositHash[:], int(index))
 
-	deposit := &ethpb.Deposit{
-		Data: depositData,
+	proof, err := s.depositTrie.MerkleProof(int(index))
+	if err != nil {
+		return errors.Wrap(err, "Unable to generate merkle proof for deposit")
 	}
-	// Only generate the proofs during pre-genesis.
-	if !s.chainStartData.Chainstarted {
-		proof, err := s.depositTrie.MerkleProof(int(index))
-		if err != nil {
-			return errors.Wrap(err, "Unable to generate merkle proof for deposit")
-		}
-		deposit.Proof = proof
+
+	deposit := &ethpb.Deposit{
+		Data:  depositData,
+		Proof: proof,
 	}
 
 	// We always store all historical deposits in the DB.
-	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
-	if err != nil {
-		return errors.Wrap(err, "unable to insert deposit into cache")
+	s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+
+	// if vanguard flag is enable, then executes the below code
+	if s.cfg.EnableVanguardNode {
+		genesisState, err := s.cfg.BeaconDB.GenesisState(ctx)
+		if err != nil {
+			return err
+		}
+		// Exit early if no genesis state is saved.
+		if genesisState == nil {
+			return nil
+		}
+		pubKeyHex := hexutil.Encode(pubkey)
+		if uint64(index) < genesisState.Eth1Data().DepositCount {
+			log.WithField("index", index).
+				WithField("genesisPubKey", pubKeyHex).
+				Debug("Finalized deposit for genesis deposits")
+
+			if s.genesisPublicKeys[index] == pubKeyHex {
+				s.cfg.DepositCache.InsertFinalizedDeposits(ctx, index)
+			} else {
+				return errors.New("Genesis deposit incorrect. Index and genesis public key mis-matched")
+			}
+		}
 	}
 	validData := true
 	if !s.chainStartData.Chainstarted {
@@ -376,7 +405,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
+	if fState != nil && fState.Eth1DepositIndex() > 0 {
 		s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
 	}
 	return nil
@@ -410,6 +439,50 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		s.latestEth1Data.LastRequestedBlock = i
 	}
 
+	return nil
+}
+
+// requestMissingLogs requests any logs that were missed by requesting from previous blocks
+// until the current block(exclusive).
+func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
+	// Prevent this method from being called recursively
+	s.requestingOldLogs = true
+	defer func() {
+		s.requestingOldLogs = false
+	}()
+	// We request from the last requested block till the current block(exclusive)
+	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
+	startBlock := s.latestEth1Data.LastRequestedBlock + 1
+	for {
+		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
+		if err != nil {
+			return err
+		}
+
+		if s.lastReceivedMerkleIndex == wantedIndex {
+			break
+		}
+
+		// If the required logs still do not exist after the lookback period, then we return an error.
+		if startBlock < s.latestEth1Data.LastRequestedBlock-eth1LookBackPeriod {
+			return fmt.Errorf(
+				"latest index observed is not accurate, wanted %d, but received  %d",
+				wantedIndex,
+				s.lastReceivedMerkleIndex,
+			)
+		}
+		startBlock--
+	}
+	return nil
+}
+
+func (s *Service) processBlksInRange(ctx context.Context, startBlk, endBlk uint64) error {
+	for i := startBlk; i <= endBlk; i++ {
+		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -489,7 +562,7 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	pbState, err := stateV0.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

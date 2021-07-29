@@ -37,9 +37,9 @@ func (m *MockPandoraService) EXPECT() *MockPandoraServiceMockRecorder {
 }
 
 // GetShardBlockHeader mocks base method
-func (m *MockPandoraService) GetShardBlockHeader(ctx context.Context, parentHash common.Hash, nextBlockNumber uint64) (*types.Header, common.Hash, *pandora.ExtraData, error) {
+func (m *MockPandoraService) GetShardBlockHeader(ctx context.Context, parentHash common.Hash, nextBlockNumber, slot, epoch uint64) (*types.Header, common.Hash, *pandora.ExtraData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShardBlockHeader", ctx, parentHash, nextBlockNumber)
+	ret := m.ctrl.Call(m, "GetShardBlockHeader", ctx, parentHash, nextBlockNumber, slot, epoch)
 	ret0, _ := ret[0].(*types.Header)
 	ret1, _ := ret[1].(common.Hash)
 	ret2, _ := ret[2].(*pandora.ExtraData)
@@ -48,9 +48,9 @@ func (m *MockPandoraService) GetShardBlockHeader(ctx context.Context, parentHash
 }
 
 // GetShardBlockHeader indicates an expected call of GetShardBlockHeader
-func (mr *MockPandoraServiceMockRecorder) GetShardBlockHeader(ctx, parentHash, nextBlockNumber interface{}) *gomock.Call {
+func (mr *MockPandoraServiceMockRecorder) GetShardBlockHeader(ctx, parentHash, nextBlockNumber, slot, epoch interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardBlockHeader", reflect.TypeOf((*MockPandoraService)(nil).GetShardBlockHeader), ctx, parentHash, nextBlockNumber)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardBlockHeader", reflect.TypeOf((*MockPandoraService)(nil).GetShardBlockHeader), ctx, parentHash, nextBlockNumber, slot, epoch)
 }
 
 // SubmitShardBlockHeader mocks base method

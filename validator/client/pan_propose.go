@@ -58,7 +58,8 @@ func (v *validator) processPandoraShardHeader(
 	}
 
 	// Request for pandora chain header
-	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(ctx, latestPandoraHash, latestPandoraBlkNum+1)
+	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(
+		ctx, latestPandoraHash, latestPandoraBlkNum+1, uint64(slot), uint64(epoch))
 	if err != nil {
 		log.WithField("blockSlot", slot).
 			WithField("fmtKey", fmtKey).
@@ -96,6 +97,9 @@ func (v *validator) processPandoraShardHeader(
 
 	var headerHashSig96Bytes [96]byte
 	copy(headerHashSig96Bytes[:], headerHashSig.Marshal())
+
+	log.Debug("pandora sharding header info", "slot", slot, "sealHash",
+		headerHash, "signature", common.Bytes2Hex(headerHashSig.Marshal()))
 
 	// Submit bls signature to pandora
 	if status, err := v.pandoraService.SubmitShardBlockHeader(

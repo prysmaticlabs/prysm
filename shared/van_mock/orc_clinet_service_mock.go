@@ -6,9 +6,10 @@ package van_mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	params "github.com/prysmaticlabs/prysm/shared/params"
-	reflect "reflect"
 )
 
 // MockClient is a mock of Client interface

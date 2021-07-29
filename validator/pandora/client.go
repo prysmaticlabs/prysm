@@ -70,12 +70,18 @@ func (oc *PandoraClient) GetShardBlockHeader(
 	ctx context.Context,
 	parentHash common.Hash,
 	nextBlockNumber uint64,
+	slot uint64,
+	epoch uint64,
 ) (*ShardBlockHeaderResponse, error) {
 
-	log.WithField("latestPandoraHash", parentHash.Hex()).WithField(
-		"nextBlockNumber", nextBlockNumber).Debug("calling pandora chain for new sharding info")
+	log.WithField("latestPandoraHash", parentHash.Hex()).
+		WithField("nextBlockNumber", nextBlockNumber).
+		WithField("slot", slot).
+		WithField("epoch", epoch).
+		Debug("calling pandora chain for new sharding info")
+
 	var response []string
-	if err := oc.c.CallContext(ctx, &response, "eth_getShardingWork", parentHash, nextBlockNumber); err != nil {
+	if err := oc.c.CallContext(ctx, &response, "eth_getShardingWork", parentHash, nextBlockNumber, slot, epoch); err != nil {
 		return nil, errors.Wrap(err, "Got error when calls to eth_getWork api")
 	}
 

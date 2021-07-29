@@ -70,7 +70,8 @@ func TestService_GetShardBlockHeader_Success(t *testing.T) {
 	pandoraService.connected = true
 	pandoraService.isRunning = true
 
-	actualHeader, actualHash, actualExtraData, err := pandoraService.GetShardBlockHeader(context.Background(), types.EmptyRootHash, 1000)
+	actualHeader, actualHash, actualExtraData, err := pandoraService.GetShardBlockHeader(context.Background(),
+		types.EmptyRootHash, 1000, 31, 0)
 	require.NoError(t, err, "Should not get error when calling GetWork method")
 
 	expectedExtraData, _, err := getDummyEncodedExtraData()

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -158,9 +159,18 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			log.WithField("slot", blk.Slot).Debug("Head block of chain was nil")
 			return blk, nil
 		}
-		log.WithField("slot", headBlk.Block.Slot).WithField(
-			"pandoraShard", fmt.Sprintf("%v", headBlk.Block.Body.PandoraShard)).Debug("head block info")
-		blk.Body.PandoraShard = headBlk.Block.Body.PandoraShard
+
+		canonicalPandoraShard := headBlk.Block.Body.PandoraShard
+		if len(canonicalPandoraShard) > 0 {
+			log.WithField("slot", headBlk.Block.Slot).
+				WithField("blockNumber", canonicalPandoraShard[0].BlockNumber).
+				WithField("hash", hexutil.Encode(canonicalPandoraShard[0].Hash)).
+				WithField("sealHash", hexutil.Encode(canonicalPandoraShard[0].SealHash)).
+				WithField("StateRoot", hexutil.Encode(canonicalPandoraShard[0].StateRoot)).
+				WithField("signature", hexutil.Encode(canonicalPandoraShard[0].Signature)).
+				Debug("pandora canonical sharding info")
+		}
+		blk.Body.PandoraShard = canonicalPandoraShard
 	}
 
 	return blk, nil
@@ -257,28 +267,19 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime.Number, lastBlockByLatestValidTime.Number)
-	if err != nil {
-		return nil, err
-	}
-	if len(inRangeVotes) == 0 {
-		if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
-			hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
-			if err != nil {
-				log.WithError(err).Error("Could not get hash of last block by latest valid time")
-				return vs.randomETH1DataVote(ctx)
-			}
-			return &ethpb.Eth1Data{
-				BlockHash:    hash.Bytes(),
-				DepositCount: lastBlockDepositCount,
-				DepositRoot:  lastBlockDepositRoot[:],
-			}, nil
+	if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
+		hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
+		if err != nil {
+			log.WithError(err).Error("Could not get hash of last block by latest valid time")
+			return vs.randomETH1DataVote(ctx)
 		}
-		return vs.HeadFetcher.HeadETH1Data(), nil
+		return &ethpb.Eth1Data{
+			BlockHash:    hash.Bytes(),
+			DepositCount: lastBlockDepositCount,
+			DepositRoot:  lastBlockDepositRoot[:],
+		}, nil
 	}
-
-	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
-	return &chosenVote.data.eth1Data, nil
+	return vs.HeadFetcher.HeadETH1Data(), nil
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
@@ -438,7 +439,7 @@ func (vs *Server) deposits(
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
-		return nil, err
+		return []*ethpb.Deposit{}, nil
 	}
 
 	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -461,6 +462,14 @@ func (vs *Server) deposits(
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*dbpb.DepositContainer
 	for _, dep := range allPendingContainers {
+
+		log.WithField("index", dep.Index).
+			WithField("Eth1BlockHeight", dep.Eth1BlockHeight).
+			WithField("publicKey", hexutil.Encode(dep.Deposit.Data.PublicKey)).
+			WithField("canonicalEth1DataDepositCount", canonicalEth1Data.DepositCount).
+			WithField("Eth1DepositIndex", beaconState.Eth1DepositIndex()).
+			Debug("deposit container info")
+
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
@@ -481,6 +490,8 @@ func (vs *Server) deposits(
 	for i := uint64(0); i < uint64(len(pendingDeps)) && i < params.BeaconConfig().MaxDeposits; i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
+
+	log.WithField("pendingDepositsLen", len(pendingDeposits)).Debug("pending deposits")
 	return pendingDeposits, nil
 }
 

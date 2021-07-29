@@ -25,7 +25,8 @@ func TestGetShardBlockHeader_Success(t *testing.T) {
 
 	inputBlock := getDummyBlock()
 	var response *ShardBlockHeaderResponse
-	response, err = mockedPandoraClient.GetShardBlockHeader(context.Background(), types.EmptyRootHash, 1000)
+	response, err = mockedPandoraClient.GetShardBlockHeader(
+		context.Background(), types.EmptyRootHash, 1000, 31, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

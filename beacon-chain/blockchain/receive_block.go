@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -35,7 +35,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := timeutils.Now()
-	blockCopy := stateTrie.CopySignedBeaconBlock(block)
+	blockCopy := stateV0.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -50,7 +50,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 			log.WithError(err).Warn("Could not update head")
 		}
 		// Send notification of the processed block to the state feed.
-		s.stateNotifier.StateFeed().Send(&feed.Event{
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
 				Slot:        blockCopy.Block.Slot,
@@ -100,13 +100,13 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	}
 
 	for i, b := range blocks {
-		blockCopy := stateTrie.CopySignedBeaconBlock(b)
+		blockCopy := stateV0.CopySignedBeaconBlock(b)
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 		// Send notification of the processed block to the state feed.
-		s.stateNotifier.StateFeed().Send(&feed.Event{
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
 				Slot:        blockCopy.Block.Slot,
@@ -142,18 +142,18 @@ func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
 	}
 
 	// Add block attestations to the fork choice pool to compute head.
-	if err := s.attPool.SaveBlockAttestations(b.Body.Attestations); err != nil {
+	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body.Attestations); err != nil {
 		log.Errorf("Could not save block attestations for fork choice: %v", err)
 		return nil
 	}
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body.VoluntaryExits {
-		s.exitPool.MarkIncluded(e)
+		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
 	for _, as := range b.Body.AttesterSlashings {
-		s.slashingPool.MarkIncludedAttesterSlashing(as)
+		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
 }
@@ -169,9 +169,9 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	}
 
 	if sinceFinality >= epochsSinceFinalitySaveHotStateDB {
-		s.stateGen.EnableSaveHotStateToDB(ctx)
+		s.cfg.StateGen.EnableSaveHotStateToDB(ctx)
 		return nil
 	}
 
-	return s.stateGen.DisableSaveHotStateToDB(ctx)
+	return s.cfg.StateGen.DisableSaveHotStateToDB(ctx)
 }
