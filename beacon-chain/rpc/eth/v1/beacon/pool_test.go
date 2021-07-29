@@ -919,7 +919,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	assert.DeepEqual(t, expectedAtt, actualAtt)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
-	broadcastRoot, err := broadcaster.BroadcastMessages[0].(*ethpb.Attestation).HashTreeRoot()
+	broadcastRoot, err := broadcaster.BroadcastMessages[0].(*ethpb_v1alpha1.Attestation).HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
 }
