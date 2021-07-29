@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -56,7 +55,7 @@ func (s sortableIndices) Less(i, j int) bool {
 //    Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
 //    """
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
-func AttestingBalance(state state.ReadOnlyBeaconState, atts []*statepb.PendingAttestation) (uint64, error) {
+func AttestingBalance(state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get attesting indices")
@@ -378,7 +377,7 @@ func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, e
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
-		historicalBatch := &statepb.HistoricalBatch{
+		historicalBatch := &ethpb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),
 		}
@@ -461,7 +460,7 @@ func ProcessFinalUpdates(state state.BeaconState) (state.BeaconState, error) {
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
 //    return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(state state.ReadOnlyBeaconState, atts []*statepb.PendingAttestation) ([]types.ValidatorIndex, error) {
+func UnslashedAttestingIndices(state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) ([]types.ValidatorIndex, error) {
 	var setIndices []types.ValidatorIndex
 	seen := make(map[uint64]bool)
 

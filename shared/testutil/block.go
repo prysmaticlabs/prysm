@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -507,7 +506,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 
 // HydrateSignedBeaconBlockAltair hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlockAltair) *prysmv2.SignedBeaconBlockAltair {
+func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
 	if b.Signature == nil {
 		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
@@ -517,9 +516,9 @@ func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlockAltair) *prysmv2
 
 // HydrateBeaconBlockAltair hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlockAltair) *prysmv2.BeaconBlockAltair {
+func HydrateBeaconBlockAltair(b *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
 	if b == nil {
-		b = &prysmv2.BeaconBlockAltair{}
+		b = &ethpb.BeaconBlockAltair{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, 32)
@@ -533,9 +532,9 @@ func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlockAltair) *prysmv2.BeaconBlock
 
 // HydrateBeaconBlockBodyAltair hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBodyAltair) *prysmv2.BeaconBlockBodyAltair {
+func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
 	if b == nil {
-		b = &prysmv2.BeaconBlockBodyAltair{}
+		b = &ethpb.BeaconBlockBodyAltair{}
 	}
 	if b.RandaoReveal == nil {
 		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
@@ -550,7 +549,7 @@ func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBodyAltair) *prysmv2.Bea
 		}
 	}
 	if b.SyncAggregate == nil {
-		b.SyncAggregate = &prysmv2.SyncAggregate{
+		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}

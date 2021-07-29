@@ -7,7 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -94,10 +93,10 @@ func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
 }
 
 // MakeSyncContributionsFromBitVector creates list of sync contributions from list of bitvector.
-func MakeSyncContributionsFromBitVector(bl []bitfield.Bitvector128) []*prysmv2.SyncCommitteeContribution {
-	c := make([]*prysmv2.SyncCommitteeContribution, len(bl))
+func MakeSyncContributionsFromBitVector(bl []bitfield.Bitvector128) []*ethpb.SyncCommitteeContribution {
+	c := make([]*ethpb.SyncCommitteeContribution, len(bl))
 	for i, b := range bl {
-		c[i] = &prysmv2.SyncCommitteeContribution{
+		c[i] = &ethpb.SyncCommitteeContribution{
 			Slot:              types.Slot(1),
 			SubcommitteeIndex: 2,
 			AggregationBits:   b,

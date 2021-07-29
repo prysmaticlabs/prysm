@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -30,13 +30,13 @@ var (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *statepb.BeaconState) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*statepb.BeaconState))
+func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *statepb.BeaconState) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -89,7 +89,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	dst := &BeaconState{
-		state: &statepb.BeaconState{
+		state: &ethpb.BeaconState{
 			// Primitive types, safe to copy.
 			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
