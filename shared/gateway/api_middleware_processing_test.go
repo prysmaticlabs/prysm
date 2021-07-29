@@ -196,25 +196,18 @@ func TestHandleGrpcResponseError(t *testing.T) {
 	assert.Equal(t, 400, errJson.StatusCode())
 }
 
-func TestGrpcResponseIsStatusCodeOnly(t *testing.T) {
-	var body bytes.Buffer
-
-	t.Run("status_code_only", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, nil)
-		assert.Equal(t, true, result)
+func TestGrpcResponseIsEmpty(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty(nil))
 	})
-
-	t.Run("different_method", func(t *testing.T) {
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, nil)
-		assert.Equal(t, false, result)
+	t.Run("empty_slice", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty(make([]byte, 0)))
 	})
-
-	t.Run("non_empty_response", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example", &body)
-		result := GrpcResponseIsStatusCodeOnly(request, &testRequestContainer{})
-		assert.Equal(t, false, result)
+	t.Run("empty_brackets", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty([]byte("{}")))
+	})
+	t.Run("non_empty", func(t *testing.T) {
+		assert.Equal(t, false, GrpcResponseIsEmpty([]byte("{\"foo\":\"bar\"})")))
 	})
 }
 
