@@ -376,7 +376,7 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	}
 	balances := []uint64{0, 50}
 	root := depositTrie.Root()
-	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
