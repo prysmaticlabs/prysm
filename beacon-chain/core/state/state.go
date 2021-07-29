@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -114,13 +113,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
 
-	state := &statepb.BeaconState{
+	state := &ethpb.BeaconState{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -152,8 +151,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
 		Slashings:                 slashings,
-		CurrentEpochAttestations:  []*statepb.PendingAttestation{},
-		PreviousEpochAttestations: []*statepb.PendingAttestation{},
+		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
+		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
 		// Eth1 data.
 		Eth1Data:         eth1Data,
@@ -184,10 +183,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
-	state := &statepb.BeaconState{
+	state := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -198,8 +197,8 @@ func EmptyGenesisState() (state.BeaconState, error) {
 
 		JustificationBits:         []byte{0},
 		HistoricalRoots:           [][]byte{},
-		CurrentEpochAttestations:  []*statepb.PendingAttestation{},
-		PreviousEpochAttestations: []*statepb.PendingAttestation{},
+		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
+		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
 		// Eth1 data.
 		Eth1Data:         &ethpb.Eth1Data{},

@@ -8,7 +8,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -49,14 +49,14 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(ctx context.Context, state *statepb.BeaconState) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *statepb.BeaconState) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
 	defer span.End()
 

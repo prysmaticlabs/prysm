@@ -12,7 +12,7 @@ import (
 	prysmP2P "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -58,7 +58,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	wg.Add(1)
 	topic := "/testing/foobar/1"
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-		m, ok := msg.(*statepb.Fork)
+		m, ok := msg.(*ethpb.Fork)
 		if !ok {
 			t.Error("Object is not of type *pb.TestSimpleMessage")
 		}
@@ -67,14 +67,14 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 		return nil
 	}
-	prysmP2P.RPCTopicMappings[topic] = new(statepb.Fork)
+	prysmP2P.RPCTopicMappings[topic] = new(ethpb.Fork)
 	// Cleanup Topic mappings
 	defer func() {
 		delete(prysmP2P.RPCTopicMappings, topic)
 	}()
 	r.registerRPC(topic, handler)
 
-	p2p.ReceiveRPC(topic, &statepb.Fork{CurrentVersion: []byte("fooo"), PreviousVersion: []byte("barr")})
+	p2p.ReceiveRPC(topic, &ethpb.Fork{CurrentVersion: []byte("fooo"), PreviousVersion: []byte("barr")})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")

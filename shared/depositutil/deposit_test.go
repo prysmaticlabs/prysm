@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +25,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 
 	sig, err := bls.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
-	testData := &statepb.DepositMessage{
+	testData := &ethpb.DepositMessage{
 		PublicKey:             result.PublicKey,
 		WithdrawalCredentials: result.WithdrawalCredentials,
 		Amount:                result.Amount,
@@ -38,7 +38,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		nil, /*genesisValidatorsRoot*/
 	)
 	require.NoError(t, err)
-	root, err := (&statepb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
+	root, err := (&ethpb.SigningData{ObjectRoot: sr[:], Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, true, sig.Verify(k1.PublicKey(), root[:]))
 }

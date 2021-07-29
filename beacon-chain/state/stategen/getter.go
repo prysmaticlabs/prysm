@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -111,8 +111,8 @@ func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconS
 
 // This returns the state summary object of a given block root, it first checks the cache
 // then checks the DB. An error is returned if state summary object is nil.
-func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
-	var summary *statepb.StateSummary
+func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
+	var summary *ethpb.StateSummary
 	var err error
 
 	summary, err = s.beaconDB.StateSummary(ctx, blockRoot)
@@ -127,13 +127,13 @@ func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.
 }
 
 // RecoverStateSummary recovers state summary object of a given block root by using the saved block in DB.
-func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
+func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	if s.beaconDB.HasBlock(ctx, blockRoot) {
 		b, err := s.beaconDB.Block(ctx, blockRoot)
 		if err != nil {
 			return nil, err
 		}
-		summary := &statepb.StateSummary{Slot: b.Block().Slot(), Root: blockRoot[:]}
+		summary := &ethpb.StateSummary{Slot: b.Block().Slot(), Root: blockRoot[:]}
 		if err := s.beaconDB.SaveStateSummary(ctx, summary); err != nil {
 			return nil, err
 		}

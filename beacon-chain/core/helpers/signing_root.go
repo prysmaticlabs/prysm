@@ -6,7 +6,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -57,7 +56,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, err
 	}
-	container := &statepb.SigningData{
+	container := &ethpb.SigningData{
 		ObjectRoot: objRoot[:],
 		Domain:     domain,
 	}
@@ -210,7 +209,7 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        genesis_validators_root=genesis_validators_root,
 //    ))
 func computeForkDataRoot(version, root []byte) ([32]byte, error) {
-	r, err := (&statepb.ForkData{
+	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
 	}).HashTreeRoot()
