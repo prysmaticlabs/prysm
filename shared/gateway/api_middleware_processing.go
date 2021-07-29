@@ -115,6 +115,10 @@ func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface
 	return req.Method == "GET" && responseContainer == nil
 }
 
+func GrpcResponseIsEmpty(grpcResponseBody []byte) bool {
+	return len(grpcResponseBody) == 0 || string(grpcResponseBody) == "{}"
+}
+
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
 func DeserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer interface{}) ErrorJson {
 	if err := json.Unmarshal(body, &responseContainer); err != nil {
