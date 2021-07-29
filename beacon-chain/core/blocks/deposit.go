@@ -153,7 +153,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //        increase_balance(state, index, amount)
-func ProcessDeposit(beaconState state.BeaconState, deposit *statepb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
 	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
