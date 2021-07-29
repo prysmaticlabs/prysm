@@ -164,9 +164,6 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			hashStr := string(hash[:])
 			validatorsEntries[hashStr] = val
 		}
-
-		// zero out the validators List from the state bucket so that it is not stored as part of it.
-		pbState.Validators = make([]*ethpb.Validator, 0)
 		validatorKeys[i] = snappy.Encode(nil, hashes)
 	}
 
