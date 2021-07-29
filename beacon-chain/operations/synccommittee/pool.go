@@ -2,7 +2,7 @@ package synccommittee
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 var _ = Pool(&Store{})

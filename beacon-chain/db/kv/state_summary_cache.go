@@ -3,7 +3,7 @@ package kv
 import (
 	"sync"
 
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 const stateSummaryCachePruneCount = 128

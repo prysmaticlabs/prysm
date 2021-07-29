@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashing "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
