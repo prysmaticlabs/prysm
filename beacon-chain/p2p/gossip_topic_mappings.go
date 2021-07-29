@@ -51,5 +51,5 @@ func init() {
 		GossipTypeMapping[reflect.TypeOf(v)] = k
 	}
 	// Specially handle Altair Objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlock{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
 }
