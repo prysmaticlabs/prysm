@@ -29,4 +29,5 @@ type Server struct {
 	VoluntaryExitsPool voluntaryexits.PoolManager
 	StateGenService    stategen.StateManager
 	StateFetcher       statefetcher.Fetcher
+	HeadFetcher        blockchain.HeadFetcher
 }

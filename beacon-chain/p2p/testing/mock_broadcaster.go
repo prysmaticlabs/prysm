@@ -9,8 +9,9 @@ import (
 
 // MockBroadcaster implements p2p.Broadcaster for testing.
 type MockBroadcaster struct {
-	BroadcastCalled   bool
-	BroadcastMessages []proto.Message
+	BroadcastCalled       bool
+	BroadcastMessages     []proto.Message
+	BroadcastAttestations []*ethpb.Attestation
 }
 
 // Broadcast records a broadcast occurred.
@@ -21,7 +22,8 @@ func (m *MockBroadcaster) Broadcast(_ context.Context, msg proto.Message) error 
 }
 
 // BroadcastAttestation records a broadcast occurred.
-func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a *ethpb.Attestation) error {
 	m.BroadcastCalled = true
+	m.BroadcastAttestations = append(m.BroadcastAttestations, a)
 	return nil
 }
