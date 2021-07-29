@@ -27,7 +27,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 			require.NoError(t, err, "Failed to decompress")
-			block := &ethpb.BeaconBlock{}
+			block := &ethpb.BeaconBlockAltair{}
 			require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
