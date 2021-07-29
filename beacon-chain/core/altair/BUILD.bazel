@@ -7,7 +7,10 @@ go_library(
         "sync_committee.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
