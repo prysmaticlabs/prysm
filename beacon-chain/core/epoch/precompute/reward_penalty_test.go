@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -23,9 +22,9 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -62,10 +61,10 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -146,10 +145,10 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -182,10 +181,10 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -215,9 +214,9 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -259,7 +258,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 }
 
-func buildState(slot types.Slot, validatorCount uint64) *statepb.BeaconState {
+func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -285,7 +284,7 @@ func buildState(slot types.Slot, validatorCount uint64) *statepb.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	return &statepb.BeaconState{
+	return &ethpb.BeaconState{
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,

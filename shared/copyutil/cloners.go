@@ -2,7 +2,6 @@ package copyutil
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -112,22 +111,22 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 }
 
 // CopySignedBeaconBlockAltair copies the provided SignedBeaconBlock.
-func CopySignedBeaconBlockAltair(sigBlock *prysmv2.SignedBeaconBlockAltair) *prysmv2.SignedBeaconBlockAltair {
+func CopySignedBeaconBlockAltair(sigBlock *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
 	if sigBlock == nil {
 		return nil
 	}
-	return &prysmv2.SignedBeaconBlockAltair{
+	return &ethpb.SignedBeaconBlockAltair{
 		Block:     CopyBeaconBlockAltair(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
 // CopyBeaconBlockAltair copies the provided BeaconBlock.
-func CopyBeaconBlockAltair(block *prysmv2.BeaconBlockAltair) *prysmv2.BeaconBlockAltair {
+func CopyBeaconBlockAltair(block *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
 	if block == nil {
 		return nil
 	}
-	return &prysmv2.BeaconBlockAltair{
+	return &ethpb.BeaconBlockAltair{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
@@ -137,11 +136,11 @@ func CopyBeaconBlockAltair(block *prysmv2.BeaconBlockAltair) *prysmv2.BeaconBloc
 }
 
 // CopyBeaconBlockBodyAltair copies the provided BeaconBlockBody.
-func CopyBeaconBlockBodyAltair(body *prysmv2.BeaconBlockBodyAltair) *prysmv2.BeaconBlockBodyAltair {
+func CopyBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
 	if body == nil {
 		return nil
 	}
-	return &prysmv2.BeaconBlockBodyAltair{
+	return &ethpb.BeaconBlockBodyAltair{
 		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
@@ -329,11 +328,11 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 }
 
 // CopySyncCommitteeMessage copies the provided sync committee message object.
-func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
+func CopySyncCommitteeMessage(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
 	if s == nil {
 		return nil
 	}
-	return &prysmv2.SyncCommitteeMessage{
+	return &ethpb.SyncCommitteeMessage{
 		Slot:           s.Slot,
 		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
 		ValidatorIndex: s.ValidatorIndex,
@@ -342,11 +341,11 @@ func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncComm
 }
 
 // CopySyncCommitteeContribution copies the provided sync committee contribution object.
-func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
+func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.SyncCommitteeContribution {
 	if c == nil {
 		return nil
 	}
-	return &prysmv2.SyncCommitteeContribution{
+	return &ethpb.SyncCommitteeContribution{
 		Slot:              c.Slot,
 		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
 		SubcommitteeIndex: c.SubcommitteeIndex,
@@ -356,11 +355,11 @@ func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv
 }
 
 // CopySyncAggregate copies the provided sync aggregate object.
-func CopySyncAggregate(a *prysmv2.SyncAggregate) *prysmv2.SyncAggregate {
+func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
 	if a == nil {
 		return nil
 	}
-	return &prysmv2.SyncAggregate{
+	return &ethpb.SyncAggregate{
 		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
 		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}

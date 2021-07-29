@@ -10,7 +10,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -47,7 +46,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	var registry []*ethpb.Validator
 	currentSlot := types.Slot(0)
 
-	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -66,7 +65,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	var registry []*ethpb.Validator
 	currentSlot := types.Slot(0)
 
-	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -18,11 +18,11 @@ func (b *BeaconState) RotateAttestations() error {
 	defer b.lock.Unlock()
 
 	b.setPreviousEpochAttestations(b.currentEpochAttestations())
-	b.setCurrentEpochAttestations([]*statepb.PendingAttestation{})
+	b.setCurrentEpochAttestations([]*ethpb.PendingAttestation{})
 	return nil
 }
 
-func (b *BeaconState) setPreviousEpochAttestations(val []*statepb.PendingAttestation) {
+func (b *BeaconState) setPreviousEpochAttestations(val []*ethpb.PendingAttestation) {
 	b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
 
@@ -31,7 +31,7 @@ func (b *BeaconState) setPreviousEpochAttestations(val []*statepb.PendingAttesta
 	b.rebuildTrie[previousEpochAttestations] = true
 }
 
-func (b *BeaconState) setCurrentEpochAttestations(val []*statepb.PendingAttestation) {
+func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestation) {
 	b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
 
@@ -42,7 +42,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*statepb.PendingAttestat
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentEpochAttestations(val *statepb.PendingAttestation) error {
+func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -57,7 +57,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *statepb.PendingAttesta
 
 	if b.sharedFieldReferences[currentEpochAttestations].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		atts = make([]*statepb.PendingAttestation, len(b.state.CurrentEpochAttestations))
+		atts = make([]*ethpb.PendingAttestation, len(b.state.CurrentEpochAttestations))
 		copy(atts, b.state.CurrentEpochAttestations)
 		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
@@ -71,7 +71,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *statepb.PendingAttesta
 
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousEpochAttestations(val *statepb.PendingAttestation) error {
+func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -85,7 +85,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *statepb.PendingAttest
 	}
 
 	if b.sharedFieldReferences[previousEpochAttestations].Refs() > 1 {
-		atts = make([]*statepb.PendingAttestation, len(b.state.PreviousEpochAttestations))
+		atts = make([]*ethpb.PendingAttestation, len(b.state.PreviousEpochAttestations))
 		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)

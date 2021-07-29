@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -82,7 +81,7 @@ func main() {
 				case "deposit":
 					data = &ethpb.Deposit{}
 				case "deposit_message":
-					data = &statepb.DepositMessage{}
+					data = &ethpb.DepositMessage{}
 				case "proposer_slashing":
 					data = &ethpb.ProposerSlashing{}
 				case "signed_block_header":
@@ -92,7 +91,7 @@ func main() {
 				case "voluntary_exit":
 					data = &ethpb.VoluntaryExit{}
 				case "state":
-					data = &statepb.BeaconState{}
+					data = &ethpb.BeaconState{}
 				default:
 					log.Fatal("Invalid type")
 				}
@@ -156,7 +155,7 @@ func main() {
 					}
 					preStatePath = text
 				}
-				preState := &statepb.BeaconState{}
+				preState := &ethpb.BeaconState{}
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
@@ -188,7 +187,7 @@ func main() {
 
 				// Diff the state if a post state is provided.
 				if expectedPostStatePath != "" {
-					expectedState := &statepb.BeaconState{}
+					expectedState := &ethpb.BeaconState{}
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}

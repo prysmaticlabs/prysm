@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,7 +16,7 @@ import (
 
 func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}, Signature: sig})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}, Signature: sig})
 	require.NoError(t, err)
 
 	if !bytes.Equal(sig, wsb.Signature()) {
@@ -25,8 +25,8 @@ func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Block(t *testing.T) {
-	blk := &prysmv2.BeaconBlockAltair{Slot: 54}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: blk})
+	blk := &ethpb.BeaconBlockAltair{Slot: 54}
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, blk, wsb.Block().Proto())
@@ -36,7 +36,7 @@ func TestAltairSignedBeaconBlock_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedAltairSignedBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -47,8 +47,8 @@ func TestAltairSignedBeaconBlock_Copy(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Proto(t *testing.T) {
-	sb := &prysmv2.SignedBeaconBlockAltair{
-		Block:     &prysmv2.BeaconBlockAltair{Slot: 66},
+	sb := &ethpb.SignedBeaconBlockAltair{
+		Block:     &ethpb.BeaconBlockAltair{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(sb)
@@ -58,7 +58,7 @@ func TestAltairSignedBeaconBlock_Proto(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_PbPhase0Block(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	if _, err := wsb.PbPhase0Block(); err != wrapper.ErrUnsupportedPhase0Block {
@@ -67,8 +67,8 @@ func TestAltairSignedBeaconBlock_PbPhase0Block(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
-	sb := &prysmv2.SignedBeaconBlockAltair{
-		Block:     &prysmv2.BeaconBlockAltair{Slot: 66},
+	sb := &ethpb.SignedBeaconBlockAltair{
+		Block:     &ethpb.BeaconBlockAltair{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(sb)
@@ -80,7 +80,7 @@ func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&prysmv2.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b := []byte{}
@@ -90,7 +90,7 @@ func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&prysmv2.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -103,7 +103,7 @@ func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Version(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{Block: &prysmv2.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Altair, wsb.Version())
@@ -111,7 +111,7 @@ func TestAltairSignedBeaconBlock_Version(t *testing.T) {
 
 func TestAltairBeaconBlock_Slot(t *testing.T) {
 	slot := types.Slot(546)
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{Slot: slot})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{Slot: slot})
 	require.NoError(t, err)
 
 	assert.Equal(t, slot, wb.Slot())
@@ -119,7 +119,7 @@ func TestAltairBeaconBlock_Slot(t *testing.T) {
 
 func TestAltairBeaconBlock_ProposerIndex(t *testing.T) {
 	pi := types.ValidatorIndex(555)
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{ProposerIndex: pi})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{ProposerIndex: pi})
 	require.NoError(t, err)
 
 	assert.Equal(t, pi, wb.ProposerIndex())
@@ -127,7 +127,7 @@ func TestAltairBeaconBlock_ProposerIndex(t *testing.T) {
 
 func TestAltairBeaconBlock_ParentRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{ParentRoot: root})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{ParentRoot: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wb.ParentRoot())
@@ -135,15 +135,15 @@ func TestAltairBeaconBlock_ParentRoot(t *testing.T) {
 
 func TestAltairBeaconBlock_StateRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{StateRoot: root})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{StateRoot: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wb.StateRoot())
 }
 
 func TestAltairBeaconBlock_Body(t *testing.T) {
-	body := &prysmv2.BeaconBlockBodyAltair{Graffiti: []byte{0x44}}
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{Body: body})
+	body := &ethpb.BeaconBlockBodyAltair{Graffiti: []byte{0x44}}
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{Body: body})
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wb.Body().Proto())
@@ -153,14 +153,14 @@ func TestAltairBeaconBlock_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedAltairBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wb.IsNil())
 }
 
 func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&prysmv2.BeaconBlockAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
 	require.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -169,7 +169,7 @@ func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_Proto(t *testing.T) {
-	blk := &prysmv2.BeaconBlockAltair{ProposerIndex: 234}
+	blk := &ethpb.BeaconBlockAltair{ProposerIndex: 234}
 	wb, err := wrapper.WrappedAltairBeaconBlock(blk)
 	require.NoError(t, err)
 
@@ -177,7 +177,7 @@ func TestAltairBeaconBlock_Proto(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_SSZ(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&prysmv2.BeaconBlockAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b, err := wb.MarshalSSZ()
@@ -190,7 +190,7 @@ func TestAltairBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_Version(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&ethpb.BeaconBlockAltair{})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Altair, wb.Version())
@@ -198,7 +198,7 @@ func TestAltairBeaconBlock_Version(t *testing.T) {
 
 func TestAltairBeaconBlockBody_RandaoReveal(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{RandaoReveal: root})
+	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{RandaoReveal: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wbb.RandaoReveal())
@@ -206,7 +206,7 @@ func TestAltairBeaconBlockBody_RandaoReveal(t *testing.T) {
 
 func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
 	data := &v1alpha1.Eth1Data{}
-	body := &prysmv2.BeaconBlockBodyAltair{
+	body := &ethpb.BeaconBlockBodyAltair{
 		Eth1Data: data,
 	}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
@@ -216,7 +216,7 @@ func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
 
 func TestAltairBeaconBlockBody_Graffiti(t *testing.T) {
 	graffiti := []byte{0x66, 0xAA}
-	body := &prysmv2.BeaconBlockBodyAltair{Graffiti: graffiti}
+	body := &ethpb.BeaconBlockBodyAltair{Graffiti: graffiti}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -229,7 +229,7 @@ func TestAltairBeaconBlockBody_ProposerSlashings(t *testing.T) {
 			Signature: []byte{0x11, 0x20},
 		}},
 	}
-	body := &prysmv2.BeaconBlockBodyAltair{ProposerSlashings: ps}
+	body := &ethpb.BeaconBlockBodyAltair{ProposerSlashings: ps}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -240,7 +240,7 @@ func TestAltairBeaconBlockBody_AttesterSlashings(t *testing.T) {
 	as := []*v1alpha1.AttesterSlashing{
 		{Attestation_1: &v1alpha1.IndexedAttestation{Signature: []byte{0x11}}},
 	}
-	body := &prysmv2.BeaconBlockBodyAltair{AttesterSlashings: as}
+	body := &ethpb.BeaconBlockBodyAltair{AttesterSlashings: as}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -250,7 +250,7 @@ func TestAltairBeaconBlockBody_AttesterSlashings(t *testing.T) {
 func TestAltairBeaconBlockBody_Attestations(t *testing.T) {
 	atts := []*v1alpha1.Attestation{{Signature: []byte{0x88}}}
 
-	body := &prysmv2.BeaconBlockBodyAltair{Attestations: atts}
+	body := &ethpb.BeaconBlockBodyAltair{Attestations: atts}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -261,7 +261,7 @@ func TestAltairBeaconBlockBody_Deposits(t *testing.T) {
 	deposits := []*v1alpha1.Deposit{
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
-	body := &prysmv2.BeaconBlockBodyAltair{Deposits: deposits}
+	body := &ethpb.BeaconBlockBodyAltair{Deposits: deposits}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -272,7 +272,7 @@ func TestAltairBeaconBlockBody_VoluntaryExits(t *testing.T) {
 	exits := []*v1alpha1.SignedVoluntaryExit{
 		{Exit: &v1alpha1.VoluntaryExit{Epoch: 54}},
 	}
-	body := &prysmv2.BeaconBlockBodyAltair{VoluntaryExits: exits}
+	body := &ethpb.BeaconBlockBodyAltair{VoluntaryExits: exits}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 
@@ -283,14 +283,14 @@ func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedAltairBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{})
+	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{})
 	require.NoError(t, err)
 	assert.Equal(t, false, wbb.IsNil())
 
 }
 
 func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlockBody(testutil.HydrateBeaconBlockBodyAltair(&prysmv2.BeaconBlockBodyAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlockBody(testutil.HydrateBeaconBlockBodyAltair(&ethpb.BeaconBlockBodyAltair{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -299,7 +299,7 @@ func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_Proto(t *testing.T) {
-	body := &prysmv2.BeaconBlockBodyAltair{Graffiti: []byte{0x66, 0xAA}}
+	body := &ethpb.BeaconBlockBodyAltair{Graffiti: []byte{0x66, 0xAA}}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
 	require.NoError(t, err)
 

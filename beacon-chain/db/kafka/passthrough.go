@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
@@ -70,7 +70,7 @@ func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (state.BeaconSt
 }
 
 // StateSummary -- passthrough.
-func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
+func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	return e.db.StateSummary(ctx, blockRoot)
 }
 
@@ -145,12 +145,12 @@ func (e Exporter) SaveState(ctx context.Context, st state.ReadOnlyBeaconState, b
 }
 
 // SaveStateSummary -- passthrough.
-func (e Exporter) SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error {
+func (e Exporter) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error {
 	return e.db.SaveStateSummary(ctx, summary)
 }
 
 // SaveStateSummaries -- passthrough.
-func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error {
+func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	return e.db.SaveStateSummaries(ctx, summaries)
 }
 

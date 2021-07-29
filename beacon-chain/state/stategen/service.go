@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,7 +33,7 @@ type StateManager interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
-	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error)
+	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)

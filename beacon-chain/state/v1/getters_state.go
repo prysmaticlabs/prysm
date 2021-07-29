@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // InnerStateUnsafe returns the pointer value of the underlying
@@ -27,7 +26,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return &statepb.BeaconState{
+	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime(),
 		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		Slot:                        b.slot(),
@@ -118,10 +117,10 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 
 // ProtobufBeaconState transforms an input into beacon state in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*statepb.BeaconState, error) {
-	pbState, ok := s.(*statepb.BeaconState)
+func ProtobufBeaconState(s interface{}) (*ethpb.BeaconState, error) {
+	pbState, ok := s.(*ethpb.BeaconState)
 	if !ok {
-		return nil, errors.New("input is not type statepb.BeaconState")
+		return nil, errors.New("input is not type ethpb.BeaconState")
 	}
 	return pbState, nil
 }
@@ -153,12 +152,12 @@ func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, 
 	return root, nil
 }
 
-func (b *BeaconState) safeCopyPendingAttestationSlice(input []*statepb.PendingAttestation) []*statepb.PendingAttestation {
+func (b *BeaconState) safeCopyPendingAttestationSlice(input []*ethpb.PendingAttestation) []*ethpb.PendingAttestation {
 	if input == nil {
 		return nil
 	}
 
-	res := make([]*statepb.PendingAttestation, len(input))
+	res := make([]*ethpb.PendingAttestation, len(input))
 	for i := 0; i < len(res); i++ {
 		res[i] = copyutil.CopyPendingAttestation(input[i])
 	}
