@@ -218,13 +218,8 @@ service BeaconNodeValidator {
     // and beacon node serving aggregator can join the subnet.
     rpc SubscribeCommitteeSubnets(CommitteeSubnetsSubscribeRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
-<<<<<<< HEAD
-            post: "/prysm/v1alpha1/validator/subnet/subscribe"
-            body: "*"  
-=======
             post: "/eth/v1alpha1/validator/subnet/subscribe"
             body: "*"
->>>>>>> develop
         };
     }
 
