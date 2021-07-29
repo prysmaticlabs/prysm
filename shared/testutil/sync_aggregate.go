@@ -6,15 +6,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
-func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
+func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*ethpb.SyncAggregate, error) {
 	st, ok := bState.(state.BeaconStateAltair)
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
@@ -22,7 +21,7 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 	nextSlotEpoch := helpers.SlotToEpoch(st.Slot() + 1)
 	currEpoch := helpers.SlotToEpoch(st.Slot())
 
-	var syncCommittee *statepb.SyncCommittee
+	var syncCommittee *ethpb.SyncCommittee
 	var err error
 	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()
@@ -37,7 +36,7 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 	}
 	sigs := make([]bls.Signature, 0, len(syncCommittee.Pubkeys))
 	var bVector []byte
-	currSize := new(prysmv2.SyncAggregate).SyncCommitteeBits.Len()
+	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
 	switch currSize {
 	case 512:
 		bVector = bitfield.NewBitvector512()
@@ -71,8 +70,8 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 	}
 	if len(sigs) == 0 {
 		fakeSig := [96]byte{0xC0}
-		return &prysmv2.SyncAggregate{SyncCommitteeSignature: fakeSig[:], SyncCommitteeBits: bVector}, nil
+		return &ethpb.SyncAggregate{SyncCommitteeSignature: fakeSig[:], SyncCommitteeBits: bVector}, nil
 	}
 	aggSig := bls.AggregateSignatures(sigs)
-	return &prysmv2.SyncAggregate{SyncCommitteeSignature: aggSig.Marshal(), SyncCommitteeBits: bVector}, nil
+	return &ethpb.SyncAggregate{SyncCommitteeSignature: aggSig.Marshal(), SyncCommitteeBits: bVector}, nil
 }

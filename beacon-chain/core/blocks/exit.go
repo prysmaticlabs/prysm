@@ -10,7 +10,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -90,7 +89,7 @@ func ProcessVoluntaryExits(
 func VerifyExitAndSignature(
 	validator state.ReadOnlyValidator,
 	currentSlot types.Slot,
-	fork *statepb.Fork,
+	fork *ethpb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
 	genesisRoot []byte,
 ) error {

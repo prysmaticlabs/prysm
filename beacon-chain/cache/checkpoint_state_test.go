@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -19,7 +18,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	st, err := v1.InitializeFromProto(&statepb.BeaconState{
+	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
 		Slot:                  64,
 	})
@@ -43,7 +42,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	st2, err := v1.InitializeFromProto(&statepb.BeaconState{
+	st2, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 128,
 	})
 	require.NoError(t, err)
@@ -60,7 +59,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	c := NewCheckpointStateCache()
-	st, err := v1.InitializeFromProto(&statepb.BeaconState{
+	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
