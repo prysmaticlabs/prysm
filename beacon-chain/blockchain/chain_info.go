@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -55,7 +54,7 @@ type HeadFetcher interface {
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
-	CurrentFork() *statepb.Fork
+	CurrentFork() *ethpb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
@@ -239,12 +238,12 @@ func (s *Service) GenesisValidatorRoot() [32]byte {
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
-func (s *Service) CurrentFork() *statepb.Fork {
+func (s *Service) CurrentFork() *ethpb.Fork {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
-		return &statepb.Fork{
+		return &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
@@ -283,4 +282,24 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 	}
 
 	return headsRoots, headsSlots
+}
+
+// HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
+func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return s.headState(ctx).ValidatorIndexByPubkey(pubKey)
+}
+
+// HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
+func (s *Service) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	v, err := s.headState(ctx).ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return [48]byte{}, err
+	}
+	return v.PublicKey(), nil
 }
