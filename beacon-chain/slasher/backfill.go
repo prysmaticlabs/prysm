@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -82,6 +83,9 @@ func (s *Service) backfill(start, end types.Epoch) error {
 	headers := make([]*slashertypes.SignedBlockHeaderWrapper, 0, len(blocks))
 	atts := make([]*slashertypes.IndexedAttestationWrapper, 0)
 	for i, block := range blocks {
+		if block.Block().Slot() == 0 {
+			continue // Skip genesis.
+		}
 		header, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 		if err != nil {
 			return err
@@ -93,6 +97,9 @@ func (s *Service) backfill(start, end types.Epoch) error {
 		preState, err := s.getBlockPreState(s.ctx, block.Block())
 		if err != nil {
 			return err
+		}
+		if preState == nil {
+			return fmt.Errorf("nil prestate for block %#x", block.Block().ParentRoot())
 		}
 		for _, att := range block.Block().Body().Attestations() {
 			committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)

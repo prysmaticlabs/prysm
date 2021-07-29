@@ -108,7 +108,8 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 	// Write blocks for every slot from epoch 0 to numEpochs.
 	numSlots := uint64(cfg.numEpochs) * uint64(params.BeaconConfig().SlotsPerEpoch)
-	blocks := make([]interfaces.SignedBeaconBlock, 0, numSlots)
+	blocksBySlot := make(map[types.Slot][]interfaces.SignedBeaconBlock)
+	blocksBySlot[0] = []interfaces.SignedBeaconBlock{wrapGenesis}
 
 	// Setup validators in the beacon state for a full test setup.
 	numValidators := numSlots
@@ -116,13 +117,13 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 	require.NoError(tb, beaconState.SetValidators(validators))
 	require.NoError(tb, beaconState.SetBalances(balances))
 
-	for i := uint64(0); i < numSlots; i++ {
+	for i := uint64(1); i < numSlots; i++ {
 		// Create a realistic looking block for the slot.
 		slot := types.Slot(i)
 		require.NoError(tb, beaconState.SetSlot(slot))
 		parentRoot := genesisRoot[:]
-		if i > 0 {
-			parentRoot = blocks[i-1].Block().ParentRoot()
+		if i > 1 {
+			parentRoot = blocksBySlot[slot-1][0].Block().ParentRoot()
 		}
 
 		_, proposerIndexToSlot, err := helpers.CommitteeAssignments(beaconState, helpers.SlotToEpoch(slot))
@@ -144,7 +145,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 			parentRoot,
 			false, /* not slashable */
 		)
-		blocks = append(blocks, blk)
+		blocksBySlot[slot] = append(blocksBySlot[slot], blk)
 
 		// Save the state.
 		blockRoot, err := blk.Block().HashTreeRoot()
@@ -154,6 +155,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 		// If we specify it, create a slashable block at a certain slot.
 		if uint64(cfg.proposerSlashingAtSlot) == i && i != 0 {
+			tb.Log("Inserting proposer slashing!")
 			slashableBlk := generateBlock(
 				tb,
 				beaconState,
@@ -163,7 +165,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 				parentRoot,
 				true, /* slashable */
 			)
-			blocks = append(blocks, slashableBlk)
+			blocksBySlot[slot] = append(blocksBySlot[slot], blk)
 			// Save the state.
 			blockRoot, err := slashableBlk.Block().HashTreeRoot()
 			require.NoError(tb, err)
@@ -171,8 +173,13 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 			require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
 		}
 	}
-	require.NoError(tb, beaconDB.SaveBlocks(ctx, blocks))
-	require.NoError(tb, beaconState.SetSlot(types.Slot(0)))
+	for _, blocks := range blocksBySlot {
+		require.NoError(tb, beaconDB.SaveBlocks(ctx, blocks))
+	}
+	headSlot := types.Slot(numSlots)
+	mockChain.Slot = &headSlot
+	mockChain.State = beaconState
+	srv.serviceCfg.HeadStateFetcher = mockChain
 	return srv
 }
 
@@ -185,7 +192,7 @@ func setupValidators(t testing.TB, count uint64) ([]*ethpb.Validator, []uint64, 
 		require.NoError(t, err)
 		secretKeysByValidator[types.ValidatorIndex(i)] = privKey
 		pubKey := privKey.PublicKey().Marshal()
-		balances[i] = uint64(i)
+		balances[i] = i
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:                  pubKey,
 			WithdrawalCredentials:      make([]byte, 32),
@@ -232,7 +239,8 @@ func generateBlock(
 	wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
 	require.NoError(tb, err)
-	sig, err := signBlockHeader(beaconState, header, privKeysByValidator[valIdx])
+	epoch := helpers.SlotToEpoch(slot)
+	sig, err := signBlockHeader(beaconState, header, privKeysByValidator[valIdx], epoch)
 	require.NoError(tb, err)
 	blk.Signature = sig.Marshal()
 	return wrapper.WrappedPhase0SignedBeaconBlock(blk)
@@ -242,10 +250,11 @@ func signBlockHeader(
 	beaconState iface.BeaconState,
 	header *ethpb.SignedBeaconBlockHeader,
 	privKey bls.SecretKey,
+	epoch types.Epoch,
 ) (bls.Signature, error) {
 	domain, err := helpers.Domain(
 		beaconState.Fork(),
-		0,
+		epoch,
 		params.BeaconConfig().DomainBeaconProposer,
 		beaconState.GenesisValidatorRoot(),
 	)
