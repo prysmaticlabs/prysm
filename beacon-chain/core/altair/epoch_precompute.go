@@ -4,11 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -154,123 +152,4 @@ func ProcessEpochParticipation(
 	}
 	bal = precompute.UpdateBalance(vals, bal)
 	return vals, bal, nil
-}
-
-// ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
-// This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
-func ProcessRewardsAndPenaltiesPrecompute(
-	state state.BeaconStateAltair,
-	bal *precompute.Balance,
-	vals []*precompute.Validator,
-) (state.BeaconStateAltair, error) {
-	// Don't process rewards and penalties in genesis epoch.
-	if helpers.CurrentEpoch(state) == 0 {
-		return state, nil
-	}
-
-	numOfVals := state.NumValidators()
-	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vals) != numOfVals || len(vals) != state.BalancesLength() {
-		return state, errors.New("validator registries not the same length as state's validator registries")
-	}
-
-	attsRewards, attsPenalties, err := AttestationsDelta(state, bal, vals)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation delta")
-	}
-
-	balances := state.Balances()
-	for i := 0; i < numOfVals; i++ {
-		vals[i].BeforeEpochTransitionBalance = balances[i]
-
-		// Compute the post balance of the validator after accounting for the
-		// attester and proposer rewards and penalties.
-		balances[i] = helpers.IncreaseBalanceWithVal(balances[i], attsRewards[i])
-		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], attsPenalties[i])
-
-		vals[i].AfterEpochTransitionBalance = balances[i]
-	}
-
-	if err := state.SetBalances(balances); err != nil {
-		return nil, errors.Wrap(err, "could not set validator balances")
-	}
-
-	return state, nil
-}
-
-// AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
-// voting records.
-func AttestationsDelta(state state.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
-	numOfVals := state.NumValidators()
-	rewards = make([]uint64, numOfVals)
-	penalties = make([]uint64, numOfVals)
-	prevEpoch := helpers.PrevEpoch(state)
-	finalizedEpoch := state.FinalizedCheckpointEpoch()
-
-	for i, v := range vals {
-		rewards[i], penalties[i] = attestationDelta(bal, v, prevEpoch, finalizedEpoch)
-	}
-
-	return rewards, penalties, nil
-}
-
-func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (r, p uint64) {
-	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
-	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
-	if !eligible || bal.ActiveCurrentEpoch == 0 {
-		return 0, 0
-	}
-
-	cfg := params.BeaconConfig()
-	balIncrement := cfg.EffectiveBalanceIncrement
-	rewardFactor := cfg.BaseRewardFactor
-	eb := v.CurrentEpochEffectiveBalance
-	baseReward := (eb / balIncrement) * (balIncrement * rewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch))
-	activeEpochIncrement := bal.ActiveCurrentEpoch / balIncrement
-
-	weightDenominator := cfg.WeightDenominator
-	srcWeight := cfg.TimelySourceWeight
-	tgtWeight := cfg.TimelyTargetWeight
-	headWeight := cfg.TimelyHeadWeight
-	r, p = uint64(0), uint64(0)
-	// Process source reward / penalty
-	inactivityLeak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
-	if v.IsPrevEpochAttester && !v.IsSlashed {
-		if !inactivityLeak {
-			rewardNumerator := baseReward * srcWeight * (bal.PrevEpochAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
-		}
-	} else {
-		p += baseReward * srcWeight / weightDenominator
-	}
-
-	// Process target reward / penalty
-	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		if !inactivityLeak {
-			rewardNumerator := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
-		}
-	} else {
-		p += baseReward * tgtWeight / weightDenominator
-	}
-
-	// Process head reward / penalty
-	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		if !inactivityLeak {
-			rewardNumerator := baseReward * headWeight * (bal.PrevEpochHeadAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
-		}
-	}
-
-	// Process finality delay penalty
-	// Apply an additional penalty to validators that did not vote on the correct target or slashed
-	if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-		penaltyNumerator := eb * v.InactivityScore
-		scoreBias := cfg.InactivityScoreBias
-		quotient := cfg.InactivityPenaltyQuotientAltair
-		penaltyDenominator := scoreBias * quotient
-		p += penaltyNumerator / penaltyDenominator
-	}
-
-	return r, p
 }
