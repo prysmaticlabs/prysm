@@ -13,9 +13,9 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
@@ -36,7 +36,7 @@ type ReadOnlyDatabase interface {
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	GenesisState(ctx context.Context) (state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
-	StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error)
+	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
 	// Slashing operations.
@@ -73,8 +73,8 @@ type NoHeadAccessDatabase interface {
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
-	SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error
-	SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error
+	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
+	SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
 	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error

@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -62,7 +61,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
-		genesisState := &statepb.BeaconState{}
+		genesisState := &ethpb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}

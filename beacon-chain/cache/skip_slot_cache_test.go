@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -23,7 +23,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 
 	require.NoError(t, c.MarkInProgress(r))
 
-	s, err = v1.InitializeFromProto(&statepb.BeaconState{
+	s, err = v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)

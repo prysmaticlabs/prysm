@@ -21,9 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,10 +59,10 @@ func TestStore_OnBlock(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(random)))
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), randomParentRoot))
 	randomParentRoot2 := roots[1]
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)))
 
 	tests := []struct {
@@ -256,7 +255,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 
 	genesisStateRoot := [32]byte{}
@@ -273,7 +272,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
 	b.Block.ParentRoot = gRoot[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: 1, Root: gRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
 	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
 }
@@ -308,9 +307,9 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	assert.ErrorContains(t, wanted, err)
 
 	b.Block.ParentRoot = gRoot[:]
-	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 1})
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: 1})
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: 1, Root: gRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
 	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b).Block()))
 }
@@ -763,7 +762,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		service, err := NewService(ctx, &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
 		require.NoError(t, err)
 		service.justifiedCheckpt = test.args.cachedCheckPoint
-		require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}))
+		require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}))
 		genesisState, err := testutil.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, bytesutil.ToBytes32(test.want.Root)))
@@ -878,7 +877,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(gBlk)))
 	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: gRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: gRoot[:]}))
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, beaconState, gRoot))
 	service.genesisRoot = gRoot

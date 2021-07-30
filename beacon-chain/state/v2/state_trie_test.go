@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -45,7 +44,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 func TestInitializeFromProto(t *testing.T) {
 	type test struct {
 		name  string
-		state *statepb.BeaconStateAltair
+		state *ethpb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -56,14 +55,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &statepb.BeaconStateAltair{},
+			state: &ethpb.BeaconStateAltair{},
 		},
 		// TODO: Add full state. Blocked by testutil migration.
 	}
@@ -98,7 +97,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&statepb.BeaconStateAltair{
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -136,7 +135,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	type test struct {
 		name  string
-		state *statepb.BeaconStateAltair
+		state *ethpb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -147,14 +146,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &statepb.BeaconStateAltair{},
+			state: &ethpb.BeaconStateAltair{},
 		},
 		// TODO: Add full state. Blocked by testutil migration.
 	}
