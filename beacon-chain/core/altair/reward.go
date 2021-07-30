@@ -23,31 +23,38 @@ import (
 //    """
 //    increments = state.validators[index].effective_balance // EFFECTIVE_BALANCE_INCREMENT
 //    return Gwei(increments * get_base_reward_per_increment(state))
-func BaseReward(state state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
-	totalBalance, err := helpers.TotalActiveBalance(state)
+func BaseReward(s state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+	totalBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
 	}
-	return BaseRewardWithTotalBalance(state, index, totalBalance)
+	return BaseRewardWithTotalBalance(s, index, totalBalance)
 }
 
 // BaseRewardWithTotalBalance calculates the base reward with the provided total balance.
-func BaseRewardWithTotalBalance(state state.ReadOnlyBeaconState, index types.ValidatorIndex, totalBalance uint64) (uint64, error) {
-	val, err := state.ValidatorAtIndexReadOnly(index)
+func BaseRewardWithTotalBalance(s state.ReadOnlyBeaconState, index types.ValidatorIndex, totalBalance uint64) (uint64, error) {
+	val, err := s.ValidatorAtIndexReadOnly(index)
 	if err != nil {
 		return 0, err
 	}
 	cfg := params.BeaconConfig()
 	increments := val.EffectiveBalance() / cfg.EffectiveBalanceIncrement
-	return increments * baseRewardPerIncrement(totalBalance), nil
+	baseRewardPerInc, err := BaseRewardPerIncrement(totalBalance)
+	if err != nil {
+		return 0, err
+	}
+	return increments * baseRewardPerInc, nil
 }
 
-// baseRewardPerIncrement of the beacon state
+// BaseRewardPerIncrement of the beacon state
 //
 // Spec code:
 // def get_base_reward_per_increment(state: BeaconState) -> Gwei:
 //    return Gwei(EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR // integer_squareroot(get_total_active_balance(state)))
-func baseRewardPerIncrement(activeBalance uint64) uint64 {
+func BaseRewardPerIncrement(activeBalance uint64) (uint64, error) {
+	if activeBalance == 0 {
+		return 0, errors.New("active balance can't be 0")
+	}
 	cfg := params.BeaconConfig()
-	return cfg.EffectiveBalanceIncrement * cfg.BaseRewardFactor / mathutil.IntegerSquareRoot(activeBalance)
+	return cfg.EffectiveBalanceIncrement * cfg.BaseRewardFactor / mathutil.IntegerSquareRoot(activeBalance), nil
 }
