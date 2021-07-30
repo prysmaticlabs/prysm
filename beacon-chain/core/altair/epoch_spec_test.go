@@ -1,6 +1,7 @@
 package altair_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
 	}
 	require.NoError(t, s.SetLatestBlockHeader(h))
-	postState, err := altair.ProcessSyncCommitteeUpdates(s)
+	postState, err := altair.ProcessSyncCommitteeUpdates(context.Background(), s)
 	require.NoError(t, err)
 	current, err := postState.CurrentSyncCommittee()
 	require.NoError(t, err)
@@ -34,7 +35,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, current, next)
 
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	postState, err = altair.ProcessSyncCommitteeUpdates(s)
+	postState, err = altair.ProcessSyncCommitteeUpdates(context.Background(), s)
 	require.NoError(t, err)
 	c, err := postState.CurrentSyncCommittee()
 	require.NoError(t, err)
@@ -44,7 +45,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, next, n)
 
 	require.NoError(t, s.SetSlot(types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch-1))
-	postState, err = altair.ProcessSyncCommitteeUpdates(s)
+	postState, err = altair.ProcessSyncCommitteeUpdates(context.Background(), s)
 	require.NoError(t, err)
 	c, err = postState.CurrentSyncCommittee()
 	require.NoError(t, err)
@@ -57,7 +58,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	// Test boundary condition.
 	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(helpers.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 	require.NoError(t, s.SetSlot(slot))
-	boundaryCommittee, err := altair.NextSyncCommittee(s)
+	boundaryCommittee, err := altair.NextSyncCommittee(context.Background(), s)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, boundaryCommittee, n)
 }

@@ -2086,7 +2086,7 @@ func TestProposer_GetBlockAltair_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)
-	committee, err := altair.NextSyncCommittee(beaconState)
+	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
 

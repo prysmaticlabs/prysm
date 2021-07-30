@@ -101,7 +101,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconStateAltair) (state.Bea
 	}
 
 	// New in Altair.
-	state, err = ProcessSyncCommitteeUpdates(state)
+	state, err = ProcessSyncCommitteeUpdates(ctx, state)
 	if err != nil {
 		return nil, err
 	}
