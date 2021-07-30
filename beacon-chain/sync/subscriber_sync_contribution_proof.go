@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -13,7 +13,7 @@ import (
 // contribution pool for processing.
 // skipcq: SCC-U1000
 func (s *Service) syncContributionAndProofSubscriber(_ context.Context, msg proto.Message) error {
-	a, ok := msg.(*prysmv2.SignedContributionAndProof)
+	a, ok := msg.(*ethpb.SignedContributionAndProof)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SignedAggregateAttestationAndProof, type=%T", msg)
 	}

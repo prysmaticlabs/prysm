@@ -25,9 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -50,13 +49,13 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID
-		msg   *prysmv2.SignedContributionAndProof
+		msg   *ethpb.SignedContributionAndProof
 		topic string
 	}
 	tests := []struct {
 		name     string
 		svc      *Service
-		setupSvc func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service
+		setupSvc func(s *Service, msg *ethpb.SignedContributionAndProof) *Service
 		args     args
 		want     pubsub.ValidationResult
 	}{
@@ -69,7 +68,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -80,10 +79,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: "junk",
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -105,7 +104,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -116,10 +115,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: "junk",
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -141,7 +140,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -151,10 +150,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              30,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -176,7 +175,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -189,10 +188,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -214,7 +213,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -232,10 +231,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -257,7 +256,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -291,10 +290,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -316,7 +315,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -353,10 +352,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -378,7 +377,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				s.cfg.Chain = chainService
@@ -430,10 +429,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -455,7 +454,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -509,10 +508,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -534,7 +533,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -592,10 +591,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -617,7 +616,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -689,10 +688,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SignedContributionAndProof{
-					Message: &prysmv2.ContributionAndProof{
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &prysmv2.SyncCommitteeContribution{
+						Contribution: &ethpb.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -746,7 +745,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		_, testState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
 		assert.NoError(t, err)
 		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: i, Root: r[:]}))
+		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: i, Root: r[:]}))
 		assert.NoError(t, beaconDB.SaveState(ctx, testState, r))
 		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, r))
 		hRoot = r
@@ -759,6 +758,6 @@ func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx
 	if err != nil {
 		return [32]byte{}, err
 	}
-	selectionData := &statepb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
+	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
 	return helpers.ComputeSigningRoot(selectionData, dom)
 }

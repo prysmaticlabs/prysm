@@ -7,7 +7,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -47,14 +47,14 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *statepb.BeaconStateAltair) ([][]byte, error) {
+func computeFieldRoots(state *ethpb.BeaconStateAltair) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *statepb.BeaconStateAltair) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAltair) ([][]byte, error) {
 	if state == nil {
 		return nil, errors.New("nil state")
 	}

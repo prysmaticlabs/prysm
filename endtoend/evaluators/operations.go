@@ -13,11 +13,10 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -95,15 +94,15 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := altairClient.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
@@ -129,16 +128,16 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 
 func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := altairClient.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
@@ -164,14 +163,14 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 
 func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	validatorRequest := &eth.ListValidatorsRequest{
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
 	}
@@ -223,8 +222,8 @@ func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 
 func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.ListValidatorsRequest{
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
 	}
@@ -273,8 +272,8 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 
 func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := eth.NewBeaconNodeValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn)
+	valClient := ethpb.NewBeaconNodeValidatorClient(conn)
+	beaconClient := ethpb.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -290,11 +289,11 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	exitedIndex = types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 	valExited = true
 
-	voluntaryExit := &eth.VoluntaryExit{
+	voluntaryExit := &ethpb.VoluntaryExit{
 		Epoch:          chainHead.HeadEpoch,
 		ValidatorIndex: exitedIndex,
 	}
-	req := &eth.DomainRequest{
+	req := &ethpb.DomainRequest{
 		Epoch:  chainHead.HeadEpoch,
 		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
 	}
@@ -307,7 +306,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	signature := privKeys[exitedIndex].Sign(signingData[:])
-	signedExit := &eth.SignedVoluntaryExit{
+	signedExit := &ethpb.SignedVoluntaryExit{
 		Exit:      voluntaryExit,
 		Signature: signature.Marshal(),
 	}
@@ -320,9 +319,9 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 
 func validatorIsExited(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.GetValidatorRequest{
-		QueryFilter: &eth.GetValidatorRequest_Index{
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.GetValidatorRequest{
+		QueryFilter: &ethpb.GetValidatorRequest_Index{
 			Index: exitedIndex,
 		},
 	}
@@ -338,15 +337,14 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 
 func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := altairClient.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
@@ -387,7 +385,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *prysmv2.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
+func convertToBlockInterface(obj *ethpb.BeaconBlockContainerAltair) (block.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
 		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
 	}

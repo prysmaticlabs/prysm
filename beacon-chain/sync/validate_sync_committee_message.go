@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -45,7 +45,7 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject
 	}
 
-	m, ok := raw.(*prysmv2.SyncCommitteeMessage)
+	m, ok := raw.(*ethpb.SyncCommitteeMessage)
 	if !ok {
 		return pubsub.ValidationReject
 	}
@@ -82,7 +82,7 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationIgnore
 	}
 
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
+	format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	// Validate that the validator is in the correct committee.
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	for _, idx := range committeeIndices {

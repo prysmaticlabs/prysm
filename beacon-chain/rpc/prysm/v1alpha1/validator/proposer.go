@@ -19,11 +19,13 @@ import (
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -31,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -223,6 +226,137 @@ func (vs *Server) ProposeBlockGeneric(ctx context.Context, blk block.SignedBeaco
 
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
+	}, nil
+}
+
+// GetBlockAltair is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot. This is used by a validator
+// after the altair fork epoch has been encountered.
+func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	blkData, err := vs.BuildBlockData(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
+	if err != nil {
+		return nil, err
+	}
+
+	blk := &ethpb.BeaconBlockAltair{
+		Slot:          req.Slot,
+		ParentRoot:    blkData.ParentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: blkData.ProposerIdx,
+		Body: &ethpb.BeaconBlockBodyAltair{
+			Eth1Data:          blkData.Eth1Data,
+			Deposits:          blkData.Deposits,
+			Attestations:      blkData.Attestations,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: blkData.ProposerSlashings,
+			AttesterSlashings: blkData.AttesterSlashings,
+			VoluntaryExits:    blkData.VoluntaryExits,
+			Graffiti:          blkData.Graffiti[:],
+			SyncAggregate:     syncAggregate,
+		},
+	}
+	// Compute state root with the newly constructed block.
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
+		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
+	)
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err = vs.ComputeStateRoot(
+		ctx,
+		wsb,
+	)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+
+	return blk, nil
+}
+
+// ProposeBlockAltair is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+func (vs *Server) ProposeBlockAltair(ctx context.Context, rBlk *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+	blk, err := wrapper.WrappedAltairSignedBeaconBlock(rBlk)
+	if err != nil {
+		return nil, err
+	}
+	return vs.ProposeBlockGeneric(ctx, blk)
+}
+
+// getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
+// The contributions are filtered based on matching of the input root and slot then profitability.
+func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetSyncAggregate")
+	defer span.End()
+
+	// Contributions have to match the input root
+	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(slot)
+	if err != nil {
+		return nil, err
+	}
+	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
+
+	// Each sync subcommittee is 128 bits and the sync committee is 512 bits(mainnet).
+	bitsHolder := [][]byte{}
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		bitsHolder = append(bitsHolder, ethpb.NewSyncCommitteeAggregationBits())
+	}
+	sigsHolder := make([]bls.Signature, 0, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount)
+
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		cs := proposerContributions.filterBySubIndex(i)
+		aggregates, err := sync_contribution.Aggregate(cs)
+		if err != nil {
+			return nil, err
+		}
+
+		// Retrieve the most profitable contribution
+		deduped, err := proposerSyncContributions(aggregates).dedup()
+		if err != nil {
+			return nil, err
+		}
+		c := deduped.mostProfitable()
+		if c == nil {
+			continue
+		}
+		bitsHolder[i] = c.AggregationBits
+		sig, err := bls.SignatureFromBytes(c.Signature)
+		if err != nil {
+			return nil, err
+		}
+		sigsHolder = append(sigsHolder, sig)
+	}
+
+	// Aggregate all the contribution bits and signatures.
+	var syncBits []byte
+	for _, b := range bitsHolder {
+		syncBits = append(syncBits, b...)
+	}
+	syncSig := bls.AggregateSignatures(sigsHolder)
+	var syncSigBytes [96]byte
+	if syncSig == nil {
+		syncSigBytes = [96]byte{0xC0} // Infinity signature if itself is nil.
+	} else {
+		syncSigBytes = bytesutil2.ToBytes96(syncSig.Marshal())
+	}
+
+	return &ethpb.SyncAggregate{
+		SyncCommitteeBits:      syncBits,
+		SyncCommitteeSignature: syncSigBytes[:],
 	}, nil
 }
 

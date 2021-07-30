@@ -19,7 +19,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -461,7 +460,7 @@ func TestAssignValidatorToSyncSubnet(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		committee = append(committee, pubKey(uint64(i)))
 	}
-	sCommittee := &statepb.SyncCommittee{
+	sCommittee := &ethpb.SyncCommittee{
 		Pubkeys: committee,
 	}
 	assignValidatorToSyncSubnet(0, 0, k, sCommittee, ethpb.ValidatorStatus_ACTIVE)

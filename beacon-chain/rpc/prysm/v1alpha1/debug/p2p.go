@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

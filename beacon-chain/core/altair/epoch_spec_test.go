@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -94,7 +93,7 @@ func TestProcessParticipationFlagUpdates_CanRotate(t *testing.T) {
 }
 
 func TestProcessSlashings_NotSlashed(t *testing.T) {
-	base := &statepb.BeaconStateAltair{
+	base := &ethpb.BeaconStateAltair{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{Slashed: true}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -110,11 +109,11 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 
 func TestProcessSlashings_SlashedLess(t *testing.T) {
 	tests := []struct {
-		state *statepb.BeaconStateAltair
+		state *ethpb.BeaconStateAltair
 		want  uint64
 	}{
 		{
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -126,7 +125,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(30000000000),
 		},
 		{
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -140,7 +139,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(31000000000),
 		},
 		{
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -154,7 +153,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(30000000000),
 		},
 		{
-			state: &statepb.BeaconStateAltair{
+			state: &ethpb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestStore_SavePowchainData(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -40,13 +40,13 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID
-		msg   *prysmv2.SyncCommitteeMessage
+		msg   *ethpb.SyncCommitteeMessage
 		topic string
 	}
 	tests := []struct {
 		name     string
 		svc      *Service
-		setupSvc func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string)
+		setupSvc func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string)
 		args     args
 		want     pubsub.ValidationResult
 	}{
@@ -59,7 +59,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -70,7 +70,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: "junk",
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -87,7 +87,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -98,7 +98,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: "junk",
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -115,7 +115,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -125,7 +125,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: fmt.Sprintf(defaultTopic, fakeDigest, 0),
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           10,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -142,7 +142,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -154,7 +154,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: fmt.Sprintf(defaultTopic, fakeDigest, 0),
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -171,7 +171,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -188,7 +188,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: fmt.Sprintf(defaultTopic, fakeDigest, 0),
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -205,7 +205,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -236,7 +236,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -253,7 +253,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -279,7 +279,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -296,7 +296,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -334,7 +334,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
@@ -351,7 +351,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -393,7 +393,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &prysmv2.SyncCommitteeMessage{
+				msg: &ethpb.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],

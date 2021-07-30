@@ -11,8 +11,6 @@ import (
 	"github.com/golang/snappy"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -49,9 +47,9 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*statepb.BeaconStateAltair); ok {
+				if _, ok := object.(*ethpb.BeaconStateAltair); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := stateAltair.InitializeFromProto(s.(*statepb.BeaconStateAltair))
+						beaconState, err := stateAltair.InitializeFromProto(s.(*ethpb.BeaconStateAltair))
 						require.NoError(t, err)
 						return beaconState.HashTreeRoot(context.Background())
 					}
@@ -104,19 +102,19 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
-		obj = &prysmv2.BeaconBlock{}
+		obj = &ethpb.BeaconBlockAltair{}
 	case "BeaconBlockBody":
-		obj = &prysmv2.BeaconBlockBody{}
+		obj = &ethpb.BeaconBlockBodyAltair{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		obj = &statepb.BeaconStateAltair{}
+		obj = &ethpb.BeaconStateAltair{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
 		obj = &ethpb.Deposit{}
 	case "DepositMessage":
-		obj = &statepb.DepositMessage{}
+		obj = &ethpb.DepositMessage{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
@@ -125,43 +123,43 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		t.Skip("Unused type")
 		return nil, nil
 	case "Fork":
-		obj = &statepb.Fork{}
+		obj = &ethpb.Fork{}
 	case "ForkData":
-		obj = &statepb.ForkData{}
+		obj = &ethpb.ForkData{}
 	case "HistoricalBatch":
-		obj = &statepb.HistoricalBatch{}
+		obj = &ethpb.HistoricalBatch{}
 	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
 	case "PendingAttestation":
-		obj = &statepb.PendingAttestation{}
+		obj = &ethpb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
-		obj = &prysmv2.SignedBeaconBlock{}
+		obj = &ethpb.SignedBeaconBlockAltair{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":
 		obj = &ethpb.SignedVoluntaryExit{}
 	case "SigningData":
-		obj = &statepb.SigningData{}
+		obj = &ethpb.SigningData{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
 	case "SyncCommitteeMessage":
-		obj = &prysmv2.SyncCommitteeMessage{}
+		obj = &ethpb.SyncCommitteeMessage{}
 	case "SyncCommitteeContribution":
-		obj = &prysmv2.SyncCommitteeContribution{}
+		obj = &ethpb.SyncCommitteeContribution{}
 	case "ContributionAndProof":
-		obj = &prysmv2.ContributionAndProof{}
+		obj = &ethpb.ContributionAndProof{}
 	case "SignedContributionAndProof":
-		obj = &prysmv2.SignedContributionAndProof{}
+		obj = &ethpb.SignedContributionAndProof{}
 	case "SyncAggregate":
-		obj = &prysmv2.SyncAggregate{}
+		obj = &ethpb.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
-		obj = &statepb.SyncAggregatorSelectionData{}
+		obj = &ethpb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":
 		t.Skip("TODO(8638): fssz bug, using custom HTR so state works")
 		return nil, nil

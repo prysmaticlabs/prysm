@@ -9,8 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -40,7 +39,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	m, ok := raw.(*prysmv2.SignedContributionAndProof)
+	m, ok := raw.(*ethpb.SignedContributionAndProof)
 	if !ok {
 		return pubsub.ValidationReject
 	}
@@ -189,8 +188,8 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 
 // verifySyncSelectionData verifies that the provided sync contribution has a valid
 // selection proof.
-func (s *Service) verifySyncSelectionData(ctx context.Context, m *prysmv2.ContributionAndProof) error {
-	selectionData := &statepb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
+func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.ContributionAndProof) error {
+	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
 	domain, err := s.cfg.Chain.HeadSyncSelectionProofDomain(ctx, m.Contribution.Slot)
 	if err != nil {
 		return err

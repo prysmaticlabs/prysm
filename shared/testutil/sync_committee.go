@@ -1,11 +1,11 @@
 package testutil
 
 import (
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // HydrateSyncCommittee hydrates the provided sync committee message.
-func HydrateSyncCommittee(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
+func HydrateSyncCommittee(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
 	if s.Signature == nil {
 		s.Signature = make([]byte, 96)
 	}

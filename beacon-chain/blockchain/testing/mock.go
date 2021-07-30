@@ -21,8 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -42,7 +41,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
 	CanonicalRoots              map[[32]byte]bool
-	Fork                        *statepb.Fork
+	Fork                        *ethpb.Fork
 	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
@@ -266,7 +265,7 @@ func (s *ChainService) HeadState(context.Context) (state.BeaconState, error) {
 }
 
 // CurrentFork mocks HeadState method in chain service.
-func (s *ChainService) CurrentFork() *statepb.Fork {
+func (s *ChainService) CurrentFork() *ethpb.Fork {
 	return s.Fork
 }
 

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -20,7 +19,7 @@ func TestUint64Root(t *testing.T) {
 }
 
 func TestForkRoot(t *testing.T) {
-	testFork := statepb.Fork{
+	testFork := ethpb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,

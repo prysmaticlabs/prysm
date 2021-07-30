@@ -8,8 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -24,7 +22,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -99,7 +97,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -136,7 +134,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -208,7 +206,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 func TestValidateNilSyncContribution(t *testing.T) {
 	tests := []struct {
 		name    string
-		s       *prysmv2.SignedContributionAndProof
+		s       *ethpb.SignedContributionAndProof
 		wantErr bool
 	}{
 		{
@@ -218,27 +216,27 @@ func TestValidateNilSyncContribution(t *testing.T) {
 		},
 		{
 			name:    "nil message",
-			s:       &prysmv2.SignedContributionAndProof{},
+			s:       &ethpb.SignedContributionAndProof{},
 			wantErr: true,
 		},
 		{
 			name:    "nil contribution",
-			s:       &prysmv2.SignedContributionAndProof{Message: &prysmv2.ContributionAndProof{}},
+			s:       &ethpb.SignedContributionAndProof{Message: &ethpb.ContributionAndProof{}},
 			wantErr: true,
 		},
 		{
 			name: "nil bitfield",
-			s: &prysmv2.SignedContributionAndProof{
-				Message: &prysmv2.ContributionAndProof{
-					Contribution: &prysmv2.SyncCommitteeContribution{},
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{},
 				}},
 			wantErr: true,
 		},
 		{
 			name: "non nil sync contribution",
-			s: &prysmv2.SignedContributionAndProof{
-				Message: &prysmv2.ContributionAndProof{
-					Contribution: &prysmv2.SyncCommitteeContribution{
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{
 						AggregationBits: []byte{},
 					},
 				}},
@@ -290,7 +288,7 @@ func getState(t *testing.T, count uint64) *stateAltair.BeaconState {
 			PublicKey:        blsKey.PublicKey().Marshal(),
 		}
 	}
-	state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
+	state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})

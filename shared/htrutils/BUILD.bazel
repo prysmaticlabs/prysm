@@ -12,7 +12,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
@@ -35,7 +34,6 @@ go_test(
     deps = [
         ":go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

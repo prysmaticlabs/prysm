@@ -11,7 +11,6 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -20,7 +19,7 @@ import (
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	// This test showcases the logic on a the RandaoMixes field with the GC finalizer.
 
-	a, err := InitializeFromProtoUnsafe(&statepb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
+	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
 
@@ -46,7 +45,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	root1, root2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
-	a, err := InitializeFromProtoUnsafe(&statepb.BeaconState{
+	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		BlockRoots: [][]byte{
 			root1[:],
 		},
@@ -117,7 +116,7 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
 	val1, val2 := []byte("foo"), []byte("bar")
-	a, err := InitializeFromProtoUnsafe(&statepb.BeaconState{
+	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		RandaoMixes: [][]byte{
 			val1,
 		},
@@ -164,7 +163,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
-	assertAttFound := func(vals []*statepb.PendingAttestation, val uint64) {
+	assertAttFound := func(vals []*ethpb.PendingAttestation, val uint64) {
 		for i := range vals {
 			if reflect.DeepEqual(vals[i].AggregationBits, bitfield.NewBitlist(val)) {
 				return
@@ -173,7 +172,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		t.Log(string(debug.Stack()))
 		t.Fatalf("Expected attestation not found (%v), want: %v", vals, val)
 	}
-	assertAttNotFound := func(vals []*statepb.PendingAttestation, val uint64) {
+	assertAttNotFound := func(vals []*ethpb.PendingAttestation, val uint64) {
 		for i := range vals {
 			if reflect.DeepEqual(vals[i].AggregationBits, bitfield.NewBitlist(val)) {
 				t.Log(string(debug.Stack()))
@@ -183,13 +182,13 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		}
 	}
 
-	a, err := InitializeFromProtoUnsafe(&statepb.BeaconState{})
+	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	assertRefCount(t, a, previousEpochAttestations, 1)
 	assertRefCount(t, a, currentEpochAttestations, 1)
 
 	// Update initial state.
-	atts := []*statepb.PendingAttestation{
+	atts := []*ethpb.PendingAttestation{
 		{AggregationBits: bitfield.NewBitlist(1)},
 		{AggregationBits: bitfield.NewBitlist(2)},
 	}
@@ -248,9 +247,9 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 2)
 
 	// Mutator should only affect calling state: a.
-	applyToEveryAttestation := func(state *statepb.BeaconState) {
+	applyToEveryAttestation := func(state *ethpb.BeaconState) {
 		// One MUST copy on write.
-		atts = make([]*statepb.PendingAttestation, len(state.CurrentEpochAttestations))
+		atts = make([]*ethpb.PendingAttestation, len(state.CurrentEpochAttestations))
 		copy(atts, state.CurrentEpochAttestations)
 		state.CurrentEpochAttestations = atts
 		for i := range state.GetCurrentEpochAttestations() {
@@ -259,7 +258,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 			state.CurrentEpochAttestations[i] = att
 		}
 
-		atts = make([]*statepb.PendingAttestation, len(state.PreviousEpochAttestations))
+		atts = make([]*ethpb.PendingAttestation, len(state.PreviousEpochAttestations))
 		copy(atts, state.PreviousEpochAttestations)
 		state.PreviousEpochAttestations = atts
 		for i := range state.GetPreviousEpochAttestations() {
@@ -293,7 +292,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 }
 
 func TestValidatorReferences_RemainsConsistent(t *testing.T) {
-	a, err := InitializeFromProtoUnsafe(&statepb.BeaconState{
+	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{PublicKey: []byte{'A'}},
 			{PublicKey: []byte{'B'}},

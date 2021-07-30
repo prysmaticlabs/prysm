@@ -114,6 +114,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 			field:     f.field,
 			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
+			length:    f.length,
 		}
 	}
 	dstFieldTrie := make([][]*[32]byte, len(f.fieldLayers))
@@ -126,6 +127,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		field:       f.field,
 		reference:   stateutil.NewRef(1),
 		RWMutex:     new(sync.RWMutex),
+		length:      f.length,
 	}
 }
 

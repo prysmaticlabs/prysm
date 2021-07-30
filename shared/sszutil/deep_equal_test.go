@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -60,15 +59,15 @@ func TestDeepEqualStructs_Unexported(t *testing.T) {
 }
 
 func TestDeepEqualProto(t *testing.T) {
-	var fork1, fork2 *statepb.Fork
+	var fork1, fork2 *ethpb.Fork
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork2))
 
-	fork1 = &statepb.Fork{
+	fork1 = &ethpb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,
 	}
-	fork2 = &statepb.Fork{
+	fork2 = &ethpb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{125},
 		Epoch:           1234567890,

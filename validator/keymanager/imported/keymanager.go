@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"

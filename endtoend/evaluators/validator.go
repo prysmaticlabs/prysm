@@ -8,8 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -43,9 +42,9 @@ var ValidatorSyncParticipation = types.Evaluator{
 
 func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
-	validatorRequest := &eth.ListValidatorsRequest{
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		Active:   true,
 	}
@@ -96,8 +95,8 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 // validatorsParticipating ensures the validators have an acceptable participation rate.
 func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.GetValidatorParticipationRequest{}
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
@@ -120,8 +119,8 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 // sync committee assignments.
 func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewNodeClient(conn)
-	altairClient := prysmv2.NewBeaconChainClient(conn)
+	client := ethpb.NewNodeClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	genesis, err := client.GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
@@ -133,7 +132,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if lowestBound < params.AltairE2EForkEpoch {
 		lowestBound = params.AltairE2EForkEpoch
 	}
-	blockCtrs, err := altairClient.ListBlocks(context.Background(), &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: lowestBound}})
+	blockCtrs, err := altairClient.ListBlocksAltair(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: lowestBound}})
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
@@ -162,7 +161,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if lowestBound == currEpoch {
 		return nil
 	}
-	blockCtrs, err = altairClient.ListBlocks(context.Background(), &prysmv2.ListBlocksRequest{QueryFilter: &prysmv2.ListBlocksRequest_Epoch{Epoch: currEpoch}})
+	blockCtrs, err = altairClient.ListBlocksAltair(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: currEpoch}})
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
 	}

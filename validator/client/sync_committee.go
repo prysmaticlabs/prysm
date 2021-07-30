@@ -8,8 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +25,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClientV2.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
+	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		traceutil.AnnotateError(span, err)
@@ -50,7 +49,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
-	sig, err := v.keyManager.Sign(ctx, &prysmv2.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &ethpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
@@ -60,13 +59,13 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
-	msg := &prysmv2.SyncCommitteeMessage{
+	msg := &ethpb.SyncCommitteeMessage{
 		Slot:           slot,
 		BlockRoot:      res.Root,
 		ValidatorIndex: duty.ValidatorIndex,
 		Signature:      sig.Marshal(),
 	}
-	if _, err := v.validatorClientV2.SubmitSyncMessage(ctx, msg); err != nil {
+	if _, err := v.validatorClient.SubmitSyncMessage(ctx, msg); err != nil {
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
@@ -90,7 +89,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		return
 	}
 
-	indexRes, err := v.validatorClientV2.GetSyncSubcommitteeIndex(ctx, &prysmv2.SyncSubcommitteeIndexRequest{
+	indexRes, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})
@@ -123,7 +122,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		}
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		subnet := uint64(comIdx) / subCommitteeSize
-		contribution, err := v.validatorClientV2.GetSyncCommitteeContribution(ctx, &prysmv2.SyncCommitteeContributionRequest{
+		contribution, err := v.validatorClient.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
 			Slot:      slot,
 			PublicKey: pubKey[:],
 			SubnetId:  subnet,
@@ -141,7 +140,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			continue
 		}
 
-		contributionAndProof := &prysmv2.ContributionAndProof{
+		contributionAndProof := &ethpb.ContributionAndProof{
 			AggregatorIndex: duty.ValidatorIndex,
 			Contribution:    contribution,
 			SelectionProof:  selectionProofs[i],
@@ -152,7 +151,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			return
 		}
 
-		if _, err := v.validatorClientV2.SubmitSignedContributionAndProof(ctx, &prysmv2.SignedContributionAndProof{
+		if _, err := v.validatorClient.SubmitSignedContributionAndProof(ctx, &ethpb.SignedContributionAndProof{
 			Message:   contributionAndProof,
 			Signature: sig,
 		}); err != nil {
@@ -177,7 +176,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 		return nil, err
 	}
 
-	data := &statepb.SyncAggregatorSelectionData{
+	data := &ethpb.SyncAggregatorSelectionData{
 		Slot:              slot,
 		SubcommitteeIndex: index,
 	}
@@ -185,7 +184,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &prysmv2.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &ethpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -198,7 +197,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *prysmv2.ContributionAndProof) ([]byte, error) {
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
 	d, err := v.domainData(ctx, helpers.SlotToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
@@ -208,7 +207,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &prysmv2.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &ethpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
