@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -24,7 +24,7 @@ func TestInitializeFromProto(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *statepb.BeaconState
+		state *ethpb.BeaconState
 		error string
 	}
 	initTests := []test{
@@ -35,14 +35,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &statepb.BeaconState{},
+			state: &ethpb.BeaconState{},
 		},
 		{
 			name:  "full state",
@@ -67,7 +67,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *statepb.BeaconState
+		state *ethpb.BeaconState
 		error string
 	}
 	initTests := []test{
@@ -78,14 +78,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &statepb.BeaconState{},
+			state: &ethpb.BeaconState{},
 		},
 		{
 			name:  "full state",
@@ -256,11 +256,11 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 }
 
 func TestBeaconState_ToProto(t *testing.T) {
-	source, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, func(state *statepb.BeaconState) error {
+	source, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, func(state *ethpb.BeaconState) error {
 		state.GenesisTime = 1
 		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
 		state.Slot = 2
-		state.Fork = &statepb.Fork{
+		state.Fork = &ethpb.Fork{
 			PreviousVersion: bytesutil.PadTo([]byte("123"), 4),
 			CurrentVersion:  bytesutil.PadTo([]byte("456"), 4),
 			Epoch:           3,
@@ -299,7 +299,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 		state.Balances = []uint64{14}
 		state.RandaoMixes = [][]byte{bytesutil.PadTo([]byte("randaomixes"), 32)}
 		state.Slashings = []uint64{15}
-		state.PreviousEpochAttestations = []*statepb.PendingAttestation{{
+		state.PreviousEpochAttestations = []*ethpb.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{16},
 			Data: &eth.AttestationData{
 				Slot:            17,
@@ -317,7 +317,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 			InclusionDelay: 21,
 			ProposerIndex:  22,
 		}}
-		state.CurrentEpochAttestations = []*statepb.PendingAttestation{{
+		state.CurrentEpochAttestations = []*ethpb.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{23},
 			Data: &eth.AttestationData{
 				Slot:            24,

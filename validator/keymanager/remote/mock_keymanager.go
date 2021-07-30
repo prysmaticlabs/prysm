@@ -3,7 +3,7 @@ package remote
 import (
 	"context"
 
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 )

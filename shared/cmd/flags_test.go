@@ -125,3 +125,115 @@ func TestValidateNoArgs(t *testing.T) {
 	err = app.Run([]string{"command", "bar", "subComm2", "subComm4"})
 	require.NoError(t, err)
 }
+
+func TestValidateNoArgs_SubcommandFlags(t *testing.T) {
+	app := &cli.App{
+		Before: ValidateNoArgs,
+		Action: func(c *cli.Context) error {
+			return nil
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name: "foo",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name: "bar",
+				Subcommands: []*cli.Command{
+					{
+						Name: "subComm1",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm3",
+							},
+						},
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "barfoo2",
+							},
+							&cli.BoolFlag{
+								Name: "barfoo99",
+							},
+						},
+					},
+					{
+						Name: "subComm2",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm4",
+							},
+						},
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "barfoo3",
+							},
+							&cli.BoolFlag{
+								Name: "barfoo100",
+							},
+						},
+					},
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "barfoo1",
+					},
+				},
+			},
+		},
+	}
+
+	// It should not work with a bogus argument
+	err := app.Run([]string{"command", "foo"})
+	require.ErrorContains(t, "unrecognized argument: foo", err)
+	// It should work with registered flags
+	err = app.Run([]string{"command", "--foo=bar"})
+	require.NoError(t, err)
+
+	// It should work with registered flags with spaces.
+	err = app.Run([]string{"command", "--foo", "bar"})
+	require.NoError(t, err)
+
+	// Handle Nested Subcommands and its flags
+
+	err = app.Run([]string{"command", "bar", "--barfoo1=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "--barfoo1", "xyz"})
+	require.NoError(t, err)
+
+	// Should pass with correct nested double subcommands.
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo2=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo2", "xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo3=xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo3", "xyz"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo3"})
+	require.ErrorContains(t, "flag needs an argument", err)
+
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo99"})
+	require.NoError(t, err)
+
+	// Test edge case with boolean flags, as they do not require spaced arguments.
+	app.CommandNotFound = func(context *cli.Context, s string) {
+		require.Equal(t, "garbage", s)
+	}
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo99", "garbage"})
+	require.ErrorContains(t, "unrecognized argument: garbage", err)
+
+	err = app.Run([]string{"command", "bar", "subComm1", "--barfoo99", "garbage", "subComm3"})
+	require.ErrorContains(t, "unrecognized argument: garbage", err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo100", "garbage"})
+	require.ErrorContains(t, "unrecognized argument: garbage", err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "--barfoo100", "garbage", "subComm4"})
+	require.ErrorContains(t, "unrecognized argument: garbage", err)
+}

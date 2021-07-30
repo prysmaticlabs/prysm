@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"google.golang.org/protobuf/proto"
 )
@@ -71,14 +71,14 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 }
 
 // SetFork version for the beacon chain.
-func (b *BeaconState) SetFork(val *statepb.Fork) error {
+func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	fk, ok := proto.Clone(val).(*statepb.Fork)
+	fk, ok := proto.Clone(val).(*ethpb.Fork)
 	if !ok {
 		return errors.New("proto.Clone did not return a fork proto")
 	}

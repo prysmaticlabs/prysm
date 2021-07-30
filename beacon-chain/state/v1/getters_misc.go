@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -92,7 +92,7 @@ func (b *BeaconState) slot() types.Slot {
 }
 
 // Fork version of the beacon chain.
-func (b *BeaconState) Fork() *statepb.Fork {
+func (b *BeaconState) Fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -108,7 +108,7 @@ func (b *BeaconState) Fork() *statepb.Fork {
 
 // fork version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) fork() *statepb.Fork {
+func (b *BeaconState) fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -120,7 +120,7 @@ func (b *BeaconState) fork() *statepb.Fork {
 	copy(prevVersion, b.state.Fork.PreviousVersion)
 	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
 	copy(currVersion, b.state.Fork.CurrentVersion)
-	return &statepb.Fork{
+	return &ethpb.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
 		Epoch:           b.state.Fork.Epoch,

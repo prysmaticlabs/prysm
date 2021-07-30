@@ -132,16 +132,17 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 			WriteError(w, errJson, nil)
 			return
 		}
-		if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
-			WriteError(w, errJson, nil)
-			return
-		}
 
 		var responseJson []byte
-		if endpoint.Err.Msg() != "" {
-			HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
-			return
-		} else if !GrpcResponseIsStatusCodeOnly(req, endpoint.GetResponse) {
+		if !GrpcResponseIsEmpty(grpcResponseBody) {
+			if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
+				WriteError(w, errJson, nil)
+				return
+			}
+			if endpoint.Err.Msg() != "" {
+				HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
+				return
+			}
 			var response interface{}
 			if req.Method == "GET" {
 				response = endpoint.GetResponse

@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//shared/aggregation:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/copyutil:go_default_library",
@@ -23,7 +23,7 @@ go_test(
     srcs = ["naive_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/prysm/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//shared/aggregation:go_default_library",
         "//shared/aggregation/testing:go_default_library",
         "//shared/bls:go_default_library",

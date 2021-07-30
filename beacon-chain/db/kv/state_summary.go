@@ -3,22 +3,22 @@ package kv
 import (
 	"context"
 
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
 // SaveStateSummary saves a state summary object to the DB.
-func (s *Store) SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error {
+func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
-	return s.SaveStateSummaries(ctx, []*statepb.StateSummary{summary})
+	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
 }
 
 // SaveStateSummaries saves state summary objects to the DB.
-func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error {
+func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 
@@ -38,7 +38,7 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*statepb.Sta
 }
 
 // StateSummary returns the state summary object from the db using input block root.
-func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
+func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
 
@@ -53,7 +53,7 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.
 	if len(enc) == 0 {
 		return nil, nil
 	}
-	summary := &statepb.StateSummary{}
+	summary := &ethpb.StateSummary{}
 	if err := decode(ctx, enc, summary); err != nil {
 		return nil, err
 	}

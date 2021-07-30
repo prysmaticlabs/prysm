@@ -3,7 +3,7 @@ package debug
 import (
 	"context"
 
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

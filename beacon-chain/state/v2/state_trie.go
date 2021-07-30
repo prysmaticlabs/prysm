@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -20,13 +20,13 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *statepb.BeaconStateAltair) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*statepb.BeaconStateAltair))
+func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *statepb.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -80,7 +80,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 
 	dst := &BeaconState{
-		state: &statepb.BeaconStateAltair{
+		state: &ethpb.BeaconStateAltair{
 			// Primitive types, safe to copy.
 			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
@@ -355,7 +355,6 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 	if err != nil {
 		return [32]byte{}, err
 	}
-
 	b.dirtyIndices[index] = []uint64{}
 	return root, nil
 }
