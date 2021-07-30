@@ -4,32 +4,20 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/schollz/progressbar/v3"
-
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
-
 	"github.com/golang/snappy"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 )
 
-const (
-	batchSize = 10
-)
+const batchSize = 10
 
 var migrationStateValidatorsKey = []byte("migration_state_validator")
 
-type migrationRow struct {
-	key   []byte
-	value []byte
-}
-
 func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	migrateDB := false
-	if updateErr := db.Update(func(tx *bolt.Tx) error {
+	if updateErr := db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		// feature flag is not enabled
 		// - migration is complete, don't migrate the DB but warn that this will work as if the flag is enabled.
@@ -64,149 +52,142 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	}
 
 	log.Infof("Performing a one-time migration to a more efficient database schema for %s. It will take few minutes", stateBucket)
+
+	// get all the keys to migrate
+	var keys [][]byte
 	if err := db.Update(func(tx *bolt.Tx) error {
 		stateBkt := tx.Bucket(stateBucket)
 		if stateBkt == nil {
 			return nil
 		}
-		// get the count of keys in the state bucket for passing it to the progress indicator.
-		count, err := stateCount(stateBkt)
+		k, err := stateBucketKeys(stateBkt)
 		if err != nil {
 			return err
 		}
-		bar := progressutil.InitializeProgressBar(count, "Migrating state validators to new schema.")
+		keys = k
+		return nil
+	}); err != nil {
+		return err
+	}
+	log.Infof("total keys = %d", len(keys))
 
-		valBkt := tx.Bucket(stateValidatorsBucket)
-		if valBkt == nil {
+	// prepare the progress bar with the total count of the keys to migrate
+	//bar := progressutil.InitializeProgressBar(len(keys), "Migrating state validators to new schema.")
+
+	batchNo := 0
+	for batchIndex := 0; batchIndex < len(keys); batchIndex += batchSize {
+		log.Infof("processing batch %d with capacity of %d per blcok and batchIndex %d", batchNo, batchSize, batchIndex)
+		if err := db.Update(func(tx *bolt.Tx) error {
+			//create the source and destination buckets
+			stateBkt := tx.Bucket(stateBucket)
+			if stateBkt == nil {
+				return nil
+			}
+			valBkt := tx.Bucket(stateValidatorsBucket)
+			if valBkt == nil {
+				return nil
+			}
+			indexBkt := tx.Bucket(blockRootValidatorHashesBucket)
+			if indexBkt == nil {
+				return nil
+			}
+
+			// migrate the key values for this batch
+			cursor := stateBkt.Cursor()
+			count := 0
+			index := batchIndex
+			for _, v := cursor.Seek(keys[index]); count < batchSize && index < len(keys); _, v = cursor.Next() {
+				log.Infof("processing block %d", index)
+				state := &statepb.BeaconState{}
+				if decodeErr := decode(ctx, v, state); decodeErr != nil {
+					return decodeErr
+				}
+
+				// no validators in state to migrate
+				if len(state.Validators) == 0 {
+					continue
+				}
+
+				// move all the validators in this state registry out to a new bucket.
+				var validatorKeys []byte
+				for _, val := range state.Validators {
+					valBytes, encodeErr := encode(ctx, val)
+					if encodeErr != nil {
+						return encodeErr
+					}
+
+					// create the unique hash for that validator entry.
+					hash, hashErr := val.HashTreeRoot()
+					if hashErr != nil {
+						return hashErr
+					}
+
+					// add the validator in the stateValidatorsBucket, if it is not present.
+					if valEntry := valBkt.Get(hash[:]); valEntry == nil {
+						if putErr := valBkt.Put(hash[:], valBytes); putErr != nil {
+							return putErr
+						}
+					}
+
+					// note down the pointer of the stateValidatorsBucket.
+					validatorKeys = append(validatorKeys, hash[:]...)
+				}
+
+				// add the validator entry keys for a given block root.
+				compValidatorKeys := snappy.Encode(nil, validatorKeys)
+				idxErr := indexBkt.Put(keys[index], compValidatorKeys)
+				if idxErr != nil {
+					return idxErr
+				}
+
+				// zero the validator entries in BeaconState object .
+				state.Validators = make([]*v1alpha1.Validator, 0)
+				stateBytes, encodeErr := encode(ctx, state)
+				if encodeErr != nil {
+					return encodeErr
+				}
+				if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
+					return stateErr
+				}
+				count++
+				index++
+				log.Infof("processed block %d", index)
+
+				//if barErr := bar.Add(1); barErr != nil {
+				//	return barErr
+				//}
+			}
+
 			return nil
+		}); err != nil {
+			return err
 		}
-		indexBkt := tx.Bucket(blockRootValidatorHashesBucket)
-		if indexBkt == nil {
-			return nil
-		}
+		log.Infof("batch %d over", batchNo)
+		batchNo++
+	}
+
+	// set the migration entry to done
+	if err := db.Update(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if mb == nil {
 			return nil
 		}
-		doneC := make(chan bool)
-		errC := make(chan error, batchSize)
-		workC := make(chan *migrationRow, batchSize)
-		go readStateEntriesFromBucket(ctx, stateBkt, workC, errC)
-		go storeValidatorEntriesSeparately(ctx, bar, stateBkt, valBkt, indexBkt, workC, doneC, errC)
-		<-doneC
 		return mb.Put(migrationStateValidatorsKey, migrationCompleted)
 	}); err != nil {
 		return err
 	}
+
 	log.Infof("migration done for bucket %s.", stateBucket)
 	return nil
 }
 
-func readStateEntriesFromBucket(ctx context.Context, stateBkt *bolt.Bucket, workC chan<- *migrationRow, errC chan error) {
-	count := uint64(0)
-	defer func() {
-		close(workC)
-	}()
-	if forEachErr := stateBkt.ForEach(func(k, v []byte) error {
-		row := &migrationRow{
-			key:   k,
-			value: v,
-		}
-		workC <- row
-		count++
-
-		select {
-		case err := <-errC:
-			log.Errorf("received error during sending : %s", err.Error())
-			break
-		case <-ctx.Done():
-			log.Errorf("received context canceled during sending")
-			errC <- ctx.Err()
-			break
-		default:
-			return nil
-		}
-		return nil
-	}); forEachErr != nil {
-		log.WithError(forEachErr).Errorf("could not migrate row %d for bucket: %s", count, stateBucket)
-		errC <- forEachErr
-	}
-}
-
-func storeValidatorEntriesSeparately(ctx context.Context, bar *progressbar.ProgressBar, stateBkt *bolt.Bucket, valBkt *bolt.Bucket, indexBkt *bolt.Bucket, workC <-chan *migrationRow, doneC chan<- bool, errC chan error) {
-	defer func() {
-		doneC <- true
-	}()
-	for mRow := range workC {
-		state := &statepb.BeaconState{}
-		if decodeErr := decode(ctx, mRow.value, state); decodeErr != nil {
-			errC <- decodeErr
-		}
-
-		// move all the validators in this state registry out to a new bucket.
-		var validatorKeys []byte
-		for _, val := range state.Validators {
-			valBytes, encodeErr := encode(ctx, val)
-			if encodeErr != nil {
-				errC <- encodeErr
-			}
-
-			// create the unique hash for that validator entry.
-			hash := hashutil.Hash(valBytes)
-
-			// add the validator in the stateValidatorsBucket, if it is not present.
-			if valEntry := valBkt.Get(hash[:]); valEntry == nil {
-				if putErr := valBkt.Put(hash[:], valBytes); putErr != nil {
-					errC <- putErr
-				}
-			}
-
-			// note down the pointer of the stateValidatorsBucket.
-			validatorKeys = append(validatorKeys, hash[:]...)
-		}
-
-		// add the validator entry keys for a given block root.
-		compValidatorKeys := snappy.Encode(nil, validatorKeys)
-		idxErr := indexBkt.Put(mRow.key, compValidatorKeys)
-		if idxErr != nil {
-			errC <- idxErr
-		}
-
-		// zero the validator entries in BeaconState object .
-		state.Validators = make([]*v1alpha1.Validator, 0)
-		stateBytes, encodeErr := encode(ctx, state)
-		if encodeErr != nil {
-			errC <- encodeErr
-		}
-		if stateErr := stateBkt.Put(mRow.key, stateBytes); stateErr != nil {
-			errC <- stateErr
-		}
-
-		if barErr := bar.Add(1); barErr != nil {
-			errC <- barErr
-		}
-
-		select {
-		case err := <-errC:
-			log.Errorf("received error during inserting : %s", err.Error())
-			break
-		case <-ctx.Done():
-			log.Errorf("received context canceled during inserting")
-			errC <- ctx.Err()
-			break
-		default:
-			continue
-		}
-	}
-}
-
-func stateCount(stateBucket *bolt.Bucket) (int, error) {
-	count := 0
+func stateBucketKeys(stateBucket *bolt.Bucket) ([][]byte, error) {
+	var keys [][]byte
 	if err := stateBucket.ForEach(func(pubKey, v []byte) error {
-		count++
+		keys = append(keys, pubKey)
 		return nil
 	}); err != nil {
-		return 0, nil
+		return nil, err
 	}
-	return count, nil
+	return keys, nil
 }
