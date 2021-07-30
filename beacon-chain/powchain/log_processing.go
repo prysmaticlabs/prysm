@@ -143,6 +143,14 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	deposit := &ethpb.Deposit{
 		Data: depositData,
 	}
+	// Only generate the proofs during pre-genesis.
+	if !s.chainStartData.Chainstarted {
+		proof, err := s.depositTrie.MerkleProof(int(index))
+		if err != nil {
+			return errors.Wrap(err, "Unable to generate merkle proof for deposit")
+		}
+		deposit.Proof = proof
+	}
 
 	// We always store all historical deposits in the DB.
 	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
