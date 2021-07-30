@@ -136,7 +136,6 @@ func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
 	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[1])
 	require.Equal(t, defaultScore-1, inactivityScores[2])
 	require.Equal(t, defaultScore-1, inactivityScores[3])
-	t.Error(1)
 }
 
 func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
