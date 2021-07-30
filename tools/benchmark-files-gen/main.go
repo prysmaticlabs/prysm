@@ -16,7 +16,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -211,7 +210,7 @@ func genesisBeaconState() (state.BeaconState, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}
-	genesisState := &statepb.BeaconState{}
+	genesisState := &ethpb.BeaconState{}
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}

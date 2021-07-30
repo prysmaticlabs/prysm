@@ -7,8 +7,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
-        "//proto/prysm/v2/metadata:go_default_library",
+        "//proto/prysm/v1alpha1/metadata:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",

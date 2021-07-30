@@ -21,8 +21,8 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -567,7 +567,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		Active: true,
 	})
 	require.NoError(t, err)
-	assert.DeepEqual(t, activeValidators, received.ValidatorList)
+	assert.DeepSSZEqual(t, activeValidators, received.ValidatorList)
 }
 
 func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
@@ -1064,7 +1064,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	res, err = bs.ListValidators(context.Background(), req)
 	require.NoError(t, err)
-	assert.DeepEqual(t, want, res.ValidatorList, "Incorrect number of validators")
+	assert.DeepSSZEqual(t, want, res.ValidatorList, "Incorrect number of validators")
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {

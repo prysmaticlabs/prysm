@@ -13,7 +13,6 @@ go_library(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mputil:go_default_library",

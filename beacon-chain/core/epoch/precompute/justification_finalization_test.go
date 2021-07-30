@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -21,7 +20,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &statepb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -58,7 +57,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &statepb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -95,7 +94,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &statepb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,

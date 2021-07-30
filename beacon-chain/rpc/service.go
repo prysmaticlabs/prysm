@@ -39,8 +39,8 @@ import (
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -262,11 +262,12 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		HeadFetcher:        s.cfg.HeadFetcher,
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
+	prysmv2.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
@@ -295,7 +296,7 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
+		prysmv2.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)

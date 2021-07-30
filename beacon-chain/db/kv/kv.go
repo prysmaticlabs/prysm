@@ -11,6 +11,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -21,12 +22,31 @@ import (
 var _ iface.Database = (*Store)(nil)
 
 const (
+	// NumOfValidatorEntries is the size of the validator cache entries.
+	// we expect to hold a max of 200K validators, so setting it to 2 million (10x the capacity).
+	NumOfValidatorEntries = 1 << 21
+	// ValidatorEntryMaxCost is set to ~64Mb to allow 200K validators entries to be cached.
+	ValidatorEntryMaxCost = 1 << 26
 	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
 	BeaconNodeDbDirName = "beaconchaindata"
 	// DatabaseFileName is the name of the beacon node database.
 	DatabaseFileName = "beaconchain.db"
 
 	boltAllocSize = 8 * 1024 * 1024
+	// The size of hash length in bytes
+	hashLength = 32
+)
+
+var (
+	// Metrics for the validator cache.
+	validatorEntryCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "validator_entry_cache_hit",
+		Help: "The total number of cache hits on the validator entry cache.",
+	})
+	validatorEntryCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "validator_entry_cache_miss",
+		Help: "The total number of cache misses on the validator entry cache.",
+	})
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
@@ -52,11 +72,12 @@ type Config struct {
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum Beacon Nodes.
 type Store struct {
-	db                *bolt.DB
-	databasePath      string
-	blockCache        *ristretto.Cache
-	stateSummaryCache *stateSummaryCache
-	ctx               context.Context
+	db                  *bolt.DB
+	databasePath        string
+	blockCache          *ristretto.Cache
+	validatorEntryCache *ristretto.Cache
+	stateSummaryCache   *stateSummaryCache
+	ctx                 context.Context
 }
 
 // KVStoreDatafilePath is the canonical construction of a full
@@ -104,12 +125,22 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
+	validatorCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: NumOfValidatorEntries, // number of entries in cache (2 Million).
+		MaxCost:     ValidatorEntryMaxCost, // maximum size of the cache (64Mb)
+		BufferItems: 64,                    // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	kv := &Store{
-		db:                boltDB,
-		databasePath:      dirPath,
-		blockCache:        blockCache,
-		stateSummaryCache: newStateSummaryCache(),
-		ctx:               ctx,
+		db:                  boltDB,
+		databasePath:        dirPath,
+		blockCache:          blockCache,
+		validatorEntryCache: validatorCache,
+		stateSummaryCache:   newStateSummaryCache(),
+		ctx:                 ctx,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -125,6 +156,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			checkpointBucket,
 			powchainBucket,
 			stateSummaryBucket,
+			stateValidatorsBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -135,6 +167,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
+			blockRootValidatorHashesBucket,
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Migrations

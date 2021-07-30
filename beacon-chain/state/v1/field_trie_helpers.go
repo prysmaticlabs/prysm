@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -53,10 +52,10 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 		}
 		return stateutil.HandleValidatorSlice(val, indices, convertAll)
 	case previousEpochAttestations, currentEpochAttestations:
-		val, ok := elements.([]*statepb.PendingAttestation)
+		val, ok := elements.([]*ethpb.PendingAttestation)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([]*statepb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
+				reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		return handlePendingAttestation(val, indices, convertAll)
 	default:
@@ -103,14 +102,14 @@ func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	return roots, nil
 }
 
-func handlePendingAttestation(val []*statepb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
+func handlePendingAttestation(val []*ethpb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
-	rootCreator := func(input *statepb.PendingAttestation) error {
+	rootCreator := func(input *ethpb.PendingAttestation) error {
 		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
 		if err != nil {
 			return err

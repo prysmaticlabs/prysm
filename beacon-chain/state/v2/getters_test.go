@@ -2,8 +2,30 @@ package v2
 
 import (
 	"runtime/debug"
+	"sync"
 	"testing"
+
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
+
+func TestBeaconState_SlotDataRace(t *testing.T) {
+	headState, err := InitializeFromProto(&ethpb.BeaconStateAltair{Slot: 1})
+	require.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		require.NoError(t, headState.SetSlot(0))
+		wg.Done()
+	}()
+	go func() {
+		headState.Slot()
+		wg.Done()
+	}()
+
+	wg.Wait()
+}
 
 func TestNilState_NoPanic(t *testing.T) {
 	var st *BeaconState
