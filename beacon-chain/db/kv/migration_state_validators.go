@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/progressutil"
+
 	"github.com/golang/snappy"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -71,11 +73,10 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	log.Infof("total keys = %d", len(keys))
 
 	// prepare the progress bar with the total count of the keys to migrate
-	//bar := progressutil.InitializeProgressBar(len(keys), "Migrating state validators to new schema.")
+	bar := progressutil.InitializeProgressBar(len(keys), "Migrating state validators to new schema.")
 
 	batchNo := 0
 	for batchIndex := 0; batchIndex < len(keys); batchIndex += batchSize {
-		log.Infof("processing batch %d with capacity of %d per blcok and batchIndex %d", batchNo, batchSize, batchIndex)
 		if err := db.Update(func(tx *bolt.Tx) error {
 			//create the source and destination buckets
 			stateBkt := tx.Bucket(stateBucket)
@@ -96,7 +97,6 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 			count := 0
 			index := batchIndex
 			for _, v := cursor.Seek(keys[index]); count < batchSize && index < len(keys); _, v = cursor.Next() {
-				log.Infof("processing block %d", index)
 				state := &v1alpha1.BeaconState{}
 				if decodeErr := decode(ctx, v, state); decodeErr != nil {
 					return decodeErr
@@ -150,18 +150,16 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 				}
 				count++
 				index++
-				log.Infof("processed block %d", index)
 
-				//if barErr := bar.Add(1); barErr != nil {
-				//	return barErr
-				//}
+				if barErr := bar.Add(1); barErr != nil {
+					return barErr
+				}
 			}
 
 			return nil
 		}); err != nil {
 			return err
 		}
-		log.Infof("batch %d over", batchNo)
 		batchNo++
 	}
 
@@ -175,7 +173,6 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	}); err != nil {
 		return err
 	}
-
 	log.Infof("migration done for bucket %s.", stateBucket)
 	return nil
 }
