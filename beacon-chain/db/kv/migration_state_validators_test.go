@@ -6,12 +6,15 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"go.etcd.io/bbolt"
 )
 
@@ -31,16 +34,6 @@ func Test_migrateStateValidators(t *testing.T) {
 					_, err = tx.CreateBucketIfNotExists(blockRootValidatorHashesBucket)
 					assert.NoError(t, err)
 					return nil
-				})
-				assert.NoError(t, err)
-
-				// save the state
-				blockRoot := [32]byte{'A'}
-				require.NoError(t, dbStore.SaveState(context.Background(), state, blockRoot))
-
-				// set the migration as over
-				err = dbStore.db.Update(func(tx *bbolt.Tx) error {
-					return tx.Bucket(migrationsBucket).Put(migrationStateValidatorsKey, migrationCompleted)
 				})
 				assert.NoError(t, err)
 			},
@@ -64,12 +57,6 @@ func Test_migrateStateValidators(t *testing.T) {
 					_, err = tx.CreateBucketIfNotExists(blockRootValidatorHashesBucket)
 					assert.NoError(t, err)
 					return nil
-				})
-				assert.NoError(t, err)
-
-				// set the migration as over
-				err = dbStore.db.Update(func(tx *bbolt.Tx) error {
-					return tx.Bucket(migrationsBucket).Put(migrationStateValidatorsKey, migrationCompleted)
 				})
 				assert.NoError(t, err)
 			},
@@ -136,15 +123,6 @@ func Test_migrateStateValidators(t *testing.T) {
 					return nil
 				})
 				assert.NoError(t, err)
-
-				// add a state with the given validators
-				blockRoot := [32]byte{'A'}
-				st, err := testutil.NewBeaconState()
-				assert.NoError(t, err)
-				assert.NoError(t, st.SetSlot(100))
-				assert.NoError(t, st.SetValidators(vals))
-				assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
-				assert.NoError(t, err)
 			},
 			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
@@ -207,12 +185,6 @@ func Test_migrateStateValidators(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dbStore := setupDB(t)
 
-			// enable historical state representation flag to test this
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-				EnableHistoricalSpaceRepresentation: true,
-			})
-			defer resetCfg()
-
 			// add a state with the given validators
 			vals := validators(10)
 			blockRoot := [32]byte{'A'}
@@ -223,7 +195,14 @@ func Test_migrateStateValidators(t *testing.T) {
 			assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
 			assert.NoError(t, err)
 
+			// enable historical state representation flag to test this
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				EnableHistoricalSpaceRepresentation: true,
+			})
+			defer resetCfg()
+
 			tt.setup(t, dbStore, st, vals)
+			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateArchivedIndex(tx) error")
 			tt.eval(t, dbStore, st, vals)
 		})
 	}
