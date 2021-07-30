@@ -97,7 +97,7 @@ func (s *Service) backfill(start, end types.Epoch) error {
 		if err != nil {
 			return err
 		}
-		if preState == nil {
+		if preState == nil || preState.IsNil() {
 			continue // Block is useless without a pre-state.
 		}
 		for _, att := range block.Block().Body().Attestations() {
