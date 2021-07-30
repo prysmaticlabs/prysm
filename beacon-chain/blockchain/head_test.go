@@ -9,10 +9,9 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -60,7 +59,7 @@ func TestSaveHead_Different(t *testing.T) {
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
@@ -105,7 +104,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
@@ -127,7 +126,7 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 
 	state, _ := testutil.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: r[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
 	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
 	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")

@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/blockutil",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//proto/interfaces:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -17,8 +17,8 @@ go_test(
     srcs = ["block_utils_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//proto/eth/v1alpha1/wrapper:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",

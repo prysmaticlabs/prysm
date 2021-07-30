@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 

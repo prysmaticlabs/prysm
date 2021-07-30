@@ -1,12 +1,10 @@
 package gateway
 
 import (
-	"net/http"
-
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -65,9 +63,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 			},
 		}),
 	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req)
-	}
 	v1Alpha1PbHandler := gateway.PbMux{
 		Registrations: v1Alpha1Registrations,
 		Patterns:      []string{"/eth/v1alpha1/"},
@@ -80,7 +75,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 	}
 
 	return MuxConfig{
-		Handler:       muxHandler,
 		V1PbMux:       v1PbHandler,
 		V1Alpha1PbMux: v1Alpha1PbHandler,
 	}

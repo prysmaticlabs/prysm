@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // GetProtoArrayForkChoice returns proto array fork choice store.

@@ -48,6 +48,10 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
+		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/blocks/{slot}",
+		"/eth/v1/validator/attestation_data",
+		"/eth/v1/validator/aggregate_attestation",
 	}
 }
 
@@ -243,6 +247,31 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			Hooks: gateway.HookCollection{
 				OnPostStart: []gateway.Hook{wrapValidatorIndicesArray},
 			},
+		}
+	case "/eth/v1/validator/duties/proposer/{epoch}":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &proposerDutiesResponseJson{},
+			RequestURLLiterals: []string{"epoch"},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/validator/blocks/{slot}":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &produceBlockResponseJson{},
+			RequestURLLiterals: []string{"slot"},
+			RequestQueryParams: []gateway.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/validator/attestation_data":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &produceAttestationDataResponseJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/validator/aggregate_attestation":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &aggregateAttestationResponseJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	default:
 		return nil, errors.New("invalid path")

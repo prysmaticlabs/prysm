@@ -76,8 +76,11 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 		assert.Equal(t, c1.WhistleBlowerRewardQuotient, c2.WhistleBlowerRewardQuotient, "%s: WhistleBlowerRewardQuotient", name)
 		assert.Equal(t, c1.ProposerRewardQuotient, c2.ProposerRewardQuotient, "%s: ProposerRewardQuotient", name)
 		assert.Equal(t, c1.InactivityPenaltyQuotient, c2.InactivityPenaltyQuotient, "%s: InactivityPenaltyQuotient", name)
+		assert.Equal(t, c1.InactivityPenaltyQuotientAltair, c2.InactivityPenaltyQuotientAltair, "%s: InactivityPenaltyQuotientAltair", name)
 		assert.Equal(t, c1.MinSlashingPenaltyQuotient, c2.MinSlashingPenaltyQuotient, "%s: MinSlashingPenaltyQuotient", name)
+		assert.Equal(t, c1.MinSlashingPenaltyQuotientAltair, c2.MinSlashingPenaltyQuotientAltair, "%s: MinSlashingPenaltyQuotientAltair", name)
 		assert.Equal(t, c1.ProportionalSlashingMultiplier, c2.ProportionalSlashingMultiplier, "%s: ProportionalSlashingMultiplier", name)
+		assert.Equal(t, c1.ProportionalSlashingMultiplierAltair, c2.ProportionalSlashingMultiplierAltair, "%s: ProportionalSlashingMultiplierAltair", name)
 
 		// Max operations per block.
 		assert.Equal(t, c1.MaxProposerSlashings, c2.MaxProposerSlashings, "%s: MaxProposerSlashings", name)

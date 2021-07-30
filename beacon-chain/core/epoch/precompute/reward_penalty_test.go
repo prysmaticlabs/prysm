@@ -9,10 +9,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -23,9 +22,9 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -62,10 +61,10 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -146,10 +145,10 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -182,10 +181,10 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -215,9 +214,9 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -259,7 +258,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 }
 
-func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
+func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -285,7 +284,7 @@ func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	return &pb.BeaconState{
+	return &ethpb.BeaconState{
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,
@@ -361,7 +360,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 //    total_balance = get_total_active_balance(state)
 //    effective_balance = state.validators[index].effective_balance
 //    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
-func baseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+func baseReward(state state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")

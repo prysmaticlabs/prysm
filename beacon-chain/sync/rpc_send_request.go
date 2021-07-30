@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -20,13 +20,13 @@ var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
 
 // BeaconBlockProcessor defines a block processing function, which allows to start utilizing
 // blocks even before all blocks are ready.
-type BeaconBlockProcessor func(block interfaces.SignedBeaconBlock) error
+type BeaconBlockProcessor func(block block.SignedBeaconBlock) error
 
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]block.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRangeTopicV1, pid)
 	if err != nil {
 		return nil, err
@@ -34,8 +34,8 @@ func SendBeaconBlocksByRangeRequest(
 	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
-	blocks := make([]interfaces.SignedBeaconBlock, 0, req.Count)
-	process := func(blk interfaces.SignedBeaconBlock) error {
+	blocks := make([]block.SignedBeaconBlock, 0, req.Count)
+	process := func(blk block.SignedBeaconBlock) error {
 		blocks = append(blocks, blk)
 		if blockProcessor != nil {
 			return blockProcessor(blk)
@@ -84,7 +84,7 @@ func SendBeaconBlocksByRangeRequest(
 func SendBeaconBlocksByRootRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]block.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopicV1, pid)
 	if err != nil {
 		return nil, err
@@ -92,8 +92,8 @@ func SendBeaconBlocksByRootRequest(
 	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
-	blocks := make([]interfaces.SignedBeaconBlock, 0, len(*req))
-	process := func(block interfaces.SignedBeaconBlock) error {
+	blocks := make([]block.SignedBeaconBlock, 0, len(*req))
+	process := func(block block.SignedBeaconBlock) error {
 		blocks = append(blocks, block)
 		if blockProcessor != nil {
 			return blockProcessor(block)

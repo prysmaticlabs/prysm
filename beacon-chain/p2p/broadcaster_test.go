@@ -17,9 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -45,7 +46,7 @@ func TestService_Broadcast(t *testing.T) {
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
-	msg := &pb.Fork{
+	msg := &statepb.Fork{
 		Epoch:           55,
 		CurrentVersion:  []byte("fooo"),
 		PreviousVersion: []byte("barr"),
@@ -76,7 +77,7 @@ func TestService_Broadcast(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &pb.Fork{}
+		result := &statepb.Fork{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)

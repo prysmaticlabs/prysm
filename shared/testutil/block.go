@@ -7,10 +7,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -66,7 +65,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,
@@ -188,7 +187,7 @@ func GenerateFullBlock(
 
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
@@ -227,7 +226,7 @@ func GenerateProposerSlashingForValidator(
 }
 
 func generateProposerSlashings(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -248,7 +247,7 @@ func generateProposerSlashings(
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
@@ -304,7 +303,7 @@ func GenerateAttesterSlashingForValidator(
 }
 
 func generateAttesterSlashings(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -328,7 +327,7 @@ func generateAttesterSlashings(
 }
 
 func generateDepositsAndEth1Data(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
@@ -348,7 +347,7 @@ func generateDepositsAndEth1Data(
 }
 
 func generateVoluntaryExits(
-	bState iface.BeaconState,
+	bState state.BeaconState,
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
@@ -375,7 +374,7 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState iface.BeaconState) (types.ValidatorIndex, error) {
+func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
@@ -507,7 +506,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 
 // HydrateSignedBeaconBlockAltair hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlock) *prysmv2.SignedBeaconBlock {
+func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
 	if b.Signature == nil {
 		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
@@ -517,9 +516,9 @@ func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlock) *prysmv2.Signe
 
 // HydrateBeaconBlockAltair hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
+func HydrateBeaconBlockAltair(b *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
 	if b == nil {
-		b = &prysmv2.BeaconBlock{}
+		b = &ethpb.BeaconBlockAltair{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, 32)
@@ -533,9 +532,9 @@ func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
 
 // HydrateBeaconBlockBodyAltair hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlockBody {
+func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
 	if b == nil {
-		b = &prysmv2.BeaconBlockBody{}
+		b = &ethpb.BeaconBlockBodyAltair{}
 	}
 	if b.RandaoReveal == nil {
 		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
@@ -550,7 +549,7 @@ func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlo
 		}
 	}
 	if b.SyncAggregate == nil {
-		b.SyncAggregate = &prysmv2.SyncAggregate{
+		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}

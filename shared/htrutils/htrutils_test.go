@@ -3,8 +3,8 @@ package htrutils_test
 import (
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -20,7 +20,7 @@ func TestUint64Root(t *testing.T) {
 }
 
 func TestForkRoot(t *testing.T) {
-	testFork := pb.Fork{
+	testFork := statepb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,

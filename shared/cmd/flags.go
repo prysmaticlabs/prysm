@@ -257,13 +257,63 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 // ValidateNoArgs insures that the application is not run with erroneous arguments or flags.
 // This function should be used in the app.Before, whenever the application supports a default command.
 func ValidateNoArgs(ctx *cli.Context) error {
+	commandList := ctx.App.Commands
+	parentCommand := ctx.Command
+	isParamForFlag := false
 	for _, a := range ctx.Args().Slice() {
-		if strings.HasPrefix(a, "-") {
+		// We don't validate further if
+		// the following value is actually
+		// a parameter for a flag.
+		if isParamForFlag {
+			isParamForFlag = false
 			continue
 		}
-		if c := ctx.App.Command(a); c == nil {
+		if strings.HasPrefix(a, "-") || strings.HasPrefix(a, "--") {
+			// In the event our flag doesn't specify
+			// the relevant argument with an equal
+			// sign, we can assume the next argument
+			// is the relevant value for the flag.
+			flagName := strings.TrimPrefix(a, "--")
+			flagName = strings.TrimPrefix(flagName, "-")
+			if !strings.Contains(a, "=") && !isBoolFlag(parentCommand, flagName) {
+				isParamForFlag = true
+			}
+			continue
+		}
+		c := checkCommandList(commandList, a)
+		if c == nil {
 			return fmt.Errorf("unrecognized argument: %s", a)
+		}
+		// Set the command list as the subcommand's
+		// from the current selected parent command.
+		commandList = c.Subcommands
+		parentCommand = c
+	}
+	return nil
+}
+
+// verifies that the provided command is in the command list.
+func checkCommandList(commands []*cli.Command, name string) *cli.Command {
+	for _, c := range commands {
+		if c.Name == name {
+			return c
 		}
 	}
 	return nil
+}
+
+func isBoolFlag(com *cli.Command, name string) bool {
+	for _, f := range com.Flags {
+		switch bFlag := f.(type) {
+		case *cli.BoolFlag:
+			if bFlag.Name == name {
+				return true
+			}
+		case *altsrc.BoolFlag:
+			if bFlag.Name == name {
+				return true
+			}
+		}
+	}
+	return false
 }

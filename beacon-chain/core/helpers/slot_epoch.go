@@ -5,9 +5,10 @@ import (
 	"math"
 	"time"
 
+	math2 "github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -37,7 +38,7 @@ func SlotToEpoch(slot types.Slot) types.Epoch {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_at_slot(state.slot)
-func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func CurrentEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }
 
@@ -52,7 +53,7 @@ func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 //    """
 //    current_epoch = get_current_epoch(state)
 //    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func PrevEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -62,7 +63,7 @@ func PrevEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
+func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot()) + 1
 }
 
@@ -200,4 +201,23 @@ func PrevSlot(slot types.Slot) types.Slot {
 		return slot.Sub(1)
 	}
 	return 0
+}
+
+// SyncCommitteePeriod returns the sync committee period of input epoch `e`.
+//
+// Spec code:
+// def compute_sync_committee_period(epoch: Epoch) -> uint64:
+//    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+func SyncCommitteePeriod(e types.Epoch) uint64 {
+	return uint64(e / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+}
+
+// SyncCommitteePeriodStartEpoch returns the start epoch of a sync committee period.
+func SyncCommitteePeriodStartEpoch(e types.Epoch) (types.Epoch, error) {
+	// Overflow is impossible here because of division of `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
+	startEpoch, overflow := math2.SafeMul(SyncCommitteePeriod(e), uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
+	if overflow {
+		return 0, errors.New("start epoch calculation overflow")
+	}
+	return types.Epoch(startEpoch), nil
 }

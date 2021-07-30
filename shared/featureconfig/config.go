@@ -31,6 +31,7 @@ import (
 var log = logrus.WithField("prefix", "flags")
 
 const enabledFeatureFlag = "Enabled feature flag"
+const disabledFeatureFlag = "Disabled feature flag"
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
@@ -39,17 +40,18 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
-	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
-	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
-	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
-	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
-	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
-	EnableOptimizedBalanceUpdate       bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
-	EnableDoppelGanger                 bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
+	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
+	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	EnableLargerGossipHistory           bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
+	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
+	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
+	UpdateHeadTimely                    bool // UpdateHeadTimely updates head right after state transition.
+	ProposerAttsSelectionUsingMaxCover  bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
+	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
+	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
+	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -145,56 +147,62 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
-		log.WithField(writeSSZStateTransitionsFlag.Name, writeSSZStateTransitionsFlag.Usage).Warn(enabledFeatureFlag)
+		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
 	}
 
 	cfg.EnableSSZCache = true
 
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		log.WithField(kafkaBootstrapServersFlag.Name, kafkaBootstrapServersFlag.Usage).Warn(enabledFeatureFlag)
+		logEnabled(kafkaBootstrapServersFlag)
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
-		log.WithField(disableGRPCConnectionLogging.Name, disableGRPCConnectionLogging.Usage).Warn(enabledFeatureFlag)
+		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
-		log.WithField(forceOptMaxCoverAggregationStategy.Name, forceOptMaxCoverAggregationStategy.Usage).Warn(enabledFeatureFlag)
+		logEnabled(forceOptMaxCoverAggregationStategy)
 		cfg.AttestationAggregationStrategy = "opt_max_cover"
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
-		log.WithField(enablePeerScorer.Name, enablePeerScorer.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enablePeerScorer)
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
-		log.WithField(enableLargerGossipHistory.Name, enableLargerGossipHistory.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enableLargerGossipHistory)
 		cfg.EnableLargerGossipHistory = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
-		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn(enabledFeatureFlag)
+		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(enableNextSlotStateCache.Name) {
-		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enableNextSlotStateCache)
 		cfg.EnableNextSlotStateCache = true
 	}
-	if ctx.Bool(updateHeadTimely.Name) {
-		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
-		cfg.UpdateHeadTimely = true
+	cfg.UpdateHeadTimely = true
+	if ctx.Bool(disableUpdateHeadTimely.Name) {
+		logDisabled(disableUpdateHeadTimely)
+		cfg.UpdateHeadTimely = false
 	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
-		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		logDisabled(disableProposerAttsSelectionUsingMaxCover)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
-	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
-		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableOptimizedBalanceUpdate = true
+	cfg.EnableOptimizedBalanceUpdate = true
+	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
+		logDisabled(disableOptimizedBalanceUpdate)
+		cfg.EnableOptimizedBalanceUpdate = false
+	}
+	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
+		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableHistoricalSpaceRepresentation = true
 	}
 	Init(cfg)
 }
@@ -207,7 +215,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(disableLookbackFlag.Name) {
-		log.WithField(disableLookbackFlag.Name, disableLookbackFlag.Usage).Warn(enabledFeatureFlag)
+		logDisabled(disableLookbackFlag)
 		cfg.DisableLookback = true
 	}
 	Init(cfg)
@@ -220,27 +228,27 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enableExternalSlasherProtectionFlag)
 		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
-		log.WithField(writeWalletPasswordOnWebOnboarding.Name, writeWalletPasswordOnWebOnboarding.Usage).Warn(enabledFeatureFlag)
+		logEnabled(writeWalletPasswordOnWebOnboarding)
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
 	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
-		log.WithField(disableAttestingHistoryDBCache.Name, disableAttestingHistoryDBCache.Usage).Warn(enabledFeatureFlag)
+		logDisabled(disableAttestingHistoryDBCache)
 		cfg.DisableAttestingHistoryDBCache = true
 	}
 	if ctx.Bool(attestTimely.Name) {
-		log.WithField(attestTimely.Name, attestTimely.Usage).Warn(enabledFeatureFlag)
+		logEnabled(attestTimely)
 		cfg.AttestTimely = true
 	}
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
-		log.WithField(enableSlashingProtectionPruning.Name, enableSlashingProtectionPruning.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
-		log.WithField(enableDoppelGangerProtection.Name, enableDoppelGangerProtection.Usage).Warn(enabledFeatureFlag)
+		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
@@ -266,4 +274,20 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}
 	}
+}
+
+func logEnabled(flag cli.DocGenerationFlag) {
+	var name string
+	if names := flag.Names(); len(names) > 0 {
+		name = names[0]
+	}
+	log.WithField(name, flag.GetUsage()).Warn(enabledFeatureFlag)
+}
+
+func logDisabled(flag cli.DocGenerationFlag) {
+	var name string
+	if names := flag.Names(); len(names) > 0 {
+		name = names[0]
+	}
+	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
 }

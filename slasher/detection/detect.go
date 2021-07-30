@@ -5,8 +5,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -223,7 +223,7 @@ func (s *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Index
 			h = &slashpb.HighestAttestation{
 				HighestSourceEpoch: 0,
 				HighestTargetEpoch: 0,
-				ValidatorId:        idx,
+				ValidatorIndex:     idx,
 			}
 		}
 		update := false

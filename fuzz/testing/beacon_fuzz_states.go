@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -13,7 +13,7 @@ const fileBase = "0-11-0/mainnet/beaconstate"
 const fileBaseENV = "BEACONSTATES_PATH"
 
 // BeaconFuzzState returns a beacon state by ID using the beacon-fuzz corpora.
-func BeaconFuzzState(ID uint64) (*pb.BeaconState, error) {
+func BeaconFuzzState(ID uint64) (*ethpb.BeaconState, error) {
 	base := fileBase
 	// Using an environment variable allows a host image to specify the path when only the binary
 	// executable was uploaded (without the runfiles). i.e. fuzzit's platform.
@@ -31,7 +31,7 @@ func BeaconFuzzState(ID uint64) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	st := &pb.BeaconState{}
+	st := &ethpb.BeaconState{}
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return nil, err
 	}

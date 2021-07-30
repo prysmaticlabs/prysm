@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -64,7 +64,7 @@ type Service struct {
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	metaData              p2p.Metadata
+	metaData              metadata.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
@@ -143,6 +143,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithValidateQueueSize(256),
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
+		pubsub.WithGossipSubParams(pubsubGossipParam()),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
@@ -341,7 +342,7 @@ func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // Metadata returns a copy of the peer's metadata.
-func (s *Service) Metadata() p2p.Metadata {
+func (s *Service) Metadata() metadata.Metadata {
 	return s.metaData.Copy()
 }
 

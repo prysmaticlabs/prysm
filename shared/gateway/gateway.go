@@ -131,9 +131,12 @@ func (g *Gateway) Start() {
 	}
 
 	corsMux := g.corsMiddleware(g.mux)
-	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		g.muxHandler(corsMux, w, r)
-	})
+
+	if g.muxHandler != nil {
+		g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			g.muxHandler(corsMux, w, r)
+		})
+	}
 
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
@@ -199,7 +202,7 @@ func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	return c.Handler(h)
 }
 
-const swaggerDir = "proto/beacon/rpc/v1/"
+const swaggerDir = "proto/prysm/v1alpha1/"
 
 // SwaggerServer returns swagger specification files located under "/swagger/"
 func SwaggerServer() http.HandlerFunc {

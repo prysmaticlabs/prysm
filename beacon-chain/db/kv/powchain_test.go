@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/proto/beacon/db"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestStore_SavePowchainData(t *testing.T) {
 	type args struct {
-		data *db.ETH1ChainData
+		data *v2.ETH1ChainData
 	}
 	tests := []struct {
 		name    string

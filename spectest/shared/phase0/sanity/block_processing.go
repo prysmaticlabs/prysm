@@ -11,12 +11,11 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -25,7 +24,7 @@ import (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	core.SkipSlotCache.Disable()
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
@@ -40,7 +39,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			beaconStateBase := &pb.BeaconState{}
+			beaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
@@ -52,7 +51,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
 			var transitionError error
-			var processedState iface.BeaconState
+			var processedState state.BeaconState
 			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz_snappy", i)
@@ -62,7 +61,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				processedState, transitionError = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				if transitionError != nil {
 					break
 				}
@@ -89,7 +88,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")
 
-				postBeaconState := &pb.BeaconState{}
+				postBeaconState := &ethpb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 				pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 				require.NoError(t, err)

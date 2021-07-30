@@ -5,9 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -335,8 +333,8 @@ func genEth1Data() *ethpb.Eth1Data {
 	}
 }
 
-func genPendingAttestation() *pbp2p.PendingAttestation {
-	return &pbp2p.PendingAttestation{
+func genPendingAttestation() *ethpb.PendingAttestation {
+	return &ethpb.PendingAttestation{
 		AggregationBits: bytes(),
 		Data:            genAttData(),
 		InclusionDelay:  3,
@@ -488,8 +486,8 @@ func genValidator() *ethpb.Validator {
 	}
 }
 
-func genSyncCommitteeContribution() *prysmv2.SyncCommitteeContribution {
-	return &prysmv2.SyncCommitteeContribution{
+func genSyncCommitteeContribution() *ethpb.SyncCommitteeContribution {
+	return &ethpb.SyncCommitteeContribution{
 		Slot:              12333,
 		BlockRoot:         bytes(),
 		SubcommitteeIndex: 4444,
@@ -498,15 +496,15 @@ func genSyncCommitteeContribution() *prysmv2.SyncCommitteeContribution {
 	}
 }
 
-func genSyncAggregate() *prysmv2.SyncAggregate {
-	return &prysmv2.SyncAggregate{
+func genSyncAggregate() *ethpb.SyncAggregate {
+	return &ethpb.SyncAggregate{
 		SyncCommitteeBits:      bytes(),
 		SyncCommitteeSignature: bytes(),
 	}
 }
 
-func genBeaconBlockBodyAltair() *prysmv2.BeaconBlockBodyAltair {
-	return &prysmv2.BeaconBlockBodyAltair{
+func genBeaconBlockBodyAltair() *ethpb.BeaconBlockBodyAltair {
+	return &ethpb.BeaconBlockBodyAltair{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),
@@ -519,8 +517,8 @@ func genBeaconBlockBodyAltair() *prysmv2.BeaconBlockBodyAltair {
 	}
 }
 
-func genBeaconBlockAltair() *prysmv2.BeaconBlockAltair {
-	return &prysmv2.BeaconBlockAltair{
+func genBeaconBlockAltair() *ethpb.BeaconBlockAltair {
+	return &ethpb.BeaconBlockAltair{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
@@ -529,15 +527,15 @@ func genBeaconBlockAltair() *prysmv2.BeaconBlockAltair {
 	}
 }
 
-func genSignedBeaconBlockAltair() *prysmv2.SignedBeaconBlockAltair {
-	return &prysmv2.SignedBeaconBlockAltair{
+func genSignedBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
+	return &ethpb.SignedBeaconBlockAltair{
 		Block:     genBeaconBlockAltair(),
 		Signature: bytes(),
 	}
 }
 
-func genSyncCommitteeMessage() *prysmv2.SyncCommitteeMessage {
-	return &prysmv2.SyncCommitteeMessage{
+func genSyncCommitteeMessage() *ethpb.SyncCommitteeMessage {
+	return &ethpb.SyncCommitteeMessage{
 		Slot:           424555,
 		BlockRoot:      bytes(),
 		ValidatorIndex: 5443,

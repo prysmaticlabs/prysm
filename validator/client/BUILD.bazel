@@ -21,8 +21,9 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
+        "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -96,9 +97,8 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",

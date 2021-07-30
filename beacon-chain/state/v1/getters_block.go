@@ -1,6 +1,6 @@
 package v1
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
