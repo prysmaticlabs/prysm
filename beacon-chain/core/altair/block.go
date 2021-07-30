@@ -101,7 +101,11 @@ func ProcessSyncAggregate(state state.BeaconStateAltair, sync *ethpb.SyncAggrega
 	}
 	cfg := params.BeaconConfig()
 	totalActiveIncrements := activeBalance / cfg.EffectiveBalanceIncrement
-	totalBaseRewards := baseRewardPerIncrement(activeBalance) * totalActiveIncrements
+	baseRewardPerInc, err := BaseRewardPerIncrement(activeBalance)
+	if err != nil {
+		return nil, err
+	}
+	totalBaseRewards := baseRewardPerInc * totalActiveIncrements
 	maxParticipantRewards := totalBaseRewards * cfg.SyncRewardWeight / cfg.WeightDenominator / uint64(cfg.SlotsPerEpoch)
 	participantReward := maxParticipantRewards / cfg.SyncCommitteeSize
 	proposerReward := participantReward * cfg.ProposerWeight / (cfg.WeightDenominator - cfg.ProposerWeight)
