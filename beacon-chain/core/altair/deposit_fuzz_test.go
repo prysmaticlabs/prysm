@@ -8,13 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFuzzProcessDeposits_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &statepb.BeaconStateAltair{}
+	state := &ethpb.BeaconStateAltair{}
 	deposits := make([]*ethpb.Deposit, 100)
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
@@ -33,7 +32,7 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 
 func TestFuzzProcessDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &statepb.BeaconStateAltair{}
+	state := &ethpb.BeaconStateAltair{}
 	deposit := &ethpb.Deposit{}
 
 	for i := 0; i < 10000; i++ {
