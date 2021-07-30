@@ -2,7 +2,6 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -51,7 +51,7 @@ func TestService_waitForBackfill_DetectsSlashableBlock(t *testing.T) {
 		proposerSlashingAtSlot: 2,
 	})
 	srv.waitForDataBackfill(types.Epoch(1))
-	require.LogsContain(t, hook, "Beginning slasher data backfill from epoch 0 to 4")
+	require.LogsContain(t, hook, "Beginning slasher data backfill from epoch 0 to 1")
 	require.LogsContain(t, hook, "Found 1 proposer slashing")
 }
 
@@ -82,6 +82,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 		State: beaconState,
 		Slot:  &currentSlot,
 	}
+	slashingsPool := &slashings.PoolMock{}
 
 	srv, err := New(ctx, &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
@@ -92,6 +93,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 		HeadStateFetcher:        mockChain,
 		SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		StateGen:                stategen.New(beaconDB),
+		SlashingPoolInserter:    slashingsPool,
 	})
 	require.NoError(tb, err)
 
@@ -161,7 +163,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 		// If we specify it, create a slashable block at a certain slot.
 		if uint64(cfg.proposerSlashingAtSlot) == i && i != 0 {
-			tb.Log("Inserting proposer slashing!", proposerIdx)
+			tb.Log("Inserting proposer slashing for proposer index and slot", proposerIdx, i)
 			slashableBlk := generateBlock(
 				tb,
 				beaconState,
@@ -175,15 +177,11 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 			// Save the state.
 			blockRoot, err := slashableBlk.Block().HashTreeRoot()
 			require.NoError(tb, err)
-			fmt.Printf("Writing slashable block with root %#x and parent %#x, slot %d\n", blockRoot, parentRoot, slot)
 			require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
 			require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
 		}
 	}
-	for slot, blocks := range blocksBySlot {
-		if len(blocks) > 1 {
-			tb.Log("Saving blocks", slot, len(blocks))
-		}
+	for _, blocks := range blocksBySlot {
 		require.NoError(tb, beaconDB.SaveBlocks(ctx, blocks))
 	}
 	headSlot := types.Slot(numSlots)
@@ -232,6 +230,7 @@ func generateBlock(
 			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
 				Slot:          slot,
 				ProposerIndex: valIdx,
+				ParentRoot:    parentRoot,
 				Body: testutil.HydrateBeaconBlockBody(&ethpb.BeaconBlockBody{
 					Graffiti: slashableGraffiti,
 				}),
