@@ -136,7 +136,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 				"slot":   slot,
 				"pubkey": pubKey,
 				"subnet": subnet,
-			}).Warnf("Sync contribution for validator has no bits set.")
+			}).Warn("Sync contribution for validator has no bits set.")
 			continue
 		}
 
