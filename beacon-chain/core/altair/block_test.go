@@ -2,6 +2,7 @@ package altair_test
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -122,7 +123,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 	}
 
 	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
-	require.ErrorContains(t, "could not verify sync committee signature", err)
+	require.ErrorContains(t, "invalid sync committee signature", err)
 }
 
 func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
@@ -160,4 +161,120 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 
 	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
 	require.NoError(t, err)
+}
+
+func Test_VerifySyncCommitteeSig(t *testing.T) {
+	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
+
+	syncBits := bitfield.NewBitvector512()
+	for i := range syncBits {
+		syncBits[i] = 0xff
+	}
+	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+	require.NoError(t, err)
+	ps := helpers.PrevSlot(beaconState.Slot())
+	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
+	require.NoError(t, err)
+	sigs := make([]bls.Signature, len(indices))
+	pks := make([]bls.PublicKey, len(indices))
+	for i, indice := range indices {
+		b := p2pType.SSZBytes(pbr)
+		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		sigs[i] = sig
+		pks[i] = privKeys[indice].PublicKey()
+	}
+	aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+
+	blsKey, err := bls.RandKey()
+	require.NoError(t, err)
+	require.ErrorContains(t, "invalid sync committee signature", altair.VerifySyncCommitteeSig(beaconState, pks, blsKey.Sign([]byte{'m', 'e', 'o', 'w'}).Marshal()))
+
+	require.NoError(t, altair.VerifySyncCommitteeSig(beaconState, pks, aggregatedSig))
+}
+
+func Test_ApplySyncRewardsPenalties(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, err := altair.ApplySyncRewardsPenalties(beaconState,
+		[]types.ValidatorIndex{0, 1}, // voted
+		[]types.ValidatorIndex{2, 3}) // didn't vote
+	require.NoError(t, err)
+	balances := beaconState.Balances()
+	require.Equal(t, uint64(32000000988), balances[0])
+	require.Equal(t, balances[0], balances[1])
+	require.Equal(t, uint64(31999999012), balances[2])
+	require.Equal(t, balances[2], balances[3])
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	require.NoError(t, err)
+	require.Equal(t, uint64(32000000282), balances[proposerIndex])
+}
+
+func Test_SyncRewards(t *testing.T) {
+	tests := []struct {
+		name                  string
+		activeBalance         uint64
+		wantProposerReward    uint64
+		wantParticipantReward uint64
+		errString             string
+	}{
+		{
+			name:                  "active balance is 0",
+			activeBalance:         0,
+			wantProposerReward:    0,
+			wantParticipantReward: 0,
+			errString:             "active balance can't be 0",
+		},
+		{
+			name:                  "active balance is 1",
+			activeBalance:         1,
+			wantProposerReward:    0,
+			wantParticipantReward: 0,
+			errString:             "",
+		},
+		{
+			name:                  "active balance is 1eth",
+			activeBalance:         params.BeaconConfig().EffectiveBalanceIncrement,
+			wantProposerReward:    0,
+			wantParticipantReward: 3,
+			errString:             "",
+		},
+		{
+			name:                  "active balance is 32eth",
+			activeBalance:         params.BeaconConfig().MaxEffectiveBalance,
+			wantProposerReward:    3,
+			wantParticipantReward: 21,
+			errString:             "",
+		},
+		{
+			name:                  "active balance is 32eth * 1m validators",
+			activeBalance:         params.BeaconConfig().MaxEffectiveBalance * 1e9,
+			wantProposerReward:    62780,
+			wantParticipantReward: 439463,
+			errString:             "",
+		},
+		{
+			name:                  "active balance is max uint64",
+			activeBalance:         math.MaxUint64,
+			wantProposerReward:    70368,
+			wantParticipantReward: 492581,
+			errString:             "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proposerReward, participarntReward, err := altair.SyncRewards(tt.activeBalance)
+			if (err != nil) && (tt.errString != "") {
+				require.ErrorContains(t, tt.errString, err)
+				return
+			}
+			require.Equal(t, tt.wantProposerReward, proposerReward)
+			require.Equal(t, tt.wantParticipantReward, participarntReward)
+		})
+	}
 }
