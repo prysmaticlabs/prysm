@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/queue"
 )
@@ -16,7 +16,7 @@ const syncCommitteeMaxQueueSize = 4
 
 // SaveSyncCommitteeContribution saves a sync committee contribution in to a priority queue.
 // The priority queue is capped at syncCommitteeMaxQueueSize contributions.
-func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContribution) error {
+func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribution) error {
 	if cont == nil {
 		return errNilContribution
 	}
@@ -33,7 +33,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 
 	// Contributions exist in the queue. Append instead of insert new.
 	if item != nil {
-		contributions, ok := item.Value.([]*prysmv2.SyncCommitteeContribution)
+		contributions, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
 		if !ok {
 			return errors.New("not typed []ethpb.SyncCommitteeContribution")
 		}
@@ -50,7 +50,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 	// Contribution does not exist. Insert new.
 	if err := s.contributionCache.Push(&queue.Item{
 		Key:      syncCommitteeKey(cont.Slot),
-		Value:    []*prysmv2.SyncCommitteeContribution{copied},
+		Value:    []*ethpb.SyncCommitteeContribution{copied},
 		Priority: int64(cont.Slot),
 	}); err != nil {
 		return err
@@ -69,7 +69,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 
 // SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
 // Upon retrieval, the contribution is removed from the queue.
-func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncCommitteeContribution, error) {
+func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
 	s.contributionLock.RLock()
 	defer s.contributionLock.RUnlock()
 
@@ -78,9 +78,9 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncComm
 		return nil, nil
 	}
 
-	contributions, ok := item.Value.([]*prysmv2.SyncCommitteeContribution)
+	contributions, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
 	if !ok {
-		return nil, errors.New("not typed []prysmv2.SyncCommitteeContribution")
+		return nil, errors.New("not typed []ethpb.SyncCommitteeContribution")
 	}
 
 	return contributions, nil
