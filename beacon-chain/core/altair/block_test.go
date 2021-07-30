@@ -121,7 +121,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	beaconState, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
+	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
 	require.ErrorContains(t, "could not verify sync committee signature", err)
 }
 
@@ -158,6 +158,6 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	beaconState, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
+	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
 	require.NoError(t, err)
 }
