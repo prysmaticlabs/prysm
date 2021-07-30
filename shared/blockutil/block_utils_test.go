@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -95,7 +96,8 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		Signature: blk.Signature,
 	}
 
-	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
+	wrappedBlk := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	bh, err := SignedBeaconBlockHeaderFromBlock(wrappedBlk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -110,6 +112,7 @@ func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
-	_, err := SignedBeaconBlockHeaderFromBlock(blk)
+	wrappedBlk := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	_, err := SignedBeaconBlockHeaderFromBlock(wrappedBlk)
 	require.ErrorContains(t, "nil block", err)
 }
