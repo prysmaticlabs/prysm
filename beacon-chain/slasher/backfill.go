@@ -80,6 +80,7 @@ func (s *Service) backfill(start, end types.Epoch) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Detecting on items", len(blocks), len(roots))
 	headers := make([]*slashertypes.SignedBlockHeaderWrapper, 0, len(blocks))
 	atts := make([]*slashertypes.IndexedAttestationWrapper, 0)
 	for i, block := range blocks {
@@ -94,11 +95,13 @@ func (s *Service) backfill(start, end types.Epoch) error {
 			SignedBeaconBlockHeader: header,
 			SigningRoot:             roots[i],
 		})
+		fmt.Printf("Getting prestate for block %d with root %#x and parent %#x\n", block.Block().Slot(), roots[i], block.Block().ParentRoot())
 		preState, err := s.getBlockPreState(s.ctx, block.Block())
 		if err != nil {
 			return err
 		}
 		if preState == nil {
+			// TODO: Is this the right thing to do?
 			return fmt.Errorf("nil prestate for block %#x", block.Block().ParentRoot())
 		}
 		for _, att := range block.Block().Body().Attestations() {
@@ -121,6 +124,9 @@ func (s *Service) backfill(start, end types.Epoch) error {
 		}
 	}
 	log.Debugf("Running slashing detection on %d blocks", len(headers))
+	for _, header := range headers {
+		fmt.Printf("Header slot %d, proposer index %d, root %#x\n", header.SignedBeaconBlockHeader.Header.Slot, header.SignedBeaconBlockHeader.Header.ProposerIndex, header.SigningRoot)
+	}
 	propSlashings, err := s.detectProposerSlashings(s.ctx, headers)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -42,12 +43,15 @@ func TestService_waitForBackfill_OK(t *testing.T) {
 
 func TestService_waitForBackfill_DetectsSlashableBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
+	c := params.BeaconConfig()
+	c.SlotsPerEpoch = 4
+	params.OverrideBeaconConfig(c)
 	srv := setupBackfillTest(t, &backfillTestConfig{
-		numEpochs:              types.Epoch(8),
-		proposerSlashingAtSlot: 20,
+		numEpochs:              types.Epoch(1),
+		proposerSlashingAtSlot: 2,
 	})
-	srv.waitForDataBackfill(types.Epoch(8))
-	require.LogsContain(t, hook, "Beginning slasher data backfill from epoch 0 to 8")
+	srv.waitForDataBackfill(types.Epoch(1))
+	require.LogsContain(t, hook, "Beginning slasher data backfill from epoch 0 to 4")
 	require.LogsContain(t, hook, "Found 1 proposer slashing")
 }
 
@@ -117,13 +121,15 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 	require.NoError(tb, beaconState.SetValidators(validators))
 	require.NoError(tb, beaconState.SetBalances(balances))
 
-	for i := uint64(1); i < numSlots; i++ {
+	for i := uint64(1); i <= numSlots; i++ {
 		// Create a realistic looking block for the slot.
 		slot := types.Slot(i)
 		require.NoError(tb, beaconState.SetSlot(slot))
 		parentRoot := genesisRoot[:]
 		if i > 1 {
-			parentRoot = blocksBySlot[slot-1][0].Block().ParentRoot()
+			parentRootHtr, err := blocksBySlot[slot-1][0].Block().HashTreeRoot()
+			require.NoError(tb, err)
+			parentRoot = parentRootHtr[:]
 		}
 
 		_, proposerIndexToSlot, err := helpers.CommitteeAssignments(beaconState, helpers.SlotToEpoch(slot))
@@ -155,7 +161,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 		// If we specify it, create a slashable block at a certain slot.
 		if uint64(cfg.proposerSlashingAtSlot) == i && i != 0 {
-			tb.Log("Inserting proposer slashing!")
+			tb.Log("Inserting proposer slashing!", proposerIdx)
 			slashableBlk := generateBlock(
 				tb,
 				beaconState,
@@ -165,15 +171,19 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 				parentRoot,
 				true, /* slashable */
 			)
-			blocksBySlot[slot] = append(blocksBySlot[slot], blk)
+			blocksBySlot[slot] = append(blocksBySlot[slot], slashableBlk)
 			// Save the state.
 			blockRoot, err := slashableBlk.Block().HashTreeRoot()
 			require.NoError(tb, err)
+			fmt.Printf("Writing slashable block with root %#x and parent %#x, slot %d\n", blockRoot, parentRoot, slot)
 			require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
 			require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
 		}
 	}
-	for _, blocks := range blocksBySlot {
+	for slot, blocks := range blocksBySlot {
+		if len(blocks) > 1 {
+			tb.Log("Saving blocks", slot, len(blocks))
+		}
 		require.NoError(tb, beaconDB.SaveBlocks(ctx, blocks))
 	}
 	headSlot := types.Slot(numSlots)
