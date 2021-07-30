@@ -117,7 +117,12 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	v.waitToSlotTwoThirds(ctx, slot)
 
 	for i, comIdx := range indexRes.Indices {
-		if !altair.IsSyncCommitteeAggregator(selectionProofs[i]) {
+		isAggregator, err := altair.IsSyncCommitteeAggregator(selectionProofs[i])
+		if err != nil {
+			log.Errorf("Could check in aggregator: %v", err)
+			return
+		}
+		if !isAggregator {
 			continue
 		}
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
