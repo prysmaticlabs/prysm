@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/schollz/progressbar/v3"
+
+	"github.com/prysmaticlabs/prysm/shared/progressutil"
+
 	"github.com/golang/snappy"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -65,6 +69,13 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		if stateBkt == nil {
 			return nil
 		}
+		// get the count of keys in the state bucket for passing it to the progress indicator.
+		count, err := stateCount(stateBkt)
+		if err != nil {
+			return err
+		}
+		bar := progressutil.InitializeProgressBar(count, "Migrating state validators to new schema.")
+
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		if valBkt == nil {
 			return nil
@@ -81,7 +92,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		errC := make(chan error, batchSize)
 		workC := make(chan *migrationRow, batchSize)
 		go readStateEntriesFromBucket(ctx, stateBkt, workC, errC)
-		go storeValidatorEntriesSeparately(ctx, stateBkt, valBkt, indexBkt, workC, doneC, errC)
+		go storeValidatorEntriesSeparately(ctx, bar, stateBkt, valBkt, indexBkt, workC, doneC, errC)
 		<-doneC
 		return mb.Put(migrationStateValidatorsKey, migrationCompleted)
 	}); err != nil {
@@ -122,11 +133,10 @@ func readStateEntriesFromBucket(ctx context.Context, stateBkt *bolt.Bucket, work
 	}
 }
 
-func storeValidatorEntriesSeparately(ctx context.Context, stateBkt *bolt.Bucket, valBkt *bolt.Bucket, indexBkt *bolt.Bucket, workC <-chan *migrationRow, doneC chan<- bool, errC chan error) {
+func storeValidatorEntriesSeparately(ctx context.Context, bar *progressbar.ProgressBar, stateBkt *bolt.Bucket, valBkt *bolt.Bucket, indexBkt *bolt.Bucket, workC <-chan *migrationRow, doneC chan<- bool, errC chan error) {
 	defer func() {
 		doneC <- true
 	}()
-	count := uint64(0)
 	for mRow := range workC {
 		state := &statepb.BeaconState{}
 		if decodeErr := decode(ctx, mRow.value, state); decodeErr != nil {
@@ -172,7 +182,10 @@ func storeValidatorEntriesSeparately(ctx context.Context, stateBkt *bolt.Bucket,
 			errC <- stateErr
 		}
 
-		count++
+		if barErr := bar.Add(1); barErr != nil {
+			errC <- barErr
+		}
+
 		select {
 		case err := <-errC:
 			log.Errorf("received error during inserting : %s", err.Error())
@@ -182,10 +195,18 @@ func storeValidatorEntriesSeparately(ctx context.Context, stateBkt *bolt.Bucket,
 			errC <- ctx.Err()
 			break
 		default:
-			if count%batchSize == 0 {
-				log.Infof("migrated %d rows", count)
-			}
 			continue
 		}
 	}
+}
+
+func stateCount(stateBucket *bolt.Bucket) (int, error) {
+	count := 0
+	if err := stateBucket.ForEach(func(pubKey, v []byte) error {
+		count++
+		return nil
+	}); err != nil {
+		return 0, nil
+	}
+	return count, nil
 }
