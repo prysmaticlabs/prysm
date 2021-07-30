@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/golang/snappy"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
@@ -98,7 +97,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 			index := batchIndex
 			for _, v := cursor.Seek(keys[index]); count < batchSize && index < len(keys); _, v = cursor.Next() {
 				log.Infof("processing block %d", index)
-				state := &statepb.BeaconState{}
+				state := &v1alpha1.BeaconState{}
 				if decodeErr := decode(ctx, v, state); decodeErr != nil {
 					return decodeErr
 				}
