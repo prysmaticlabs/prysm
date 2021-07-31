@@ -47,6 +47,10 @@ var (
 		Name: "validator_entry_cache_miss",
 		Help: "The total number of cache misses on the validator entry cache.",
 	})
+	validatorEntryCacheDelete = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "validator_entry_cache_delete",
+		Help: "The total number of cache deletes on the validator entry cache.",
+	})
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
