@@ -9,6 +9,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"os"
@@ -27,13 +28,18 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+const (
+	MaxUint = ^uint(0)
+)
+
 var (
-	datadir        = flag.String("datadir", "", "Path to data directory.")
-	dbName         = flag.String("dbname", "", "database name.")
-	bucketStats    = flag.Bool("bucket-stats", false, "Show all the bucket stats.")
-	bucketContents = flag.Bool("bucket-contents", false, "Show contents of a given bucket.")
-	bucketName     = flag.String("bucket-name", "", "bucket to show contents.")
-	rowLimit       = flag.Uint64("limit", 10, "limit to rows.")
+	datadir       = flag.String("datadir", "", "Path to data directory.")
+	dbName        = flag.String("dbname", "", "database name.")
+	command       = flag.String("command", "", "command to execute.")
+	bucketName    = flag.String("bucket-name", "", "bucket to show contents.")
+	rowLimit      = flag.Uint64("limit", 10, "limit to rows.")
+	migrationName = flag.String("migration", "", "migration to cross check.")
+	destDatadir   = flag.String("dest-datadir", "", "Path to destination data directory.")
 )
 
 // used to parallelize all the bucket stats
@@ -78,25 +84,33 @@ func main() {
 
 	// check if the database file is present.
 	dbNameWithPath := filepath.Join(*datadir, *dbName)
-	if _, err := os.Stat(*datadir); os.IsNotExist(err) {
+	if _, err := os.Stat(dbNameWithPath); os.IsNotExist(err) {
 		log.Fatalf("could not locate database file : %s, %v", dbNameWithPath, err)
 	}
 
-	// show stats of all the buckets.
-	if *bucketStats {
+	switch *command {
+	case "bucket-stats":
 		printBucketStats(dbNameWithPath)
-		return
-	}
-
-	// show teh contents of the specified bucket.
-	if *bucketContents {
+	case "bucket-content":
 		switch *bucketName {
 		case "state", "state-summary":
 			printBucketContents(dbNameWithPath, *rowLimit, *bucketName)
 		default:
-			log.Fatal("Oops, Only 'state' and 'state-summary' buckets are supported for now.")
+			log.Fatal("Oops, given bucket is supported for now.")
+		}
+	case "migration-check":
+		destDbNameWithPath := filepath.Join(*destDatadir, *dbName)
+		if _, err := os.Stat(destDbNameWithPath); os.IsNotExist(err) {
+			log.Fatalf("could not locate destination database file : %s, %v", destDbNameWithPath, err)
+		}
+		switch *migrationName {
+		case "validator-entries":
+			checkValidatorMigration(dbNameWithPath, destDbNameWithPath)
+		default:
+			log.Fatal("Oops, given migration is not supported for now.")
 		}
 	}
+	return
 }
 
 func printBucketStats(dbNameWithPath string) {
@@ -104,8 +118,8 @@ func printBucketStats(dbNameWithPath string) {
 	groupSize := uint64(128)
 	doneC := make(chan bool)
 	statsC := make(chan *bucketStat, groupSize)
-	go readBucketStats(ctx, dbNameWithPath, statsC)
-	go printBucketStates(statsC, doneC)
+	go readBucketStat(ctx, dbNameWithPath, statsC)
+	go printBucketStat(statsC, doneC)
 	<-doneC
 }
 
@@ -147,7 +161,7 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 	<-doneC
 }
 
-func readBucketStats(ctx context.Context, dbNameWithPath string, statsC chan<- *bucketStat) {
+func readBucketStat(ctx context.Context, dbNameWithPath string, statsC chan<- *bucketStat) {
 	// open the raw database file. If the file is busy, then exit.
 	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if openErr != nil {
@@ -272,7 +286,7 @@ func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *m
 	close(stateSummaryC)
 }
 
-func printBucketStates(statsC <-chan *bucketStat, doneC chan<- bool) {
+func printBucketStat(statsC <-chan *bucketStat, doneC chan<- bool) {
 	for stat := range statsC {
 		if stat.noOfRows != 0 {
 			averageValueSize := stat.totalValueSize / stat.noOfRows
@@ -343,6 +357,84 @@ func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- 
 		log.Infof("row : %04d, slot : %d, root = %s", msts.rowCount, msts.slot, hexutils.BytesToHex(msts.root))
 	}
 	doneC <- true
+}
+
+func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
+	// get the keys within the supplied limit for the given bucket.
+	souceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), uint64(MaxUint))
+	destStateKeys, _ := keysOfBucket(destDbNameWithPath, []byte("state"), uint64(MaxUint))
+
+	if len(destStateKeys) < len(souceStateKeys) {
+		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(souceStateKeys), len(destStateKeys))
+	}
+	//
+	//for i, key := range souceStateKeys {
+	//	if !bytes.Equal(key, destStateKeys[i]) {
+	//		log.Fatalf("invalid keys: %d", i)
+	//	}
+	//}
+
+	// create the source and destination KV stores.
+	sourceDbDirectory := filepath.Dir(dbNameWithPath)
+	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory, &kv.Config{})
+	if openErr != nil {
+		log.WithError(openErr).Fatalf("could not open sourceDB")
+	}
+
+	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
+	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
+	if openErr != nil {
+		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
+		//if you want to avoid this then we should pass the metric name when opening the DB which touches
+		// too many places.
+		if openErr.Error() != "duplicate metrics collector registration attempted" {
+			log.WithError(openErr).Fatalf("could not open sourceDB, %v", openErr)
+		}
+	}
+
+	// don't forget to close it when ejecting out of this function.
+	defer func() {
+		closeErr := sourceDB.Close()
+		if closeErr != nil {
+			log.WithError(closeErr).Fatalf("could not close sourceDB")
+		}
+	}()
+	defer func() {
+		closeErr := destDB.Close()
+		if closeErr != nil {
+			log.WithError(closeErr).Fatalf("could not close sourceDB")
+		}
+	}()
+
+	ctx := context.Background()
+	for rowCount, key := range souceStateKeys {
+		sourceState, stateErr := sourceDB.State(ctx, bytesutil.ToBytes32(key))
+		if stateErr != nil {
+			log.WithError(stateErr).Fatalf("could not get from source db, the state for key : %s", hexutils.BytesToHex(key))
+		}
+
+		destinationState, stateErr := destDB.State(ctx, bytesutil.ToBytes32(key))
+		if stateErr != nil {
+			log.WithError(stateErr).Fatalf("could not get destination db, the state for key : %s", hexutils.BytesToHex(key))
+		}
+
+		if len(sourceState.Validators()) != len(destinationState.Validators()) {
+			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
+		}
+
+		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
+		if err != nil {
+			log.WithError(err).Fatalf("could not find hash of source state")
+		}
+		destinationSatteHash, err := destinationState.HashTreeRoot(ctx)
+		if err != nil {
+			log.WithError(err).Fatalf("could not find hash of destination state")
+		}
+		if !bytes.Equal(sourceStateHash[:], destinationSatteHash[:]) {
+			log.Fatalf("state mismatch : key = %d", hexutils.BytesToHex(key))
+		}
+		log.Infof("processed row %d", rowCount)
+	}
 }
 
 func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
