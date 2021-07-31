@@ -32,6 +32,7 @@ func TestMain(m *testing.M) {
 
 func TestService_StartStop_ChainStartEvent(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	hook := logTest.NewGlobal()
 
 	beaconState, err := testutil.NewBeaconState()
@@ -46,6 +47,7 @@ func TestService_StartStop_ChainStartEvent(t *testing.T) {
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
+		BeaconDatabase:          beaconDB,
 		StateNotifier:           &mock.MockStateNotifier{},
 		Database:                slasherDB,
 		HeadStateFetcher:        mockChain,
