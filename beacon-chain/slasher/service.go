@@ -79,6 +79,10 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
+	go s.run()
+}
+
+func (s *Service) run() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	stateEvent := <-stateChannel
