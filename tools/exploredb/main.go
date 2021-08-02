@@ -93,7 +93,8 @@ func main() {
 		printBucketStats(dbNameWithPath)
 	case "bucket-content":
 		switch *bucketName {
-		case "state", "state-summary":
+		case "state",
+			"state-summary":
 			printBucketContents(dbNameWithPath, *rowLimit, *bucketName)
 		default:
 			log.Fatal("Oops, given bucket is supported for now.")
@@ -366,28 +367,22 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	if len(destStateKeys) < len(souceStateKeys) {
 		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(souceStateKeys), len(destStateKeys))
 	}
-	//
-	//for i, key := range souceStateKeys {
-	//	if !bytes.Equal(key, destStateKeys[i]) {
-	//		log.Fatalf("invalid keys: %d", i)
-	//	}
-	//}
 
 	// create the source and destination KV stores.
 	sourceDbDirectory := filepath.Dir(dbNameWithPath)
 	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory, &kv.Config{})
 	if openErr != nil {
-		log.WithError(openErr).Fatalf("could not open sourceDB")
+		log.Fatalf("could not open sourceDB: %v", openErr)
 	}
 
 	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
 	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
 	if openErr != nil {
 		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
-		//if you want to avoid this then we should pass the metric name when opening the DB which touches
+		// if you want to avoid this then we should pass the metric name when opening the DB which touches
 		// too many places.
 		if openErr.Error() != "duplicate metrics collector registration attempted" {
-			log.WithError(openErr).Fatalf("could not open sourceDB, %v", openErr)
+			log.Fatalf("could not open sourceDB, %v", openErr)
 		}
 	}
 
@@ -395,45 +390,52 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	defer func() {
 		closeErr := sourceDB.Close()
 		if closeErr != nil {
-			log.WithError(closeErr).Fatalf("could not close sourceDB")
+			log.Fatalf("could not close sourceDB: %v", closeErr)
 		}
 	}()
 	defer func() {
 		closeErr := destDB.Close()
 		if closeErr != nil {
-			log.WithError(closeErr).Fatalf("could not close sourceDB")
+			log.Fatalf("could not close sourceDB: %v", closeErr)
 		}
 	}()
 
 	ctx := context.Background()
+	failCount := 0
 	for rowCount, key := range souceStateKeys {
 		sourceState, stateErr := sourceDB.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
-			log.WithError(stateErr).Fatalf("could not get from source db, the state for key : %s", hexutils.BytesToHex(key))
+			log.Fatalf("could not get from source db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
 		}
-
 		destinationState, stateErr := destDB.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
-			log.WithError(stateErr).Fatalf("could not get destination db, the state for key : %s", hexutils.BytesToHex(key))
+			log.Fatalf("could not get destination db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
+		}
+		if destinationState == nil {
+			// When too many updates are done (migration), rarely boltDB behaves weird, and return nil for a key that is present.
+			// this is to not break during those times and continue checking other sates.
+			// TIP: use "bucket-contents" sub-command to see the missing state.
+			log.Infof("source: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s", rowCount, sourceState.Slot(), sourceState.Slot()/32, sourceState.NumValidators(), hexutils.BytesToHex(key))
+			failCount++
+			continue
 		}
 
 		if len(sourceState.Validators()) != len(destinationState.Validators()) {
 			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
 		}
-
 		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {
-			log.WithError(err).Fatalf("could not find hash of source state")
+			log.Fatalf("could not find hash of source state: %v", err)
 		}
 		destinationSatteHash, err := destinationState.HashTreeRoot(ctx)
 		if err != nil {
-			log.WithError(err).Fatalf("could not find hash of destination state")
+			log.Fatalf("could not find hash of destination state: %v", err)
 		}
 		if !bytes.Equal(sourceStateHash[:], destinationSatteHash[:]) {
 			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
-		log.Infof("processed row %d", rowCount)
 	}
+	log.Infof("number of not matching states: %d", failCount)
 }
 
 func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
@@ -462,7 +464,11 @@ func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([]
 			if count >= rowLimit {
 				return nil
 			}
-			keys = append(keys, k)
+			actualKey := make([]byte, len(k))
+			actualSizes := make([]byte, len(v))
+			copy(actualKey, k)
+			copy(actualSizes, v)
+			keys = append(keys, actualKey)
 			sizes = append(sizes, uint64(len(v)))
 			count++
 		}
