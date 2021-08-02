@@ -110,7 +110,6 @@ func main() {
 			log.Fatal("Oops, given migration is not supported for now.")
 		}
 	}
-	return
 }
 
 func printBucketStats(dbNameWithPath string) {
@@ -431,7 +430,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.WithError(err).Fatalf("could not find hash of destination state")
 		}
 		if !bytes.Equal(sourceStateHash[:], destinationSatteHash[:]) {
-			log.Fatalf("state mismatch : key = %d", hexutils.BytesToHex(key))
+			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
 		log.Infof("processed row %d", rowCount)
 	}
