@@ -4,12 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessDeposits processes validator deposits for beacon state Altair.
@@ -37,22 +35,11 @@ func ProcessDeposits(
 
 // ProcessDeposit processes validator deposit for beacon state Altair.
 func ProcessDeposit(ctx context.Context, beaconState state.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconStateAltair, error) {
-	beaconState, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
+	beaconState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
 	if err != nil {
 		return nil, err
 	}
-
-	// The last validator in the beacon state validator registry.
-	v, err := beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(beaconState.NumValidators() - 1))
-	if err != nil {
-		return nil, err
-	}
-	// We know a validator is brand new when its status epochs are all far future epoch.
-	// In this case, we append 0 to inactivity score and participation bits.
-	if v.ActivationEligibilityEpoch() == v.ActivationEpoch() &&
-		v.ActivationEpoch() == v.ExitEpoch() &&
-		v.ExitEpoch() == v.WithdrawableEpoch() &&
-		v.WithdrawableEpoch() == params.BeaconConfig().FarFutureEpoch {
+	if isNewValidator {
 		if err := beaconState.AppendInactivityScore(0); err != nil {
 			return nil, err
 		}
