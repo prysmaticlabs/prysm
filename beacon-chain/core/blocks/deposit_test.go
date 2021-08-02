@@ -211,8 +211,9 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
+	assert.Equal(t, true, isNewValidator, "Expected isNewValidator to be true")
 	assert.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	assert.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
 	if newState.Balances()[1] != dep[0].Data.Amount {
@@ -253,8 +254,9 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
+	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
 
 	if newState.Eth1DepositIndex() != 1 {
 		t.Errorf(
@@ -336,4 +338,55 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	if newState.Balances()[0] != 0 {
 		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
 	}
+}
+
+func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             sk.PublicKey().Marshal(),
+			Amount:                1000,
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
+		},
+	}
+	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	deposit.Data.Signature = sig.Marshal()
+	leaf, err := deposit.Data.HashTreeRoot()
+	require.NoError(t, err)
+
+	// We then create a merkle branch for the test.
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not generate trie")
+	proof, err := depositTrie.MerkleProof(0)
+	require.NoError(t, err, "Could not generate proof")
+
+	deposit.Proof = proof
+	registry := []*ethpb.Validator{
+		{
+			PublicKey: []byte{1, 2, 3},
+		},
+		{
+			PublicKey:             sk.PublicKey().Marshal(),
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 50}
+	root := depositTrie.Root()
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: root[:],
+			BlockHash:   root[:],
+		},
+	})
+	require.NoError(t, err)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
+	require.NoError(t, err, "Process deposit failed")
+	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
+	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
