@@ -40,15 +40,15 @@ const (
 var (
 	// Metrics for the validator cache.
 	validatorEntryCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "validator_entry_cache_hit",
+		Name: "validator_entry_cache_hit_total",
 		Help: "The total number of cache hits on the validator entry cache.",
 	})
 	validatorEntryCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "validator_entry_cache_miss",
+		Name: "validator_entry_cache_miss_total",
 		Help: "The total number of cache misses on the validator entry cache.",
 	})
 	validatorEntryCacheDelete = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "validator_entry_cache_delete",
+		Name: "validator_entry_cache_delete_total",
 		Help: "The total number of cache deletes on the validator entry cache.",
 	})
 )
