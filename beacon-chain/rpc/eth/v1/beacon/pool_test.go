@@ -18,7 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -777,8 +777,10 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		HeadFetcher:      chainService,
+		ChainInfoFetcher: chainService,
 		AttestationsPool: &attestations.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -801,7 +803,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
@@ -901,8 +903,10 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		HeadFetcher:      chainService,
+		ChainInfoFetcher: chainService,
 		AttestationsPool: &attestations.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -919,8 +923,8 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedAtt, actualAtt)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
-	broadcastRoot, err := broadcaster.BroadcastMessages[0].(*eth.Attestation).HashTreeRoot()
+	require.Equal(t, 1, len(broadcaster.BroadcastAttestations))
+	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
 }

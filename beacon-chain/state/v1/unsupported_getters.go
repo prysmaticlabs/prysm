@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // CurrentEpochParticipation is not supported for phase 0 beacon state.
@@ -21,11 +21,11 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 }
 
 // CurrentSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) CurrentSyncCommittee() (*statepb.SyncCommittee, error) {
+func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	return nil, errors.New("CurrentSyncCommittee is not supported for phase 0 beacon state")
 }
 
 // NextSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) NextSyncCommittee() (*statepb.SyncCommittee, error) {
+func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	return nil, errors.New("NextSyncCommittee is not supported for phase 0 beacon state")
 }

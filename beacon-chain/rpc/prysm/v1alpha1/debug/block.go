@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +19,7 @@ import (
 // GetBlock in an ssz-encoded format by block root.
 func (ds *Server) GetBlock(
 	ctx context.Context,
-	req *pbrpc.BlockRequest,
+	req *pbrpc.BlockRequestByRoot,
 ) (*pbrpc.SSZResponse, error) {
 	root := bytesutil.ToBytes32(req.BlockRoot)
 	signedBlock, err := ds.BeaconDB.Block(ctx, root)

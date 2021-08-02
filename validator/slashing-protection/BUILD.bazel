@@ -17,7 +17,6 @@ go_library(
     deps = [
         "//cmd/validator/flags:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/grpcutils:go_default_library",

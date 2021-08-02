@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -20,7 +20,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	s := &statepb.BeaconState{
+	s := &ethpb.BeaconState{
 		BlockRoots: blockRoots,
 	}
 
@@ -77,7 +77,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	state := &statepb.BeaconState{
+	state := &ethpb.BeaconState{
 		BlockRoots: blockRoots,
 	}
 

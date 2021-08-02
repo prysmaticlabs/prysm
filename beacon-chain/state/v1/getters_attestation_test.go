@@ -3,19 +3,19 @@ package v1
 import (
 	"testing"
 
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
-	s, err := InitializeFromProto(&statepb.BeaconState{})
+	s, err := InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.PreviousEpochAttestations()
 	require.NoError(t, err)
-	require.DeepEqual(t, []*statepb.PendingAttestation(nil), atts)
+	require.DeepEqual(t, []*ethpb.PendingAttestation(nil), atts)
 
-	want := []*statepb.PendingAttestation{{ProposerIndex: 100}}
-	s, err = InitializeFromProto(&statepb.BeaconState{PreviousEpochAttestations: want})
+	want := []*ethpb.PendingAttestation{{ProposerIndex: 100}}
+	s, err = InitializeFromProto(&ethpb.BeaconState{PreviousEpochAttestations: want})
 	require.NoError(t, err)
 	got, err := s.PreviousEpochAttestations()
 	require.NoError(t, err)
@@ -27,14 +27,14 @@ func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
 }
 
 func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
-	s, err := InitializeFromProto(&statepb.BeaconState{})
+	s, err := InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.CurrentEpochAttestations()
 	require.NoError(t, err)
-	require.DeepEqual(t, []*statepb.PendingAttestation(nil), atts)
+	require.DeepEqual(t, []*ethpb.PendingAttestation(nil), atts)
 
-	want := []*statepb.PendingAttestation{{ProposerIndex: 101}}
-	s, err = InitializeFromProto(&statepb.BeaconState{CurrentEpochAttestations: want})
+	want := []*ethpb.PendingAttestation{{ProposerIndex: 101}}
+	s, err = InitializeFromProto(&ethpb.BeaconState{CurrentEpochAttestations: want})
 	require.NoError(t, err)
 	got, err := s.CurrentEpochAttestations()
 	require.NoError(t, err)

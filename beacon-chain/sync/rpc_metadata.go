@@ -7,9 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.

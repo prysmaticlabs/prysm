@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -41,7 +40,7 @@ func TestHasVoted_OK(t *testing.T) {
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	exitEpoch := types.Epoch(199)
-	base := &statepb.BeaconState{Validators: []*ethpb.Validator{{
+	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
 	state, err := v1.InitializeFromProto(base)
@@ -56,7 +55,7 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	exitedEpoch := types.Epoch(100)
 	idx := types.ValidatorIndex(3)
-	base := &statepb.BeaconState{Validators: []*ethpb.Validator{
+	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch},
 		{ExitEpoch: exitedEpoch + 1},
 		{ExitEpoch: exitedEpoch + 2},
@@ -74,7 +73,7 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	exitedEpoch := types.Epoch(100)
 	idx := types.ValidatorIndex(4)
-	base := &statepb.BeaconState{Validators: []*ethpb.Validator{
+	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
@@ -110,7 +109,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
 	}
 
-	base := &statepb.BeaconState{
+	base := &ethpb.BeaconState{
 		Validators:  registry,
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -153,11 +152,11 @@ func TestSlashValidator_OK(t *testing.T) {
 
 func TestActivatedValidatorIndices(t *testing.T) {
 	tests := []struct {
-		state  *statepb.BeaconState
+		state  *ethpb.BeaconState
 		wanted []types.ValidatorIndex
 	}{
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: 0,
@@ -179,7 +178,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{0, 1, 3},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: helpers.ActivationExitEpoch(10),
@@ -189,7 +188,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						ActivationEpoch: 0,
@@ -210,11 +209,11 @@ func TestActivatedValidatorIndices(t *testing.T) {
 
 func TestSlashedValidatorIndices(t *testing.T) {
 	tests := []struct {
-		state  *statepb.BeaconState
+		state  *ethpb.BeaconState
 		wanted []types.ValidatorIndex
 	}{
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -233,7 +232,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{0, 2},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -243,7 +242,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector,
@@ -264,11 +263,11 @@ func TestSlashedValidatorIndices(t *testing.T) {
 
 func TestExitedValidatorIndices(t *testing.T) {
 	tests := []struct {
-		state  *statepb.BeaconState
+		state  *ethpb.BeaconState
 		wanted []types.ValidatorIndex
 	}{
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -290,7 +289,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{0, 2},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
@@ -302,7 +301,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 			wanted: []types.ValidatorIndex{},
 		},
 		{
-			state: &statepb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{
 						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,

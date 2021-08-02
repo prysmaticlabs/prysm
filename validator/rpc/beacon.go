@@ -11,7 +11,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"

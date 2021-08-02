@@ -11,8 +11,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -31,7 +31,7 @@ func TestServer_GetBlock(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 	}
-	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequest{
+	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	// Checking for nil block.
 	blockRoot = [32]byte{}
-	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequest{
+	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)

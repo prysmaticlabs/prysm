@@ -35,6 +35,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
@@ -42,6 +43,7 @@ go_test(
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
+        "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
@@ -57,5 +59,6 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

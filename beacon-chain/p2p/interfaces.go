@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
