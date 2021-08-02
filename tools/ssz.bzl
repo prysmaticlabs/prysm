@@ -5,6 +5,10 @@ load(
 )
 
 def _ssz_go_proto_library_impl(ctx):
+    print(ctx.var.get("ssz"))
+    if ctx.var.get("ssz"):
+        fail("--define=ssz=<value> is no longer supported, please use --//proto:network=<value>")
+
     if ctx.attr.go_proto != None:
         go_proto = ctx.attr.go_proto
         input_files = go_proto[OutputGroupInfo].go_generated_srcs.to_list()
