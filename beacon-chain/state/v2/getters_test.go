@@ -5,12 +5,12 @@ import (
 	"sync"
 	"testing"
 
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, err := InitializeFromProto(&statepb.BeaconStateAltair{Slot: 1})
+	headState, err := InitializeFromProto(&ethpb.BeaconStateAltair{Slot: 1})
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}

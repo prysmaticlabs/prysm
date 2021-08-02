@@ -95,7 +95,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t).db
 			tt.setup(t, db)
-			assert.NoError(t, db.Update(migrateArchivedIndex), "migrateArchivedIndex(tx) error")
+			assert.NoError(t, migrateArchivedIndex(context.Background(), db), "migrateArchivedIndex(tx) error")
 			tt.eval(t, db)
 		})
 	}

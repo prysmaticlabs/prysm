@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // BeaconState has read and write access to beacon state methods.
@@ -39,7 +38,7 @@ type ReadOnlyBeaconState interface {
 	GenesisTime() uint64
 	GenesisValidatorRoot() []byte
 	Slot() types.Slot
-	Fork() *statepb.Fork
+	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
 	HistoricalRoots() [][]byte
 	Slashings() []uint64
@@ -61,7 +60,7 @@ type WriteOnlyBeaconState interface {
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorRoot(val []byte) error
 	SetSlot(val types.Slot) error
-	SetFork(val *statepb.Fork) error
+	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
 	SetHistoricalRoots(val [][]byte) error
 	SetSlashings(val []uint64) error
@@ -139,8 +138,8 @@ type ReadOnlyEth1Data interface {
 
 // ReadOnlyAttestations defines a struct which only has read access to attestations methods.
 type ReadOnlyAttestations interface {
-	PreviousEpochAttestations() ([]*statepb.PendingAttestation, error)
-	CurrentEpochAttestations() ([]*statepb.PendingAttestation, error)
+	PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error)
+	CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -194,8 +193,8 @@ type WriteOnlyCheckpoint interface {
 
 // WriteOnlyAttestations defines a struct which only has write access to attestations methods.
 type WriteOnlyAttestations interface {
-	AppendCurrentEpochAttestations(val *statepb.PendingAttestation) error
-	AppendPreviousEpochAttestations(val *statepb.PendingAttestation) error
+	AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error
+	AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error
 	RotateAttestations() error
 }
 
@@ -209,10 +208,10 @@ type FutureForkStub interface {
 	PreviousEpochParticipation() ([]byte, error)
 	InactivityScores() ([]uint64, error)
 	SetInactivityScores(val []uint64) error
-	CurrentSyncCommittee() (*statepb.SyncCommittee, error)
-	SetCurrentSyncCommittee(val *statepb.SyncCommittee) error
+	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
+	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetPreviousParticipationBits(val []byte) error
 	SetCurrentParticipationBits(val []byte) error
-	NextSyncCommittee() (*statepb.SyncCommittee, error)
-	SetNextSyncCommittee(val *statepb.SyncCommittee) error
+	NextSyncCommittee() (*ethpb.SyncCommittee, error)
+	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 }

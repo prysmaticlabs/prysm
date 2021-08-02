@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,7 +41,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Misc fields checks.
 	assert.Equal(t, types.Slot(0), newState.Slot(), "Slot was not correctly initialized")
-	if !proto.Equal(newState.Fork(), &statepb.Fork{
+	if !proto.Equal(newState.Fork(), &ethpb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
 		Epoch:           genesisEpoch,
@@ -76,10 +75,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
 	currAtt, err := newState.CurrentEpochAttestations()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []*statepb.PendingAttestation{}, currAtt, "CurrentEpochAttestations was not correctly initialized")
+	assert.DeepSSZEqual(t, []*ethpb.PendingAttestation{}, currAtt, "CurrentEpochAttestations was not correctly initialized")
 	prevAtt, err := newState.CurrentEpochAttestations()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []*statepb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
+	assert.DeepSSZEqual(t, []*ethpb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.

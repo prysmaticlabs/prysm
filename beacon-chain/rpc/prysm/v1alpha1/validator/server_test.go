@@ -15,7 +15,6 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -52,7 +51,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 func TestWaitForActivation_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
-	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
@@ -70,7 +69,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
+		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
@@ -108,7 +107,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()
 	pubKey2 := priv2.PublicKey().Marshal()
 
-	beaconState := &statepb.BeaconState{
+	beaconState := &ethpb.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -146,7 +145,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
+		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
@@ -197,7 +196,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	pubKey2 := priv2.PublicKey().Marshal()
 	pubKey3 := priv3.PublicKey().Marshal()
 
-	beaconState := &statepb.BeaconState{
+	beaconState := &ethpb.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -226,7 +225,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *statepb.BeaconState, 1),
+		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
 	}

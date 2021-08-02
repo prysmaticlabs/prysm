@@ -196,15 +196,18 @@ func TestHandleGrpcResponseError(t *testing.T) {
 	assert.Equal(t, 400, errJson.StatusCode())
 }
 
-func TestGrpcResponseIsStatusCodeOnly(t *testing.T) {
-	t.Run("status_code_only", func(t *testing.T) {
-		result := GrpcResponseIsStatusCodeOnly(nil)
-		assert.Equal(t, true, result)
+func TestGrpcResponseIsEmpty(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty(nil))
 	})
-
-	t.Run("non_empty_response", func(t *testing.T) {
-		result := GrpcResponseIsStatusCodeOnly(&testRequestContainer{})
-		assert.Equal(t, false, result)
+	t.Run("empty_slice", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty(make([]byte, 0)))
+	})
+	t.Run("empty_brackets", func(t *testing.T) {
+		assert.Equal(t, true, GrpcResponseIsEmpty([]byte("{}")))
+	})
+	t.Run("non_empty", func(t *testing.T) {
+		assert.Equal(t, false, GrpcResponseIsEmpty([]byte("{\"foo\":\"bar\"})")))
 	})
 }
 

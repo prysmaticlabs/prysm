@@ -263,6 +263,7 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		HeadFetcher:        s.cfg.HeadFetcher,
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)

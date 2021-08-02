@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -35,7 +34,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return &statepb.BeaconStateAltair{
+	return &ethpb.BeaconStateAltair{
 		GenesisTime:                 b.genesisTime(),
 		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		Slot:                        b.slot(),
@@ -166,7 +165,7 @@ func (b *BeaconState) slot() types.Slot {
 }
 
 // Fork version of the beacon chain.
-func (b *BeaconState) Fork() *statepb.Fork {
+func (b *BeaconState) Fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -182,7 +181,7 @@ func (b *BeaconState) Fork() *statepb.Fork {
 
 // fork version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) fork() *statepb.Fork {
+func (b *BeaconState) fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -194,7 +193,7 @@ func (b *BeaconState) fork() *statepb.Fork {
 	copy(prevVersion, b.state.Fork.PreviousVersion)
 	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
 	copy(currVersion, b.state.Fork.CurrentVersion)
-	return &statepb.Fork{
+	return &ethpb.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
 		Epoch:           b.state.Fork.Epoch,
@@ -979,7 +978,7 @@ func (b *BeaconState) FinalizedCheckpointEpoch() types.Epoch {
 
 // currentSyncCommittee of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentSyncCommittee() *statepb.SyncCommittee {
+func (b *BeaconState) currentSyncCommittee() *ethpb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -989,7 +988,7 @@ func (b *BeaconState) currentSyncCommittee() *statepb.SyncCommittee {
 
 // nextSyncCommittee of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) nextSyncCommittee() *statepb.SyncCommittee {
+func (b *BeaconState) nextSyncCommittee() *ethpb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -998,7 +997,7 @@ func (b *BeaconState) nextSyncCommittee() *statepb.SyncCommittee {
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
-func (b *BeaconState) CurrentSyncCommittee() (*statepb.SyncCommittee, error) {
+func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -1014,7 +1013,7 @@ func (b *BeaconState) CurrentSyncCommittee() (*statepb.SyncCommittee, error) {
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
-func (b *BeaconState) NextSyncCommittee() (*statepb.SyncCommittee, error) {
+func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -1156,8 +1155,8 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 
 // ProtobufBeaconState transforms an input into beacon state hard fork 1 in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*statepb.BeaconStateAltair, error) {
-	pbState, ok := s.(*statepb.BeaconStateAltair)
+func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateAltair, error) {
+	pbState, ok := s.(*ethpb.BeaconStateAltair)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateAltair")
 	}
@@ -1170,11 +1169,11 @@ func (b *BeaconState) Version() int {
 }
 
 // CopySyncCommittee copies the provided sync committee object.
-func CopySyncCommittee(data *statepb.SyncCommittee) *statepb.SyncCommittee {
+func CopySyncCommittee(data *ethpb.SyncCommittee) *ethpb.SyncCommittee {
 	if data == nil {
 		return nil
 	}
-	return &statepb.SyncCommittee{
+	return &ethpb.SyncCommittee{
 		Pubkeys:         bytesutil.Copy2dBytes(data.Pubkeys),
 		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
 	}
