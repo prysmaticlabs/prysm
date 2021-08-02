@@ -42,38 +42,9 @@ import (
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
 func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
-	currentSyncCommittee, err := s.CurrentSyncCommittee()
+	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
 		return nil, err
-	}
-	if currentSyncCommittee == nil {
-		return nil, errors.New("nil current sync committee in state")
-	}
-	committeeKeys := currentSyncCommittee.Pubkeys
-	if sync.SyncCommitteeBits.Len() > uint64(len(committeeKeys)) {
-		return nil, errors.New("bits length exceeds committee length")
-	}
-	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
-	votedIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
-	didntVoteIndices := make([]types.ValidatorIndex, 0) // No allocation. Expect most votes.
-
-	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
-		vIdx, exists := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
-		// Impossible scenario.
-		if !exists {
-			return nil, errors.New("validator public key does not exist in state")
-		}
-
-		if sync.SyncCommitteeBits.BitAt(i) {
-			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
-			if err != nil {
-				return nil, err
-			}
-			votedKeys = append(votedKeys, pubKey)
-			votedIndices = append(votedIndices, vIdx)
-		} else {
-			didntVoteIndices = append(didntVoteIndices, vIdx)
-		}
 	}
 
 	if err := VerifySyncCommitteeSig(s, votedKeys, sync.SyncCommitteeSignature); err != nil {
@@ -81,6 +52,48 @@ func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) 
 	}
 
 	return ApplySyncRewardsPenalties(s, votedIndices, didntVoteIndices)
+}
+
+// FilterSyncCommitteeVotes filters the validator public keys and indices for the ones that voted and didn't vote.
+func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (
+	votedKeys []bls.PublicKey,
+	votedIndices []types.ValidatorIndex,
+	didntVoteIndices []types.ValidatorIndex,
+	err error) {
+	currentSyncCommittee, err := s.CurrentSyncCommittee()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if currentSyncCommittee == nil {
+		return nil, nil, nil, errors.New("nil current sync committee in state")
+	}
+	committeeKeys := currentSyncCommittee.Pubkeys
+	if sync.SyncCommitteeBits.Len() > uint64(len(committeeKeys)) {
+		return nil, nil, nil, errors.New("bits length exceeds committee length")
+	}
+	votedKeys = make([]bls.PublicKey, 0, len(committeeKeys))
+	votedIndices = make([]types.ValidatorIndex, 0, len(committeeKeys))
+	didntVoteIndices = make([]types.ValidatorIndex, 0) // No allocation. Expect most votes.
+
+	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
+		vIdx, exists := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
+		// Impossible scenario.
+		if !exists {
+			return nil, nil, nil, errors.New("validator public key does not exist in state")
+		}
+
+		if sync.SyncCommitteeBits.BitAt(i) {
+			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			votedKeys = append(votedKeys, pubKey)
+			votedIndices = append(votedIndices, vIdx)
+		} else {
+			didntVoteIndices = append(didntVoteIndices, vIdx)
+		}
+	}
+	return
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.

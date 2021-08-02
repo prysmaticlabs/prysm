@@ -12,6 +12,7 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -161,6 +162,42 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 
 	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
 	require.NoError(t, err)
+}
+
+func TestProcessSyncCommittee_FilterSyncCommitteeVotes(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
+
+	syncBits := bitfield.NewBitvector512()
+	for i := range syncBits {
+		syncBits[i] = 0xAA
+	}
+	syncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits: syncBits,
+	}
+
+	votedKeys, votedIndices, didntVoteIndices, err := altair.FilterSyncCommitteeVotes(beaconState, syncAggregate)
+	require.NoError(t, err)
+	votedMap := make(map[[48]byte]bool)
+	for _, key := range votedKeys {
+		votedMap[bytesutil.ToBytes48(key.Marshal())] = true
+	}
+	require.Equal(t, int(syncBits.Len()/2), len(votedKeys))
+	require.Equal(t, int(syncBits.Len()/2), len(votedIndices))
+	require.Equal(t, int(syncBits.Len()/2), len(didntVoteIndices))
+
+	for i := 0; i < len(syncBits); i++ {
+		if syncBits.BitAt(uint64(i)) {
+			pk := beaconState.PubkeyAtIndex(votedIndices[i])
+			require.DeepEqual(t, true, votedMap[pk])
+		} else {
+			pk := beaconState.PubkeyAtIndex(didntVoteIndices[i])
+			require.DeepEqual(t, false, votedMap[pk])
+		}
+	}
 }
 
 func Test_VerifySyncCommitteeSig(t *testing.T) {
