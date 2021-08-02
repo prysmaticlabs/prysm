@@ -414,6 +414,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 		if destinationState == nil {
 			// When too many updates are done (migration), rarely boltDB behaves weird, and return nil for a key that is present.
 			// this is to not break during those times and continue checking other sates.
+			// similar to this https://github.com/etcd-io/bbolt/issues/95
 			// TIP: use "bucket-contents" sub-command to see the missing state.
 			log.Infof("source: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s", rowCount, sourceState.Slot(), sourceState.Slot()/32, sourceState.NumValidators(), hexutils.BytesToHex(key))
 			failCount++
