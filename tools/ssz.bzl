@@ -5,7 +5,6 @@ load(
 )
 
 def _ssz_go_proto_library_impl(ctx):
-    print(ctx.var.get("ssz"))
     if ctx.var.get("ssz"):
         fail("--define=ssz=<value> is no longer supported, please use --//proto:network=<value>")
 
