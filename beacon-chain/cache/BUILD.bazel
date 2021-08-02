@@ -10,6 +10,7 @@ go_library(
         "committees.go",
         "common.go",
         "doc.go",
+        "error.go",
         "proposer_indices_type.go",
         "skip_slot_cache.go",
         "subnet_ids.go",
@@ -17,10 +18,12 @@ go_library(
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",
             "proposer_indices_disabled.go",
+            "sync_committee_disabled.go",
         ],
         "//conditions:default": [
             "committee.go",
             "proposer_indices.go",
+            "sync_committee.go",
         ],
     }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
