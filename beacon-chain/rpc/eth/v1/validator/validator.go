@@ -8,8 +8,10 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -238,7 +240,67 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
 func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.SubmitBeaconCommitteeSubscription")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Verify validators at the beginning to return early if request is invalid.
+	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	for i, sub := range req.Data {
+		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
+		if outOfRangeErr, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
+		}
+		validators[i] = val
+	}
+
+	fetchValsLen := func(slot types.Slot) (uint64, error) {
+		wantedEpoch := helpers.SlotToEpoch(slot)
+		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		if err != nil {
+			return 0, err
+		}
+		return uint64(len(vals)), nil
+	}
+
+	// Request the head validator indices of epoch represented by the first requested slot.
+	currValsLen, err := fetchValsLen(req.Data[0].Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
+	}
+	currEpoch := helpers.SlotToEpoch(req.Data[0].Slot)
+
+	for i, sub := range req.Data {
+		// If epoch has changed, re-request active validators length
+		if currEpoch != helpers.SlotToEpoch(sub.Slot) {
+			currValsLen, err = fetchValsLen(sub.Slot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
+			}
+			currEpoch = helpers.SlotToEpoch(sub.Slot)
+		}
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
+		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		if sub.IsAggregator {
+			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+			valStatus, err := rpchelpers.ValidatorStatus(validators[i], currEpoch)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
+			}
+			pubkey := validators[i].PublicKey()
+			vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
@@ -306,4 +368,18 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 	}
 
 	return s, nil
+}
+
+// Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
+func v1ValidatorStatusToV1Alpha1(valStatus v1.ValidatorStatus) v1alpha1.ValidatorStatus {
+	switch valStatus {
+	case v1.ValidatorStatus_ACTIVE:
+		return v1alpha1.ValidatorStatus_ACTIVE
+	case v1.ValidatorStatus_PENDING:
+		return v1alpha1.ValidatorStatus_PENDING
+	case v1.ValidatorStatus_WITHDRAWAL:
+		return v1alpha1.ValidatorStatus_EXITED
+	default:
+		return v1alpha1.ValidatorStatus_UNKNOWN_STATUS
+	}
 }
