@@ -320,12 +320,6 @@ func printBucketStat(statsC <-chan *bucketStat, doneC chan<- bool) {
 
 func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 	for mst := range stateC {
-		if mst.state == nil {
-			log.Infof("---- row = %04d  ----", mst.rowCount)
-			log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
-			log.Infof("value                         : not found")
-			continue
-		}
 		st := mst.state
 		log.Infof("---- row = %04d, slot = %8d, epoch = %8d, key = %s ----", mst.rowCount, st.Slot(), st.Slot()/params.BeaconConfig().SlotsPerEpoch, hexutils.BytesToHex(mst.key))
 		log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
@@ -427,24 +421,9 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.Fatalf("could not get destination db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
 		}
 		if destinationState == nil {
-			// When too many updates are done (migration), rarely boltDB behaves weird, and return nil for a key that is present.
-			// this is to not break during those times and continue checking other sates.
-			// similar to this https://github.com/etcd-io/bbolt/issues/95
-			// TIP: use "bucket-contents" sub-command to see the missing state.
 			log.Infof("could not find state in migrated DB: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s",
 				rowCount, sourceState.Slot(), sourceState.Slot()/params.BeaconConfig().SlotsPerEpoch, sourceState.NumValidators(), hexutils.BytesToHex(key))
 			failCount++
-
-			for _, missingKey := range destStateKeys {
-				found := false
-				if bytes.Equal(key, missingKey) {
-					found = true
-				}
-				if found {
-					log.Info("found the missing key in dest keys")
-				}
-			}
-
 			continue
 		}
 
@@ -463,7 +442,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
 	}
-	log.Infof("number of not matching states: %d", failCount)
+	log.Infof("number of state that did not match: %d", failCount)
 }
 
 func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
