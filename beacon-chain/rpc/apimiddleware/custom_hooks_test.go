@@ -76,6 +76,54 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 	})
 }
 
+func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
+		}
+		unwrappedSubs := []*beaconCommitteeSubscribeJson{{
+			ValidatorIndex:   "1",
+			CommitteeIndex:   "1",
+			CommitteesAtSlot: "1",
+			Slot:             "1",
+			IsAggregator:     true,
+		}}
+		unwrappedSubsJson, err := json.Marshal(unwrappedSubs)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedSubsJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrappedAggss := &submitBeaconCommitteeSubscriptionsRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggss))
+		require.Equal(t, 1, len(wrappedAggss.Data), "wrong number of wrapped items")
+		assert.Equal(t, "1", wrappedAggss.Data[0].ValidatorIndex)
+		assert.Equal(t, "1", wrappedAggss.Data[0].CommitteeIndex)
+		assert.Equal(t, "1", wrappedAggss.Data[0].CommitteesAtSlot)
+		assert.Equal(t, "1", wrappedAggss.Data[0].Slot)
+		assert.Equal(t, true, wrappedAggss.Data[0].IsAggregator)
+	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
+}
+
 func TestPrepareGraffiti(t *testing.T) {
 	endpoint := gateway.Endpoint{
 		PostRequest: &beaconBlockContainerJson{
