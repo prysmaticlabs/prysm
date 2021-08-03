@@ -668,6 +668,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	}
 
 	t.Run("Single subscription", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
 		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
 			Data: []*v1.BeaconCommitteeSubscribe{
 				{
@@ -686,6 +687,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	})
 
 	t.Run("Multiple subscriptions", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
 		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
 			Data: []*v1.BeaconCommitteeSubscribe{
 				{
@@ -709,6 +711,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	})
 
 	t.Run("Is aggregator", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
 		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
 			Data: []*v1.BeaconCommitteeSubscribe{
 				{
