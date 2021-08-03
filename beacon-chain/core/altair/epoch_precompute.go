@@ -20,7 +20,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	pValidators := make([]*precompute.Validator, st.NumValidators())
 	bal := &precompute.Balance{}
 	prevEpoch := helpers.PrevEpoch(st)
-
+	currentEpoch := helpers.CurrentEpoch(st)
 	inactivityScores, err := st.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -33,7 +33,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	}
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
+		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		pVal := &precompute.Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
@@ -41,7 +41,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 			InactivityScore:              inactivityScores[idx],
 		}
 		// Validator active current epoch
-		if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(st)) {
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			pVal.IsActiveCurrentEpoch = true
 			bal.ActiveCurrentEpoch += val.EffectiveBalance()
 		}
@@ -60,7 +60,13 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 }
 
 // ProcessInactivityScores of beacon chain. This updates inactivity scores of beacon chain and
-// updates the precompute validator struct for later processing.
+// updates the precompute validator struct for later processing. The inactivity scores work as following:
+// For fully inactive validators and perfect active validators, the effect is the same as before Altair.
+// For a validator is inactive and the chain fails to finalize, the inactivity score increases by a fixed number, the total loss after N epochs is proportional to N**2/2.
+// For imperfectly active validators. The inactivity score's behavior is specified by this function:
+//    If a validator fails to submit an attestation with the correct target, their inactivity score goes up by 4.
+//    If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
+//    If the chain has recently finalized, each validator's score drops by 16.
 func ProcessInactivityScores(
 	ctx context.Context,
 	state state.BeaconState,
