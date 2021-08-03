@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	MaxUint = ^uint(0)
+	MaxUint64 = ^uint64(0)
 )
 
 var (
@@ -361,8 +361,8 @@ func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- 
 
 func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	// get the keys within the supplied limit for the given bucket.
-	souceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), uint64(MaxUint))
-	destStateKeys, _ := keysOfBucket(destDbNameWithPath, []byte("state"), uint64(MaxUint))
+	souceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), MaxUint64)
+	destStateKeys, _ := keysOfBucket(destDbNameWithPath, []byte("state"), MaxUint64)
 
 	if len(destStateKeys) < len(souceStateKeys) {
 		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(souceStateKeys), len(destStateKeys))
