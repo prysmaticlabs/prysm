@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
+        "block.go",
         "deposit.go",
         "epoch_precompute.go",
         "reward.go",
@@ -18,6 +19,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
@@ -35,6 +37,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_test.go",
+        "block_test.go",
         "deposit_fuzz_test.go",
         "deposit_test.go",
         "epoch_precompute_test.go",
@@ -45,6 +48,7 @@ go_test(
     deps = [
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -57,5 +61,6 @@ go_test(
         "//shared/trieutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
