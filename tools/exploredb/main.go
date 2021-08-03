@@ -23,13 +23,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
-	MaxUint64 = ^uint64(0)
+	MaxUint64         = ^uint64(0)
+	maxSlotsToDisplay = 2000000
 )
 
 var (
@@ -250,6 +252,7 @@ func readBucketStat(ctx context.Context, dbNameWithPath string, statsC chan<- *b
 }
 
 func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState, keys [][]byte, sizes []uint64) {
+	stateMap := make(map[uint64]*modifiedState)
 	for rowCount, key := range keys {
 		st, stateErr := db.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
@@ -262,7 +265,13 @@ func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState,
 			valueSize: sizes[rowCount],
 			rowCount:  uint64(rowCount),
 		}
-		stateC <- mst
+		stateMap[uint64(st.Slot())] = mst
+	}
+
+	for i := uint64(0); i < maxSlotsToDisplay; i++ {
+		if _, ok := stateMap[i]; ok {
+			stateC <- stateMap[i]
+		}
 	}
 	close(stateC)
 }
@@ -311,8 +320,14 @@ func printBucketStat(statsC <-chan *bucketStat, doneC chan<- bool) {
 
 func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 	for mst := range stateC {
+		if mst.state == nil {
+			log.Infof("---- row = %04d  ----", mst.rowCount)
+			log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
+			log.Infof("value                         : not found")
+			continue
+		}
 		st := mst.state
-		log.Infof("---- row = %04d ----", mst.rowCount)
+		log.Infof("---- row = %04d, slot = %8d, epoch = %8d, key = %s ----", mst.rowCount, st.Slot(), st.Slot()/params.BeaconConfig().SlotsPerEpoch, hexutils.BytesToHex(mst.key))
 		log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
 		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
 		t := time.Unix(int64(st.GenesisTime()), 0)
@@ -361,11 +376,11 @@ func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- 
 
 func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	// get the keys within the supplied limit for the given bucket.
-	souceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), MaxUint64)
+	sourceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), MaxUint64)
 	destStateKeys, _ := keysOfBucket(destDbNameWithPath, []byte("state"), MaxUint64)
 
-	if len(destStateKeys) < len(souceStateKeys) {
-		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(souceStateKeys), len(destStateKeys))
+	if len(destStateKeys) < len(sourceStateKeys) {
+		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(sourceStateKeys), len(destStateKeys))
 	}
 
 	// create the source and destination KV stores.
@@ -402,7 +417,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 
 	ctx := context.Background()
 	failCount := 0
-	for rowCount, key := range souceStateKeys {
+	for rowCount, key := range sourceStateKeys[910:] {
 		sourceState, stateErr := sourceDB.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
 			log.Fatalf("could not get from source db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
@@ -416,8 +431,20 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			// this is to not break during those times and continue checking other sates.
 			// similar to this https://github.com/etcd-io/bbolt/issues/95
 			// TIP: use "bucket-contents" sub-command to see the missing state.
-			log.Infof("source: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s", rowCount, sourceState.Slot(), sourceState.Slot()/32, sourceState.NumValidators(), hexutils.BytesToHex(key))
+			log.Infof("could not find state in migrated DB: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s",
+				rowCount, sourceState.Slot(), sourceState.Slot()/params.BeaconConfig().SlotsPerEpoch, sourceState.NumValidators(), hexutils.BytesToHex(key))
 			failCount++
+
+			for _, missingKey := range destStateKeys {
+				found := false
+				if bytes.Equal(key, missingKey) {
+					found = true
+				}
+				if found {
+					log.Info("found the missing key in dest keys")
+				}
+			}
+
 			continue
 		}
 
