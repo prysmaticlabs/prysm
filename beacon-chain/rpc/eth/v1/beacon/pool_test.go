@@ -855,23 +855,6 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	attInvalidTarget := &ethpb.Attestation{
-		AggregationBits: b,
-		Data: &ethpb.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: 99,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
 	attInvalidSignature := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
@@ -888,40 +871,34 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	// Don't sign attInvalidSignature.
-	for _, att := range []*ethpb.Attestation{attValid, attInvalidTarget} {
-		sb, err := helpers.ComputeDomainAndSign(
-			state,
-			helpers.SlotToEpoch(att.Data.Slot),
-			att.Data,
-			params.BeaconConfig().DomainBeaconAttester,
-			keys[0],
-		)
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		att.Signature = sig.Marshal()
-	}
+	sb, err := helpers.ComputeDomainAndSign(
+		state,
+		helpers.SlotToEpoch(attValid.Data.Slot),
+		attValid.Data,
+		params.BeaconConfig().DomainBeaconAttester,
+		keys[0],
+	)
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	attValid.Signature = sig.Marshal()
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		HeadFetcher:      chainService,
-		ChainInfoFetcher: chainService,
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{attValid, attInvalidTarget, attInvalidSignature},
+		Data: []*ethpb.Attestation{attValid, attInvalidSignature},
 	})
 	require.ErrorContains(t, "One or more attestations failed validation", err)
-	savedAtts := s.AttestationsPool.AggregatedAttestations()
-	require.Equal(t, 1, len(savedAtts))
 	expectedAtt, err := attValid.HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt, err := savedAtts[0].HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, expectedAtt, actualAtt)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	require.Equal(t, 1, len(broadcaster.BroadcastAttestations))
 	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
