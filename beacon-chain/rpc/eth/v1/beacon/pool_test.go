@@ -906,7 +906,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
 }
 
-func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
+func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
@@ -948,30 +948,21 @@ func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
 				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: 99,
+				Epoch: 1,
 				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: make([]byte, 96),
+		Signature: nil,
 	}
 
-	sb, err := helpers.ComputeDomainAndSign(
-		state,
-		helpers.SlotToEpoch(att.Data.Slot),
-		att.Data,
-		params.BeaconConfig().DomainBeaconAttester,
-		keys[0],
-	)
-	require.NoError(t, err)
-	sig, err := bls.SignatureFromBytes(sb)
-	require.NoError(t, err)
-	att.Signature = sig.Marshal()
-
+	chain := &chainMock.ChainService{State: state}
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chain,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
+		HeadFetcher:       chain,
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
@@ -985,7 +976,7 @@ func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
 	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 	assert.DeepEqual(
 		t,
-		[]string{"{\"failures\":[{\"index\":0,\"message\":\"expected target epoch (99) to be the previous epoch (0) or the current epoch (1)\"}]}"},
+		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: signature must be 96 bytes\"}]}"},
 		v,
 	)
 }
