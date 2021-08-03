@@ -19,7 +19,9 @@ go_test(
     srcs = ["validator_status_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//proto/migration:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

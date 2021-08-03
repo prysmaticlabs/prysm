@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -138,7 +140,9 @@ func Test_ValidatorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ValidatorStatus(tt.args.validator, tt.args.epoch)
+			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			require.NoError(t, err)
+			got, err := ValidatorStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("validatorStatus() got = %v, want %v", got, tt.want)
@@ -274,7 +278,9 @@ func Test_ValidatorSubStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ValidatorSubStatus(tt.args.validator, tt.args.epoch)
+			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			require.NoError(t, err)
+			got, err := ValidatorSubStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("validatorSubStatus() got = %v, want %v", got, tt.want)
