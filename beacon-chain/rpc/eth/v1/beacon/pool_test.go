@@ -10,6 +10,7 @@ import (
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -779,31 +780,30 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		HeadFetcher:      chainService,
-		ChainInfoFetcher: chainService,
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
 		Data: []*ethpb.Attestation{att1, att2},
 	})
 	require.NoError(t, err)
-	savedAtts := s.AttestationsPool.AggregatedAttestations()
-	require.Equal(t, 2, len(savedAtts))
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
 	expectedAtt1, err := att1.HashTreeRoot()
 	require.NoError(t, err)
 	expectedAtt2, err := att2.HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt1, err := savedAtts[0].HashTreeRoot()
+	actualAtt1, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt2, err := savedAtts[1].HashTreeRoot()
+	actualAtt2, err := broadcaster.BroadcastAttestations[1].HashTreeRoot()
 	require.NoError(t, err)
 	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
 		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {

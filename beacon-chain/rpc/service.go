@@ -253,6 +253,7 @@ func (s *Service) Start() {
 		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		BlockNotifier:      s.cfg.BlockNotifier,
+		OperationNotifier:  s.cfg.OperationNotifier,
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,
