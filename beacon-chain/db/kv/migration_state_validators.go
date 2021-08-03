@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -106,7 +105,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 
 				// no validators in state to migrate
 				if len(state.Validators) == 0 {
-					return errors.New(fmt.Sprintf("no validator entries in state 0x%s", hexutil.Encode(keys[index])))
+					return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
 				}
 
 				// move all the validators in this state registry out to a new bucket.
