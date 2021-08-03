@@ -76,6 +76,7 @@ go_test(
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
