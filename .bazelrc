@@ -24,11 +24,6 @@ build --sandbox_default_allow_network=false
 build --workspace_status_command=./scripts/workspace_status.sh
 build --stamp
 
-# Use mainnet protobufs at runtime
-run --define ssz=mainnet
-test --define ssz=mainnet
-build --define ssz=mainnet
-
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
 test --incompatible_strict_action_env
