@@ -85,6 +85,10 @@ func ProcessInactivityScores(
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
 	for i, v := range vals {
+		if !precompute.EligibleForRewards(v) {
+			continue
+		}
+
 		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 			// Decrease inactivity score when validator gets target correct.
 			if v.InactivityScore > 0 {
