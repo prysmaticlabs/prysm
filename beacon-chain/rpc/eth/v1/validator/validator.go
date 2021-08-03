@@ -247,6 +247,10 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	if len(req.Data) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
+	}
+
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
