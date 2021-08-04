@@ -208,7 +208,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 			return nil, err
 		}
 		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
-			state, err = altair.UpgradeToAltair(state)
+			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				return nil, err
 			}

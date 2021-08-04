@@ -24,7 +24,7 @@ import (
 func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 100)
 
-	syncCommittee, err := altair.NextSyncCommittee(beaconState)
+	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 
@@ -65,7 +65,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.NextSyncCommitteeIndices(beaconState)
+	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
 	h := copyutil.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
@@ -111,7 +111,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 100)
 
-	syncCommittee, err := altair.NextSyncCommittee(beaconState)
+	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 
@@ -152,7 +152,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.NextSyncCommitteeIndices(beaconState)
+	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
 	h := copyutil.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
@@ -209,7 +209,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconStateAltair,
 	*ethpb.SignedBeaconBlockAltair) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 32)
-	sCom, err := altair.NextSyncCommittee(beaconState)
+	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	assert.NoError(t, err)
 	assert.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
 	tState := beaconState.Copy()

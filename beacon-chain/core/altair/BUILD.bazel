@@ -19,7 +19,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
         "//spectest:__subpackages__",
-        "//validator:__subpackages__",
+        "//validator/client:__pkg__",
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

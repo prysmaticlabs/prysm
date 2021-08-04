@@ -278,7 +278,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-						if !altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if !isAggregator {
 							msg.Message.AggregatorIndex = idx
 							break
 						}
@@ -332,7 +334,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if !isAggregator {
 							msg.Message.AggregatorIndex = idx
 							break
 						}
@@ -396,7 +400,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if isAggregator {
 							infiniteSig := [96]byte{0xC0}
 							pubkey = keys[idx].PublicKey().Marshal()
 							msg.Message.AggregatorIndex = idx
@@ -471,7 +477,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if isAggregator {
 							infiniteSig := [96]byte{0xC0}
 							junkRoot := [32]byte{'A'}
 							badSig := keys[idx].Sign(junkRoot[:])
@@ -552,8 +560,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-
-						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if isAggregator {
 							infiniteSig := [96]byte{0xC0}
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
@@ -639,7 +648,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
-						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if isAggregator {
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
 							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
@@ -728,7 +739,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 
 func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Database) ([32]byte, []bls.SecretKey) {
 	gs, keys := testutil.DeterministicGenesisStateAltair(t, 64)
-	sCom, err := altair.NextSyncCommittee(gs)
+	sCom, err := altair.NextSyncCommittee(ctx, gs)
 	assert.NoError(t, err)
 	assert.NoError(t, gs.SetCurrentSyncCommittee(sCom))
 	assert.NoError(t, beaconDB.SaveGenesisData(context.Background(), gs))

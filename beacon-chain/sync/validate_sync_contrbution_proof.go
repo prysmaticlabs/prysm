@@ -68,7 +68,11 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	// The `contribution_and_proof.selection_proof` selects the validator as an aggregator for the slot.
-	if !altair.IsSyncCommitteeAggregator(m.Message.SelectionProof) {
+	isAggregator, err := altair.IsSyncCommitteeAggregator(m.Message.SelectionProof)
+	if err != nil {
+		return pubsub.ValidationReject
+	}
+	if !isAggregator {
 		return pubsub.ValidationReject
 	}
 

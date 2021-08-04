@@ -728,7 +728,11 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Sl
 		if err != nil {
 			return false, err
 		}
-		if altair.IsSyncCommitteeAggregator(sig) {
+		isAggregator, err := altair.IsSyncCommitteeAggregator(sig)
+		if err != nil {
+			return false, err
+		}
+		if isAggregator {
 			return true, nil
 		}
 	}

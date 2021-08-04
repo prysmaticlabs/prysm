@@ -298,7 +298,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 		// Transition to Altair state.
 		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
-			state, err = altair.UpgradeToAltair(state)
+			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				return nil, err
 			}
