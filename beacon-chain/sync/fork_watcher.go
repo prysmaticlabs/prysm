@@ -97,10 +97,7 @@ func (s *Service) checkForPreviousEpochFork(currEpoch types.Epoch) error {
 				continue
 			}
 			if retDigest == prevDigest {
-				if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
-					log.WithError(err).Error("Could not unregister topic validator")
-				}
-				s.subHandler.removeTopic(t)
+				s.unSubscribeFromTopic(t)
 			}
 		}
 	}

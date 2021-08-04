@@ -129,7 +129,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.host = h
 	s.host.RemoveStreamHandler(identify.IDDelta)
-
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub

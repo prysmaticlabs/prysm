@@ -4,11 +4,13 @@ import (
 	"context"
 
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/kr/pretty"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -24,6 +26,11 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	}
 	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
+
+	log.WithFields(logrus.Fields{
+		"topic":   topic,
+		"request": pretty.Sprint(message),
+	}).Tracef("Sending RPC request to peer %s", pid.String())
 
 	// Apply max dial timeout when opening a new stream.
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)

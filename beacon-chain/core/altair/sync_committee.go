@@ -2,6 +2,8 @@ package altair
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -170,7 +172,7 @@ func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
-	if len(sig) != params.BeaconConfig().BLSPubkeyLength {
+	if len(sig) != params.BeaconConfig().BLSSignatureLength {
 		return false, errors.New("incorrect sig length")
 	}
 
@@ -178,4 +180,42 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 	modulo := mathutil.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
 	hashedSig := hashutil.Hash(sig)
 	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
+}
+
+// Validate Sync Message to ensure that the provided slot is valid.
+func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
+	if err := helpers.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
+		return err
+	}
+	messageTime, err := helpers.SlotToTime(uint64(genesisTime.Unix()), slot)
+	if err != nil {
+		return err
+	}
+	currentSlot := helpers.SlotsSince(genesisTime)
+	slotStartTime, err := helpers.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
+	if err != nil {
+		return err
+	}
+
+	lowestSlotBound := slotStartTime.Add(-clockDisparity)
+	currentLowerBound := time.Now().Add(-clockDisparity)
+	// In the event the Slot's start time, is before the
+	// current allowable bound, we set the slot's start
+	// time as the bound.
+	if slotStartTime.Before(currentLowerBound) {
+		lowestSlotBound = slotStartTime
+	}
+
+	lowerBound := lowestSlotBound
+	upperBound := time.Now().Add(clockDisparity)
+	// Verify sync message slot is within the time range.
+	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
+		return fmt.Errorf(
+			"sync message slot %d not within allowable range of %d to %d (current slot)",
+			slot,
+			lowerBound.Unix(),
+			upperBound.Unix(),
+		)
+	}
+	return nil
 }

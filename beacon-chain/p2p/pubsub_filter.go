@@ -7,14 +7,19 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var _ pubsub.SubscriptionFilter = (*Service)(nil)
 
-const pubsubSubscriptionRequestLimit = 100
+// It is set at this limit to handle the possibility
+// of double topic subscriptions at fork boundaries.
+// -> 64 Attestation Subnets * 2.
+// -> 4 Sync Committee Subnets * 2.
+// -> Block,Aggregate,ProposerSlashing,AttesterSlashing,Exits,SyncContribution * 2.
+const pubsubSubscriptionRequestLimit = 200
 
 // CanSubscribe returns true if the topic is of interest and we could subscribe to it.
 func (s *Service) CanSubscribe(topic string) bool {
@@ -37,22 +42,12 @@ func (s *Service) CanSubscribe(topic string) bool {
 		log.WithError(err).Error("Could not determine fork digest")
 		return false
 	}
-	isForkNextEpoch, err := p2putils.IsForkNextEpoch(s.genesisTime, s.genesisValidatorsRoot)
+	digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not determine next fork epoch")
+		log.WithError(err).Error("Could not determine next fork digest")
 		return false
 	}
-	if isForkNextEpoch {
-		currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
-		digest, err := p2putils.ForkDigestFromEpoch(currEpoch+1, s.genesisValidatorsRoot)
-		if err != nil {
-			log.WithError(err).Error("Could not determine next fork digest")
-			return false
-		}
-		if parts[2] != fmt.Sprintf("%x", fd) && parts[2] != fmt.Sprintf("%x", digest) {
-			return false
-		}
-	} else if parts[2] != fmt.Sprintf("%x", fd) {
+	if parts[2] != fmt.Sprintf("%x", fd) && parts[2] != fmt.Sprintf("%x", digest) {
 		return false
 	}
 	if parts[4] != encoder.ProtocolSuffixSSZSnappy {
