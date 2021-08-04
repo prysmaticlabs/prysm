@@ -206,28 +206,29 @@ type aggregateAttestationResponseJson struct {
 	Data *attestationJson `json:"data"`
 }
 
+// submitAggregateAndProofsRequestJson is used in /validator/aggregate_and_proofs API endpoint.
+type submitAggregateAndProofsRequestJson struct {
+	Data []*signedAggregateAttestationAndProofJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------
 
-// checkpointJson is a JSON representation of a checkpoint.
 type checkpointJson struct {
 	Epoch string `json:"epoch"`
 	Root  string `json:"root" hex:"true"`
 }
 
-// blockRootContainerJson is a JSON representation of a block root container.
 type blockRootContainerJson struct {
 	Root string `json:"root" hex:"true"`
 }
 
-// beaconBlockContainerJson is a JSON representation of a beacon block container.
 type beaconBlockContainerJson struct {
 	Message   *beaconBlockJson `json:"message"`
 	Signature string           `json:"signature" hex:"true"`
 }
 
-// beaconBlockJson is a JSON representation of a beacon block.
 type beaconBlockJson struct {
 	Slot          string               `json:"slot"`
 	ProposerIndex string               `json:"proposer_index"`
@@ -236,7 +237,6 @@ type beaconBlockJson struct {
 	Body          *beaconBlockBodyJson `json:"body"`
 }
 
-// beaconBlockBodyJson is a JSON representation of a beacon block body.
 type beaconBlockBodyJson struct {
 	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
 	Eth1Data          *eth1DataJson              `json:"eth1_data"`
@@ -248,26 +248,22 @@ type beaconBlockBodyJson struct {
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 }
 
-// blockHeaderContainerJson is a JSON representation of a block header container.
 type blockHeaderContainerJson struct {
 	Root      string                          `json:"root" hex:"true"`
 	Canonical bool                            `json:"canonical"`
 	Header    *beaconBlockHeaderContainerJson `json:"header"`
 }
 
-// beaconBlockHeaderContainerJson is a JSON representation of a beacon block header container.
 type beaconBlockHeaderContainerJson struct {
 	Message   *beaconBlockHeaderJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
 }
 
-// signedBeaconBlockHeaderJson is a JSON representation of a signed beacon block header.
 type signedBeaconBlockHeaderJson struct {
 	Header    *beaconBlockHeaderJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
 }
 
-// beaconBlockHeaderJson is a JSON representation of a beacon block header.
 type beaconBlockHeaderJson struct {
 	Slot          string `json:"slot"`
 	ProposerIndex string `json:"proposer_index"`
@@ -276,40 +272,34 @@ type beaconBlockHeaderJson struct {
 	BodyRoot      string `json:"body_root" hex:"true"`
 }
 
-// eth1DataJson is a JSON representation of eth1data.
 type eth1DataJson struct {
 	DepositRoot  string `json:"deposit_root" hex:"true"`
 	DepositCount string `json:"deposit_count"`
 	BlockHash    string `json:"block_hash" hex:"true"`
 }
 
-// proposerSlashingJson is a JSON representation of a proposer slashing.
 type proposerSlashingJson struct {
 	Header_1 *signedBeaconBlockHeaderJson `json:"signed_header_1"`
 	Header_2 *signedBeaconBlockHeaderJson `json:"signed_header_2"`
 }
 
-// attesterSlashingJson is a JSON representation of an attester slashing.
 type attesterSlashingJson struct {
 	Attestation_1 *indexedAttestationJson `json:"attestation_1"`
 	Attestation_2 *indexedAttestationJson `json:"attestation_2"`
 }
 
-// indexedAttestationJson is a JSON representation of an indexed attestation.
 type indexedAttestationJson struct {
 	AttestingIndices []string             `json:"attesting_indices"`
 	Data             *attestationDataJson `json:"data"`
 	Signature        string               `json:"signature" hex:"true"`
 }
 
-// attestationJson is a JSON representation of an attestation.
 type attestationJson struct {
 	AggregationBits string               `json:"aggregation_bits" hex:"true"`
 	Data            *attestationDataJson `json:"data"`
 	Signature       string               `json:"signature" hex:"true"`
 }
 
-// attestationDataJson is a JSON representation of attestation data.
 type attestationDataJson struct {
 	Slot            string          `json:"slot"`
 	CommitteeIndex  string          `json:"index"`
@@ -318,13 +308,11 @@ type attestationDataJson struct {
 	Target          *checkpointJson `json:"target"`
 }
 
-// depositJson is a JSON representation of a deposit.
 type depositJson struct {
 	Proof []string          `json:"proof" hex:"true"`
 	Data  *deposit_DataJson `json:"data"`
 }
 
-// deposit_DataJson is a JSON representation of deposit data.
 type deposit_DataJson struct {
 	PublicKey             string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials string `json:"withdrawal_credentials" hex:"true"`
@@ -332,19 +320,16 @@ type deposit_DataJson struct {
 	Signature             string `json:"signature" hex:"true"`
 }
 
-// signedVoluntaryExitJson is a JSON representation of a signed voluntary exit.
 type signedVoluntaryExitJson struct {
 	Exit      *voluntaryExitJson `json:"message"`
 	Signature string             `json:"signature" hex:"true"`
 }
 
-// voluntaryExitJson is a JSON representation of a voluntary exit.
 type voluntaryExitJson struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
 }
 
-// identityJson is a JSON representation of a peer's identity.
 type identityJson struct {
 	PeerId             string        `json:"peer_id"`
 	Enr                string        `json:"enr"`
@@ -353,13 +338,11 @@ type identityJson struct {
 	Metadata           *metadataJson `json:"metadata"`
 }
 
-// metadataJson is a JSON representation of p2p metadata.
 type metadataJson struct {
 	SeqNumber string `json:"seq_number"`
 	Attnets   string `json:"attnets" hex:"true"`
 }
 
-// peerJson is a JSON representation of a peer.
 type peerJson struct {
 	PeerId    string `json:"peer_id"`
 	Enr       string `json:"enr"`
@@ -368,12 +351,10 @@ type peerJson struct {
 	Direction string `json:"direction" enum:"true"`
 }
 
-// versionJson is a JSON representation of the system's version.
 type versionJson struct {
 	Version string `json:"version"`
 }
 
-// beaconStateJson is a JSON representation of the beacon state.
 type beaconStateJson struct {
 	GenesisTime                 string                    `json:"genesis_time"`
 	GenesisValidatorsRoot       string                    `json:"genesis_validators_root" hex:"true"`
@@ -398,14 +379,12 @@ type beaconStateJson struct {
 	FinalizedCheckpoint         *checkpointJson           `json:"finalized_checkpoint"`
 }
 
-// forkJson is a JSON representation of a fork.
 type forkJson struct {
 	PreviousVersion string `json:"previous_version" hex:"true"`
 	CurrentVersion  string `json:"current_version" hex:"true"`
 	Epoch           string `json:"epoch"`
 }
 
-// validatorContainerJson is a JSON representation of a validator container.
 type validatorContainerJson struct {
 	Index     string         `json:"index"`
 	Balance   string         `json:"balance"`
@@ -413,7 +392,6 @@ type validatorContainerJson struct {
 	Validator *validatorJson `json:"validator"`
 }
 
-// validatorJson is a JSON representation of a validator.
 type validatorJson struct {
 	PublicKey                  string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials" hex:"true"`
@@ -425,20 +403,17 @@ type validatorJson struct {
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
 }
 
-// validatorBalanceJson is a JSON representation of a validator's balance.
 type validatorBalanceJson struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
 }
 
-// committeeJson is a JSON representation of a committee
 type committeeJson struct {
 	Index      string   `json:"index"`
 	Slot       string   `json:"slot"`
 	Validators []string `json:"validators"`
 }
 
-// pendingAttestationJson is a JSON representation of a pending attestation.
 type pendingAttestationJson struct {
 	AggregationBits string               `json:"aggregation_bits" hex:"true"`
 	Data            *attestationDataJson `json:"data"`
@@ -446,26 +421,22 @@ type pendingAttestationJson struct {
 	ProposerIndex   string               `json:"proposer_index"`
 }
 
-// forkChoiceHeadJson is a JSON representation of a fork choice head.
 type forkChoiceHeadJson struct {
 	Root string `json:"root" hex:"true"`
 	Slot string `json:"slot"`
 }
 
-// depositContractJson is a JSON representation of the deposit contract.
 type depositContractJson struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
 }
 
-// syncInfoJson is a JSON representation of the sync info.
 type syncInfoJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
 }
 
-// attesterDutyJson is a JSON representation of an attester duty.
 type attesterDutyJson struct {
 	Pubkey                  string `json:"pubkey" hex:"true"`
 	ValidatorIndex          string `json:"validator_index"`
@@ -476,11 +447,21 @@ type attesterDutyJson struct {
 	Slot                    string `json:"slot"`
 }
 
-// proposerDutyJson is a JSON representation of a proposer duty.
 type proposerDutyJson struct {
 	Pubkey         string `json:"pubkey" hex:"true"`
 	ValidatorIndex string `json:"validator_index"`
 	Slot           string `json:"slot"`
+}
+
+type signedAggregateAttestationAndProofJson struct {
+	Message   *aggregateAttestationAndProofJson `json:"message"`
+	Signature string                            `json:"signature" hex:"true"`
+}
+
+type aggregateAttestationAndProofJson struct {
+	AggregatorIndex string           `json:"aggregator_index"`
+	Aggregate       *attestationJson `json:"aggregate"`
+	SelectionProof  string           `json:"selection_proof" hex:"true"`
 }
 
 //----------------

@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v1alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -81,6 +82,61 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
+
+	// check if all the validator entries are still intact in the validator entry bucket.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+			require.NotEqual(t, 0, len(data))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
+	db := setupDB(t)
+
+	// enable historical state representation flag to test this
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnableHistoricalSpaceRepresentation: true,
+	})
+	defer resetCfg()
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	stateValidators := validators(10)
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(100))
+	require.NoError(t, st.SetValidators(stateValidators))
+
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st, r))
+	assert.Equal(t, true, db.HasState(context.Background(), r))
+
+	// check if the state is in cache
+	for i := 0; i < len(stateValidators); i++ {
+		hash, hashErr := stateValidators[i].HashTreeRoot()
+		assert.NoError(t, hashErr)
+
+		data, ok := db.validatorEntryCache.Get(string(hash[:]))
+		assert.Equal(t, true, ok)
+		require.NotNil(t, data)
+
+		valEntry, vType := data.(*v1alpha.Validator)
+		assert.Equal(t, true, vType)
+		require.NotNil(t, valEntry)
+
+		require.DeepSSZEqual(t, stateValidators[i], valEntry, "validator entry is not matching")
+	}
 
 	// check if all the validator entries are still intact in the validator entry bucket.
 	err = db.db.Update(func(tx *bolt.Tx) error {

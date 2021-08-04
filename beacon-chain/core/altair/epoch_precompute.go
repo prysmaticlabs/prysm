@@ -22,7 +22,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	pValidators := make([]*precompute.Validator, st.NumValidators())
 	bal := &precompute.Balance{}
 	prevEpoch := helpers.PrevEpoch(st)
-
+	currentEpoch := helpers.CurrentEpoch(st)
 	inactivityScores, err := st.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -35,7 +35,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	}
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
+		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		pVal := &precompute.Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
@@ -43,7 +43,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 			InactivityScore:              inactivityScores[idx],
 		}
 		// Validator active current epoch
-		if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(st)) {
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			pVal.IsActiveCurrentEpoch = true
 			bal.ActiveCurrentEpoch += val.EffectiveBalance()
 		}
@@ -62,13 +62,20 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 }
 
 // ProcessInactivityScores of beacon chain. This updates inactivity scores of beacon chain and
-// updates the precompute validator struct for later processing.
+// updates the precompute validator struct for later processing. The inactivity scores work as following:
+// For fully inactive validators and perfect active validators, the effect is the same as before Altair.
+// For a validator is inactive and the chain fails to finalize, the inactivity score increases by a fixed number, the total loss after N epochs is proportional to N**2/2.
+// For imperfectly active validators. The inactivity score's behavior is specified by this function:
+//    If a validator fails to submit an attestation with the correct target, their inactivity score goes up by 4.
+//    If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
+//    If the chain has recently finalized, each validator's score drops by 16.
 func ProcessInactivityScores(
 	ctx context.Context,
 	state state.BeaconState,
 	vals []*precompute.Validator,
 ) (state.BeaconState, []*precompute.Validator, error) {
-	if helpers.CurrentEpoch(state) == params.BeaconConfig().GenesisEpoch {
+	cfg := params.BeaconConfig()
+	if helpers.CurrentEpoch(state) == cfg.GenesisEpoch {
 		return state, vals, nil
 	}
 
@@ -77,26 +84,34 @@ func ProcessInactivityScores(
 		return nil, nil, err
 	}
 
+	bias := cfg.InactivityScoreBias
+	recoveryRate := cfg.InactivityScoreRecoveryRate
 	for i, v := range vals {
+		if !precompute.EligibleForRewards(v) {
+			continue
+		}
+
 		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 			// Decrease inactivity score when validator gets target correct.
 			if v.InactivityScore > 0 {
 				score := uint64(1)
+				// Prevents underflow below 0.
 				if score > v.InactivityScore {
 					score = v.InactivityScore
 				}
 				v.InactivityScore -= score
 			}
 		} else {
-			v.InactivityScore += params.BeaconConfig().InactivityScoreBias
+			v.InactivityScore += bias
 		}
+
 		if !helpers.IsInInactivityLeak(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) {
-			score := params.BeaconConfig().InactivityScoreRecoveryRate
+			score := recoveryRate
+			// Prevents underflow below 0.
 			if score > v.InactivityScore {
 				score = v.InactivityScore
 			}
 			v.InactivityScore -= score
-
 		}
 		inactivityScores[i] = v.InactivityScore
 	}
@@ -123,8 +138,12 @@ func ProcessEpochParticipation(
 	if err != nil {
 		return nil, nil, err
 	}
+	cfg := params.BeaconConfig()
+	targetIdx := cfg.TimelyTargetFlagIndex
+	sourceIdx := cfg.TimelySourceFlagIndex
+	headIdx := cfg.TimelyHeadFlagIndex
 	for i, b := range cp {
-		if HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlagIndex) {
+		if HasValidatorFlag(b, targetIdx) {
 			vals[i].IsCurrentEpochTargetAttester = true
 		}
 	}
@@ -133,13 +152,13 @@ func ProcessEpochParticipation(
 		return nil, nil, err
 	}
 	for i, b := range pp {
-		if HasValidatorFlag(b, params.BeaconConfig().TimelySourceFlagIndex) {
+		if HasValidatorFlag(b, sourceIdx) {
 			vals[i].IsPrevEpochAttester = true
 		}
-		if HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlagIndex) {
+		if HasValidatorFlag(b, targetIdx) {
 			vals[i].IsPrevEpochTargetAttester = true
 		}
-		if HasValidatorFlag(b, params.BeaconConfig().TimelyHeadFlagIndex) {
+		if HasValidatorFlag(b, headIdx) {
 			vals[i].IsPrevEpochHeadAttester = true
 		}
 	}

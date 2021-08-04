@@ -41,27 +41,51 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(state state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
-	currentSyncCommittee, err := state.CurrentSyncCommittee()
+func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
+	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := VerifySyncCommitteeSig(s, votedKeys, sync.SyncCommitteeSignature); err != nil {
+		return nil, err
+	}
+
+	return ApplySyncRewardsPenalties(s, votedIndices, didntVoteIndices)
+}
+
+// FilterSyncCommitteeVotes filters the validator public keys and indices for the ones that voted and didn't vote.
+func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (
+	votedKeys []bls.PublicKey,
+	votedIndices []types.ValidatorIndex,
+	didntVoteIndices []types.ValidatorIndex,
+	err error) {
+	currentSyncCommittee, err := s.CurrentSyncCommittee()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if currentSyncCommittee == nil {
+		return nil, nil, nil, errors.New("nil current sync committee in state")
+	}
 	committeeKeys := currentSyncCommittee.Pubkeys
-	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
-	votedIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
-	didntVoteIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
-	// Verify sync committee signature.
+	if sync.SyncCommitteeBits.Len() > uint64(len(committeeKeys)) {
+		return nil, nil, nil, errors.New("bits length exceeds committee length")
+	}
+	votedKeys = make([]bls.PublicKey, 0, len(committeeKeys))
+	votedIndices = make([]types.ValidatorIndex, 0, len(committeeKeys))
+	didntVoteIndices = make([]types.ValidatorIndex, 0) // No allocation. Expect most votes.
+
 	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
-		vIdx, exists := state.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
+		vIdx, exists := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
 		// Impossible scenario.
 		if !exists {
-			return nil, errors.New("validator public key does not exist in state")
+			return nil, nil, nil, errors.New("validator public key does not exist in state")
 		}
 
 		if sync.SyncCommitteeBits.BitAt(i) {
 			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
 			if err != nil {
-				return nil, err
+				return nil, nil, nil, err
 			}
 			votedKeys = append(votedKeys, pubKey)
 			votedIndices = append(votedIndices, vIdx)
@@ -69,62 +93,83 @@ func ProcessSyncAggregate(state state.BeaconStateAltair, sync *ethpb.SyncAggrega
 			didntVoteIndices = append(didntVoteIndices, vIdx)
 		}
 	}
-	ps := helpers.PrevSlot(state.Slot())
-	d, err := helpers.Domain(state.Fork(), helpers.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, state.GenesisValidatorRoot())
+	return
+}
+
+// VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
+func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
+	ps := helpers.PrevSlot(s.Slot())
+	d, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	pbr, err := helpers.BlockRootAtSlot(state, ps)
+	pbr, err := helpers.BlockRootAtSlot(s, ps)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	sszBytes := p2pType.SSZBytes(pbr)
 	r, err := helpers.ComputeSigningRoot(&sszBytes, d)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	sig, err := bls.SignatureFromBytes(sync.SyncCommitteeSignature)
+	sig, err := bls.SignatureFromBytes(syncSig)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if !sig.Eth2FastAggregateVerify(votedKeys, r) {
-		return nil, errors.New("could not verify sync committee signature")
+	if !sig.Eth2FastAggregateVerify(syncKeys, r) {
+		return errors.New("invalid sync committee signature")
 	}
+	return nil
+}
 
-	// Calculate sync committee and proposer rewards
-	activeBalance, err := helpers.TotalActiveBalance(state)
+// ApplySyncRewardsPenalties applies rewards and penalties for proposer and sync committee participants.
+func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
+	activeBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return nil, err
 	}
-	totalActiveIncrements := activeBalance / params.BeaconConfig().EffectiveBalanceIncrement
-	totalBaseRewards := baseRewardPerIncrement(activeBalance) * totalActiveIncrements
-	maxParticipantRewards := totalBaseRewards * params.BeaconConfig().SyncRewardWeight / params.BeaconConfig().WeightDenominator / uint64(params.BeaconConfig().SlotsPerEpoch)
-	participantReward := maxParticipantRewards / params.BeaconConfig().SyncCommitteeSize
-	proposerReward := participantReward * params.BeaconConfig().ProposerWeight / (params.BeaconConfig().WeightDenominator - params.BeaconConfig().ProposerWeight)
+	proposerReward, participantReward, err := SyncRewards(activeBalance)
+	if err != nil {
+		return nil, err
+	}
 
 	// Apply sync committee rewards.
 	earnedProposerReward := uint64(0)
 	for _, index := range votedIndices {
-		if err := helpers.IncreaseBalance(state, index, participantReward); err != nil {
+		if err := helpers.IncreaseBalance(s, index, participantReward); err != nil {
 			return nil, err
 		}
 		earnedProposerReward += proposerReward
 	}
 	// Apply proposer rewards.
-	proposerIndex, err := helpers.BeaconProposerIndex(state)
+	proposerIndex, err := helpers.BeaconProposerIndex(s)
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.IncreaseBalance(state, proposerIndex, earnedProposerReward); err != nil {
+	if err := helpers.IncreaseBalance(s, proposerIndex, earnedProposerReward); err != nil {
 		return nil, err
 	}
-
 	// Apply sync committee penalties.
 	for _, index := range didntVoteIndices {
-		if err := helpers.DecreaseBalance(state, index, participantReward); err != nil {
+		if err := helpers.DecreaseBalance(s, index, participantReward); err != nil {
 			return nil, err
 		}
 	}
 
-	return state, nil
+	return s, nil
+}
+
+// SyncRewards returns the proposer reward and the sync participant reward given the total active balance in state.
+func SyncRewards(activeBalance uint64) (proposerReward uint64, participantReward uint64, err error) {
+	cfg := params.BeaconConfig()
+	totalActiveIncrements := activeBalance / cfg.EffectiveBalanceIncrement
+	baseRewardPerInc, err := BaseRewardPerIncrement(activeBalance)
+	if err != nil {
+		return 0, 0, err
+	}
+	totalBaseRewards := baseRewardPerInc * totalActiveIncrements
+	maxParticipantRewards := totalBaseRewards * cfg.SyncRewardWeight / cfg.WeightDenominator / uint64(cfg.SlotsPerEpoch)
+	participantReward = maxParticipantRewards / cfg.SyncCommitteeSize
+	proposerReward = participantReward * cfg.ProposerWeight / (cfg.WeightDenominator - cfg.ProposerWeight)
+	return
 }

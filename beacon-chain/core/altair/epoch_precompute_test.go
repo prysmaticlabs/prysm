@@ -199,27 +199,6 @@ func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
 	}
 }
 
-func TestProcessInactivityScores_CanProcess(t *testing.T) {
-	s, err := testState()
-	require.NoError(t, err)
-	defaultScore := uint64(5)
-	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
-	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
-	require.NoError(t, err)
-	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
-	require.NoError(t, err)
-	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
-	require.NoError(t, err)
-	inactivityScores, err := s.InactivityScores()
-	require.NoError(t, err)
-	// V0 and V1 didn't vote head. V2 and V3 did.
-	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[0])
-	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[1])
-	require.Equal(t, defaultScore-1, inactivityScores[2])
-	require.Equal(t, defaultScore-1, inactivityScores[3])
-}
-
 func TestProcessRewardsAndPenaltiesPrecompute_GenesisEpoch(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
@@ -247,6 +226,86 @@ func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
 	require.NoError(t, err)
 	_, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, []*precompute.Validator{})
 	require.ErrorContains(t, "validator registries not the same length as state's validator registries", err)
+}
+
+func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+	// V0 and V1 didn't vote head. V2 and V3 did.
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[0])
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[1])
+	require.Equal(t, defaultScore-1, inactivityScores[2])
+	require.Equal(t, defaultScore-1, inactivityScores[3])
+}
+
+func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0), inactivityScores[0])
+	require.Equal(t, uint64(0), inactivityScores[1])
+	require.Equal(t, uint64(0), inactivityScores[2])
+	require.Equal(t, uint64(0), inactivityScores[3])
+}
+
+func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+
+	// v0 is eligible (not active previous epoch, slashed and not withdrawable)
+	validators[0].IsActivePrevEpoch = false
+	validators[0].IsSlashed = true
+	validators[0].IsWithdrawableCurrentEpoch = false
+
+	// v1 is not eligible (not active previous epoch, not slashed and not withdrawable)
+	validators[1].IsActivePrevEpoch = false
+	validators[1].IsSlashed = false
+	validators[1].IsWithdrawableCurrentEpoch = false
+
+	// v2 is not eligible (not active previous epoch, slashed and withdrawable)
+	validators[2].IsActivePrevEpoch = false
+	validators[2].IsSlashed = true
+	validators[2].IsWithdrawableCurrentEpoch = true
+
+	// v3 is eligible (active previous epoch)
+	validators[3].IsActivePrevEpoch = true
+
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0), inactivityScores[0])
+	require.Equal(t, defaultScore, inactivityScores[1]) // Should remain unchanged
+	require.Equal(t, defaultScore, inactivityScores[2]) // Should remain unchanged
+	require.Equal(t, uint64(0), inactivityScores[3])
 }
 
 func testState() (state.BeaconState, error) {

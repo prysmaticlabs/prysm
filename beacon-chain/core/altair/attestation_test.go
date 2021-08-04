@@ -274,7 +274,63 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 	}
 }
 
-func TestValidatorFlag_AddHas(t *testing.T) {
+func TestValidatorFlag_Has(t *testing.T) {
+	tests := []struct {
+		name     string
+		set      uint8
+		expected []uint8
+	}{
+		{name: "none",
+			set:      0,
+			expected: []uint8{},
+		},
+		{
+			name:     "source",
+			set:      1,
+			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex},
+		},
+		{
+			name:     "target",
+			set:      2,
+			expected: []uint8{params.BeaconConfig().TimelyTargetFlagIndex},
+		},
+		{
+			name:     "head",
+			set:      4,
+			expected: []uint8{params.BeaconConfig().TimelyHeadFlagIndex},
+		},
+		{
+			name:     "source, target",
+			set:      3,
+			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex},
+		},
+		{
+			name:     "source, head",
+			set:      5,
+			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
+		},
+		{
+			name:     "target, head",
+			set:      6,
+			expected: []uint8{params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex},
+		},
+		{
+			name:     "source, target, head",
+			set:      7,
+			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, f := range tt.expected {
+				require.Equal(t, true, altair.HasValidatorFlag(tt.set, f))
+			}
+		})
+	}
+}
+
+func TestValidatorFlag_Add(t *testing.T) {
 	tests := []struct {
 		name          string
 		set           []uint8
@@ -298,7 +354,8 @@ func TestValidatorFlag_AddHas(t *testing.T) {
 			expectedTrue:  []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex},
 			expectedFalse: []uint8{params.BeaconConfig().TimelyHeadFlagIndex},
 		},
-		{name: "source, target, head",
+		{
+			name:          "source, target, head",
 			set:           []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
 			expectedTrue:  []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
 			expectedFalse: []uint8{},
