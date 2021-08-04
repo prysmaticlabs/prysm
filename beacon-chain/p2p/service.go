@@ -129,10 +129,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.host = h
 	s.host.RemoveStreamHandler(identify.IDDelta)
-	t, err := pubsub.NewJSONTracer("/home/nishant/randotracer.txt")
-	if err != nil {
-		return nil, err
-	}
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
@@ -147,7 +143,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
-		pubsub.WithEventTracer(t),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
