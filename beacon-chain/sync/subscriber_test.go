@@ -18,11 +18,13 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -280,6 +282,13 @@ func TestStaticSubnets(t *testing.T) {
 }
 
 func Test_wrapAndReportValidation(t *testing.T) {
+	mChain := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{0x01},
+	}
+	fd, err := p2putils.CreateForkDigest(mChain.GenesisTime(), mChain.ValidatorsRoot[:])
+	assert.NoError(t, err)
+	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
 		topic        string
 		v            pubsub.ValidatorEx
@@ -333,7 +342,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 		{
 			name: "validator OK",
 			args: args{
-				topic: "foo",
+				topic: mockTopic,
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
@@ -341,7 +350,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{
 						Topic: func() *string {
-							s := "foo"
+							s := mockTopic
 							return &s
 						}(),
 					},
@@ -371,6 +380,9 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			chainStarted.SetTo(tt.args.chainstarted)
 			s := &Service{
 				chainStarted: chainStarted,
+				cfg: &Config{
+					Chain: mChain,
+				},
 			}
 			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
