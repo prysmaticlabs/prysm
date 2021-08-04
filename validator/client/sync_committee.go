@@ -136,6 +136,14 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			log.Errorf("Could not get sync committee contribution: %v", err)
 			return
 		}
+		if contribution.AggregationBits.Count() == 0 {
+			log.WithFields(logrus.Fields{
+				"slot":   slot,
+				"pubkey": pubKey,
+				"subnet": subnet,
+			}).Warn("Sync contribution for validator has no bits set.")
+			continue
+		}
 
 		contributionAndProof := &ethpb.ContributionAndProof{
 			AggregatorIndex: duty.ValidatorIndex,
