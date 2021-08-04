@@ -1,0 +1,231 @@
+package altair
+
+import (
+	"context"
+	"testing"
+
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+)
+
+func TestInitializeEpochValidators_Ok(t *testing.T) {
+	ffe := params.BeaconConfig().FarFutureEpoch
+	s, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+		// Validator 0 is slashed
+		// Validator 1 is withdrawable
+		// Validator 2 is active prev epoch and current epoch
+		// Validator 3 is active prev epoch
+		Validators: []*ethpb.Validator{
+			{Slashed: true, WithdrawableEpoch: ffe, EffectiveBalance: 100},
+			{EffectiveBalance: 100},
+			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: 100},
+			{WithdrawableEpoch: ffe, ExitEpoch: 1, EffectiveBalance: 100},
+		},
+		InactivityScores: []uint64{0, 1, 2, 3},
+	})
+	require.NoError(t, err)
+	v, b, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	assert.DeepEqual(t, &precompute.Validator{
+		IsSlashed:                    true,
+		CurrentEpochEffectiveBalance: 100,
+		InactivityScore:              0,
+	}, v[0], "Incorrect validator 0 status")
+	assert.DeepEqual(t, &precompute.Validator{
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: 100,
+		InactivityScore:              1,
+	}, v[1], "Incorrect validator 1 status")
+	assert.DeepEqual(t, &precompute.Validator{
+		IsActivePrevEpoch:            true,
+		IsActiveCurrentEpoch:         true,
+		CurrentEpochEffectiveBalance: 100,
+		InactivityScore:              2,
+	}, v[2], "Incorrect validator 2 status")
+	assert.DeepEqual(t, &precompute.Validator{
+		IsActivePrevEpoch:            true,
+		CurrentEpochEffectiveBalance: 100,
+		InactivityScore:              3,
+	}, v[3], "Incorrect validator 3 status")
+
+	wantedBalances := &precompute.Balance{
+		ActiveCurrentEpoch: 100,
+		ActivePrevEpoch:    200,
+	}
+	assert.DeepEqual(t, wantedBalances, b, "Incorrect wanted balance")
+}
+
+func TestInitializeEpochValidators_BadState(t *testing.T) {
+	s, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Validators:       []*ethpb.Validator{{}},
+		InactivityScores: []uint64{},
+	})
+	require.NoError(t, err)
+	_, _, err = InitializeEpochValidators(context.Background(), s)
+	require.ErrorContains(t, "num of validators can't be greater than length of inactivity scores", err)
+}
+
+func TestProcessEpochParticipation(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         true,
+		IsActivePrevEpoch:            true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+	}, validators[0])
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         true,
+		IsActivePrevEpoch:            true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		IsPrevEpochAttester:          true,
+	}, validators[1])
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         true,
+		IsActivePrevEpoch:            true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		IsPrevEpochAttester:          true,
+		IsCurrentEpochTargetAttester: true,
+		IsPrevEpochTargetAttester:    true,
+	}, validators[2])
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         true,
+		IsActivePrevEpoch:            true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		IsPrevEpochAttester:          true,
+		IsCurrentEpochTargetAttester: true,
+		IsPrevEpochTargetAttester:    true,
+		IsPrevEpochHeadAttester:      true,
+	}, validators[3])
+	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance*3, balance.PrevEpochAttested)
+	require.Equal(t, balance.CurrentEpochTargetAttested, params.BeaconConfig().MaxEffectiveBalance*2)
+	require.Equal(t, balance.PrevEpochTargetAttested, params.BeaconConfig().MaxEffectiveBalance*2)
+	require.Equal(t, balance.PrevEpochHeadAttested, params.BeaconConfig().MaxEffectiveBalance*1)
+}
+
+func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+	// V0 and V1 didn't vote head. V2 and V3 did.
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[0])
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[1])
+	require.Equal(t, defaultScore-1, inactivityScores[2])
+	require.Equal(t, defaultScore-1, inactivityScores[3])
+}
+
+func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0), inactivityScores[0])
+	require.Equal(t, uint64(0), inactivityScores[1])
+	require.Equal(t, uint64(0), inactivityScores[2])
+	require.Equal(t, uint64(0), inactivityScores[3])
+}
+
+func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+
+	// v0 is eligible (not active previous epoch, slashed and not withdrawable)
+	validators[0].IsActivePrevEpoch = false
+	validators[0].IsSlashed = true
+	validators[0].IsWithdrawableCurrentEpoch = false
+
+	// v1 is not eligible (not active previous epoch, not slashed and not withdrawable)
+	validators[1].IsActivePrevEpoch = false
+	validators[1].IsSlashed = false
+	validators[1].IsWithdrawableCurrentEpoch = false
+
+	// v2 is not eligible (not active previous epoch, slashed and withdrawable)
+	validators[2].IsActivePrevEpoch = false
+	validators[2].IsSlashed = true
+	validators[2].IsWithdrawableCurrentEpoch = true
+
+	// v3 is eligible (active previous epoch)
+	validators[3].IsActivePrevEpoch = true
+
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0), inactivityScores[0])
+	require.Equal(t, defaultScore, inactivityScores[1]) // Should remain unchanged
+	require.Equal(t, defaultScore, inactivityScores[2]) // Should remain unchanged
+	require.Equal(t, uint64(0), inactivityScores[3])
+}
+
+func testState() (state.BeaconState, error) {
+	generateParticipation := func(flags ...uint8) byte {
+		b := byte(0)
+		for _, flag := range flags {
+			b = AddValidatorFlag(b, flag)
+		}
+		return b
+	}
+	return stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
+		Validators: []*ethpb.Validator{
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+		},
+		CurrentEpochParticipation: []byte{
+			0,
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex),
+		},
+		PreviousEpochParticipation: []byte{
+			0,
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex),
+		},
+		InactivityScores: []uint64{0, 0, 0, 0},
+		Balances:         []uint64{0, 0, 0, 0},
+	})
+}
