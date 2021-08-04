@@ -38,6 +38,13 @@ type Endpoint struct {
 	CustomHandlers     []CustomHandler // Functions that will be executed instead of the default request/response behaviour.
 }
 
+// DefaultEndpoint returns an Endpoint with default configuration, e.g. DefaultErrorJson for error handling.
+func DefaultEndpoint() Endpoint {
+	return Endpoint{
+		Err: &DefaultErrorJson{},
+	}
+}
+
 // QueryParam represents a single query parameter's metadata.
 type QueryParam struct {
 	Name string
