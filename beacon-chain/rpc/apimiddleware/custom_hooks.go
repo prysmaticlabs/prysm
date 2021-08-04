@@ -17,12 +17,12 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
 		atts := make([]*attestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
-			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
 		j := &submitAttestationRequestJson{Data: atts}
 		b, err := json.Marshal(j)
 		if err != nil {
-			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped attestations array")
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}
@@ -35,12 +35,30 @@ func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter,
 	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
 		indices := make([]string, 0)
 		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
-			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
 		j := &attesterDutiesRequestJson{Index: indices}
 		b, err := json.Marshal(j)
 		if err != nil {
-			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped validator indices array")
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
+// https://ethereum.github.io/eth2.0-APIs/#/Validator/publishAggregateAndProofs expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSignedAggregateAndProofArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitAggregateAndProofsRequestJson); ok {
+		data := make([]*signedAggregateAttestationAndProofJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitAggregateAndProofsRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}

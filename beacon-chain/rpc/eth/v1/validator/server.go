@@ -16,5 +16,6 @@ type Server struct {
 	SyncChecker      sync.Checker
 	AttestationsPool attestations.Pool
 	PeerManager      p2p.PeerManager
+	Broadcaster      p2p.Broadcaster
 	V1Alpha1Server   *v1alpha1validator.Server
 }

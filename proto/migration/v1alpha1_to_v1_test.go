@@ -31,6 +31,7 @@ var (
 	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
 	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
 	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
+	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 
@@ -424,4 +425,33 @@ func Test_V1ValidatorToV1Alpha1(t *testing.T) {
 	assert.Equal(t, types.Epoch(11), v1Alpha1Validator.ActivationEpoch)
 	assert.Equal(t, types.Epoch(111), v1Alpha1Validator.ExitEpoch)
 	assert.Equal(t, types.Epoch(1111), v1Alpha1Validator.WithdrawableEpoch)
+}
+
+func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
+	v1Att := &ethpb.SignedAggregateAttestationAndProof{
+		Message: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 1,
+			Aggregate:       testutil.HydrateV1Attestation(&ethpb.Attestation{}),
+			SelectionProof:  selectionProof,
+		},
+		Signature: signature,
+	}
+	v1Alpha1Att := V1SignedAggregateAttAndProofToV1Alpha1(v1Att)
+
+	v1Root, err := v1Att.HashTreeRoot()
+	require.NoError(t, err)
+	v1Alpha1Root, err := v1Alpha1Att.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, v1Alpha1Root)
+}
+
+func Test_V1AttestationToV1Alpha1(t *testing.T) {
+	v1Att := testutil.HydrateV1Attestation(&ethpb.Attestation{})
+	v1Alpha1Att := V1AttToV1Alpha1(v1Att)
+
+	v1Root, err := v1Att.HashTreeRoot()
+	require.NoError(t, err)
+	v1Alpha1Root, err := v1Alpha1Att.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
