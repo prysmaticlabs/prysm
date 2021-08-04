@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -17,7 +16,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -189,11 +187,11 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		err := r2.metaDataHandler(context.Background(), new(interface{}), stream)
-		assert.ErrorContains(t, fmt.Sprintf("stream version of %s doesn't match provided version %s", p2p.SchemaVersionV2, p2p.SchemaVersionV1), err)
+		assert.NoError(t, err)
 	})
 
 	_, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
-	assert.ErrorContains(t, types.ErrGeneric.Error(), err)
+	assert.NoError(t, err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")

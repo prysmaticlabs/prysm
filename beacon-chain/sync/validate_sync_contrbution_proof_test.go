@@ -533,7 +533,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			want: pubsub.ValidationReject,
 		},
 		{
-			name: "Valid Signed Sync Contribution And Proof",
+			name: "Invalid Signed Sync Contribution And Proof - Zero Bits Set",
 			svc: NewService(context.Background(), &Config{
 				P2P:               mockp2p.NewTestP2P(t),
 				InitialSync:       &mockSync.Sync{IsSyncing: false},
@@ -592,6 +592,102 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					SyncSelectionProofDomain:    d,
 					SyncContributionProofDomain: cd,
 					SyncCommitteeDomain:         make([]byte, 32),
+				}
+				assert.NoError(t, s.initCaches())
+				return s
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: defaultTopic,
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &ethpb.SyncCommitteeContribution{
+							Slot:              1,
+							SubcommitteeIndex: 1,
+							BlockRoot:         params.BeaconConfig().ZeroHash[:],
+							AggregationBits:   bitfield.NewBitvector128(),
+							Signature:         emptySig[:],
+						},
+						SelectionProof: emptySig[:],
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationReject,
+		},
+		{
+			name: "Valid Signed Sync Contribution And Proof - Single Bit Set",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: false},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+				s.cfg.StateGen = stategen.New(db)
+				msg.Message.Contribution.BlockRoot = headRoot[:]
+				s.cfg.DB = db
+				hState, err := db.State(context.Background(), headRoot)
+				assert.NoError(t, err)
+				sc, err := hState.CurrentSyncCommittee()
+				assert.NoError(t, err)
+				cd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				assert.NoError(t, err)
+				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				assert.NoError(t, err)
+				var pubkeys [][]byte
+				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
+					pubkeys = coms
+					assert.NoError(t, err)
+					for _, p := range coms {
+						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						assert.Equal(t, true, ok)
+						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						assert.NoError(t, err)
+						sig := keys[idx].Sign(rt[:])
+						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
+						require.NoError(t, err)
+						if isAggregator {
+							msg.Message.AggregatorIndex = idx
+							msg.Message.SelectionProof = sig.Marshal()
+							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.SubcommitteeIndex = i
+							msg.Message.Contribution.BlockRoot = headRoot[:]
+							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
+							// Only Sign for 1 validator.
+							rawBytes := p2ptypes.SSZBytes(headRoot[:])
+							sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+							assert.NoError(t, err)
+							valIdx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(coms[0]))
+							assert.Equal(t, true, ok)
+							sig = keys[valIdx].Sign(sigRoot[:])
+							msg.Message.Contribution.AggregationBits.SetBitAt(uint64(0), true)
+							msg.Message.Contribution.Signature = sig.Marshal()
+
+							sigRoot, err = helpers.ComputeSigningRoot(msg.Message, cd)
+							assert.NoError(t, err)
+							contrSig := keys[idx].Sign(sigRoot[:])
+							msg.Signature = contrSig.Marshal()
+							break
+						}
+					}
+				}
+
+				pd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				require.NoError(t, err)
+				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+				s.cfg.Chain = &mockChain.ChainService{
+					ValidatorsRoot:              [32]byte{'A'},
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
+					SyncSelectionProofDomain:    pd,
+					SyncContributionProofDomain: cd,
+					SyncCommitteeDomain:         d,
+					SyncCommitteePubkeys:        pubkeys,
 				}
 				assert.NoError(t, s.initCaches())
 				return s

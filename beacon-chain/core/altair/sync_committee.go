@@ -172,7 +172,7 @@ func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
-	if len(sig) != params.BeaconConfig().BLSPubkeyLength {
+	if len(sig) != params.BeaconConfig().BLSSignatureLength {
 		return false, errors.New("incorrect sig length")
 	}
 
