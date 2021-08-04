@@ -144,7 +144,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			PostRequest:        &submitAttestationRequestJson{},
 			Err:                &submitAttestationsErrorJson{},
 			Hooks: gateway.HookCollection{
-				OnPostStart: []gateway.Hook{wrapAttestationsArray},
+				OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapAttestationsArray},
 			},
 		}
 	case "/eth/v1/beacon/pool/attester_slashings":
@@ -239,7 +239,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			RequestURLLiterals: []string{"epoch"},
 			Err:                &gateway.DefaultErrorJson{},
 			Hooks: gateway.HookCollection{
-				OnPostStart: []gateway.Hook{wrapValidatorIndicesArray},
+				OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapValidatorIndicesArray},
 			},
 		}
 	case "/eth/v1/validator/duties/proposer/{epoch}":

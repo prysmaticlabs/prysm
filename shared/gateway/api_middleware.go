@@ -54,7 +54,7 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.Respo
 
 // HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	OnPostStart                               []Hook
+	OnPreDeserializeRequestBodyIntoContainer  []Hook
 	OnPostDeserializeRequestBodyIntoContainer []Hook
 }
 
@@ -90,7 +90,7 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 		}
 
 		if req.Method == "POST" {
-			for _, hook := range endpoint.Hooks.OnPostStart {
+			for _, hook := range endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer {
 				if errJson := hook(*endpoint, w, req); errJson != nil {
 					WriteError(w, errJson, nil)
 					return
