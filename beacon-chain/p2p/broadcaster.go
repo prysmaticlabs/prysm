@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	ssz "github.com/ferranbt/fastssz"
@@ -46,10 +45,6 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	if !ok {
 		traceutil.AnnotateError(span, ErrMessageNotMapped)
 		return ErrMessageNotMapped
-	}
-	if strings.Contains(topic, "beacon_block") {
-		ps := s.pubsub.ListPeers(fmt.Sprintf(topic, forkDigest) + s.Encoding().ProtocolSuffix())
-		log.Infof("topic: %s has %d peers: %v", fmt.Sprintf(topic, forkDigest)+s.Encoding().ProtocolSuffix(), len(ps), ps)
 	}
 	castMsg, ok := msg.(ssz.Marshaler)
 	if !ok {

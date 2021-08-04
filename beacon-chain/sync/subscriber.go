@@ -235,6 +235,20 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationIgnore
 		}
+		retDigest, err := p2p.ExtractGossipDigest(topic)
+		if err != nil {
+			log.WithField("topic", topic).Errorf("Invalid topic format of pubsub topic: %v", err)
+			return pubsub.ValidationIgnore
+		}
+		currDigest, err := s.currentForkDigest()
+		if err != nil {
+			log.WithField("topic", topic).Errorf("Unable to retrieve fork data: %v", err)
+			return pubsub.ValidationIgnore
+		}
+		if currDigest != retDigest {
+			log.WithField("topic", topic).Warnf("Received message from outdated fork digest %#x", retDigest)
+			return pubsub.ValidationIgnore
+		}
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()

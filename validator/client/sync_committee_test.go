@@ -349,6 +349,8 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
+	aggBits := bitfield.NewBitvector128()
+	aggBits.SetBitAt(0, true)
 	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
 		gomock.Any(), // ctx
 		&ethpb.SyncCommitteeContributionRequest{
@@ -359,7 +361,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	).Return(&ethpb.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
 		Signature:       make([]byte, 96),
-		AggregationBits: bitfield.NewBitvector128(),
+		AggregationBits: aggBits,
 	}, nil)
 
 	m.validatorClient.EXPECT().
@@ -425,6 +427,8 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
+	aggBits := bitfield.NewBitvector128()
+	aggBits.SetBitAt(0, true)
 	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
 		gomock.Any(), // ctx
 		&ethpb.SyncCommitteeContributionRequest{
@@ -435,7 +439,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
 		Signature:       make([]byte, 96),
-		AggregationBits: bitfield.NewBitvector128(),
+		AggregationBits: aggBits,
 	}, nil)
 
 	m.validatorClient.EXPECT().
