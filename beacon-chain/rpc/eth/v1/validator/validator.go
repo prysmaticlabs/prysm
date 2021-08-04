@@ -282,7 +282,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 	}
 	currEpoch := helpers.SlotToEpoch(req.Data[0].Slot)
 
-	for i, sub := range req.Data {
+	for _, sub := range req.Data {
 		// If epoch has changed, re-request active validators length
 		if currEpoch != helpers.SlotToEpoch(sub.Slot) {
 			currValsLen, err = fetchValsLen(sub.Slot)
@@ -295,13 +295,16 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
 		if sub.IsAggregator {
 			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
-			valStatus, err := rpchelpers.ValidatorStatus(validators[i], currEpoch)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
-			}
-			pubkey := validators[i].PublicKey()
-			vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
 		}
+	}
+
+	for _, val := range validators {
+		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
+		}
+		pubkey := val.PublicKey()
+		vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
 	}
 
 	return &emptypb.Empty{}, nil
