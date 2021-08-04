@@ -141,7 +141,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) && !s.cfg.Chain.HasInitSyncBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()

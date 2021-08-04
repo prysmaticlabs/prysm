@@ -213,6 +213,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	}
 
 	go messageLoop()
+	log.WithField("topic", topic).Info("Subscribed to topic")
 	return sub
 }
 
@@ -231,12 +232,15 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 		}
 		// Ignore any messages received before chainstart.
 		if s.chainStarted.IsNotSet() {
-			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
 			return pubsub.ValidationIgnore
 		}
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+		}
+		if b == pubsub.ValidationIgnore {
+			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
 		}
 		return b
 	}
@@ -280,10 +284,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 					// Unsubscribes from all our current subnets.
 					for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.P2P.Encoding().ProtocolSuffix()
-						if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
-							log.WithError(err).Error("Could not unregister topic validator")
-						}
-						s.subHandler.removeTopic(fullTopic)
+						s.unSubscribeFromTopic(fullTopic)
 					}
 					ticker.Done()
 					return
@@ -386,10 +387,7 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 		if !wanted && v != nil {
 			v.Cancel()
 			fullTopic := fmt.Sprintf(topicFormat, digest, k) + s.cfg.P2P.Encoding().ProtocolSuffix()
-			if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
-				log.WithError(err).Error("Could not unregister topic validator")
-			}
-			s.subHandler.removeTopic(fullTopic)
+			s.unSubscribeFromTopic(fullTopic)
 			delete(subscriptions, k)
 		}
 	}
@@ -485,10 +483,7 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.
 					// Unsubscribes from all our current subnets.
 					for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.P2P.Encoding().ProtocolSuffix()
-						if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
-							log.WithError(err).Error("Could not unregister topic validator")
-						}
-						s.subHandler.removeTopic(fullTopic)
+						s.unSubscribeFromTopic(fullTopic)
 					}
 					ticker.Done()
 					return
@@ -585,6 +580,21 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
+	}
+}
+
+func (s *Service) unSubscribeFromTopic(topic string) {
+	log.WithField("topic", topic).Debug("Unsubscribing from topic")
+	if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(topic); err != nil {
+		log.WithError(err).Error("Could not unregister topic validator")
+	}
+	sub := s.subHandler.subForTopic(topic)
+	if sub != nil {
+		sub.Cancel()
+	}
+	s.subHandler.removeTopic(topic)
+	if err := s.cfg.P2P.LeaveTopic(topic); err != nil {
+		log.WithError(err).Error("Unable to leave topic")
 	}
 }
 

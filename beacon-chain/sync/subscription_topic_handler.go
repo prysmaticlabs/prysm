@@ -82,3 +82,9 @@ func (s *subTopicHandler) allTopics() []string {
 	}
 	return topics
 }
+
+func (s *subTopicHandler) subForTopic(topic string) *pubsub.Subscription {
+	s.RLock()
+	defer s.RUnlock()
+	return s.subTopics[topic]
+}

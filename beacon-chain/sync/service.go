@@ -178,10 +178,7 @@ func (s *Service) Stop() error {
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
-		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
-			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
-		}
-		s.subHandler.removeTopic(t)
+		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
 	return nil

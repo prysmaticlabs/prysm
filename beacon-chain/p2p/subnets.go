@@ -22,6 +22,11 @@ var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
+// The value used with the subnet, inorder
+// to create an appropriate key tor retrieve
+// the relevant lock.
+const syncLockerVal = 100
+
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
 // with those peers. This method will block until the required amount of
@@ -237,6 +242,13 @@ func syncBitvector(record *enr.Record) (bitfield.Bitvector4, error) {
 	return bitV, nil
 }
 
+// The subnet locker is a map which keeps track of all
+// mutexes stored per subnet. This locker is re-used
+// between both the attestation and sync subnets. In
+// order to differentiate between attestation and sync
+// subnets. Sync subnets are stored by (subnet+syncLockerVal). This
+// is to prevent conflicts while allowing both subnets
+// to use a single locker.
 func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
 	s.subnetsLockLock.Lock()
 	defer s.subnetsLockLock.Unlock()

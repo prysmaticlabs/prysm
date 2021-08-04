@@ -5,10 +5,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -43,6 +46,10 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	if !ok {
 		traceutil.AnnotateError(span, ErrMessageNotMapped)
 		return ErrMessageNotMapped
+	}
+	if strings.Contains(topic, "beacon_block") {
+		ps := s.pubsub.ListPeers(fmt.Sprintf(topic, forkDigest) + s.Encoding().ProtocolSuffix())
+		log.Infof("topic: %s has %d peers: %v", fmt.Sprintf(topic, forkDigest)+s.Encoding().ProtocolSuffix(), len(ps), ps)
 	}
 	castMsg, ok := msg.(ssz.Marshaler)
 	if !ok {
@@ -126,6 +133,13 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 			traceutil.AnnotateError(span, err)
 		}
 	}
+	// In the event our attestation is outdated and beyond the
+	// acceptable threshold, we exit early and do not broadcast it.
+	currSlot := helpers.CurrentSlot(uint64(s.genesisTime.Unix()))
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
+		log.Warnf("Attestation is too old to broadcast, discarding it. Current Slot: %d , Attestation Slot: %d", currSlot, att.Data.Slot)
+		return
+	}
 
 	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest)); err != nil {
 		log.WithError(err).Error("Failed to broadcast attestation")
@@ -138,15 +152,17 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
-	oneEpoch := time.Duration(1*params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
+	oneSlot := time.Duration(1*params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneSlot)
 	defer cancel()
 
-	// TODO: Change to sync committee subnet locker rather than sharing the same one with attestations.
 	// Ensure we have peers with this subnet.
-	s.subnetLocker(subnet).RLock()
+	// This adds in a special value to the subnet
+	// to ensure that we can re-use the same subnet locker.
+	wrappedSubIdx := subnet + syncLockerVal
+	s.subnetLocker(wrappedSubIdx).RLock()
 	hasPeer := s.hasPeerWithSubnet(syncCommitteeToTopic(subnet, forkDigest))
-	s.subnetLocker(subnet).RUnlock()
+	s.subnetLocker(wrappedSubIdx).RUnlock()
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
@@ -157,8 +173,8 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	if !hasPeer {
 		syncCommitteeBroadcastAttempts.Inc()
 		if err := func() error {
-			s.subnetLocker(subnet).Lock()
-			defer s.subnetLocker(subnet).Unlock()
+			s.subnetLocker(wrappedSubIdx).Lock()
+			defer s.subnetLocker(wrappedSubIdx).Unlock()
 			ok, err := s.FindPeersWithSubnet(ctx, syncCommitteeToTopic(subnet, forkDigest), subnet, 1)
 			if err != nil {
 				return err
@@ -172,6 +188,12 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 			log.WithError(err).Error("Failed to find peers")
 			traceutil.AnnotateError(span, err)
 		}
+	}
+	// In the event our sync message is outdated and beyond the
+	// acceptable threshold, we exit early and do not broadcast it.
+	if err := altair.ValidateSyncMessageTime(sMsg.Slot, s.genesisTime, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		log.Warnf("Sync Committee Message is too old to broadcast, discarding it. %v", err)
+		return
 	}
 
 	if err := s.broadcastObject(ctx, sMsg, syncCommitteeToTopic(subnet, forkDigest)); err != nil {

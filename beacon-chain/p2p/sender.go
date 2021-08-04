@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/kr/pretty"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -24,6 +25,9 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	}
 	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
+
+	log.WithField("topic", topic).Debugf("Sending RPC request to peer %s", pid.String())
+	log.WithField("request", pretty.Sprint(message)).Trace("Request parameters")
 
 	// Apply max dial timeout when opening a new stream.
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)

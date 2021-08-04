@@ -6,11 +6,14 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,14 +39,8 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		}
 		return nilErr
 	}
-	topicVersion := ""
-	switch s.cfg.P2P.Metadata().Version() {
-	case version.Phase0:
-		topicVersion = p2p.SchemaVersionV1
-	case version.Altair:
-		topicVersion = p2p.SchemaVersionV2
-	}
-	if err := validateVersion(topicVersion, stream); err != nil {
+	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
+	if err != nil {
 		resp, genErr := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if genErr != nil {
 			log.WithError(genErr).Debug("Could not generate a response error")
@@ -52,10 +49,34 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		}
 		return err
 	}
+	currMd := s.cfg.P2P.Metadata()
+	switch streamVersion {
+	case p2p.SchemaVersionV1:
+		// We have a v1 metadata object saved locally, so we
+		// convert it back to a v0 metadata object.
+		if currMd.Version() != version.Phase0 {
+			currMd = wrapper.WrappedMetadataV0(
+				&pb.MetaDataV0{
+					Attnets:   currMd.AttnetsBitfield(),
+					SeqNumber: currMd.SequenceNumber(),
+				})
+		}
+	case p2p.SchemaVersionV2:
+		// We have a v0 metadata object saved locally, so we
+		// convert it to a v1 metadata object.
+		if currMd.Version() != version.Altair {
+			currMd = wrapper.WrappedMetadataV1(
+				&pb.MetaDataV1{
+					Attnets:   currMd.AttnetsBitfield(),
+					SeqNumber: currMd.SequenceNumber(),
+					Syncnets:  bitfield.Bitvector4{byte(0x00)},
+				})
+		}
+	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata())
+	_, err = s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, currMd)
 	if err != nil {
 		return err
 	}
