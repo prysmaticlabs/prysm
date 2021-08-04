@@ -321,6 +321,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			for i := 0; i < len(validatorHashes); i += hashLength {
 				key := validatorHashes[i : i+hashLength]
 				s.validatorEntryCache.Del(key)
+				validatorEntryCacheDelete.Inc()
 			}
 		}
 
@@ -398,7 +399,6 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*v1
 			if ok {
 				valEntry, vType := v.(*v1alpha.Validator)
 				if vType {
-					s.validatorEntryCache.Set(key, valEntry, int64(valEntry.SizeSSZ()))
 					validatorEntries = append(validatorEntries, valEntry)
 					validatorEntryCacheHit.Inc()
 				} else {
@@ -418,6 +418,9 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*v1
 				}
 				validatorEntries = append(validatorEntries, encValEntry)
 				validatorEntryCacheMiss.Inc()
+
+				// should add here in cache
+				s.validatorEntryCache.Set(key, encValEntry, int64(encValEntry.SizeSSZ()))
 			}
 		}
 		return nil
