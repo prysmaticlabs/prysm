@@ -1,6 +1,7 @@
 package altair_test
 
 import (
+	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -67,7 +68,7 @@ func TestTranslateParticipation(t *testing.T) {
 
 func TestUpgradeToAltair(t *testing.T) {
 	st, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	aState, err := altair.UpgradeToAltair(st)
+	aState, err := altair.UpgradeToAltair(context.Background(), st)
 	require.NoError(t, err)
 	_, ok := aState.(state.BeaconStateAltair)
 	require.Equal(t, true, ok)

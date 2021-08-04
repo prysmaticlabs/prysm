@@ -1,6 +1,8 @@
 package altair
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,7 +20,7 @@ import (
 //    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_next_sync_committee(state)
-func ProcessSyncCommitteeUpdates(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
+func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	nextEpoch := helpers.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		currentSyncCommittee, err := beaconState.NextSyncCommittee()
@@ -28,7 +30,7 @@ func ProcessSyncCommitteeUpdates(beaconState state.BeaconStateAltair) (state.Bea
 		if err := beaconState.SetCurrentSyncCommittee(currentSyncCommittee); err != nil {
 			return nil, err
 		}
-		nextCommittee, err := NextSyncCommittee(beaconState)
+		nextCommittee, err := NextSyncCommittee(ctx, beaconState)
 		if err != nil {
 			return nil, err
 		}

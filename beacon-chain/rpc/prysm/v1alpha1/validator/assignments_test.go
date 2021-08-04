@@ -121,7 +121,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	syncCommittee, err := altair.NextSyncCommittee(bs)
+	syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
 	require.NoError(t, err)
 	require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
 	pubKeys := make([][]byte, len(deposits))

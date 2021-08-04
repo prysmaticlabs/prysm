@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,8 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ValidateNilSyncContribution validates that the signed contribution
-// is not nil.
+const maxRandomByte = uint64(1<<8 - 1)
+
+// ValidateNilSyncContribution validates the following fields are not nil:
+// -the contribution and proof itself
+// -the message within contribution and proof
+// -the contribution within contribution and proof
+// -the aggregation bits within contribution
 func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 	if s == nil {
 		return errors.New("signed message can't be nil")
@@ -45,14 +51,14 @@ func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
 //    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
-func NextSyncCommittee(state state.BeaconStateAltair) (*ethpb.SyncCommittee, error) {
-	indices, err := NextSyncCommitteeIndices(state)
+func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.SyncCommittee, error) {
+	indices, err := NextSyncCommitteeIndices(ctx, s)
 	if err != nil {
 		return nil, err
 	}
-	pubkeys := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	pubkeys := make([][]byte, len(indices))
 	for i, index := range indices {
-		p := state.PubkeyAtIndex(index) // Using ReadOnlyValidators interface. No copy here.
+		p := s.PubkeyAtIndex(index)
 		pubkeys[i] = p[:]
 	}
 	aggregated, err := bls.AggregatePublicKeys(pubkeys)
@@ -89,22 +95,27 @@ func NextSyncCommittee(state state.BeaconStateAltair) (*ethpb.SyncCommittee, err
 //            sync_committee_indices.append(candidate_index)
 //        i += 1
 //    return sync_committee_indices
-func NextSyncCommitteeIndices(state state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
-	epoch := helpers.NextEpoch(state)
-	indices, err := helpers.ActiveValidatorIndices(state, epoch)
+func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
+	epoch := helpers.NextEpoch(s)
+	indices, err := helpers.ActiveValidatorIndices(s, epoch)
+	if err != nil {
+		return nil, err
+	}
+	seed, err := helpers.Seed(s, epoch, params.BeaconConfig().DomainSyncCommittee)
 	if err != nil {
 		return nil, err
 	}
 	count := uint64(len(indices))
-	seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainSyncCommittee)
-	if err != nil {
-		return nil, err
-	}
-	i := types.ValidatorIndex(0)
-	cIndices := make([]types.ValidatorIndex, 0, params.BeaconConfig().SyncCommitteeSize)
+	cfg := params.BeaconConfig()
+	syncCommitteeSize := cfg.SyncCommitteeSize
+	cIndices := make([]types.ValidatorIndex, 0, syncCommitteeSize)
 	hashFunc := hashutil.CustomSHA256Hasher()
-	maxRandomByte := uint64(1<<8 - 1)
-	for uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize {
+
+	for i := types.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		sIndex, err := helpers.ComputeShuffledIndex(i.Mod(count), count, seed, true)
 		if err != nil {
 			return nil, err
@@ -113,17 +124,17 @@ func NextSyncCommitteeIndices(state state.BeaconStateAltair) ([]types.ValidatorI
 		b := append(seed[:], bytesutil.Bytes8(uint64(i.Div(32)))...)
 		randomByte := hashFunc(b)[i%32]
 		cIndex := indices[sIndex]
-		v, err := state.ValidatorAtIndexReadOnly(cIndex)
+		v, err := s.ValidatorAtIndexReadOnly(cIndex)
 		if err != nil {
 			return nil, err
 		}
 
 		effectiveBal := v.EffectiveBalance()
-		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+		if effectiveBal*maxRandomByte >= cfg.MaxEffectiveBalance*uint64(randomByte) {
 			cIndices = append(cIndices, cIndex)
 		}
-		i++
 	}
+
 	return cIndices, nil
 }
 
@@ -143,7 +154,8 @@ func NextSyncCommitteeIndices(state state.BeaconStateAltair) ([]types.ValidatorI
 //    i = subcommittee_index * sync_subcommittee_size
 //    return sync_committee.pubkeys[i:i + sync_subcommittee_size]
 func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
-	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	cfg := params.BeaconConfig()
+	subCommSize := cfg.SyncCommitteeSize / cfg.SyncCommitteeSubnetCount
 	i := uint64(subComIdx) * subCommSize
 	endOfSubCom := i + subCommSize
 	pubkeyLen := uint64(len(syncCommittee.Pubkeys))
@@ -159,10 +171,15 @@ func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
-func IsSyncCommitteeAggregator(sig []byte) bool {
-	modulo := mathutil.Max(1, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount/params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee)
+func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
+	if len(sig) != params.BeaconConfig().BLSPubkeyLength {
+		return false, errors.New("incorrect sig length")
+	}
+
+	cfg := params.BeaconConfig()
+	modulo := mathutil.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
 	hashedSig := hashutil.Hash(sig)
-	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0
+	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
 }
 
 // Validate Sync Message to ensure that the provided slot is valid.

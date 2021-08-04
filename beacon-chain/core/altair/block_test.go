@@ -1,6 +1,7 @@
 package altair_test
 
 import (
+	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -18,7 +19,7 @@ import (
 func TestProcessSyncCommittee_OK(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
-	committee, err := altair.NextSyncCommittee(beaconState)
+	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
 
@@ -26,7 +27,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.NextSyncCommitteeIndices(beaconState)
+	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
 	ps := helpers.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)

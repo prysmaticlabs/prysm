@@ -1,6 +1,7 @@
 package fork
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -37,7 +38,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			}
 			preState, err := v1.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
-			postState, err := altair.UpgradeToAltair(preState)
+			postState, err := altair.UpgradeToAltair(context.Background(), preState)
 			require.NoError(t, err)
 			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
