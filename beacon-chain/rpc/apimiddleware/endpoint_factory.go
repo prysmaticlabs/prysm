@@ -123,11 +123,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint = gateway.Endpoint{
-			GetResponse: &blockResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
-			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleGetBeaconBlockSSZ},
-			},
+			GetResponse:    &blockResponseJson{},
+			Err:            &gateway.DefaultErrorJson{},
+			CustomHandlers: []gateway.CustomHandler{handleGetBeaconBlockSSZ},
 		}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
 		endpoint = gateway.Endpoint{
@@ -205,11 +203,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/debug/beacon/states/{state_id}":
 		endpoint = gateway.Endpoint{
-			GetResponse: &beaconStateResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
-			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleGetBeaconStateSSZ},
-			},
+			GetResponse:    &beaconStateResponseJson{},
+			Err:            &gateway.DefaultErrorJson{},
+			CustomHandlers: []gateway.CustomHandler{handleGetBeaconStateSSZ},
 		}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint = gateway.Endpoint{
@@ -233,10 +229,8 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/events":
 		endpoint = gateway.Endpoint{
-			Err: &gateway.DefaultErrorJson{},
-			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleEvents},
-			},
+			Err:            &gateway.DefaultErrorJson{},
+			CustomHandlers: []gateway.CustomHandler{handleEvents},
 		}
 	case "/eth/v1/validator/duties/attester/{epoch}":
 		endpoint = gateway.Endpoint{

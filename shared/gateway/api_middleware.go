@@ -27,14 +27,15 @@ type EndpointFactory interface {
 
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.
 type Endpoint struct {
-	Path               string         // The path of the HTTP endpoint.
-	PostRequest        interface{}    // The struct corresponding to the JSON structure used in a POST request.
-	PostResponse       interface{}    // The struct corresponding to the JSON structure used in a POST response.
-	RequestURLLiterals []string       // Names of URL parameters that should not be base64-encoded.
-	RequestQueryParams []QueryParam   // Query parameters of the request.
-	GetResponse        interface{}    // The struct corresponding to the JSON structure used in a GET response.
-	Err                ErrorJson      // The struct corresponding to the error that should be returned in case of a request failure.
-	Hooks              HookCollection // A collection of functions that can be invoked at various stages of the request/response cycle.
+	Path               string          // The path of the HTTP endpoint.
+	PostRequest        interface{}     // The struct corresponding to the JSON structure used in a POST request.
+	PostResponse       interface{}     // The struct corresponding to the JSON structure used in a POST response.
+	RequestURLLiterals []string        // Names of URL parameters that should not be base64-encoded.
+	RequestQueryParams []QueryParam    // Query parameters of the request.
+	GetResponse        interface{}     // The struct corresponding to the JSON structure used in a GET response.
+	Err                ErrorJson       // The struct corresponding to the error that should be returned in case of a request failure.
+	Hooks              HookCollection  // A collection of functions that can be invoked at various stages of the request/response cycle.
+	CustomHandlers     []CustomHandler // Functions that will be executed instead of the default request/response behaviour.
 }
 
 // QueryParam represents a single query parameter's metadata.
@@ -51,9 +52,8 @@ type Hook = func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) Er
 // essentially replacing the whole default request/response logic with custom logic for a specific endpoint.
 type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.ResponseWriter, req *http.Request) (handled bool)
 
-// HookCollection contains handlers/hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
+// HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	CustomHandlers                            []CustomHandler
 	OnPostStart                               []Hook
 	OnPostDeserializeRequestBodyIntoContainer []Hook
 }
@@ -83,7 +83,7 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 			WriteError(w, errJson, nil)
 		}
 
-		for _, handler := range endpoint.Hooks.CustomHandlers {
+		for _, handler := range endpoint.CustomHandlers {
 			if handler(m, *endpoint, w, req) {
 				return
 			}
