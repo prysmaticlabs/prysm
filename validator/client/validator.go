@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -44,8 +43,6 @@ import (
 // in case no keys were fetched previously.
 var (
 	keyRefetchPeriod = 30 * time.Second
-	// slasher connection when the slasher client connection is not ready.
-	reconnectPeriod = 5 * time.Second
 )
 
 var (
@@ -78,7 +75,6 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	oldRemoteSlasher                   slashingiface.OldRemoteSlasher
 	slashingProtectionClient           ethpb.SlasherClient
 	db                                 vdb.Database
 	graffiti                           []byte

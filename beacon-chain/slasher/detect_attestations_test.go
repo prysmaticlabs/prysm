@@ -859,7 +859,7 @@ func BenchmarkCheckSlashableAttestations(b *testing.B) {
 	})
 }
 
-func runAttestationsBenchmark(b *testing.B, s *Service, numAtts uint64, numValidators uint64) {
+func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators uint64) {
 	indices := make([]uint64, numValidators)
 	for i := uint64(0); i < numValidators; i++ {
 		indices[i] = i
