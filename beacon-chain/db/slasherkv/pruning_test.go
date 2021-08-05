@@ -29,7 +29,7 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		historyLength := types.Epoch(10)
 
 		pruningLimitEpoch := currentEpoch - historyLength
-		lowestStoredSlot, err := helpers.StartSlot(pruningLimitEpoch)
+		lowestStoredSlot, err := helpers.EndSlot(pruningLimitEpoch)
 		require.NoError(t, err)
 
 		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
