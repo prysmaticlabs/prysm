@@ -3,8 +3,8 @@ package sszutil_test
 import (
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -60,15 +60,15 @@ func TestDeepEqualStructs_Unexported(t *testing.T) {
 }
 
 func TestDeepEqualProto(t *testing.T) {
-	var fork1, fork2 *pb.Fork
+	var fork1, fork2 *statepb.Fork
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork2))
 
-	fork1 = &pb.Fork{
+	fork1 = &statepb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,
 	}
-	fork2 = &pb.Fork{
+	fork2 = &statepb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{125},
 		Epoch:           1234567890,

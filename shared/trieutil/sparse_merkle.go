@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"

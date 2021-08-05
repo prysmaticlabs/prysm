@@ -12,8 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
@@ -53,12 +52,12 @@ func init() {
 		Chain: &mock.ChainService{
 			Root:                bytesutil.PadTo([]byte("root"), 32),
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
-			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
+			Fork:                &ethpb.Fork{CurrentVersion: []byte("foo")},
 		},
-		StateNotifier:       (&mock.ChainService{}).StateNotifier(),
-		AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		InitialSync:         &mockSync.Sync{IsSyncing: false},
-		BlockNotifier:       nil,
+		StateNotifier:     (&mock.ChainService{}).StateNotifier(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		InitialSync:       &mockSync.Sync{IsSyncing: false},
+		BlockNotifier:     nil,
 	})
 }
 

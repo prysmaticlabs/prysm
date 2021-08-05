@@ -111,9 +111,9 @@ var (
 		Name:  "enable-next-slot-state-cache",
 		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
-	updateHeadTimely = &cli.BoolFlag{
-		Name:  "update-head-timely",
-		Usage: "Improves update head time by updating head right after state transition",
+	disableUpdateHeadTimely = &cli.BoolFlag{
+		Name:  "disable-update-head-timely",
+		Usage: "Disables updating head right after state transition",
 	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
@@ -127,15 +127,21 @@ var (
 		Name:  "enable-slashing-protection-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protectin database",
 	}
-	enableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:  "enable-optimized-balance-update",
-		Usage: "Enables the optimized method of updating validator balances.",
+	disableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:  "disable-optimized-balance-update",
+		Usage: "Disable the optimized method of updating validator balances.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
 		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not " +
 			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
 			" vulnerable if it is being run in unsafe configurations.",
+	}
+	enableHistoricalSpaceRepresentation = &cli.BoolFlag{
+		Name: "enable-historical-state-representation",
+		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +
+			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
+			"there is no going back. At worst, your entire database might get corrupted.",
 	}
 )
 
@@ -144,8 +150,6 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	updateHeadTimely,
-	enableOptimizedBalanceUpdate,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -195,10 +199,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	updateHeadTimely,
 	enableSlasherFlag,
+	disableUpdateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
-	enableOptimizedBalanceUpdate,
+	disableOptimizedBalanceUpdate,
+	enableHistoricalSpaceRepresentation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

@@ -11,7 +11,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 

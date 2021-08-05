@@ -2,19 +2,23 @@ package testutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +47,7 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState iface.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
+	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
@@ -60,16 +64,33 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
-		if err != nil {
-			return nil, err
+		var headState state.BeaconState
+		switch bState.Version() {
+		case version.Phase0:
+			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := v1.InitializeFromProtoUnsafe(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = state.BeaconState(genState)
+		case version.Altair:
+			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := v2.InitializeFromProtoUnsafe(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = state.BeaconState(genState)
+		default:
+			return nil, errors.New("state type isn't supported")
 		}
-		genState, err := v1.InitializeFromProtoUnsafe(pbState)
-		if err != nil {
-			return nil, err
-		}
-		headState := iface.BeaconState(genState)
-		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
+
+		headState, err = core.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err
 		}
@@ -195,6 +216,22 @@ func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	return a
 }
 
+// HydrateV1Attestation hydrates a v1 attestation object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
+	if a.Signature == nil {
+		a.Signature = make([]byte, 96)
+	}
+	if a.AggregationBits == nil {
+		a.AggregationBits = make([]byte, 1)
+	}
+	if a.Data == nil {
+		a.Data = &attv1.AttestationData{}
+	}
+	a.Data = HydrateV1AttestationData(a.Data)
+	return a
+}
+
 // HydrateAttestationData hydrates an attestation data object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
@@ -209,6 +246,27 @@ func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 	}
 	if d.Source == nil {
 		d.Source = &ethpb.Checkpoint{}
+	}
+	if d.Source.Root == nil {
+		d.Source.Root = make([]byte, 32)
+	}
+	return d
+}
+
+// HydrateV1AttestationData hydrates a v1 attestation data object with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV1AttestationData(d *attv1.AttestationData) *attv1.AttestationData {
+	if d.BeaconBlockRoot == nil {
+		d.BeaconBlockRoot = make([]byte, 32)
+	}
+	if d.Target == nil {
+		d.Target = &attv1.Checkpoint{}
+	}
+	if d.Target.Root == nil {
+		d.Target.Root = make([]byte, 32)
+	}
+	if d.Source == nil {
+		d.Source = &attv1.Checkpoint{}
 	}
 	if d.Source.Root == nil {
 		d.Source.Root = make([]byte, 32)

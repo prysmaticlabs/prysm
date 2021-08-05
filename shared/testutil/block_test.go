@@ -9,8 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -191,6 +192,19 @@ func TestHydrateSignedBeaconBlock_NoError(t *testing.T) {
 func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 	b := &v1.SignedBeaconBlock{}
 	b = HydrateV1SignedBeaconBlock(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV2SignedBeaconBlockAltair_NoError(t *testing.T) {
+	b := &v2.SignedBeaconBlockAltair{}
+	b = HydrateSignedBeaconBlockAltair(b)
+
+	// HTR should not error. It errors with incorrect field length sizes.
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Block.HashTreeRoot()

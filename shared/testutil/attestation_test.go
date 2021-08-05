@@ -3,7 +3,8 @@ package testutil
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -17,6 +18,22 @@ func TestHydrateAttestation(t *testing.T) {
 
 func TestHydrateAttestationData(t *testing.T) {
 	d := HydrateAttestationData(&ethpb.AttestationData{})
+	_, err := d.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, 32))
+	require.DeepEqual(t, d.Target.Root, make([]byte, 32))
+	require.DeepEqual(t, d.Source.Root, make([]byte, 32))
+}
+
+func TestHydrateV1Attestation(t *testing.T) {
+	a := HydrateV1Attestation(&v1.Attestation{})
+	_, err := a.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, a.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength))
+}
+
+func TestHydrateV1AttestationData(t *testing.T) {
+	d := HydrateV1AttestationData(&v1.AttestationData{})
 	_, err := d.HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, 32))

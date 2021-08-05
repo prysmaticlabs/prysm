@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -116,7 +116,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 }
 
 // Signs input slot with domain selection proof. This is used to create the signature for aggregator selection.
-func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [48]byte, slot types.Slot) (signature []byte, error error) {
+func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [48]byte, slot types.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSelectionProof[:])
 	if err != nil {
 		return nil, err

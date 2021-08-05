@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,7 +16,7 @@ var failedBlockSignLocalErr = "attempted to sign a double proposal, block reject
 var failedBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 
 func (v *validator) slashableProposalCheck(
-	ctx context.Context, pubKey [48]byte, signedBlock *ethpb.SignedBeaconBlock, signingRoot [32]byte,
+	ctx context.Context, pubKey [48]byte, signedBlock block.SignedBeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -50,11 +50,11 @@ func (v *validator) slashableProposalCheck(
 	// than or equal to the minimum signed proposal present in the DB for that public key.
 	// In the case the slot of the incoming block is equal to the minimum signed proposal, we
 	// then also check the signing root is different.
-	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= block.Slot {
+	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= block.Slot() {
 		return fmt.Errorf(
 			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
 			lowestSignedProposalSlot,
-			block.Slot,
+			block.Slot(),
 		)
 	}
 	if featureconfig.Get().OldRemoteSlasherProtection {
@@ -112,11 +112,11 @@ func (v *validator) slashableProposalCheck(
 	return nil
 }
 
-func blockLogFields(pubKey [48]byte, blk *ethpb.BeaconBlock, sig []byte) logrus.Fields {
+func blockLogFields(pubKey [48]byte, blk block.BeaconBlock, sig []byte) logrus.Fields {
 	fields := logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
-		"proposerIndex":     blk.ProposerIndex,
-		"blockSlot":         blk.Slot,
+		"proposerIndex":     blk.ProposerIndex(),
+		"blockSlot":         blk.Slot(),
 	}
 	if sig != nil {
 		fields["signature"] = fmt.Sprintf("%#x", sig)

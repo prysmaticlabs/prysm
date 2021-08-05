@@ -6,12 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func Test_Equal(t *testing.T) {
@@ -788,6 +790,176 @@ func Test_LogsContainDoNotContain(t *testing.T) {
 			} else {
 				require.LogsDoNotContain(tt.args.tb, hook, tt.args.want, tt.args.msgs...)
 			}
+			verify()
+		})
+	}
+}
+
+func TestAssert_NotEmpty(t *testing.T) {
+	type args struct {
+		tb     *assertions.TBMock
+		input  interface{}
+		actual interface{}
+		msgs   []interface{}
+	}
+	tests := []struct {
+		name        string
+		args        args
+		expectedErr string
+	}{
+		{
+			name: "literal value int",
+			args: args{
+				tb:    &assertions.TBMock{},
+				input: 42,
+			},
+		}, {
+			name: "literal value int",
+			args: args{
+				tb:    &assertions.TBMock{},
+				input: 0,
+			},
+			expectedErr: "empty/zero field: int",
+		}, {
+			name: "literal value slice",
+			args: args{
+				tb:    &assertions.TBMock{},
+				input: []uint64{42},
+			},
+		}, {
+			name: "literal value string",
+			args: args{
+				tb:    &assertions.TBMock{},
+				input: "42",
+			},
+		}, {
+			name: "simple populated struct",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: struct {
+					foo int
+					bar string
+				}{
+					foo: 42,
+					bar: "42",
+				},
+			},
+		}, {
+			name: "simple partially empty struct",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: struct {
+					foo int
+					bar string
+				}{
+					bar: "42",
+				},
+			},
+			expectedErr: "empty/zero field: .foo",
+		}, {
+			name: "simple empty struct",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: struct {
+					foo int
+					bar string
+				}{},
+			},
+			expectedErr: "empty/zero field",
+		}, {
+			name: "simple populated protobuf",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: &testpb.Puzzle{
+					Challenge: "what do you get when protobufs have internal fields?",
+					Answer:    "Complicated reflect logic!",
+				},
+			},
+		}, {
+			name: "simple partially empty protobuf",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: &testpb.Puzzle{
+					Challenge: "what do you get when protobufs have internal fields?",
+				},
+			},
+			expectedErr: "empty/zero field: Puzzle.Answer",
+		}, {
+			name: "complex populated protobuf",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: &testpb.AddressBook{
+					People: []*testpb.Person{
+						{
+							Name:  "Foo",
+							Id:    42,
+							Email: "foo@bar.com",
+							Phones: []*testpb.Person_PhoneNumber{
+								{
+									Number: "+1 111-111-1111",
+									Type:   testpb.Person_WORK, // Note: zero'th enum value will count as empty.
+								},
+							},
+							LastUpdated: timestamppb.Now(),
+						},
+					},
+				},
+			},
+		}, {
+			name: "complex partially empty protobuf with empty slices",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: &testpb.AddressBook{
+					People: []*testpb.Person{
+						{
+							Name:        "Foo",
+							Id:          42,
+							Email:       "foo@bar.com",
+							Phones:      []*testpb.Person_PhoneNumber{},
+							LastUpdated: timestamppb.Now(),
+						},
+					},
+				},
+			},
+			expectedErr: "empty/zero field: AddressBook.People.Phones",
+		}, {
+			name: "complex partially empty protobuf with empty string",
+			args: args{
+				tb: &assertions.TBMock{},
+				input: &testpb.AddressBook{
+					People: []*testpb.Person{
+						{
+							Name:  "Foo",
+							Id:    42,
+							Email: "",
+							Phones: []*testpb.Person_PhoneNumber{
+								{
+									Number: "+1 111-111-1111",
+									Type:   testpb.Person_WORK, // Note: zero'th enum value will count as empty.
+								},
+							},
+							LastUpdated: timestamppb.Now(),
+						},
+					},
+				},
+			},
+			expectedErr: "empty/zero field: AddressBook.People.Email",
+		},
+	}
+	for _, tt := range tests {
+		verify := func() {
+			if tt.expectedErr == "" && tt.args.tb.ErrorfMsg != "" {
+				t.Errorf("Unexpected error: %v", tt.args.tb.ErrorfMsg)
+			} else if !strings.Contains(tt.args.tb.ErrorfMsg, tt.expectedErr) {
+				t.Errorf("got: %q, want: %q", tt.args.tb.ErrorfMsg, tt.expectedErr)
+			}
+		}
+		t.Run(fmt.Sprintf("Assert/%s", tt.name), func(t *testing.T) {
+			assert.NotEmpty(tt.args.tb, tt.args.input, tt.args.msgs...)
+			verify()
+		})
+		t.Run(fmt.Sprintf("Require/%s", tt.name), func(t *testing.T) {
+			require.NotEmpty(tt.args.tb, tt.args.input, tt.args.msgs...)
 			verify()
 		})
 	}

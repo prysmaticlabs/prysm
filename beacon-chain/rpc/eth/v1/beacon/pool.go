@@ -4,9 +4,10 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
@@ -100,9 +101,18 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save attestations: %v", err)
 	}
+
 	broadcastFailed := false
 	for _, att := range validAttestations {
-		if err := bs.Broadcaster.Broadcast(ctx, att); err != nil {
+		// Determine subnet to broadcast attestation to
+		wantedEpoch := helpers.SlotToEpoch(att.Data.Slot)
+		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		if err != nil {
+			return nil, err
+		}
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
+
+		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			broadcastFailed = true
 		}
 	}

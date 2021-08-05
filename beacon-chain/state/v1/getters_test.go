@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, err := InitializeFromProto(&pb.BeaconState{Slot: 1})
+	headState, err := InitializeFromProto(&ethpb.BeaconState{Slot: 1})
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
@@ -78,20 +78,10 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.FinalizedCheckpoint()
 }
 
-func TestReadOnlyValidator_NoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
-}
-
-func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
-}
-
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	beaconState, err := InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: c1})
+	beaconState, err := InitializeFromProto(&ethpb.BeaconState{CurrentJustifiedCheckpoint: c1})
 	require.NoError(t, err)
 	require.Equal(t, true, beaconState.MatchCurrentJustifiedCheckpoint(c1))
 	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
@@ -104,7 +94,7 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	beaconState, err := InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: c1})
+	beaconState, err := InitializeFromProto(&ethpb.BeaconState{PreviousJustifiedCheckpoint: c1})
 	require.NoError(t, err)
 	require.NoError(t, err)
 	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
@@ -116,7 +106,7 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 }
 
 func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
-	s, err := InitializeFromProto(&pb.BeaconState{})
+	s, err := InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	s.state = nil
 	_, err = s.MarshalSSZ()
@@ -214,7 +204,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := InitializeFromProto(&pb.BeaconState{})
+			s, err := InitializeFromProto(&ethpb.BeaconState{})
 			require.NoError(t, err)
 			nKey := keyCreator([]byte{'A'})
 			tt.modifyFunc(s, nKey)

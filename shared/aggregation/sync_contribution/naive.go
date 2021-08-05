@@ -1,7 +1,7 @@
 package sync_contribution
 
 import (
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"

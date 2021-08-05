@@ -14,8 +14,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -30,7 +30,7 @@ type POWChain struct {
 	BlockNumberByTime map[uint64]*big.Int
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
-	GenesisState      iface.BeaconState
+	GenesisState      state.BeaconState
 }
 
 // GenesisTime represents a static past date - JAN 01 2000.
@@ -120,7 +120,7 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (m *POWChain) PreGenesisState() iface.BeaconState {
+func (m *POWChain) PreGenesisState() state.BeaconState {
 	return m.GenesisState
 }
 

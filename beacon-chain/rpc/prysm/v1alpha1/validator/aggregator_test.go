@@ -9,14 +9,12 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -28,7 +26,6 @@ import (
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s := &v1.BeaconState{}
@@ -36,7 +33,6 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		BeaconDB:    db,
 	}
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
@@ -46,10 +42,9 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	s, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
@@ -57,7 +52,6 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 	}
 
 	priv, err := bls.RandKey()
@@ -70,10 +64,9 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	s, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
 			{PublicKey: pubKey(0)},
@@ -85,7 +78,6 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 	}
 
@@ -107,7 +99,6 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -119,7 +110,6 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
@@ -143,7 +133,6 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -158,7 +147,6 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
@@ -190,7 +178,6 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -199,7 +186,6 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
@@ -219,7 +205,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	assert.Equal(t, 0, len(aggregatedAtts), "Wanted aggregated attestation")
 }
 
-func generateAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
+func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
@@ -257,7 +243,7 @@ func generateAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	return att, nil
 }
 
-func generateUnaggregatedAtt(state iface.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
+func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := testutil.HydrateAttestation(&ethpb.Attestation{
@@ -303,7 +289,6 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
@@ -329,7 +314,6 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
 	}
@@ -360,7 +344,6 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,
@@ -381,7 +364,6 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
 	}

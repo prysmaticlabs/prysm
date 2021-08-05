@@ -16,8 +16,8 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -39,11 +39,11 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	require.NoError(t, err)
 	s := &Service{
 		cfg: &Config{
-			InitialSync:         &mockSync.Sync{IsSyncing: false},
-			P2P:                 p,
-			DB:                  db,
-			Chain:               chain,
-			AttestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
+			InitialSync:       &mockSync.Sync{IsSyncing: false},
+			P2P:               p,
+			DB:                db,
+			Chain:             chain,
+			OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,

@@ -1,4 +1,4 @@
-// Package beaconv1 defines a gRPC beacon service implementation,
+// Package beacon defines a gRPC beacon service implementation,
 // following the official API standards https://ethereum.github.io/eth2.0-APIs/#/.
 // This package includes the beacon and config endpoints.
 package beacon
@@ -29,4 +29,5 @@ type Server struct {
 	VoluntaryExitsPool voluntaryexits.PoolManager
 	StateGenService    stategen.StateManager
 	StateFetcher       statefetcher.Fetcher
+	HeadFetcher        blockchain.HeadFetcher
 }

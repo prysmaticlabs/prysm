@@ -59,10 +59,10 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
-	if errJson := HandleURLParameters(endpoint.Path, req, endpoint.GetRequestURLLiterals); errJson != nil {
+	if errJson := HandleURLParameters(endpoint.Path, req, endpoint.RequestURLLiterals); errJson != nil {
 		return errJson
 	}
-	return HandleQueryParameters(req, endpoint.GetRequestQueryParams)
+	return HandleQueryParameters(req, endpoint.RequestQueryParams)
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
@@ -110,9 +110,9 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, w http.Resp
 	WriteError(w, errJson, resp.Header)
 }
 
-// GrpcResponseIsStatusCodeOnly checks whether a grpc-gateway's response contained no body.
-func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface{}) bool {
-	return req.Method == "GET" && responseContainer == nil
+// GrpcResponseIsEmpty determines whether the grpc-gateway's response body contains no data.
+func GrpcResponseIsEmpty(grpcResponseBody []byte) bool {
+	return len(grpcResponseBody) == 0 || string(grpcResponseBody) == "{}"
 }
 
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
@@ -168,7 +168,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			}
 		}
 	}
-	if req.Method == "GET" {
+	if responseJson != nil {
 		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
@@ -182,7 +182,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
-	} else if req.Method == "POST" {
+	} else {
 		w.WriteHeader(grpcResp.StatusCode)
 	}
 	return nil

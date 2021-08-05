@@ -53,6 +53,7 @@ container_image(
     name = "image_with_creation_time",
     base = "image",
     stamp = True,
+    tags = ["manual"],
     visibility = ["//validator:__pkg__"],
 )
 

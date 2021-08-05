@@ -8,8 +8,8 @@ import (
 	"io"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"

@@ -20,10 +20,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -56,7 +56,6 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
@@ -138,7 +137,6 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
@@ -224,7 +222,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	proposerServer := &Server{
-		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -261,7 +258,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -377,7 +373,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
@@ -505,7 +501,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		votes = append(votes, vote)
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositRoot:  make([]byte, 32),
@@ -716,7 +712,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -810,7 +806,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -904,7 +900,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -1014,7 +1010,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -1295,7 +1291,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1331,7 +1327,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1367,7 +1363,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(51, earliestValidTime+1, []byte("first")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1404,7 +1400,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(51, earliestValidTime+1, []byte("first")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1441,7 +1437,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(100, latestValidTime, []byte("latest")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1478,7 +1474,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("unknown"), DepositCount: 1},
@@ -1512,7 +1508,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(49, earliestValidTime-1, []byte("before_range")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 		})
 		require.NoError(t, err)
@@ -1544,7 +1540,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1578,7 +1574,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot:          slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{}})
 		require.NoError(t, err)
@@ -1608,7 +1604,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 		})
 		require.NoError(t, err)
@@ -1642,7 +1638,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1678,7 +1674,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
@@ -1711,7 +1707,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		t.Skip()
 		p := mockPOW.NewPOWChain().InsertBlock(50, earliestValidTime, []byte("earliest"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1745,7 +1741,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			// because of earliest block increment in the algorithm.
 			InsertBlock(50, earliestValidTime+1, []byte("first"))
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1784,7 +1780,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		depositCache, err := depositcache.New()
 		require.NoError(t, err)
 
-		beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1813,13 +1809,9 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 }
 
 func TestProposer_FilterAttestation(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	numValidators := uint64(64)
 	state, privKeys := testutil.DeterministicGenesisState(t, numValidators)
@@ -1828,8 +1820,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
 
 	tests := []struct {
 		name         string
@@ -1905,7 +1895,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			proposerServer := &Server{
-				BeaconDB:    db,
 				AttPool:     attestations.NewPool(),
 				HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 			}
@@ -1934,7 +1923,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		GenesisEth1Block: height,
 	}
 
-	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),

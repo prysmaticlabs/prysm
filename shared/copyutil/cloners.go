@@ -1,9 +1,7 @@
 package copyutil
 
 import (
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -20,12 +18,12 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 }
 
 // CopyPendingAttestation copies the provided pending attestation object.
-func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
+func CopyPendingAttestation(att *ethpb.PendingAttestation) *ethpb.PendingAttestation {
 	if att == nil {
 		return nil
 	}
 	data := CopyAttestationData(att.Data)
-	return &pbp2p.PendingAttestation{
+	return &ethpb.PendingAttestation{
 		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
 		Data:            data,
 		InclusionDelay:  att.InclusionDelay,
@@ -109,6 +107,49 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		Attestations:      CopyAttestations(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+	}
+}
+
+// CopySignedBeaconBlockAltair copies the provided SignedBeaconBlock.
+func CopySignedBeaconBlockAltair(sigBlock *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
+	if sigBlock == nil {
+		return nil
+	}
+	return &ethpb.SignedBeaconBlockAltair{
+		Block:     CopyBeaconBlockAltair(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBeaconBlockAltair copies the provided BeaconBlock.
+func CopyBeaconBlockAltair(block *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
+	if block == nil {
+		return nil
+	}
+	return &ethpb.BeaconBlockAltair{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyAltair(block.Body),
+	}
+}
+
+// CopyBeaconBlockBodyAltair copies the provided BeaconBlockBody.
+func CopyBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
+	if body == nil {
+		return nil
+	}
+	return &ethpb.BeaconBlockBodyAltair{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
 	}
 }
 
@@ -286,16 +327,40 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	}
 }
 
+// CopySyncCommitteeMessage copies the provided sync committee message object.
+func CopySyncCommitteeMessage(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
+	if s == nil {
+		return nil
+	}
+	return &ethpb.SyncCommitteeMessage{
+		Slot:           s.Slot,
+		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
+		ValidatorIndex: s.ValidatorIndex,
+		Signature:      bytesutil.SafeCopyBytes(s.Signature),
+	}
+}
+
 // CopySyncCommitteeContribution copies the provided sync committee contribution object.
-func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
+func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.SyncCommitteeContribution {
 	if c == nil {
 		return nil
 	}
-	return &prysmv2.SyncCommitteeContribution{
+	return &ethpb.SyncCommitteeContribution{
 		Slot:              c.Slot,
 		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
 		SubcommitteeIndex: c.SubcommitteeIndex,
 		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
 		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	}
+}
+
+// CopySyncAggregate copies the provided sync aggregate object.
+func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
+	if a == nil {
+		return nil
+	}
+	return &ethpb.SyncAggregate{
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }

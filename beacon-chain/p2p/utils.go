@@ -18,9 +18,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
@@ -108,7 +109,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 // TODO: Figure out how to do a v1/v2 check.
-func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
+func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
@@ -118,7 +119,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		return nil, err
 	}
 	if metaDataPath == "" && !defaultMetadataExist {
-		metaData := &pbp2p.MetaDataV0{
+		metaData := &pb.MetaDataV0{
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
@@ -129,7 +130,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		if err := fileutil.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return interfaces.WrappedMetadataV0(metaData), nil
+		return wrapper.WrappedMetadataV0(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
@@ -139,11 +140,11 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
-	metaData := &pbp2p.MetaDataV0{}
+	metaData := &pb.MetaDataV0{}
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV0(metaData), nil
+	return wrapper.WrappedMetadataV0(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.

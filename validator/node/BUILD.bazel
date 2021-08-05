@@ -29,7 +29,7 @@ go_library(
     ],
     deps = [
         "//cmd/validator/flags:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//shared:go_default_library",
         "//shared/backuputil:go_default_library",
         "//shared/cmd:go_default_library",

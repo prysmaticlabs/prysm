@@ -28,20 +28,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
+	slasher2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/slasher"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -63,7 +64,7 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *pbp2p.BeaconState
+	canonicalStateChan   chan *statepb.BeaconState
 	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
@@ -118,7 +119,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:  make(chan *statepb.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
@@ -170,7 +171,6 @@ func (s *Service) Start() {
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
-		BeaconDB:               s.cfg.BeaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
@@ -195,6 +195,15 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 	}
+	validatorServerV1 := &validator.Server{
+		HeadFetcher:      s.cfg.HeadFetcher,
+		TimeFetcher:      s.cfg.GenesisTimeFetcher,
+		SyncChecker:      s.cfg.SyncService,
+		AttestationsPool: s.cfg.AttestationsPool,
+		Broadcaster:      s.cfg.Broadcaster,
+		V1Alpha1Server:   validatorServer,
+	}
+
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
@@ -219,7 +228,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	slasherServer := &slasher.Server{
+	slasherServer := &slasher2.Server{
 		SlashingChecker: s.cfg.SlashingChecker,
 	}
 
@@ -261,12 +270,13 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		HeadFetcher:        s.cfg.HeadFetcher,
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
-	pbrpc.RegisterSlasherServer(s.grpcServer, slasherServer)
+	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterSlasherServer(s.grpcServer, slasherServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
@@ -295,11 +305,11 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
+		prysmv2.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-
+	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 

@@ -16,7 +16,7 @@ func TestPreGenState1Epoch(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPreGenState2FullEpochs(t *testing.T) {
+func TestPreGenstateFullEpochs(t *testing.T) {
 	_, err := PreGenFullBlock()
 	require.NoError(t, err)
 }

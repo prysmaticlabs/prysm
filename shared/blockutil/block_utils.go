@@ -2,7 +2,8 @@ package blockutil
 
 import (
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
@@ -27,6 +28,23 @@ func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.Si
 	}, nil
 }
 
+// SignedBeaconBlockHeaderFromBlockInterface function to retrieve signed block header from block.
+func SignedBeaconBlockHeaderFromBlockInterface(sb block.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+	b := sb.Block()
+	if b.IsNil() || b.Body().IsNil() {
+		return nil, errors.New("nil block")
+	}
+
+	h, err := BeaconBlockHeaderFromBlockInterface(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get block header of block")
+	}
+	return &ethpb.SignedBeaconBlockHeader{
+		Header:    h,
+		Signature: sb.Signature(),
+	}, nil
+}
+
 // BeaconBlockHeaderFromBlock function to retrieve block header from block.
 func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
 	if block.Body == nil {
@@ -42,6 +60,25 @@ func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHea
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
 		StateRoot:     block.StateRoot,
+		BodyRoot:      bodyRoot[:],
+	}, nil
+}
+
+// BeaconBlockHeaderFromBlockInterface function to retrieve block header from block.
+func BeaconBlockHeaderFromBlockInterface(block block.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+	if block.Body().IsNil() {
+		return nil, errors.New("nil block body")
+	}
+
+	bodyRoot, err := block.Body().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get body root of block")
+	}
+	return &ethpb.BeaconBlockHeader{
+		Slot:          block.Slot(),
+		ProposerIndex: block.ProposerIndex(),
+		ParentRoot:    block.ParentRoot(),
+		StateRoot:     block.StateRoot(),
 		BodyRoot:      bodyRoot[:],
 	}, nil
 }

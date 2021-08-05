@@ -18,11 +18,10 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -40,7 +39,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -68,7 +67,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := v1.InitializeFromProto(&pbp2p.BeaconState{
+	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -157,7 +156,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetRoot := [32]byte{7, 8, 9}
 	targetEpoch := types.Epoch(7)
 
-	blocks := []interfaces.SignedBeaconBlock{
+	blocks := []block.SignedBeaconBlock{
 		wrapper.WrappedPhase0SignedBeaconBlock(
 			testutil.HydrateSignedBeaconBlock(
 				&ethpb.SignedBeaconBlock{
@@ -564,13 +563,13 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db),
 	}
-	err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err := db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: targetRoot1[:],
 		Slot: 1,
 	})
 	require.NoError(t, err)
 
-	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err = db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: targetRoot2[:],
 		Slot: 2,
 	})
@@ -664,7 +663,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		},
 		StateGen: stategen.New(db),
 	}
-	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	err = db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: blockRoot[:],
 		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)),
 	})
