@@ -8,35 +8,20 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestStore_PruneProposals(t *testing.T) {
+func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 	ctx := context.Background()
-
-	// If the current slot is less than the history length we track in slasher, there
-	// is nothing to prune yet, so we expect exiting early.
-	t.Run("current_epoch_less_than_history_length", func(t *testing.T) {
-		hook := logTest.NewGlobal()
-		beaconDB := setupDB(t)
-		epochPruningIncrements := types.Epoch(100)
-		currentEpoch := types.Epoch(1)
-		historyLength := types.Epoch(2)
-		err := beaconDB.PruneProposals(ctx, currentEpoch, epochPruningIncrements, historyLength)
-		require.NoError(t, err)
-		require.LogsContain(t, hook, "Current epoch 1 < history length 2, nothing to prune")
-	})
 
 	// If the lowest stored epoch in the database is >= the end epoch of the pruning process,
 	// there is nothing to prune, so we also expect exiting early.
 	t.Run("lowest_stored_epoch_greater_than_pruning_limit_epoch", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 		beaconDB := setupDB(t)
-		epochPruningIncrements := types.Epoch(100)
 
 		// With a current epoch of 20 and a history length of 10, we should be pruning
 		// everything before epoch (20 - 10) = 10.
@@ -49,14 +34,7 @@ func TestStore_PruneProposals(t *testing.T) {
 
 		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(proposalRecordsBucket)
-			key, err := keyForValidatorProposal(&slashertypes.SignedBlockHeaderWrapper{
-				SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						Slot:          lowestStoredSlot,
-						ProposerIndex: 0,
-					},
-				},
-			})
+			key, err := keyForValidatorProposal(lowestStoredSlot+1, 0 /* proposer index */)
 			if err != nil {
 				return err
 			}
@@ -64,19 +42,15 @@ func TestStore_PruneProposals(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = beaconDB.PruneProposals(ctx, currentEpoch, epochPruningIncrements, historyLength)
+		_, err = beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
 		expectedLog := fmt.Sprintf(
-			"Lowest slot %d is >= pruning slot %d, nothing to prune", lowestStoredSlot, lowestStoredSlot,
+			"Lowest slot %d is > pruning slot %d, nothing to prune", lowestStoredSlot+1, lowestStoredSlot,
 		)
 		require.LogsContain(t, hook, expectedLog)
 	})
 
-	// Prune in increments until the cursor reaches the pruning limit epoch, and we expect
-	// that all the proposals written are deleted from the database, while those above the
-	// pruning limit epoch are kept intact.
-	t.Run("prune_in_full_increments_and_verify_deletions", func(t *testing.T) {
-		hook := logTest.NewGlobal()
+	t.Run("prune_and_verify_deletions", func(t *testing.T) {
 		beaconDB := setupDB(t)
 
 		config := params.BeaconConfig()
@@ -85,7 +59,6 @@ func TestStore_PruneProposals(t *testing.T) {
 		params.OverrideBeaconConfig(copyConfig)
 		defer params.OverrideBeaconConfig(config)
 
-		epochPruningIncrements := types.Epoch(2)
 		historyLength := types.Epoch(10)
 		currentEpoch := types.Epoch(20)
 		pruningLimitEpoch := currentEpoch - historyLength
@@ -101,7 +74,7 @@ func TestStore_PruneProposals(t *testing.T) {
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
 				prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
-				prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
+				prop2 := createProposalWrapper(t, j, 1 /* proposer index */, []byte{1})
 				proposals = append(proposals, prop1, prop2)
 			}
 		}
@@ -109,13 +82,8 @@ func TestStore_PruneProposals(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposals))
 
 		// We expect pruning completes without an issue and properly logs progress.
-		err := beaconDB.PruneProposals(ctx, currentEpoch, epochPruningIncrements, historyLength)
+		_, err := beaconDB.PruneProposalsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
-
-		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
-			wantedLog := fmt.Sprintf("Pruned %d/%d epochs", i, pruningLimitEpoch-1)
-			require.LogsContain(t, hook, wantedLog)
-		}
 
 		// Everything before epoch 10 should be deleted.
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
@@ -126,13 +94,11 @@ func TestStore_PruneProposals(t *testing.T) {
 				endSlot, err := helpers.StartSlot(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
-					prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
-					prop1Key, err := keyForValidatorProposal(prop1)
+					prop1Key, err := keyForValidatorProposal(j, 0)
 					if err != nil {
 						return err
 					}
-					prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
-					prop2Key, err := keyForValidatorProposal(prop2)
+					prop2Key, err := keyForValidatorProposal(j, 1)
 					if err != nil {
 						return err
 					}
@@ -153,25 +119,11 @@ func TestStore_PruneProposals(t *testing.T) {
 func TestStore_PruneAttestations_OK(t *testing.T) {
 	ctx := context.Background()
 
-	// If the current slot is less than the history length we track in slasher, there
-	// is nothing to prune yet, so we expect exiting early.
-	t.Run("current_epoch_less_than_history_length", func(t *testing.T) {
-		hook := logTest.NewGlobal()
-		beaconDB := setupDB(t)
-		epochPruningIncrements := types.Epoch(100)
-		currentEpoch := types.Epoch(1)
-		historyLength := types.Epoch(2)
-		err := beaconDB.PruneAttestations(ctx, currentEpoch, epochPruningIncrements, historyLength)
-		require.NoError(t, err)
-		require.LogsContain(t, hook, "Current epoch 1 < history length 2, nothing to prune")
-	})
-
 	// If the lowest stored epoch in the database is >= the end epoch of the pruning process,
 	// there is nothing to prune, so we also expect exiting early.
 	t.Run("lowest_stored_epoch_greater_than_pruning_limit_epoch", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 		beaconDB := setupDB(t)
-		epochPruningIncrements := types.Epoch(100)
 
 		// With a current epoch of 20 and a history length of 10, we should be pruning
 		// everything before epoch (20 - 10) = 10.
@@ -184,25 +136,21 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		err := beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(attestationDataRootsBucket)
 			encIdx := encodeValidatorIndex(types.ValidatorIndex(0))
-			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch)
+			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch + 1)
 			key := append(encodedTargetEpoch, encIdx...)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
 
-		err = beaconDB.PruneAttestations(ctx, currentEpoch, epochPruningIncrements, historyLength)
+		_, err = beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
 		expectedLog := fmt.Sprintf(
-			"Lowest epoch %d is >= pruning epoch %d, nothing to prune", lowestStoredEpoch, lowestStoredEpoch,
+			"Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestStoredEpoch+1, lowestStoredEpoch,
 		)
 		require.LogsContain(t, hook, expectedLog)
 	})
 
-	// Prune in increments until the cursor reaches the pruning limit epoch, and we expect
-	// that all the attestations written are deleted from the database, while those above the
-	// pruning limit epoch are kept intact.
-	t.Run("prune_in_full_increments_and_verify_deletions", func(t *testing.T) {
-		hook := logTest.NewGlobal()
+	t.Run("prune_and_verify_deletions", func(t *testing.T) {
 		beaconDB := setupDB(t)
 
 		config := params.BeaconConfig()
@@ -211,7 +159,6 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		params.OverrideBeaconConfig(copyConfig)
 		defer params.OverrideBeaconConfig(config)
 
-		epochPruningIncrements := types.Epoch(2)
 		historyLength := types.Epoch(10)
 		currentEpoch := types.Epoch(20)
 		pruningLimitEpoch := currentEpoch - historyLength
@@ -241,14 +188,9 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 
 		require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, attestations))
 
-		// We expect pruning completes without an issue and properly logs progress.
-		err := beaconDB.PruneAttestations(ctx, currentEpoch, epochPruningIncrements, historyLength)
+		// We expect pruning completes without an issue.
+		_, err := beaconDB.PruneAttestationsAtEpoch(ctx, pruningLimitEpoch)
 		require.NoError(t, err)
-
-		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
-			wantedLog := fmt.Sprintf("Pruned %d/%d epochs", i, pruningLimitEpoch-1)
-			require.LogsContain(t, hook, wantedLog)
-		}
 
 		// Everything before epoch 10 should be deleted.
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
