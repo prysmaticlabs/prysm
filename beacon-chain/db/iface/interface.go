@@ -138,12 +138,12 @@ type SlasherDatabase interface {
 	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*eth.ProposerSlashing, error)
-	PruneAttestations(
-		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
-	) error
-	PruneProposals(
-		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
-	) error
+	PruneAttestationsAtEpoch(
+		ctx context.Context, maxEpoch types.Epoch,
+	) (numPruned uint, err error)
+	PruneProposalsAtEpoch(
+		ctx context.Context, maxEpoch types.Epoch,
+	) (numPruned uint, err error)
 	DatabasePath() string
 	ClearDB() error
 }
