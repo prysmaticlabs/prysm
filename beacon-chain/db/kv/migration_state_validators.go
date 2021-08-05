@@ -3,7 +3,9 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -103,7 +105,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 
 				// no validators in state to migrate
 				if len(state.Validators) == 0 {
-					continue
+					return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
 				}
 
 				// move all the validators in this state registry out to a new bucket.
