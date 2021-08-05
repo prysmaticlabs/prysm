@@ -3,6 +3,7 @@ package altair_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -11,7 +12,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 func TestSyncCommitteeIndices_CanGet(t *testing.T) {
@@ -276,6 +279,107 @@ func TestSyncSubCommitteePubkeys_CanGet(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, com.Pubkeys[3*subCommSize:], sub)
 
+}
+
+func Test_ValidateSyncMessageTime(t *testing.T) {
+	if params.BeaconNetworkConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
+		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
+	}
+
+	type args struct {
+		syncMessageSlot types.Slot
+		genesisTime     time.Time
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantedErr string
+	}{
+		{
+			name: "sync_message.slot == current_slot",
+			args: args{
+				syncMessageSlot: 15,
+				genesisTime:     timeutils.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+		},
+		{
+			name: "sync_message.slot == current_slot, received in middle of slot",
+			args: args{
+				syncMessageSlot: 15,
+				genesisTime: timeutils.Now().Add(
+					-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(-(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second)),
+			},
+		},
+		{
+			name: "sync_message.slot == current_slot, received 200ms early",
+			args: args{
+				syncMessageSlot: 16,
+				genesisTime: timeutils.Now().Add(
+					-16 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(-200 * time.Millisecond),
+			},
+		},
+		{
+			name: "sync_message.slot > current_slot",
+			args: args{
+				syncMessageSlot: 16,
+				genesisTime:     timeutils.Now().Add(-(15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)),
+			},
+			wantedErr: "sync message slot 16 not within allowable range of",
+		},
+		{
+			name: "sync_message.slot == current_slot+CLOCK_DISPARITY",
+			args: args{
+				syncMessageSlot: 100,
+				genesisTime:     timeutils.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second - params.BeaconNetworkConfig().MaximumGossipClockDisparity)),
+			},
+			wantedErr: "",
+		},
+		{
+			name: "sync_message.slot == current_slot+CLOCK_DISPARITY+200ms",
+			args: args{
+				syncMessageSlot: 100,
+				genesisTime:     timeutils.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second - params.BeaconNetworkConfig().MaximumGossipClockDisparity - 200*time.Millisecond)),
+			},
+			wantedErr: "sync message slot 100 not within allowable range of",
+		},
+		{
+			name: "sync_message.slot == current_slot-CLOCK_DISPARITY",
+			args: args{
+				syncMessageSlot: 100,
+				genesisTime:     timeutils.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second + params.BeaconNetworkConfig().MaximumGossipClockDisparity)),
+			},
+			wantedErr: "",
+		},
+		{
+			name: "sync_message.slot > current_slot+CLOCK_DISPARITY",
+			args: args{
+				syncMessageSlot: 101,
+				genesisTime:     timeutils.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second + params.BeaconNetworkConfig().MaximumGossipClockDisparity)),
+			},
+			wantedErr: "sync message slot 101 not within allowable range of",
+		},
+		{
+			name: "sync_message.slot is well beyond current slot",
+			args: args{
+				syncMessageSlot: 1 << 32,
+				genesisTime:     timeutils.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantedErr: "which exceeds max allowed value relative to the local clock",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := altair.ValidateSyncMessageTime(tt.args.syncMessageSlot, tt.args.genesisTime,
+				params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+			if tt.wantedErr != "" {
+				assert.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func getState(t *testing.T, count uint64) *stateAltair.BeaconState {
