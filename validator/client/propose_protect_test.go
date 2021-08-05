@@ -148,7 +148,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.ProposerSlashingResponse{ProposerSlashings: []*ethpb.ProposerSlashing{}}, nil /*err*/)
+	).Return(&ethpb.ProposerSlashingResponse{ProposerSlashings: []*ethpb.ProposerSlashing{{}}}, nil /*err*/)
 
 	err := validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{2})
 	require.ErrorContains(t, failedBlockSignExternalErr, err)

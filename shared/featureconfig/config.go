@@ -232,8 +232,8 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
-	if ctx.Bool(enableNewExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableNewExternalSlasherProtectionFlag.Name, enableNewExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
+	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
+		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.RemoteSlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {

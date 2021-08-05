@@ -42,7 +42,10 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.AttesterSlashingResponse{AttesterSlashings: []*ethpb.AttesterSlashing{}}, nil /*err*/)
+	).Return(&ethpb.AttesterSlashingResponse{AttesterSlashings: []*ethpb.AttesterSlashing{{
+		Attestation_1: &ethpb.IndexedAttestation{},
+		Attestation_2: &ethpb.IndexedAttestation{},
+	}}}, nil /*err*/)
 
 	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.ErrorContains(t, failedPostAttSignExternalErr, err)
