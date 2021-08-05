@@ -34,7 +34,7 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	if !ok {
 		return nil, errors.Errorf("unrecognized field in trie")
 	}
-	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
+	fieldRoots, err := convertToRoots(field, []uint64{}, elements, true)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if !ok {
 		return [32]byte{}, errors.Errorf("unrecognized field in trie")
 	}
-	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
+	fieldRoots, err := convertToRoots(f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -101,7 +101,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
-
 }
 
 // CopyTrie copies the references to the elements the trie
