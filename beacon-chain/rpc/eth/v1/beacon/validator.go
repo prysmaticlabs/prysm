@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -92,11 +93,15 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	epoch := helpers.SlotToEpoch(state.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
-		valStatus, err := validatorStatus(vc.Validator, epoch)
+		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
+		}
+		valStatus, err := rpchelpers.ValidatorStatus(readOnlyVal, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator status: %v", err)
 		}
-		valSubStatus, err := validatorSubStatus(vc.Validator, epoch)
+		valSubStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator sub status: %v", err)
 		}
@@ -198,8 +203,11 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 		allBalances := state.Balances()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
-			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
-			subStatus, err := validatorSubStatus(v1Validator, epoch)
+			readOnlyVal, err := v1.NewValidator(validator)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
+			}
+			subStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
@@ -207,7 +215,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				Index:     types.ValidatorIndex(i),
 				Balance:   allBalances[i],
 				Status:    subStatus,
-				Validator: v1Validator,
+				Validator: migration.V1Alpha1ValidatorToV1(validator),
 			}
 		}
 	} else {
@@ -238,7 +246,11 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				return nil, errors.Wrap(err, "could not get validator")
 			}
 			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
-			subStatus, err := validatorSubStatus(v1Validator, epoch)
+			readOnlyVal, err := v1.NewValidator(validator)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
+			}
+			subStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
@@ -252,67 +264,6 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 	}
 
 	return valContainers, nil
-}
-
-func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
-	valStatus, err := validatorSubStatus(validator, epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get sub status")
-	}
-	switch valStatus {
-	case ethpb.ValidatorStatus_PENDING_INITIALIZED, ethpb.ValidatorStatus_PENDING_QUEUED:
-		return ethpb.ValidatorStatus_PENDING, nil
-	case ethpb.ValidatorStatus_ACTIVE_ONGOING, ethpb.ValidatorStatus_ACTIVE_SLASHED, ethpb.ValidatorStatus_ACTIVE_EXITING:
-		return ethpb.ValidatorStatus_ACTIVE, nil
-	case ethpb.ValidatorStatus_EXITED_UNSLASHED, ethpb.ValidatorStatus_EXITED_SLASHED:
-		return ethpb.ValidatorStatus_EXITED, nil
-	case ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE, ethpb.ValidatorStatus_WITHDRAWAL_DONE:
-		return ethpb.ValidatorStatus_WITHDRAWAL, nil
-	}
-	return 0, errors.New("invalid validator state")
-}
-
-func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
-	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
-
-	// Pending.
-	if validator.ActivationEpoch > epoch {
-		if validator.ActivationEligibilityEpoch == farFutureEpoch {
-			return ethpb.ValidatorStatus_PENDING_INITIALIZED, nil
-		} else if validator.ActivationEligibilityEpoch < farFutureEpoch {
-			return ethpb.ValidatorStatus_PENDING_QUEUED, nil
-		}
-	}
-
-	// Active.
-	if validator.ActivationEpoch <= epoch && epoch < validator.ExitEpoch {
-		if validator.ExitEpoch == farFutureEpoch {
-			return ethpb.ValidatorStatus_ACTIVE_ONGOING, nil
-		} else if validator.ExitEpoch < farFutureEpoch {
-			if validator.Slashed {
-				return ethpb.ValidatorStatus_ACTIVE_SLASHED, nil
-			}
-			return ethpb.ValidatorStatus_ACTIVE_EXITING, nil
-		}
-	}
-
-	// Exited.
-	if validator.ExitEpoch <= epoch && epoch < validator.WithdrawableEpoch {
-		if validator.Slashed {
-			return ethpb.ValidatorStatus_EXITED_SLASHED, nil
-		}
-		return ethpb.ValidatorStatus_EXITED_UNSLASHED, nil
-	}
-
-	if validator.WithdrawableEpoch <= epoch {
-		if validator.EffectiveBalance != 0 {
-			return ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE, nil
-		} else {
-			return ethpb.ValidatorStatus_WITHDRAWAL_DONE, nil
-		}
-	}
-
-	return 0, errors.New("invalid validator state")
 }
 
 func handleValContainerErr(err error) error {

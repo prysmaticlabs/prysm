@@ -95,6 +95,21 @@ func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *ethpb_alpha.AggregateAttestat
 	}
 }
 
+// V1SignedAggregateAttAndProofToV1Alpha1 converts a v1 signed aggregate attestation and proof to v1alpha1.
+func V1SignedAggregateAttAndProofToV1Alpha1(v1Att *ethpb.SignedAggregateAttestationAndProof) *ethpb_alpha.SignedAggregateAttestationAndProof {
+	if v1Att == nil {
+		return &ethpb_alpha.SignedAggregateAttestationAndProof{}
+	}
+	return &ethpb_alpha.SignedAggregateAttestationAndProof{
+		Message: &ethpb_alpha.AggregateAttestationAndProof{
+			AggregatorIndex: v1Att.Message.AggregatorIndex,
+			Aggregate:       V1AttestationToV1Alpha1(v1Att.Message.Aggregate),
+			SelectionProof:  v1Att.Message.SelectionProof,
+		},
+		Signature: v1Att.Signature,
+	}
+}
+
 // V1Alpha1IndexedAttToV1 converts a v1alpha1 indexed attestation to v1.
 func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.IndexedAttestation {
 	if v1alpha1Att == nil {
@@ -116,6 +131,18 @@ func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attest
 		AggregationBits: v1alpha1Att.AggregationBits,
 		Data:            V1Alpha1AttDataToV1(v1alpha1Att.Data),
 		Signature:       v1alpha1Att.Signature,
+	}
+}
+
+// V1AttestationToV1Alpha1 converts a v1 attestation to v1alpha1.
+func V1AttestationToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
+	if v1Att == nil {
+		return &ethpb_alpha.Attestation{}
+	}
+	return &ethpb_alpha.Attestation{
+		AggregationBits: v1Att.AggregationBits,
+		Data:            V1AttDataToV1Alpha1(v1Att.Data),
+		Signature:       v1Att.Signature,
 	}
 }
 
@@ -289,13 +316,30 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 	}
 }
 
-// V1Alpha1ValidatorToV1 converts a v1 validator to v1alpha1.
-func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator {
-	if v1Validator == nil {
+// V1Alpha1ValidatorToV1 converts a v1alpha1 validator to v1.
+func V1Alpha1ValidatorToV1(v1Alpha1Validator *ethpb_alpha.Validator) *ethpb.Validator {
+	if v1Alpha1Validator == nil {
 		return &ethpb.Validator{}
 	}
 	return &ethpb.Validator{
-		Pubkey:                     v1Validator.PublicKey,
+		Pubkey:                     v1Alpha1Validator.PublicKey,
+		WithdrawalCredentials:      v1Alpha1Validator.WithdrawalCredentials,
+		EffectiveBalance:           v1Alpha1Validator.EffectiveBalance,
+		Slashed:                    v1Alpha1Validator.Slashed,
+		ActivationEligibilityEpoch: v1Alpha1Validator.ActivationEligibilityEpoch,
+		ActivationEpoch:            v1Alpha1Validator.ActivationEpoch,
+		ExitEpoch:                  v1Alpha1Validator.ExitEpoch,
+		WithdrawableEpoch:          v1Alpha1Validator.WithdrawableEpoch,
+	}
+}
+
+// V1ValidatorToV1Alpha1 converts a v1 validator to v1alpha1.
+func V1ValidatorToV1Alpha1(v1Validator *ethpb.Validator) *ethpb_alpha.Validator {
+	if v1Validator == nil {
+		return &ethpb_alpha.Validator{}
+	}
+	return &ethpb_alpha.Validator{
+		PublicKey:                  v1Validator.Pubkey,
 		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
 		EffectiveBalance:           v1Validator.EffectiveBalance,
 		Slashed:                    v1Validator.Slashed,

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -53,10 +55,8 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubKeys := make([][]byte, len(deposits))
-	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
-		indices[i] = uint64(i)
 	}
 
 	chainSlot := types.Slot(0)
@@ -214,10 +214,8 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubKeys := make([][]byte, len(deposits))
-	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
-		indices[i] = uint64(i)
 	}
 
 	chainSlot := types.Slot(0)
@@ -635,4 +633,425 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	require.NotNil(t, att)
 	require.NotNil(t, att.Data)
 	assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1}, att.Data.AggregationBits)
+}
+
+func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
+	ctx := context.Background()
+	genesis := testutil.NewBeaconBlock()
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	require.NoError(t, err)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not set up genesis state")
+	// Set state to non-epoch start slot.
+	require.NoError(t, bs.SetSlot(5))
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots[0] = genesisRoot[:]
+	require.NoError(t, bs.SetBlockRoots(roots))
+
+	pubKeys := make([][]byte, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+	}
+
+	chainSlot := types.Slot(0)
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+	}
+	vs := &Server{
+		HeadFetcher:    chain,
+		TimeFetcher:    chain,
+		SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		V1Alpha1Server: &v1alpha1validator.Server{},
+	}
+
+	t.Run("Single subscription", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+	})
+
+	t.Run("Multiple subscriptions", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+				{
+					ValidatorIndex: 1000,
+					CommitteeIndex: 16,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 2, len(subnets))
+	})
+
+	t.Run("Is aggregator", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   true,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(types.Slot(1))
+		assert.Equal(t, 1, len(ids))
+	})
+
+	t.Run("Validators assigned to subnet", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   true,
+				},
+				{
+					ValidatorIndex: 2,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		ids, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubKeys[1])
+		require.Equal(t, true, ok, "subnet for validator 1 not found")
+		assert.Equal(t, 1, len(ids))
+		ids, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubKeys[2])
+		require.Equal(t, true, ok, "subnet for validator 2 not found")
+		assert.Equal(t, 1, len(ids))
+	})
+
+	t.Run("No subscriptions", func(t *testing.T) {
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: make([]*v1.BeaconCommitteeSubscribe, 0),
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "No subscriptions provided", err)
+	})
+}
+
+func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
+	vs := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &v1.SubmitBeaconCommitteeSubscriptionsRequest{})
+	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+}
+
+func TestSubmitAggregateAndProofs(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	c.MaximumGossipClockDisparity = time.Hour
+	params.OverrideBeaconNetworkConfig(c)
+	root := bytesutil.PadTo([]byte("root"), 32)
+	sig := bytesutil.PadTo([]byte("sig"), 96)
+	proof := bytesutil.PadTo([]byte("proof"), 96)
+	att := &v1.Attestation{
+		AggregationBits: []byte{0, 1},
+		Data: &v1.AttestationData{
+			Slot:            1,
+			Index:           1,
+			BeaconBlockRoot: root,
+			Source: &v1.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+			Target: &v1.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+		},
+		Signature: sig,
+	}
+
+	t.Run("OK", func(t *testing.T) {
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			Genesis: time.Now(), Slot: &chainSlot,
+		}
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			TimeFetcher: chain,
+			Broadcaster: broadcaster,
+		}
+
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate:       att,
+						SelectionProof:  proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("nil aggregate", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				nil,
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+
+		req = &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message:   nil,
+					Signature: sig,
+				},
+			},
+		}
+		_, err = vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+
+		req = &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate: &v1.Attestation{
+							AggregationBits: []byte{0, 1},
+							Data:            nil,
+							Signature:       sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+		_, err = vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("zero signature", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate:       att,
+						SelectionProof:  proof,
+					},
+					Signature: make([]byte, 96),
+				},
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("zero proof", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate:       att,
+						SelectionProof:  make([]byte, 96),
+					},
+					Signature: sig,
+				},
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("zero message signature", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate: &v1.Attestation{
+							AggregationBits: []byte{0, 1},
+							Data: &v1.AttestationData{
+								Slot:            1,
+								Index:           1,
+								BeaconBlockRoot: root,
+								Source: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+								Target: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+							},
+							Signature: make([]byte, 96),
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("wrong signature length", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			Broadcaster: broadcaster,
+		}
+
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate:       att,
+						SelectionProof:  proof,
+					},
+					Signature: make([]byte, 99),
+				},
+			},
+		}
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+
+		req = &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate: &v1.Attestation{
+							AggregationBits: []byte{0, 1},
+							Data: &v1.AttestationData{
+								Slot:            1,
+								Index:           1,
+								BeaconBlockRoot: root,
+								Source: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+								Target: &v1.Checkpoint{
+									Epoch: 1,
+									Root:  root,
+								},
+							},
+							Signature: make([]byte, 99),
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+		_, err = vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
+
+	t.Run("invalid attestation time", func(t *testing.T) {
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			Genesis: time.Now().Add(time.Hour * 2), Slot: &chainSlot,
+		}
+		broadcaster := &p2pMock.MockBroadcaster{}
+		vs := Server{
+			TimeFetcher: chain,
+			Broadcaster: broadcaster,
+		}
+
+		req := &v1.SubmitAggregateAndProofsRequest{
+			Data: []*v1.SignedAggregateAttestationAndProof{
+				{
+					Message: &v1.AggregateAttestationAndProof{
+						AggregatorIndex: 1,
+						Aggregate:       att,
+						SelectionProof:  proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Attestation slot is no longer valid from current time", err)
+		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	})
 }

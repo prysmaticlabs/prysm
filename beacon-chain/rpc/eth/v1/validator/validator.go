@@ -8,13 +8,18 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -232,13 +237,124 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.Aggregate
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	defer span.End()
+
+	for _, agg := range req.Data {
+		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
+			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
+		}
+		sigLen := params.BeaconConfig().BLSSignatureLength
+		emptySig := make([]byte, sigLen)
+		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) || bytes.Equal(agg.Message.Aggregate.Signature, emptySig) {
+			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
+		}
+		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
+		}
+
+		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
+		if err := helpers.ValidateAttestationTime(agg.Message.Aggregate.Data.Slot,
+			vs.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
+		}
+	}
+
+	broadcastFailed := false
+	for _, agg := range req.Data {
+		v1alpha1Agg := migration.V1SignedAggregateAttAndProofToV1Alpha1(agg)
+		if err := vs.Broadcaster.Broadcast(ctx, v1alpha1Agg); err != nil {
+			broadcastFailed = true
+		} else {
+			log.WithFields(logrus.Fields{
+				"slot":            agg.Message.Aggregate.Data.Slot,
+				"committeeIndex":  agg.Message.Aggregate.Data.Index,
+				"validatorIndex":  agg.Message.AggregatorIndex,
+				"aggregatedCount": agg.Message.Aggregate.AggregationBits.Count(),
+			}).Debug("Broadcasting aggregated attestation and proof")
+		}
+	}
+
+	if broadcastFailed {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not broadcast one or more signed aggregated attestations")
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
 func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.SubmitBeaconCommitteeSubscription")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	if len(req.Data) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
+	}
+
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Verify validators at the beginning to return early if request is invalid.
+	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	for i, sub := range req.Data {
+		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
+		if outOfRangeErr, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
+		}
+		validators[i] = val
+	}
+
+	fetchValsLen := func(slot types.Slot) (uint64, error) {
+		wantedEpoch := helpers.SlotToEpoch(slot)
+		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		if err != nil {
+			return 0, err
+		}
+		return uint64(len(vals)), nil
+	}
+
+	// Request the head validator indices of epoch represented by the first requested slot.
+	currValsLen, err := fetchValsLen(req.Data[0].Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
+	}
+	currEpoch := helpers.SlotToEpoch(req.Data[0].Slot)
+
+	for _, sub := range req.Data {
+		// If epoch has changed, re-request active validators length
+		if currEpoch != helpers.SlotToEpoch(sub.Slot) {
+			currValsLen, err = fetchValsLen(sub.Slot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
+			}
+			currEpoch = helpers.SlotToEpoch(sub.Slot)
+		}
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
+		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		if sub.IsAggregator {
+			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+		}
+	}
+
+	for _, val := range validators {
+		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
+		}
+		pubkey := val.PublicKey()
+		vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
@@ -306,4 +422,18 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 	}
 
 	return s, nil
+}
+
+// Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
+func v1ValidatorStatusToV1Alpha1(valStatus v1.ValidatorStatus) v1alpha1.ValidatorStatus {
+	switch valStatus {
+	case v1.ValidatorStatus_ACTIVE:
+		return v1alpha1.ValidatorStatus_ACTIVE
+	case v1.ValidatorStatus_PENDING:
+		return v1alpha1.ValidatorStatus_PENDING
+	case v1.ValidatorStatus_WITHDRAWAL:
+		return v1alpha1.ValidatorStatus_EXITED
+	default:
+		return v1alpha1.ValidatorStatus_UNKNOWN_STATUS
+	}
 }

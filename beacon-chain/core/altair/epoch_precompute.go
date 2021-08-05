@@ -22,7 +22,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	pValidators := make([]*precompute.Validator, st.NumValidators())
 	bal := &precompute.Balance{}
 	prevEpoch := helpers.PrevEpoch(st)
-
+	currentEpoch := helpers.CurrentEpoch(st)
 	inactivityScores, err := st.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -35,7 +35,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	}
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
+		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		pVal := &precompute.Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
@@ -43,7 +43,7 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 			InactivityScore:              inactivityScores[idx],
 		}
 		// Validator active current epoch
-		if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(st)) {
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			pVal.IsActiveCurrentEpoch = true
 			bal.ActiveCurrentEpoch += val.EffectiveBalance()
 		}
@@ -62,7 +62,13 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 }
 
 // ProcessInactivityScores of beacon chain. This updates inactivity scores of beacon chain and
-// updates the precompute validator struct for later processing.
+// updates the precompute validator struct for later processing. The inactivity scores work as following:
+// For fully inactive validators and perfect active validators, the effect is the same as before Altair.
+// For a validator is inactive and the chain fails to finalize, the inactivity score increases by a fixed number, the total loss after N epochs is proportional to N**2/2.
+// For imperfectly active validators. The inactivity score's behavior is specified by this function:
+//    If a validator fails to submit an attestation with the correct target, their inactivity score goes up by 4.
+//    If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
+//    If the chain has recently finalized, each validator's score drops by 16.
 func ProcessInactivityScores(
 	ctx context.Context,
 	state state.BeaconState,
@@ -81,6 +87,10 @@ func ProcessInactivityScores(
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
 	for i, v := range vals {
+		if !precompute.EligibleForRewards(v) {
+			continue
+		}
+
 		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 			// Decrease inactivity score when validator gets target correct.
 			if v.InactivityScore > 0 {
@@ -237,8 +247,8 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	inactivityLeak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			rewardNumerator := baseReward * srcWeight * (bal.PrevEpochAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
+			n := baseReward * srcWeight * (bal.PrevEpochAttested / balIncrement)
+			r += n / (activeEpochIncrement * weightDenominator)
 		}
 	} else {
 		p += baseReward * srcWeight / weightDenominator
@@ -247,8 +257,8 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			rewardNumerator := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
+			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / balIncrement)
+			r += n / (activeEpochIncrement * weightDenominator)
 		}
 	} else {
 		p += baseReward * tgtWeight / weightDenominator
@@ -257,19 +267,17 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			rewardNumerator := baseReward * headWeight * (bal.PrevEpochHeadAttested / balIncrement)
-			r += rewardNumerator / (activeEpochIncrement * weightDenominator)
+			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / balIncrement)
+			r += n / (activeEpochIncrement * weightDenominator)
 		}
 	}
 
 	// Process finality delay penalty
 	// Apply an additional penalty to validators that did not vote on the correct target or slashed
 	if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-		penaltyNumerator := eb * v.InactivityScore
-		scoreBias := cfg.InactivityScoreBias
-		quotient := cfg.InactivityPenaltyQuotientAltair
-		penaltyDenominator := scoreBias * quotient
-		p += penaltyNumerator / penaltyDenominator
+		n := eb * v.InactivityScore
+		d := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
+		p += n / d
 	}
 
 	return r, p
