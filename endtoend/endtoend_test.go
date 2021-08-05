@@ -351,3 +351,43 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
+	// Exit if we are running from the previous release.
+	if r.config.UsePrysmShValidator {
+		return nil
+	}
+	g, ctx := errgroup.WithContext(ctx)
+	// Follow same parameters as older validators.
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	if validatorNum%beaconNodeNum != 0 {
+		return errors.New("validator count is not easily divisible by beacon node count")
+	}
+	validatorsPerNode := validatorNum / beaconNodeNum
+	valIndex := beaconNodeNum + 1
+
+	// Replicate starting up validator client 0 to test doppleganger protection.
+	valNode := components.NewValidatorNode(r.config, validatorsPerNode, valIndex, validatorsPerNode*0)
+	g.Go(func() error {
+		return valNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{valNode}); err != nil {
+		return fmt.Errorf("validator not ready: %w", err)
+	}
+	logFile, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, valIndex)))
+	if err != nil {
+		return fmt.Errorf("unable to open log file: %v", err)
+	}
+	r.t.Run("doppelganger found", func(t *testing.T) {
+		assert.NoError(t, helpers.WaitForTextInFile(logFile, "Duplicate instances exists in the network for validator keys"), "Failed to carry out doppelganger check correctly")
+	})
+	if r.t.Failed() {
+		return errors.New("doppelganger was unable to be found")
+	}
+	// Expect an abrupt exit for the validator client.
+	if err := g.Wait(); err == nil || !strings.Contains(err.Error(), errGeneralCode) {
+		return fmt.Errorf("wanted an error of %s but received %v", errGeneralCode, err)
+	}
+	return nil
+}

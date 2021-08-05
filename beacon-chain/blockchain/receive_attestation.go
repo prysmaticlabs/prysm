@@ -48,7 +48,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	return nil
 }
 
-// AttestationPreState returns the pre state of attestation.
+// AttestationTargetState returns the pre state of attestation.
 func (s *Service) AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (state.BeaconState, error) {
 	ss, err := helpers.StartSlot(attTarget.Epoch)
 	if err != nil {

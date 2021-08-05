@@ -200,6 +200,7 @@ func (s *Service) Start() {
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,
 		AttestationsPool: s.cfg.AttestationsPool,
+		PeerManager:      s.cfg.PeerManager,
 		Broadcaster:      s.cfg.Broadcaster,
 		V1Alpha1Server:   validatorServer,
 	}
@@ -261,6 +262,7 @@ func (s *Service) Start() {
 		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		BlockNotifier:      s.cfg.BlockNotifier,
+		OperationNotifier:  s.cfg.OperationNotifier,
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,

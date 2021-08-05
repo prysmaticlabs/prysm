@@ -74,7 +74,6 @@ func (v *validator) slashableProposalCheck(
 			return errors.New(failedBlockSignExternalErr)
 		}
 	}
-
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Slot(), signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()

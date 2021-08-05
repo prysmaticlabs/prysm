@@ -4,10 +4,14 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
@@ -69,37 +73,37 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitAttestation")
 	defer span.End()
 
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
 	var validAttestations []*ethpb_alpha.Attestation
 	var attFailures []*singleAttestationVerificationFailure
 	for i, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
-		err = blocks.VerifyAttestationNoVerifySignature(ctx, headState, att)
-		if err != nil {
+		if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 			attFailures = append(attFailures, &singleAttestationVerificationFailure{
 				Index:   i,
-				Message: err.Error(),
+				Message: "Incorrect attestation signature: " + err.Error(),
 			})
 			continue
 		}
-		err = blocks.VerifyAttestationSignature(ctx, headState, att)
-		if err != nil {
-			attFailures = append(attFailures, &singleAttestationVerificationFailure{
-				Index:   i,
-				Message: err.Error(),
-			})
-			continue
-		}
-		validAttestations = append(validAttestations, att)
-	}
 
-	err = bs.AttestationsPool.SaveAggregatedAttestations(validAttestations)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save attestations: %v", err)
+		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
+		// of a received unaggregated attestation.
+		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.UnaggregatedAttReceived,
+			Data: &operation.UnAggregatedAttReceivedData{
+				Attestation: att,
+			},
+		})
+
+		validAttestations = append(validAttestations, att)
+
+		go func() {
+			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
+			attCopy := copyutil.CopyAttestation(att)
+			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
+				log.WithError(err).Error("Could not handle attestation in operations service")
+				return
+			}
+		}()
 	}
 
 	broadcastFailed := false
@@ -124,9 +128,13 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 
 	if len(attFailures) > 0 {
 		failuresContainer := &attestationsVerificationFailure{Failures: attFailures}
-		err = grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"One or more attestations failed validation. Could not prepare attestation failure information: %v",
+				err,
+			)
 		}
 		return nil, status.Errorf(codes.InvalidArgument, "One or more attestations failed validation")
 	}

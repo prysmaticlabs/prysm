@@ -6,6 +6,7 @@ package beacon
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -23,6 +24,7 @@ type Server struct {
 	GenesisTimeFetcher blockchain.TimeFetcher
 	BlockReceiver      blockchain.BlockReceiver
 	BlockNotifier      blockfeed.Notifier
+	OperationNotifier  operation.Notifier
 	Broadcaster        p2p.Broadcaster
 	AttestationsPool   attestations.Pool
 	SlashingsPool      slashings.PoolManager
