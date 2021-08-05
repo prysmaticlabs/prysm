@@ -145,14 +145,26 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
-		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
-		if err != nil {
-			return err
+		var validators []*ethpb.Validator
+		switch st.InnerStateUnsafe().(type) {
+		case *ethpb.BeaconState:
+			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+			if err != nil {
+				return err
+			}
+			validators = pbState.Validators
+		case *ethpb.BeaconStateAltair:
+			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
+			if err != nil {
+				return err
+			}
+			validators = pbState.Validators
+		default:
+			return errors.New("invalid state type")
 		}
-
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
-		for _, val := range pbState.Validators {
+		for _, val := range validators {
 			// create the unique hash for that validator entry.
 			hash, hashErr := val.HashTreeRoot()
 			if hashErr != nil {
@@ -181,23 +193,49 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			// validator entries.To bring the gap closer, we empty the validators
 			// just before Put() and repopulate that state with original validators.
 			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
-			pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			valEntries := pbState.Validators
-			pbState.Validators = make([]*ethpb.Validator, 0)
-			encodedState, err := encode(ctx, pbState)
-			if err != nil {
-				return err
-			}
-			if err := bucket.Put(rt[:], encodedState); err != nil {
-				return err
-			}
-			pbState.Validators = valEntries
-
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
-				return err
+			switch rawType := states[i].InnerStateUnsafe().(type) {
+			case *ethpb.BeaconState:
+				pbState, err := v1.ProtobufBeaconState(rawType)
+				if err != nil {
+					return err
+				}
+				valEntries := pbState.Validators
+				pbState.Validators = make([]*ethpb.Validator, 0)
+				encodedState, err := encode(ctx, pbState)
+				if err != nil {
+					return err
+				}
+				if err := bucket.Put(rt[:], encodedState); err != nil {
+					return err
+				}
+				pbState.Validators = valEntries
+				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+					return err
+				}
+			case *ethpb.BeaconStateAltair:
+				pbState, err := v2.ProtobufBeaconState(rawType)
+				if err != nil {
+					return err
+				}
+				if pbState == nil {
+					return errors.New("nil state")
+				}
+				valEntries := pbState.Validators
+				pbState.Validators = make([]*ethpb.Validator, 0)
+				rawObj, err := pbState.MarshalSSZ()
+				if err != nil {
+					return err
+				}
+				encodedState := snappy.Encode(nil, append(altairKey, rawObj...))
+				if err := bucket.Put(rt[:], encodedState); err != nil {
+					return err
+				}
+				pbState.Validators = valEntries
+				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+					return err
+				}
+			default:
+				return errors.New("invalid state type")
 			}
 		}
 
