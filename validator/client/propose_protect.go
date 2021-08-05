@@ -57,36 +57,8 @@ func (v *validator) slashableProposalCheck(
 			block.Slot(),
 		)
 	}
-	if featureconfig.Get().OldRemoteSlasherProtection {
-		blockHdr, err := blockutil.BeaconBlockHeaderFromBlockInterface(block)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		if v.oldRemoteSlasher != nil && !v.oldRemoteSlasher.CheckBlockSafety(ctx, blockHdr) {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedBlockSignExternalErr)
-		}
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		if v.oldRemoteSlasher != nil {
-			valid, err := v.oldRemoteSlasher.CommitBlock(ctx, sbh)
-			if err != nil {
-				return err
-			}
-			if !valid {
-				if v.emitAccountMetrics {
-					ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-				}
-				return fmt.Errorf(failedBlockSignExternalErr)
-			}
-		}
-	}
 
-	if featureconfig.Get().NewRemoteSlasherProtection {
+	if featureconfig.Get().RemoteSlasherProtection {
 		blockHdr, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")

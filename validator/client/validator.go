@@ -222,37 +222,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// SlasherReady checks if slasher that was configured as external protection
-// is reachable.
-func (v *validator) SlasherReady(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
-	defer span.End()
-	if featureconfig.Get().OldRemoteSlasherProtection {
-		err := v.oldRemoteSlasher.Status()
-		if err == nil {
-			return nil
-		}
-		ticker := time.NewTicker(reconnectPeriod)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
-				err = v.oldRemoteSlasher.Status()
-				if err != nil {
-					continue
-				}
-				log.Info("Slasher connection is ready")
-				return nil
-			case <-ctx.Done():
-				log.Debug("Context closed, exiting reconnect external protection")
-				return ctx.Err()
-			}
-		}
-	}
-	return nil
-}
-
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.

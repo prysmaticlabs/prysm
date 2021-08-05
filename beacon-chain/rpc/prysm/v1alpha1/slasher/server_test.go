@@ -17,7 +17,7 @@ func TestServer_IsSlashableAttestation_SlashingFound(t *testing.T) {
 	ctx := context.Background()
 	slashing, err := s.IsSlashableAttestation(ctx, &ethpb.IndexedAttestation{})
 	require.NoError(t, err)
-	require.NotNil(t, slashing.AttesterSlashing)
+	require.Equal(t, true, len(slashing.AttesterSlashings) > 0)
 }
 
 func TestServer_IsSlashableAttestation_SlashingNotFound(t *testing.T) {
@@ -28,7 +28,7 @@ func TestServer_IsSlashableAttestation_SlashingNotFound(t *testing.T) {
 	ctx := context.Background()
 	slashing, err := s.IsSlashableAttestation(ctx, &ethpb.IndexedAttestation{})
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing.AttesterSlashing)
+	require.Equal(t, true, len(slashing.AttesterSlashings) == 0)
 }
 
 func TestServer_IsSlashableBlock_SlashingFound(t *testing.T) {
@@ -39,7 +39,7 @@ func TestServer_IsSlashableBlock_SlashingFound(t *testing.T) {
 	ctx := context.Background()
 	slashing, err := s.IsSlashableBlock(ctx, &ethpb.SignedBeaconBlockHeader{})
 	require.NoError(t, err)
-	require.NotNil(t, slashing.ProposerSlashing)
+	require.Equal(t, true, len(slashing.ProposerSlashings) > 0)
 }
 
 func TestServer_IsSlashableBlock_SlashingNotFound(t *testing.T) {
@@ -50,5 +50,5 @@ func TestServer_IsSlashableBlock_SlashingNotFound(t *testing.T) {
 	ctx := context.Background()
 	slashing, err := s.IsSlashableBlock(ctx, &ethpb.SignedBeaconBlockHeader{})
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.ProposerSlashing)(nil), slashing.ProposerSlashing)
+	require.Equal(t, true, len(slashing.ProposerSlashings) == 0)
 }

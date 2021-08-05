@@ -72,7 +72,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 func Test_slashableProposalCheck(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
-		NewRemoteSlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -133,7 +133,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 
 func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	config := &featureconfig.Flags{
-		NewRemoteSlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()

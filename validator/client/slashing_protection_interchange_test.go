@@ -11,7 +11,6 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -124,7 +123,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					err = validator.slashableProposalCheck(context.Background(), pk, wrapper.WrappedPhase0BeaconBlock(b.Block), signingRoot)
+					err = validator.slashableProposalCheck(context.Background(), pk, wrapper.WrappedPhase0SignedBeaconBlock(b), signingRoot)
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {

@@ -40,8 +40,7 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	OldRemoteSlasherProtection          bool // OldRemoteSlasherProtection protects validator from sending over a slashable offense over the network using external slasher (will be deprecated).
-	NewRemoteSlasherProtection          bool // NewRemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
+	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
@@ -233,13 +232,9 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
-	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.OldRemoteSlasherProtection = true
-	}
 	if ctx.Bool(enableNewExternalSlasherProtectionFlag.Name) {
 		log.WithField(enableNewExternalSlasherProtectionFlag.Name, enableNewExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.NewRemoteSlasherProtection = true
+		cfg.RemoteSlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

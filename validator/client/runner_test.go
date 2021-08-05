@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -60,17 +59,6 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
-}
-
-func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
-	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	cfg := &featureconfig.Flags{
-		OldRemoteSlasherProtection: true,
-	}
-	reset := featureconfig.InitWithReset(cfg)
-	defer reset()
-	run(cancelledContext(), v)
-	assert.Equal(t, true, v.SlasherReadyCalled, "Expected SlasherReady() to be called")
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
