@@ -31,6 +31,10 @@ jobs:
         with:
           goimports-path: ./
 
+      - name: Gosec security scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
   build:
     name: Build
     runs-on: ubuntu-latest
