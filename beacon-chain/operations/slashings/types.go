@@ -18,7 +18,7 @@ type PoolInserter interface {
 	) error
 	InsertProposerSlashing(
 		ctx context.Context,
-		state state.BeaconState,
+		state state.ReadOnlyBeaconState,
 		slashing *ethpb.ProposerSlashing,
 	) error
 }

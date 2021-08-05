@@ -9,8 +9,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -186,7 +185,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 	require.NoError(t, err)
 	htr, err := firstBlockHeader.Header.HashTreeRoot()
 	require.NoError(t, err)
-	container := &pb.SigningData{
+	container := &ethpb.SigningData{
 		ObjectRoot: htr[:],
 		Domain:     domain,
 	}

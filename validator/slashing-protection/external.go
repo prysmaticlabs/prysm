@@ -8,16 +8,17 @@ import (
 
 // CheckBlockSafety this function is part of slashing protection for block proposals it performs
 // validation without db update. To be used before the block is signed.
-func (s *Service) CheckBlockSafety(ctx context.Context, blockHeader *ethpb.BeaconBlockHeader) bool {
-	slashable, err := s.slasherClient.IsSlashableBlockNoUpdate(ctx, blockHeader)
+func (s *Service) CheckBlockSafety(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) bool {
+	slashable, err := s.slasherClient.IsSlashableBlock(ctx, blockHeader)
 	if err != nil {
 		log.Errorf("External slashing block protection returned an error: %v", err)
 		return false
 	}
-	if slashable != nil && slashable.Slashable {
+	if slashable != nil && len(slashable.ProposerSlashings) > 0 {
 		log.Warn("External slashing proposal protection found the block to be slashable")
+		return true
 	}
-	return !slashable.Slashable
+	return false
 }
 
 // CommitBlock this function is part of slashing protection for block proposals it performs
@@ -38,15 +39,16 @@ func (s *Service) CommitBlock(ctx context.Context, blockHeader *ethpb.SignedBeac
 // CheckAttestationSafety implements the slashing protection for attestations without db update.
 // To be used before signing.
 func (s *Service) CheckAttestationSafety(ctx context.Context, attestation *ethpb.IndexedAttestation) bool {
-	slashable, err := s.slasherClient.IsSlashableAttestationNoUpdate(ctx, attestation)
+	as, err := s.slasherClient.IsSlashableAttestation(ctx, attestation)
 	if err != nil {
 		log.Errorf("External slashing attestation protection returned an error: %v", err)
 		return false
 	}
-	if slashable.Slashable {
+	if as != nil && len(as.AttesterSlashings) != 0 {
 		log.Warn("External slashing attestation protection found the attestation to be slashable")
+		return true
 	}
-	return !slashable.Slashable
+	return false
 }
 
 // CommitAttestation implements the slashing protection for attestations it performs

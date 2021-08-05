@@ -20,8 +20,8 @@ func (v *validator) slashableProposalCheck(
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
-	block := signedBlock.Block
-	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
+	block := signedBlock.Block()
+	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot())
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -58,7 +58,7 @@ func (v *validator) slashableProposalCheck(
 		)
 	}
 	if featureconfig.Get().OldRemoteSlasherProtection {
-		blockHdr, err := blockutil.BeaconBlockHeaderFromBlock(block)
+		blockHdr, err := blockutil.BeaconBlockHeaderFromBlockInterface(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
@@ -68,7 +68,7 @@ func (v *validator) slashableProposalCheck(
 			}
 			return errors.New(failedBlockSignExternalErr)
 		}
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
+		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
@@ -87,7 +87,7 @@ func (v *validator) slashableProposalCheck(
 	}
 
 	if featureconfig.Get().NewRemoteSlasherProtection {
-		blockHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
+		blockHdr, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
@@ -95,7 +95,7 @@ func (v *validator) slashableProposalCheck(
 		if err != nil {
 			return errors.Wrap(err, "could not check if block is slashable")
 		}
-		if slashing != nil && slashing.ProposerSlashing != nil {
+		if slashing != nil && len(slashing.ProposerSlashings) > 0 {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
@@ -103,7 +103,7 @@ func (v *validator) slashableProposalCheck(
 		}
 	}
 
-	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Slot, signingRoot[:]); err != nil {
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Slot(), signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}

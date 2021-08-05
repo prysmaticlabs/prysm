@@ -9,8 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	ethereum_beacon_rpc_v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	grpc "google.golang.org/grpc"
 )
 
@@ -38,14 +37,14 @@ func (m *MockSlasherClient) EXPECT() *MockSlasherClientMockRecorder {
 }
 
 // HighestAttestations mocks base method.
-func (m *MockSlasherClient) HighestAttestations(arg0 context.Context, arg1 *ethereum_beacon_rpc_v1.HighestAttestationRequest, arg2 ...grpc.CallOption) (*ethereum_beacon_rpc_v1.HighestAttestationResponse, error) {
+func (m *MockSlasherClient) HighestAttestations(arg0 context.Context, arg1 *eth.HighestAttestationRequest, arg2 ...grpc.CallOption) (*eth.HighestAttestationResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "HighestAttestations", varargs...)
-	ret0, _ := ret[0].(*ethereum_beacon_rpc_v1.HighestAttestationResponse)
+	ret0, _ := ret[0].(*eth.HighestAttestationResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,14 +57,14 @@ func (mr *MockSlasherClientMockRecorder) HighestAttestations(arg0, arg1 interfac
 }
 
 // IsSlashableAttestation mocks base method.
-func (m *MockSlasherClient) IsSlashableAttestation(arg0 context.Context, arg1 *eth.IndexedAttestation, arg2 ...grpc.CallOption) (*ethereum_beacon_rpc_v1.AttesterSlashingResponse, error) {
+func (m *MockSlasherClient) IsSlashableAttestation(arg0 context.Context, arg1 *eth.IndexedAttestation, arg2 ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "IsSlashableAttestation", varargs...)
-	ret0, _ := ret[0].(*ethereum_beacon_rpc_v1.AttesterSlashingResponse)
+	ret0, _ := ret[0].(*eth.AttesterSlashingResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -78,14 +77,14 @@ func (mr *MockSlasherClientMockRecorder) IsSlashableAttestation(arg0, arg1 inter
 }
 
 // IsSlashableBlock mocks base method.
-func (m *MockSlasherClient) IsSlashableBlock(arg0 context.Context, arg1 *eth.SignedBeaconBlockHeader, arg2 ...grpc.CallOption) (*ethereum_beacon_rpc_v1.ProposerSlashingResponse, error) {
+func (m *MockSlasherClient) IsSlashableBlock(arg0 context.Context, arg1 *eth.SignedBeaconBlockHeader, arg2 ...grpc.CallOption) (*eth.ProposerSlashingResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "IsSlashableBlock", varargs...)
-	ret0, _ := ret[0].(*ethereum_beacon_rpc_v1.ProposerSlashingResponse)
+	ret0, _ := ret[0].(*eth.ProposerSlashingResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

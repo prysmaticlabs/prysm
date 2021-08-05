@@ -191,8 +191,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 				Genesis: time.Now(),
 				State:   beaconState,
 			},
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -274,7 +274,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 			Chain: &mock.ChainService{Genesis: time.Now(),
 				State: beaconState},
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -369,8 +369,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 					Epoch: 0,
 					Root:  att.Data.BeaconBlockRoot,
 				}},
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -463,8 +463,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 					Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
 				}},
 
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -572,8 +572,8 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Epoch: 0,
 				}},
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -665,8 +665,8 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 					Epoch: 0,
 					Root:  att.Data.BeaconBlockRoot,
 				}},
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}

@@ -11,8 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -91,7 +90,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		proposalWrapper.SignedBeaconBlockHeader.Header.ParentRoot = parentRoot[:]
 		headerHtr, err := proposalWrapper.SignedBeaconBlockHeader.Header.HashTreeRoot()
 		require.NoError(t, err)
-		container := &pb.SigningData{
+		container := &ethpb.SigningData{
 			ObjectRoot: headerHtr[:],
 			Domain:     domain,
 		}

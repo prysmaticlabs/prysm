@@ -23,7 +23,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/slasher:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//shared/testutil/require:go_default_library",
-        "@com_github_prysmaticlabs_prysm//proto/eth/v1alpha1:go_default_library",
     ],
 )
