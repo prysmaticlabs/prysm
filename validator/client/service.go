@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -63,7 +62,6 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             iface.Validator
-	oldRemoteSlasher      slashingiface.OldRemoteSlasher
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -81,7 +79,6 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	OldRemoteSlasher           slashingiface.OldRemoteSlasher
 	Endpoint                   string
 	Validator                  iface.Validator
 	ValDB                      db.Database
@@ -111,7 +108,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:           cfg.GrpcRetriesFlag,
 		grpcRetryDelay:        cfg.GrpcRetryDelay,
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		oldRemoteSlasher:      cfg.OldRemoteSlasher,
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
