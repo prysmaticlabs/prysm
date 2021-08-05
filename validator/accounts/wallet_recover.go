@@ -26,7 +26,9 @@ const (
 	newMnemonicPassphraseYesNoText  = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
 	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic " +
 		"(WARNING: You cannot recover your keys from your mnemonic if you forget this passphrase!)"
-	mnemonicPassphraseYesNoText  = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
+	/* #nosec G101 */
+	mnemonicPassphraseYesNoText = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
+	/* #nosec G101 */
 	mnemonicPassphrasePromptText = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
 )
 
