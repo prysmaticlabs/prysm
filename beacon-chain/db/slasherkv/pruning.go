@@ -88,7 +88,7 @@ func (s *Store) PruneProposalsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	var endPruneSlot types.Slot
-	endPruneSlot, err = helpers.StartSlot(maxEpoch)
+	endPruneSlot, err = helpers.EndSlot(maxEpoch)
 	if err != nil {
 		return
 	}
