@@ -224,7 +224,7 @@ func AttestationsDelta(state state.BeaconStateAltair, bal *precompute.Balance, v
 	return rewards, penalties, nil
 }
 
-func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (r, p uint64) {
+func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (reward, penalty uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
 	if !eligible || bal.ActiveCurrentEpoch == 0 {
@@ -232,53 +232,53 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	}
 
 	cfg := params.BeaconConfig()
-	balIncrement := cfg.EffectiveBalanceIncrement
-	rewardFactor := cfg.BaseRewardFactor
-	eb := v.CurrentEpochEffectiveBalance
-	baseReward := (eb / balIncrement) * (balIncrement * rewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch))
-	activeEpochIncrement := bal.ActiveCurrentEpoch / balIncrement
+	increment := cfg.EffectiveBalanceIncrement
+	factor := cfg.BaseRewardFactor
+	effectiveBalance := v.CurrentEpochEffectiveBalance
+	baseReward := (effectiveBalance / increment) * (increment * factor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch))
+	activeIncrement := bal.ActiveCurrentEpoch / increment
 
 	weightDenominator := cfg.WeightDenominator
 	srcWeight := cfg.TimelySourceWeight
 	tgtWeight := cfg.TimelyTargetWeight
 	headWeight := cfg.TimelyHeadWeight
-	r, p = uint64(0), uint64(0)
+	reward, penalty = uint64(0), uint64(0)
 	// Process source reward / penalty
 	inactivityLeak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			n := baseReward * srcWeight * (bal.PrevEpochAttested / balIncrement)
-			r += n / (activeEpochIncrement * weightDenominator)
+			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
+			reward += n / (activeIncrement * weightDenominator)
 		}
 	} else {
-		p += baseReward * srcWeight / weightDenominator
+		penalty += baseReward * srcWeight / weightDenominator
 	}
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / balIncrement)
-			r += n / (activeEpochIncrement * weightDenominator)
+			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / increment)
+			reward += n / (activeIncrement * weightDenominator)
 		}
 	} else {
-		p += baseReward * tgtWeight / weightDenominator
+		penalty += baseReward * tgtWeight / weightDenominator
 	}
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
 		if !inactivityLeak {
-			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / balIncrement)
-			r += n / (activeEpochIncrement * weightDenominator)
+			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / increment)
+			reward += n / (activeIncrement * weightDenominator)
 		}
 	}
 
 	// Process finality delay penalty
 	// Apply an additional penalty to validators that did not vote on the correct target or slashed
 	if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-		n := eb * v.InactivityScore
+		n := effectiveBalance * v.InactivityScore
 		d := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
-		p += n / d
+		penalty += n / d
 	}
 
-	return r, p
+	return reward, penalty
 }
