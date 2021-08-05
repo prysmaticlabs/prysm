@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient uint64, proposerRewardQuotient uint64) (state.BeaconState, error)
+type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
