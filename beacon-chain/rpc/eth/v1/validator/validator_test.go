@@ -55,10 +55,8 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubKeys := make([][]byte, len(deposits))
-	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
-		indices[i] = uint64(i)
 	}
 
 	chainSlot := types.Slot(0)
@@ -216,10 +214,8 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubKeys := make([][]byte, len(deposits))
-	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
-		indices[i] = uint64(i)
 	}
 
 	chainSlot := types.Slot(0)
@@ -637,6 +633,147 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	require.NotNil(t, att)
 	require.NotNil(t, att.Data)
 	assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1}, att.Data.AggregationBits)
+}
+
+func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
+	ctx := context.Background()
+	genesis := testutil.NewBeaconBlock()
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	require.NoError(t, err)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not set up genesis state")
+	// Set state to non-epoch start slot.
+	require.NoError(t, bs.SetSlot(5))
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots[0] = genesisRoot[:]
+	require.NoError(t, bs.SetBlockRoots(roots))
+
+	pubKeys := make([][]byte, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+	}
+
+	chainSlot := types.Slot(0)
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+	}
+	vs := &Server{
+		HeadFetcher:    chain,
+		TimeFetcher:    chain,
+		SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		V1Alpha1Server: &v1alpha1validator.Server{},
+	}
+
+	t.Run("Single subscription", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+	})
+
+	t.Run("Multiple subscriptions", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+				{
+					ValidatorIndex: 1000,
+					CommitteeIndex: 16,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 2, len(subnets))
+	})
+
+	t.Run("Is aggregator", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   true,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(types.Slot(1))
+		assert.Equal(t, 1, len(ids))
+	})
+
+	t.Run("Validators assigned to subnet", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: []*v1.BeaconCommitteeSubscribe{
+				{
+					ValidatorIndex: 1,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   true,
+				},
+				{
+					ValidatorIndex: 2,
+					CommitteeIndex: 1,
+					Slot:           1,
+					IsAggregator:   false,
+				},
+			},
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+		ids, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubKeys[1])
+		require.Equal(t, true, ok, "subnet for validator 1 not found")
+		assert.Equal(t, 1, len(ids))
+		ids, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubKeys[2])
+		require.Equal(t, true, ok, "subnet for validator 2 not found")
+		assert.Equal(t, 1, len(ids))
+	})
+
+	t.Run("No subscriptions", func(t *testing.T) {
+		req := &v1.SubmitBeaconCommitteeSubscriptionsRequest{
+			Data: make([]*v1.BeaconCommitteeSubscribe, 0),
+		}
+		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "No subscriptions provided", err)
+	})
+}
+
+func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
+	vs := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &v1.SubmitBeaconCommitteeSubscriptionsRequest{})
+	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestSubmitAggregateAndProofs(t *testing.T) {
