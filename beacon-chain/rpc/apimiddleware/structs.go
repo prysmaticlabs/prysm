@@ -206,6 +206,20 @@ type aggregateAttestationResponseJson struct {
 	Data *attestationJson `json:"data"`
 }
 
+// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/beacon_committee_subscriptions
+type submitBeaconCommitteeSubscriptionsRequestJson struct {
+	Data []*beaconCommitteeSubscribeJson `json:"data"`
+}
+
+// beaconCommitteeSubscribeJson is used in /validator/beacon_committee_subscriptions
+type beaconCommitteeSubscribeJson struct {
+	ValidatorIndex   string `json:"validator_index"`
+	CommitteeIndex   string `json:"committee_index"`
+	CommitteesAtSlot string `json:"committees_at_slot"`
+	Slot             string `json:"slot"`
+	IsAggregator     bool   `json:"is_aggregator"`
+}
+
 // submitAggregateAndProofsRequestJson is used in /validator/aggregate_and_proofs API endpoint.
 type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
