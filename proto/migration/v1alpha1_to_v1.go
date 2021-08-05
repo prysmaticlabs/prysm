@@ -316,13 +316,30 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 	}
 }
 
-// V1Alpha1ValidatorToV1 converts a v1 validator to v1alpha1.
-func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator {
-	if v1Validator == nil {
+// V1Alpha1ValidatorToV1 converts a v1alpha1 validator to v1.
+func V1Alpha1ValidatorToV1(v1Alpha1Validator *ethpb_alpha.Validator) *ethpb.Validator {
+	if v1Alpha1Validator == nil {
 		return &ethpb.Validator{}
 	}
 	return &ethpb.Validator{
-		Pubkey:                     v1Validator.PublicKey,
+		Pubkey:                     v1Alpha1Validator.PublicKey,
+		WithdrawalCredentials:      v1Alpha1Validator.WithdrawalCredentials,
+		EffectiveBalance:           v1Alpha1Validator.EffectiveBalance,
+		Slashed:                    v1Alpha1Validator.Slashed,
+		ActivationEligibilityEpoch: v1Alpha1Validator.ActivationEligibilityEpoch,
+		ActivationEpoch:            v1Alpha1Validator.ActivationEpoch,
+		ExitEpoch:                  v1Alpha1Validator.ExitEpoch,
+		WithdrawableEpoch:          v1Alpha1Validator.WithdrawableEpoch,
+	}
+}
+
+// V1ValidatorToV1Alpha1 converts a v1 validator to v1alpha1.
+func V1ValidatorToV1Alpha1(v1Validator *ethpb.Validator) *ethpb_alpha.Validator {
+	if v1Validator == nil {
+		return &ethpb_alpha.Validator{}
+	}
+	return &ethpb_alpha.Validator{
+		PublicKey:                  v1Validator.Pubkey,
 		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
 		EffectiveBalance:           v1Validator.EffectiveBalance,
 		Slashed:                    v1Validator.Slashed,

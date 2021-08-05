@@ -379,6 +379,54 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
 
+func Test_V1Alpha1ValidatorToV1(t *testing.T) {
+	v1Alpha1Validator := &ethpb_alpha.Validator{
+		PublicKey:                  []byte("pubkey"),
+		WithdrawalCredentials:      []byte("withdraw"),
+		EffectiveBalance:           99,
+		Slashed:                    true,
+		ActivationEligibilityEpoch: 1,
+		ActivationEpoch:            11,
+		ExitEpoch:                  111,
+		WithdrawableEpoch:          1111,
+	}
+
+	v1Validator := V1Alpha1ValidatorToV1(v1Alpha1Validator)
+	require.NotNil(t, v1Validator)
+	assert.DeepEqual(t, []byte("pubkey"), v1Validator.Pubkey)
+	assert.DeepEqual(t, []byte("withdraw"), v1Validator.WithdrawalCredentials)
+	assert.Equal(t, uint64(99), v1Validator.EffectiveBalance)
+	assert.Equal(t, true, v1Validator.Slashed)
+	assert.Equal(t, types.Epoch(1), v1Validator.ActivationEligibilityEpoch)
+	assert.Equal(t, types.Epoch(11), v1Validator.ActivationEpoch)
+	assert.Equal(t, types.Epoch(111), v1Validator.ExitEpoch)
+	assert.Equal(t, types.Epoch(1111), v1Validator.WithdrawableEpoch)
+}
+
+func Test_V1ValidatorToV1Alpha1(t *testing.T) {
+	v1Validator := &ethpb.Validator{
+		Pubkey:                     []byte("pubkey"),
+		WithdrawalCredentials:      []byte("withdraw"),
+		EffectiveBalance:           99,
+		Slashed:                    true,
+		ActivationEligibilityEpoch: 1,
+		ActivationEpoch:            11,
+		ExitEpoch:                  111,
+		WithdrawableEpoch:          1111,
+	}
+
+	v1Alpha1Validator := V1ValidatorToV1Alpha1(v1Validator)
+	require.NotNil(t, v1Alpha1Validator)
+	assert.DeepEqual(t, []byte("pubkey"), v1Alpha1Validator.PublicKey)
+	assert.DeepEqual(t, []byte("withdraw"), v1Alpha1Validator.WithdrawalCredentials)
+	assert.Equal(t, uint64(99), v1Alpha1Validator.EffectiveBalance)
+	assert.Equal(t, true, v1Alpha1Validator.Slashed)
+	assert.Equal(t, types.Epoch(1), v1Alpha1Validator.ActivationEligibilityEpoch)
+	assert.Equal(t, types.Epoch(11), v1Alpha1Validator.ActivationEpoch)
+	assert.Equal(t, types.Epoch(111), v1Alpha1Validator.ExitEpoch)
+	assert.Equal(t, types.Epoch(1111), v1Alpha1Validator.WithdrawableEpoch)
+}
+
 func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 	v1Att := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{

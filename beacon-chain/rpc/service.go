@@ -197,6 +197,7 @@ func (s *Service) Start() {
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,
 		AttestationsPool: s.cfg.AttestationsPool,
+		PeerManager:      s.cfg.PeerManager,
 		Broadcaster:      s.cfg.Broadcaster,
 		V1Alpha1Server:   validatorServer,
 	}
