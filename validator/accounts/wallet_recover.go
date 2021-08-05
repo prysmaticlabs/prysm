@@ -22,8 +22,10 @@ import (
 )
 
 const (
-	phraseWordCount                 = 24
-	newMnemonicPassphraseYesNoText  = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
+	phraseWordCount = 24
+	/* #nosec G101 */
+	newMnemonicPassphraseYesNoText = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
+	/* #nosec G101 */
 	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic " +
 		"(WARNING: You cannot recover your keys from your mnemonic if you forget this passphrase!)"
 	/* #nosec G101 */

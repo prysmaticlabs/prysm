@@ -92,7 +92,7 @@ func (node *SlasherNode) Start(ctx context.Context) error {
 	}
 
 	log.Infof("Starting slasher %d with flags: %s", node.index, strings.Join(args[2:], " "))
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start slasher client: %w", err)
 	}
