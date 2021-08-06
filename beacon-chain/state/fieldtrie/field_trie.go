@@ -98,7 +98,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.datType).Name())
 	}
-
 }
 
 // CopyTrie copies the references to the elements the trie

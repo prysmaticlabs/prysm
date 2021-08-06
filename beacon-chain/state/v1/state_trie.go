@@ -126,7 +126,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 10),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
-		// Copy on write validator index map.
+		// Share the reference to validator index map.
 		valMapHandler: b.valMapHandler,
 	}
 
@@ -411,7 +411,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -422,7 +421,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -441,7 +439,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -452,7 +449,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[validators] = []uint64{}
 			delete(b.rebuildTrie, validators)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -465,7 +461,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -482,7 +477,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -497,7 +491,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}

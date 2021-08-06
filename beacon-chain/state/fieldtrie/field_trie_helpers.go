@@ -28,7 +28,7 @@ func validateElements(field types.FieldIndex, elements interface{}, length uint6
 	return nil
 }
 
-// this converts the corresponding field and the provided elements to the appropriate roots.
+// fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots, types.StateRoots, types.RandaoMixes:
