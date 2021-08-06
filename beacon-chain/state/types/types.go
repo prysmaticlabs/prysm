@@ -1,6 +1,8 @@
 package types
 
-import "reflect"
+import (
+	"github.com/prysmaticlabs/prysm/shared/version"
+)
 
 // FieldIndex represents the relevant field position in the
 // state struct for a field.
@@ -19,56 +21,65 @@ const (
 )
 
 // String returns the name of the field index.
-func (f FieldIndex) String() string {
-	return reflect.TypeOf(f).Name()
-	/*
-		switch f {
-		case genesisTime:
-			return "genesisTime"
-		case genesisValidatorRoot:
-			return "genesisValidatorRoot"
-		case slot:
-			return "slot"
-		case fork:
-			return "fork"
-		case latestBlockHeader:
-			return "latestBlockHeader"
-		case blockRoots:
-			return "blockRoots"
-		case stateRoots:
-			return "stateRoots"
-		case historicalRoots:
-			return "historicalRoots"
-		case eth1Data:
-			return "eth1Data"
-		case eth1DataVotes:
-			return "eth1DataVotes"
-		case eth1DepositIndex:
-			return "eth1DepositIndex"
-		case validators:
-			return "validators"
-		case balances:
-			return "balances"
-		case randaoMixes:
-			return "randaoMixes"
-		case slashings:
-			return "slashings"
-		case previousEpochAttestations:
-			return "previousEpochAttestations"
-		case currentEpochAttestations:
-			return "currentEpochAttestations"
-		case justificationBits:
-			return "justificationBits"
-		case previousJustifiedCheckpoint:
-			return "previousJustifiedCheckpoint"
-		case currentJustifiedCheckpoint:
-			return "currentJustifiedCheckpoint"
-		case finalizedCheckpoint:
-			return "finalizedCheckpoint"
-		default:
-			return ""
+func (f FieldIndex) String(stateVersion int) string {
+	switch f {
+	case GenesisTime:
+		return "genesisTime"
+	case GenesisValidatorRoot:
+		return "genesisValidatorRoot"
+	case Slot:
+		return "slot"
+	case Fork:
+		return "fork"
+	case LatestBlockHeader:
+		return "latestBlockHeader"
+	case BlockRoots:
+		return "blockRoots"
+	case StateRoots:
+		return "stateRoots"
+	case HistoricalRoots:
+		return "historicalRoots"
+	case Eth1Data:
+		return "eth1Data"
+	case Eth1DataVotes:
+		return "eth1DataVotes"
+	case Eth1DepositIndex:
+		return "eth1DepositIndex"
+	case Validators:
+		return "validators"
+	case Balances:
+		return "balances"
+	case RandaoMixes:
+		return "randaoMixes"
+	case Slashings:
+		return "slashings"
+	case PreviousEpochAttestations:
+		if version.Altair == stateVersion {
+			return "previousEpochParticipationBits"
 		}
-	*/
+		return "previousEpochAttestations"
+	case CurrentEpochAttestations:
+		if version.Altair == stateVersion {
+			return "currentEpochParticipationBits"
+		}
+		return "currentEpochAttestations"
+	case JustificationBits:
+		return "justificationBits"
+	case PreviousJustifiedCheckpoint:
+		return "previousJustifiedCheckpoint"
+	case CurrentJustifiedCheckpoint:
+		return "currentJustifiedCheckpoint"
+	case FinalizedCheckpoint:
+		return "finalizedCheckpoint"
+	case InactivityScores:
+		return "inactivityScores"
+	case CurrentSyncCommittee:
+		return "currentSyncCommittee"
+	case NextSyncCommittee:
+		return "nextSyncCommittee"
+	default:
+		return ""
+	}
 }
 
 // Below we define a set of useful enum values for the field

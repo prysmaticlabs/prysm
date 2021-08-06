@@ -9,12 +9,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	for _, idx := range idxs {
 		if idx >= f.length {
-			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(), idx, f.length)
+			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, f.length)
 		}
 	}
 	return nil
@@ -23,7 +24,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 func validateElements(field types.FieldIndex, elements interface{}, length uint64) error {
 	val := reflect.ValueOf(elements)
 	if val.Len() > int(length) {
-		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), val.Len(), length)
+		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
 	}
 	return nil
 }
