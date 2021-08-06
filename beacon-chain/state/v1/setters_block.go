@@ -3,10 +3,9 @@ package v1
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // SetLatestBlockHeader in the beacon state.
