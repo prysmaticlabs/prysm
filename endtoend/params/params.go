@@ -36,6 +36,9 @@ var TestParams *params
 // BootNodeLogFileName is the file name used for the beacon chain node logs.
 var BootNodeLogFileName = "bootnode.log"
 
+// TracingRequestSinkFileName is the file name for writing raw trace requests.
+var TracingRequestSinkFileName = "tracing-http-requests.log"
+
 // BeaconNodeLogFileName is the file name used for the beacon chain node logs.
 var BeaconNodeLogFileName = "beacon-%d.log"
 

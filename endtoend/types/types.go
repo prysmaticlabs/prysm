@@ -18,6 +18,7 @@ type E2EConfig struct {
 	TestSlasher         bool
 	TestDeposits        bool
 	UsePprof            bool
+	TracingSinkEndpoint string
 	UsePrysmShValidator bool
 	Evaluators          []Evaluator
 }
