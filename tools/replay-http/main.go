@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 )
@@ -25,7 +26,12 @@ func main() {
 	scanner := bufio.NewScanner(f)
 	requests := make([][]byte, 0)
 	for scanner.Scan() {
-		requests = append(requests, scanner.Bytes())
+		scanned := scanner.Bytes()
+		buf := bytes.NewBuffer(make([]byte, base64.StdEncoding.DecodedLen(len(scanned))))
+		if _, err := base64.StdEncoding.Decode(buf.Bytes(), scanned); err != nil {
+			panic(err)
+		}
+		requests = append(requests, buf.Bytes())
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)
@@ -33,17 +39,18 @@ func main() {
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
-
-	for _, r := range requests {
-		buf := bytes.NewBuffer(make([]byte, base64.StdEncoding.DecodedLen(len(r))))
-		if _, err := base64.StdEncoding.Decode(buf.Bytes(), r); err != nil {
-			panic(err)
-		}
-		fmt.Println(buf.String())
-		r, err := http.ReadRequest(bufio.NewReader(buf))
+	u, err := url.Parse(*endpoint)
+	if err != nil {
+		panic(err)
+	}
+	for _, rawReq := range requests {
+		r, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(rawReq)))
 		if err != nil {
 			panic(err)
 		}
+		r.RequestURI = ""
+		r.URL = u
+		fmt.Println(r)
 		if _, err := client.Do(r); err != nil {
 			panic(err)
 		}
