@@ -7,7 +7,7 @@ go_library(
         "field_trie_helpers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
