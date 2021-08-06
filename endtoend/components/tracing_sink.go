@@ -2,7 +2,6 @@ package components
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"io"
@@ -53,19 +52,14 @@ func (ts *TracingSink) initializeSink() {
 		log.WithError(err).Error("Failed to create stdout file")
 		return
 	}
-	gzipFile := gzip.NewWriter(stdOutFile)
 	defer func() {
-		if err := gzipFile.Flush(); err != nil {
-			log.WithError(err).Error("Failed to flush to file")
-			return
-		}
 		if err = stdOutFile.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stdout file")
 		}
 	}()
 
 	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
-		if err := captureRequest(gzipFile, r); err != nil {
+		if err := captureRequest(stdOutFile, r); err != nil {
 			log.WithError(err).Error("Failed to capture http request")
 			return
 		}
@@ -75,17 +69,13 @@ func (ts *TracingSink) initializeSink() {
 	}
 }
 
-func captureRequest(gzipFile io.Writer, r *http.Request) error {
+func captureRequest(f io.StringWriter, r *http.Request) error {
 	buf := new(bytes.Buffer)
 	if err := r.Write(buf); err != nil {
 		return err
 	}
-	encoded := new(bytes.Buffer)
-	base64.StdEncoding.Encode(encoded.Bytes(), buf.Bytes())
-	if _, err := encoded.WriteString("\n"); err != nil {
-		return err
-	}
-	if _, err := gzipFile.Write(encoded.Bytes()); err != nil {
+	encodedStr := base64.StdEncoding.EncodeToString(buf.Bytes()) + "\n"
+	if _, err := f.WriteString(encodedStr); err != nil {
 		return err
 	}
 	return nil
