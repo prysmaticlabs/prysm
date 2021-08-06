@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -109,14 +110,17 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		}
 		time.Sleep(connTimeDelay)
 
-		chainHead, err := eth.NewBeaconChainClient(conns[i]).GetChainHead(context.Background(), &emptypb.Empty{})
+		beaconClient := eth.NewBeaconChainClient(conns[i])
+		nodeClient := eth.NewNodeClient(conns[i])
+		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
-		timeSlot, err := valueOfTopic(pageContent, "beacon_clock_time_slot")
+		genesisResp, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
+		timeSlot := slotutil.SlotsSinceGenesis(genesisResp.GenesisTime.AsTime())
 		if uint64(chainHead.HeadSlot) != uint64(timeSlot) {
 			return fmt.Errorf("expected metrics slot to equal chain head slot, expected %d, received %d", chainHead.HeadSlot, timeSlot)
 		}
