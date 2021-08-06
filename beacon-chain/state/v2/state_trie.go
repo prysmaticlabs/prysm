@@ -4,11 +4,12 @@ import (
 	"context"
 	"runtime"
 	"sort"
-	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -34,22 +35,22 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
-		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 11),
-		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]interface{}, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
+	var err error
 	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[fieldIndex(i)] = true
-		b.rebuildTrie[fieldIndex(i)] = true
-		b.dirtyIndices[fieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
-			field:     fieldIndex(i),
-			reference: stateutil.NewRef(1),
-			RWMutex:   new(sync.RWMutex),
+		b.dirtyFields[types.FieldIndex(i)] = true
+		b.rebuildTrie[types.FieldIndex(i)] = true
+		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
+		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -113,11 +114,11 @@ func (b *BeaconState) Copy() state.BeaconState {
 			CurrentSyncCommittee:        b.currentSyncCommittee(),
 			NextSyncCommittee:           b.nextSyncCommittee(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
-		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
-		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 11),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]interface{}, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Copy on write validator index map.
 		valMapHandler: b.valMapHandler,
@@ -147,9 +148,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	for fldIdx, fieldTrie := range b.stateFieldLeaves {
 		dst.stateFieldLeaves[fldIdx] = fieldTrie
-		if fieldTrie.reference != nil {
+		if fieldTrie.Reference != nil {
 			fieldTrie.Lock()
-			fieldTrie.reference.AddRef()
+			fieldTrie.Reference.AddRef()
 			fieldTrie.Unlock()
 		}
 	}
@@ -169,8 +170,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
 			v.MinusRef()
-			if b.stateFieldLeaves[field].reference != nil {
-				b.stateFieldLeaves[field].reference.MinusRef()
+			if b.stateFieldLeaves[field].Reference != nil {
+				b.stateFieldLeaves[field].Reference.MinusRef()
 			}
 		}
 	})
@@ -194,7 +195,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateAltairFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]interface{}, params.BeaconConfig().BeaconStateAltairFieldCount)
 	}
 
 	for field := range b.dirtyFields {
@@ -219,9 +220,9 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
-		numOfRefs := uint64(f.reference.Refs())
+		numOfRefs := uint64(f.Reference.Refs())
 		f.RLock()
-		if len(f.fieldLayers) != 0 {
+		if len(f.FieldLayers) != 0 {
 			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
@@ -235,7 +236,7 @@ func (b *BeaconState) IsNil() bool {
 	return b == nil || b.state == nil
 }
 
-func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
@@ -335,12 +336,12 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
-func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{}) ([32]byte, error) {
+func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	if fTrie.reference.Refs() > 1 {
+	if fTrie.Reference.Refs() > 1 {
 		fTrie.Lock()
 		defer fTrie.Unlock()
-		fTrie.reference.MinusRef()
+		fTrie.Reference.MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
@@ -359,8 +360,8 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 	return root, nil
 }
 
-func (b *BeaconState) resetFieldTrie(index fieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := NewFieldTrie(index, elements, length)
+func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
+	fTrie, err := fieldtrie.NewFieldTrie(index, fieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}
