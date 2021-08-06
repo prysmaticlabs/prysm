@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sort"
+	"sync"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -15,14 +16,14 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	// Signing root (32 bytes) + fastsum64(attesting_indices) (8 bytes).
-	attestationRecordKeySize = 40
+	// Signing root (32 bytes)
+	attestationRecordKeySize = 32 // Bytes.
 	signingRootSize          = 32 // Bytes.
 )
 
@@ -92,43 +93,64 @@ func (s *Store) CheckAttesterDoubleVotes(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
-	err := s.db.View(func(tx *bolt.Tx) error {
-		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		for _, att := range attestations {
-			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
-			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
-				validatorEpochKey := append(encEpoch, encIdx...)
-				attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
-
-				// An attestation record key is comprised of a signing root (32 bytes)
-				// and a fast sum hash of the attesting indices (8 bytes).
-				if len(attRecordsKey) < attestationRecordKeySize {
-					continue
-				}
-				encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
-				if encExistingAttRecord == nil {
-					continue
-				}
-				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
-				if existingSigningRoot != att.SigningRoot {
-					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
-					if err != nil {
-						return err
+	doubleVotesMu := sync.Mutex{}
+	eg, egctx := errgroup.WithContext(ctx)
+	for _, att := range attestations {
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		attToProcess := att
+		// process every attestation parallelly.
+		eg.Go(func() error {
+			err := s.db.View(func(tx *bolt.Tx) error {
+				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
+				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
+					validatorEpochKey := append(encEpoch, encIdx...)
+					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
+					// An attestation record key is comprised of a signing root (32 bytes).
+					if len(attRecordsKey) < attestationRecordKeySize {
+						continue
 					}
-					doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:         types.ValidatorIndex(valIdx),
-						Target:                 att.IndexedAttestation.Data.Target.Epoch,
-						PrevAttestationWrapper: existingAttRecord,
-						AttestationWrapper:     att,
-					})
+					encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
+					if encExistingAttRecord == nil {
+						continue
+					}
+					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
+					if existingSigningRoot != attToProcess.SigningRoot {
+						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
+						if err != nil {
+							return err
+						}
+						slashAtt := &slashertypes.AttesterDoubleVote{
+							ValidatorIndex:         types.ValidatorIndex(valIdx),
+							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
+							PrevAttestationWrapper: existingAttRecord,
+							AttestationWrapper:     attToProcess,
+						}
+						localDoubleVotes = append(localDoubleVotes, slashAtt)
+					}
 				}
-			}
-		}
-		return nil
-	})
-	return doubleVotes, err
+				// if any routine is cancelled, then cancel this routine too
+				select {
+				case <-egctx.Done():
+					return egctx.Err()
+				default:
+				}
+				// if there are any doible votes in this attestation, add it to the global double votes
+				if len(localDoubleVotes) > 0 {
+					doubleVotesMu.Lock()
+					defer doubleVotesMu.Unlock()
+					doubleVotes = append(doubleVotes, localDoubleVotes...)
+				}
+				return nil
+			})
+			return err
+		})
+	}
+	return doubleVotes, eg.Wait()
 }
 
 // AttestationRecordForValidator given a validator index and a target epoch,
@@ -192,20 +214,13 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
-			// An attestation record key is comprised of the signing root (32 bytes)
-			// and a fastsum64 of the attesting indices (8 bytes). This is used
-			// to have a more optimal schema
-			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			attRecordKey := append(
-				att.SigningRoot[:], ssz.MarshalUint64(make([]byte, 0), attIndicesHash)...,
-			)
-			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
+			if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, attRecordKey); err != nil {
+				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
 					return err
 				}
 			}
@@ -282,7 +297,10 @@ func (s *Store) CheckDoubleBlockProposals(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
-			key, err := keyForValidatorProposal(proposal)
+			key, err := keyForValidatorProposal(
+				proposal.SignedBeaconBlockHeader.Header.Slot,
+				proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+			)
 			if err != nil {
 				return err
 			}
@@ -307,6 +325,34 @@ func (s *Store) CheckDoubleBlockProposals(
 	return proposerSlashings, err
 }
 
+// BlockProposalForValidator given a validator index and a slot
+// retrieves an existing proposal record we have stored in the database.
+func (s *Store) BlockProposalForValidator(
+	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+) (*slashertypes.SignedBlockHeaderWrapper, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
+	defer span.End()
+	var record *slashertypes.SignedBlockHeaderWrapper
+	key, err := keyForValidatorProposal(slot, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(proposalRecordsBucket)
+		encProposal := bkt.Get(key)
+		if encProposal == nil {
+			return nil
+		}
+		decoded, err := decodeProposalRecord(encProposal)
+		if err != nil {
+			return err
+		}
+		record = decoded
+		return nil
+	})
+	return record, err
+}
+
 // SaveBlockProposals takes in a list of block proposals and saves them to our
 // proposal records bucket in the database.
 func (s *Store) SaveBlockProposals(
@@ -317,7 +363,10 @@ func (s *Store) SaveBlockProposals(
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
 	for i, proposal := range proposals {
-		key, err := keyForValidatorProposal(proposal)
+		key, err := keyForValidatorProposal(
+			proposal.SignedBeaconBlockHeader.Header.Slot,
+			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+		)
 		if err != nil {
 			return err
 		}
@@ -395,12 +444,12 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
-	encSlot, err := proposal.SignedBeaconBlockHeader.Header.Slot.MarshalSSZ()
+func keyForValidatorProposal(slot types.Slot, proposerIndex types.ValidatorIndex) ([]byte, error) {
+	encSlot, err := slot.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx := encodeValidatorIndex(proposal.SignedBeaconBlockHeader.Header.ProposerIndex)
+	encValidatorIdx := encodeValidatorIndex(proposerIndex)
 	return append(encSlot, encValidatorIdx...), nil
 }
 
