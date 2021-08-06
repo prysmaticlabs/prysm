@@ -12,7 +12,7 @@ import (
 // For our setters, we have a field reference counter through
 // which we can track shared field references. This helps when
 // performing state copies, as we simply copy the reference to the
-// field. When we do need to do need to modify these fields, we
+// field. When we do need to modify these fields, we
 // perform a full copy of the field. This is true of most of our
 // fields except for the following below.
 // 1) BlockRoots
@@ -32,8 +32,8 @@ import (
 
 const (
 	// This specifies the limit till which we process all dirty indices for a certain field.
-	// If we have more dirty indices than the theshold, then we rebuild the whole trie. This
-	// comes due to the fact that O(alogn) > O(n) beyong a certain value of a.
+	// If we have more dirty indices than the threshold, then we rebuild the whole trie. This
+	// comes due to the fact that O(alogn) > O(n) beyond a certain value of a.
 	indicesLimit = 8000
 )
 
@@ -127,7 +127,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 }
 
 // Recomputes the branch up the index in the Merkle trie representation
-// of the beacon state. This method performs map reads and the caller MUST
+// of the beacon state. This method performs slice reads and the caller MUST
 // hold the lock before calling this method.
 func (b *BeaconState) recomputeRoot(idx int) {
 	hashFunc := hashutil.CustomSHA256Hasher()
@@ -162,11 +162,7 @@ func (b *BeaconState) recomputeRoot(idx int) {
 }
 
 func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
-	_, ok := b.dirtyFields[field]
-	if !ok {
-		b.dirtyFields[field] = true
-	}
-	// do nothing if field already exists
+	b.dirtyFields[field] = true
 }
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
@@ -175,9 +171,11 @@ func (b *BeaconState) addDirtyIndices(index fieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
 		return
 	}
-	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
-	if len(b.dirtyIndices[index]) > indicesLimit {
+	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
+	if totalIndicesLen > indicesLimit {
 		b.rebuildTrie[index] = true
 		b.dirtyIndices[index] = []uint64{}
+	} else {
+		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 	}
 }
