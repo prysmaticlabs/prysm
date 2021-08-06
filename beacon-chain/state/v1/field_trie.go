@@ -34,7 +34,7 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	if !ok {
 		return nil, errors.Errorf("unrecognized field in trie")
 	}
-	fieldRoots, err := convertFieldElementsToRoots(field, []uint64{}, elements, true)
+	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if !ok {
 		return [32]byte{}, errors.Errorf("unrecognized field in trie")
 	}
-	fieldRoots, err := convertFieldElementsToRoots(f.field, indices, elements, false)
+	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}
