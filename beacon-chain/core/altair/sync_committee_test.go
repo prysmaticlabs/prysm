@@ -337,10 +337,10 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 			wantedErr: "",
 		},
 		{
-			name: "sync_message.slot == current_slot+CLOCK_DISPARITY+200ms",
+			name: "sync_message.slot == current_slot+CLOCK_DISPARITY+500ms",
 			args: args{
 				syncMessageSlot: 100,
-				genesisTime:     timeutils.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second - params.BeaconNetworkConfig().MaximumGossipClockDisparity - 200*time.Millisecond)),
+				genesisTime:     timeutils.Now().Add(-(100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) + params.BeaconNetworkConfig().MaximumGossipClockDisparity + 1000*time.Millisecond),
 			},
 			wantedErr: "sync message slot 100 not within allowable range of",
 		},
