@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -217,14 +216,25 @@ func AttestationsDelta(state state.BeaconStateAltair, bal *precompute.Balance, v
 	prevEpoch := helpers.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
+	cfg := params.BeaconConfig()
+	increment := cfg.EffectiveBalanceIncrement
+	factor := cfg.BaseRewardFactor
+	baseRewardMultiplier := increment * factor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
+	inactivityDenominator := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
+
 	for i, v := range vals {
-		rewards[i], penalties[i] = attestationDelta(bal, v, prevEpoch, finalizedEpoch)
+		rewards[i], penalties[i] = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
 	}
 
 	return rewards, penalties, nil
 }
 
-func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (reward, penalty uint64) {
+func attestationDelta(
+	bal *precompute.Balance,
+	v *precompute.Validator,
+	baseRewardMultiplier, inactivityDenominator uint64,
+	inactivityLeak bool) (reward, penalty uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
 	if !eligible || bal.ActiveCurrentEpoch == 0 {
@@ -233,9 +243,8 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 	cfg := params.BeaconConfig()
 	increment := cfg.EffectiveBalanceIncrement
-	factor := cfg.BaseRewardFactor
 	effectiveBalance := v.CurrentEpochEffectiveBalance
-	baseReward := (effectiveBalance / increment) * (increment * factor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch))
+	baseReward := (effectiveBalance / increment) * baseRewardMultiplier
 	activeIncrement := bal.ActiveCurrentEpoch / increment
 
 	weightDenominator := cfg.WeightDenominator
@@ -244,7 +253,6 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	headWeight := cfg.TimelyHeadWeight
 	reward, penalty = uint64(0), uint64(0)
 	// Process source reward / penalty
-	inactivityLeak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
@@ -276,8 +284,7 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	// Apply an additional penalty to validators that did not vote on the correct target or slashed
 	if !v.IsPrevEpochTargetAttester || v.IsSlashed {
 		n := effectiveBalance * v.InactivityScore
-		d := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
-		penalty += n / d
+		penalty += n / inactivityDenominator
 	}
 
 	return reward, penalty
