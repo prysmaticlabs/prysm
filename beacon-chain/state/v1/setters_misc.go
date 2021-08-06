@@ -171,7 +171,8 @@ func (b *BeaconState) addDirtyIndices(index fieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
 		return
 	}
-	if len(b.dirtyIndices[index])+len(indices) > indicesLimit {
+	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
+	if totalIndicesLen > indicesLimit {
 		b.rebuildTrie[index] = true
 		b.dirtyIndices[index] = []uint64{}
 	} else {

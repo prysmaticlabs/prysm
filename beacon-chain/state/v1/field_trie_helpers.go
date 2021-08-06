@@ -27,8 +27,8 @@ func validateElements(field fieldIndex, elements interface{}, length uint64) err
 	return nil
 }
 
-// convertToRoots converts the corresponding field and the provided elements to the appropriate roots.
-func convertToRoots(field fieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+// convertFieldElementsToRoots converts the corresponding field and the provided elements to the appropriate roots.
+func convertFieldElementsToRoots(field fieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case blockRoots, stateRoots, randaoMixes:
 		val, ok := elements.([][]byte)
