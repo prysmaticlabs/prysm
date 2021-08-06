@@ -2,11 +2,10 @@ package components
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
-	"encoding/json"
-	"fmt"
+	"encoding/base64"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -42,31 +41,33 @@ func (ts *TracingSink) Started() <-chan struct{} {
 
 // Initialize an http handler that writes all requests to a file.
 func (ts *TracingSink) initializeSink() {
+	ts.server = &http.Server{Addr: ts.endpoint}
+	defer func() {
+		if err := ts.server.Close(); err != nil {
+			log.WithError(err).Error("Failed to close http server")
+			return
+		}
+	}()
 	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.TracingRequestSinkFileName)
 	if err != nil {
 		log.WithError(err).Error("Failed to create stdout file")
 		return
 	}
+	gzipFile := gzip.NewWriter(stdOutFile)
 	defer func() {
+		if err := gzipFile.Flush(); err != nil {
+			log.WithError(err).Error("Failed to flush to file")
+			return
+		}
 		if err = stdOutFile.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stdout file")
 		}
 	}()
-	ts.server = &http.Server{Addr: ts.endpoint}
-	defer func() {
-		if err = ts.server.Close(); err != nil {
-			log.WithError(err).Error("Failed to close http server")
-		}
-	}()
 
-	http.HandleFunc("/", func(writer http.ResponseWriter, r *http.Request) {
-		reqContent := map[string]interface{}{}
-		if err = parseRequest(r, &reqContent); err != nil {
-			log.WithError(err).Error("Failed to parse request")
-			return
-		}
-		if err = captureRequest(stdOutFile, reqContent); err != nil {
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
+		if err := captureRequest(gzipFile, r); err != nil {
 			log.WithError(err).Error("Failed to capture http request")
+			return
 		}
 	})
 	if err := ts.server.ListenAndServe(); err != http.ErrServerClosed {
@@ -74,23 +75,18 @@ func (ts *TracingSink) initializeSink() {
 	}
 }
 
-func captureRequest(f io.StringWriter, m map[string]interface{}) error {
-	enc, err := json.Marshal(m)
-	if err != nil {
+func captureRequest(gzipFile io.Writer, r *http.Request) error {
+	buf := new(bytes.Buffer)
+	if err := r.Write(buf); err != nil {
 		return err
 	}
-	_, err = f.WriteString(fmt.Sprintf("%s\n", enc))
-	return err
-}
-
-func parseRequest(req *http.Request, unmarshalStruct interface{}) error {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
+	encoded := new(bytes.Buffer)
+	base64.StdEncoding.Encode(encoded.Bytes(), buf.Bytes())
+	if _, err := encoded.WriteString("\n"); err != nil {
 		return err
 	}
-	if err = req.Body.Close(); err != nil {
+	if _, err := gzipFile.Write(encoded.Bytes()); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-	return json.Unmarshal(body, unmarshalStruct)
+	return nil
 }
