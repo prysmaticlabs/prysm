@@ -161,12 +161,12 @@ func (b *BeaconState) Copy() state.BeaconState {
 	}
 
 	if b.merkleLayers != nil {
-		dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
+		dst.merkleLayers = make([][][32]byte, len(b.merkleLayers))
 		for i, layer := range b.merkleLayers {
-			dst.merkleLayers[i] = make([][]byte, len(layer))
+			dst.merkleLayers[i] = make([][32]byte, len(layer))
 			for j, content := range layer {
-				dst.merkleLayers[i][j] = make([]byte, len(content))
-				copy(dst.merkleLayers[i][j], content)
+				dst.merkleLayers[i][j] = *new([32]byte)
+				copy(dst.merkleLayers[i][j][:], content[:])
 			}
 		}
 	}
@@ -218,11 +218,11 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		b.merkleLayers[0][field] = root[:]
+		b.merkleLayers[0][field] = root
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return b.merkleLayers[len(b.merkleLayers)-1][0], nil
 }
 
 // ToProto returns a protobuf *v1.BeaconState representation of the state.
@@ -508,13 +508,14 @@ func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]b
 
 func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
+	fTrieMutex := b.stateFieldLeaves[index].RWMutex
 	if fTrie.reference.Refs() > 1 {
-		fTrie.Lock()
-		defer fTrie.Unlock()
+		fTrieMutex.Lock()
 		fTrie.reference.MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
+		fTrieMutex.Unlock()
 	}
 	// remove duplicate indexes
 	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])

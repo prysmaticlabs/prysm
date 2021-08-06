@@ -142,16 +142,16 @@ func (b *BeaconState) recomputeRoot(idx int) {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := make([]byte, 32)
+		var neighbor [32]byte
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashFunc(append(root, neighbor...))
-			root = parentHash[:]
+			parentHash := hashFunc(append(root[:], neighbor[:]...))
+			root = parentHash
 		} else {
-			parentHash := hashFunc(append(neighbor, root...))
-			root = parentHash[:]
+			parentHash := hashFunc(append(neighbor[:], root[:]...))
+			root = parentHash
 		}
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
