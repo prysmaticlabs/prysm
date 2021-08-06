@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -57,7 +58,8 @@ func ProcessAttesterSlashings(
 				return nil, err
 			}
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex))
+				cfg := params.BeaconConfig()
+				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)
