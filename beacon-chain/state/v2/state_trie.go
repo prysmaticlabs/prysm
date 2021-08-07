@@ -148,9 +148,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	for fldIdx, fieldTrie := range b.stateFieldLeaves {
 		dst.stateFieldLeaves[fldIdx] = fieldTrie
-		if fieldTrie.Reference != nil {
+		if fieldTrie.FieldReference() != nil {
 			fieldTrie.Lock()
-			fieldTrie.Reference.AddRef()
+			fieldTrie.FieldReference().AddRef()
 			fieldTrie.Unlock()
 		}
 	}
@@ -170,8 +170,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
 			v.MinusRef()
-			if b.stateFieldLeaves[field].Reference != nil {
-				b.stateFieldLeaves[field].Reference.MinusRef()
+			if b.stateFieldLeaves[field].FieldReference() != nil {
+				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
 		}
 	})
@@ -220,9 +220,9 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String(b.Version())] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
-		numOfRefs := uint64(f.Reference.Refs())
+		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
-		if len(f.FieldLayers) != 0 {
+		if !f.Empty() {
 			refMap[i.String(b.Version())+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
@@ -338,10 +338,10 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	if fTrie.Reference.Refs() > 1 {
+	if fTrie.FieldReference().Refs() > 1 {
 		fTrie.Lock()
 		defer fTrie.Unlock()
-		fTrie.Reference.MinusRef()
+		fTrie.FieldReference().MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
