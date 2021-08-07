@@ -192,12 +192,39 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	if a.AggregationBits.Count() != 1 || a.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject
 	}
-
-	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
-		log.WithError(err).Debug("Could not verify attestation")
+	set, err := blocks.AttestationSignatureSet(ctx, bs, []*eth.Attestation{a})
+	if err != nil {
+		log.WithError(err).Debug("Could not create attestation signature set.")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
+	resChan := make(chan error)
+	verificationSet := &signatureVerifier{set: set, resChan: resChan}
+	s.signatureChan <- verificationSet
+
+	resErr := <-resChan
+	close(resChan)
+	if resErr != nil {
+		log.WithError(resErr).Debug("Could not perform batch verification")
+		verified, err := set.Verify()
+		if err != nil {
+			log.WithError(err).Debug("Could not verify attestation")
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		if !verified {
+			log.Debug("Verification of attestation failed")
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+	}
+	/*
+		if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
+			log.WithError(err).Debug("Could not verify attestation")
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+	*/
 
 	return pubsub.ValidationAccept
 }

@@ -108,6 +108,7 @@ type Service struct {
 	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
+	signatureChan             chan *signatureVerifier
 }
 
 // NewService initializes new regular sync service.
@@ -125,9 +126,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		rateLimiter:          rLimiter,
+		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
 
 	go r.registerHandlers()
+	go r.verifierRoutine()
 
 	return r
 }
