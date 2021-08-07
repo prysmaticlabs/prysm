@@ -1,15 +1,21 @@
+/**
+Tool for replaying http request from a gzipped file of base64, line-delimited
+http raw requests. Credits to https://gist.github.com/kasey/c9e663eae5baebbf8fbe548c2b1d961b.
+*/
 package main
 
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"flag"
-	"fmt"
+	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -23,38 +29,47 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	scanner := bufio.NewScanner(f)
-	requests := make([][]byte, 0)
-	for scanner.Scan() {
-		scanned := scanner.Bytes()
-		buf := bytes.NewBuffer(make([]byte, base64.StdEncoding.DecodedLen(len(scanned))))
-		if _, err := base64.StdEncoding.Decode(buf.Bytes(), scanned); err != nil {
-			panic(err)
+	gzreader, err := gzip.NewReader(f)
+	defer func() {
+		if err := gzreader.Close(); err != nil {
+			log.WithError(err).Error("Could not close gzip")
 		}
-		requests = append(requests, buf.Bytes())
-	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
-	}
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-	u, err := url.Parse(*endpoint)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(len(requests))
-	for _, rawReq := range requests {
-		r, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(rawReq)))
+		if err := f.Close(); err != nil {
+			log.WithError(err).Error("Could not close stdout file")
+		}
+	}()
+	lr := bufio.NewReader(gzreader)
+	for {
+		line, err := lr.ReadBytes([]byte("\n")[0])
+		if err == io.EOF {
+			os.Exit(0)
+		}
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
-		r.RequestURI = ""
-		r.URL = u
-		// fmt.Println(r)
-		if _, err := client.Do(r); err != nil {
-			panic(err)
+		line = line[0 : len(line)-1]
+		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(line)))
+		_, err = base64.StdEncoding.Decode(decoded, line)
+		if err != nil {
+			log.Fatal(err)
 		}
-		time.Sleep(time.Millisecond * 200)
+		dbuf := bytes.NewBuffer(decoded)
+		req, err := http.ReadRequest(bufio.NewReader(dbuf))
+		if err != nil {
+			log.Fatal(err)
+		}
+		req.URL.Scheme = "http"
+		req.URL.Host = *endpoint
+		req.RequestURI = ""
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		respBuf := bytes.NewBuffer(nil)
+		if err := resp.Write(respBuf); err != nil {
+			log.Fatal(err)
+		}
+		log.Print(respBuf.String())
+		time.Sleep(time.Second)
 	}
 }

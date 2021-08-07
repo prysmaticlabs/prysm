@@ -2,10 +2,14 @@ package components
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"io"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
@@ -18,7 +22,7 @@ type TracingSink struct {
 	server   *http.Server
 }
 
-// TracingSink to capture HTTP requests from opentracing pushes.
+// NewTracingSink --
 func NewTracingSink(endpoint string) *TracingSink {
 	return &TracingSink{
 		started:  make(chan struct{}, 1),
@@ -52,11 +56,15 @@ func (ts *TracingSink) initializeSink() {
 		log.WithError(err).Error("Failed to create stdout file")
 		return
 	}
-	defer func() {
-		if err = stdOutFile.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
+	gzout := gzip.NewWriter(stdOutFile)
+	cleanup := func() {
+		if err := gzout.Close(); err != nil {
+			log.WithError(err).Error("Could not close gzip")
 		}
-	}()
+		if err := stdOutFile.Close(); err != nil {
+			log.WithError(err).Error("Could not close stdout file")
+		}
+	}
 
 	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		if err := captureRequest(stdOutFile, r); err != nil {
@@ -64,18 +72,30 @@ func (ts *TracingSink) initializeSink() {
 			return
 		}
 	})
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cleanup()
+		os.Exit(0)
+	}()
 	if err := ts.server.ListenAndServe(); err != http.ErrServerClosed {
 		log.WithError(err).Error("Failed to serve http")
 	}
 }
 
-func captureRequest(f io.StringWriter, r *http.Request) error {
-	buf := new(bytes.Buffer)
-	if err := r.Write(buf); err != nil {
+// Captures raw requests in base64 encoded form in a line-delimited file.
+func captureRequest(f io.Writer, r *http.Request) error {
+	buf := bytes.NewBuffer(nil)
+	err := r.Write(buf)
+	if err != nil {
 		return err
 	}
-	encodedStr := base64.StdEncoding.EncodeToString(buf.Bytes()) + "\n"
-	if _, err := f.WriteString(encodedStr); err != nil {
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(buf.Bytes())))
+	base64.StdEncoding.Encode(encoded, buf.Bytes())
+	encoded = append(encoded, []byte("\n")...)
+	_, err = f.Write(encoded)
+	if err != nil {
 		return err
 	}
 	return nil
