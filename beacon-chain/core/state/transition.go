@@ -46,20 +46,6 @@ var processExitFunc = func(ctx context.Context, s state.BeaconState, blk block.S
 	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
-// This defines the processing block routine as outlined in the Ethereum Beacon Chain spec:
-// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
-var processingPipeline = []processFunc{
-	b.ProcessBlockHeader,
-	b.ProcessRandao,
-	processEth1DataFunc,
-	VerifyOperationLengths,
-	processProposerSlashingFunc,
-	processAttesterSlashingFunc,
-	b.ProcessAttestations,
-	processDepositsFunc,
-	processExitFunc,
-}
-
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Note: This method differs from the spec pseudocode as it uses a batch signature verification.
@@ -288,40 +274,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
 			log.WithError(err).Error("Failed to put skip slot cache value")
 			traceutil.AnnotateError(span, err)
-		}
-	}
-
-	return state, nil
-}
-
-// ProcessBlock creates a new, modified beacon state by applying block operation
-// transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
-// processing block attestations, and more.
-//
-// Spec pseudocode definition:
-//
-//  def process_block(state: BeaconState, block: BeaconBlock) -> None:
-//    process_block_header(state, block)
-//    process_randao(state, block.body)
-//    process_eth1_data(state, block.body)
-//    process_operations(state, block.body)
-func ProcessBlock(
-	ctx context.Context,
-	state state.BeaconState,
-	signed block.SignedBeaconBlock,
-) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
-	defer span.End()
-
-	var err error
-	if err = helpers.VerifyNilBeaconBlock(signed); err != nil {
-		return nil, err
-	}
-
-	for _, p := range processingPipeline {
-		state, err = p(ctx, state, signed)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not process block")
 		}
 	}
 
