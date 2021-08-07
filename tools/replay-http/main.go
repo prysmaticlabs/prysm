@@ -43,6 +43,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(len(requests))
 	for _, rawReq := range requests {
 		r, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(rawReq)))
 		if err != nil {
@@ -50,9 +51,10 @@ func main() {
 		}
 		r.RequestURI = ""
 		r.URL = u
-		fmt.Println(r)
+		// fmt.Println(r)
 		if _, err := client.Do(r); err != nil {
 			panic(err)
 		}
+		time.Sleep(time.Millisecond * 200)
 	}
 }
