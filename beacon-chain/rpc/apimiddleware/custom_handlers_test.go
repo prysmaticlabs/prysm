@@ -202,6 +202,28 @@ func TestWriteEvent(t *testing.T) {
 	require.NoError(t, err)
 	msg := &sse.Event{
 		Data:  bData,
+		Event: []byte("test_event"),
+	}
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
+	require.Equal(t, true, errJson == nil)
+	written := w.Body.String()
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
+}
+
+func TestWriteEventTrailingSpace(t *testing.T) {
+	base64Val := "Zm9v"
+	data := &eventFinalizedCheckpointJson{
+		Block: base64Val,
+		State: base64Val,
+		Epoch: "1",
+	}
+	bData, err := json.Marshal(data)
+	require.NoError(t, err)
+	msg := &sse.Event{
+		Data:  bData,
 		Event: []byte("test_event "),
 	}
 	w := httptest.NewRecorder()
