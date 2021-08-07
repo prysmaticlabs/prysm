@@ -67,7 +67,7 @@ func (ts *TracingSink) initializeSink() {
 	}
 
 	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
-		if err := captureRequest(stdOutFile, r); err != nil {
+		if err := captureRequest(gzout, r); err != nil {
 			log.WithError(err).Error("Failed to capture http request")
 			return
 		}
