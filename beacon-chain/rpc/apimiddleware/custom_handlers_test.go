@@ -202,7 +202,7 @@ func TestWriteEvent(t *testing.T) {
 	require.NoError(t, err)
 	msg := &sse.Event{
 		Data:  bData,
-		Event: []byte("test_event"),
+		Event: []byte("test_event "),
 	}
 	w := httptest.NewRecorder()
 	w.Body = &bytes.Buffer{}
