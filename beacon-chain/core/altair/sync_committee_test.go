@@ -337,7 +337,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 			wantedErr: "",
 		},
 		{
-			name: "sync_message.slot == current_slot+CLOCK_DISPARITY+500ms",
+			name: "sync_message.slot == current_slot+CLOCK_DISPARITY-1000ms",
 			args: args{
 				syncMessageSlot: 100,
 				genesisTime:     timeutils.Now().Add(-(100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) + params.BeaconNetworkConfig().MaximumGossipClockDisparity + 1000*time.Millisecond),
