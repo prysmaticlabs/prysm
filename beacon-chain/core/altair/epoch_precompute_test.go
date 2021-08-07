@@ -117,6 +117,89 @@ func TestProcessEpochParticipation(t *testing.T) {
 	require.Equal(t, balance.PrevEpochHeadAttested, params.BeaconConfig().MaxEffectiveBalance*1)
 }
 
+func TestAttestationsDelta(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	rewards, penalties, err := AttestationsDelta(s, balance, validators)
+	require.NoError(t, err)
+
+	// Reward amount should increase as validator index increases due to setup.
+	for i := 1; i < len(rewards); i++ {
+		require.Equal(t, true, rewards[i] > rewards[i-1])
+	}
+
+	// Penalty amount should decrease as validator index increases due to setup.
+	for i := 1; i < len(penalties); i++ {
+		require.Equal(t, true, penalties[i] <= penalties[i-1])
+	}
+
+	// First index should have 0 reward.
+	require.Equal(t, uint64(0), rewards[0])
+	// Last index should have 0 penalty.
+	require.Equal(t, uint64(0), penalties[len(penalties)-1])
+}
+
+func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
+	require.NoError(t, err)
+
+	balances := s.Balances()
+	// Reward amount should increase as validator index increases due to setup.
+	for i := 1; i < len(balances); i++ {
+		require.Equal(t, true, balances[i] >= balances[i-1])
+	}
+
+	wanted := make([]uint64, s.NumValidators())
+	rewards, penalties, err := AttestationsDelta(s, balance, validators)
+	require.NoError(t, err)
+	for i := range rewards {
+		wanted[i] += rewards[i]
+	}
+	for i := range penalties {
+		if wanted[i] > penalties[i] {
+			wanted[i] -= penalties[i]
+		} else {
+			wanted[i] = 0
+		}
+	}
+	require.DeepEqual(t, wanted, balances)
+}
+
+func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	sCopy := s.Copy()
+	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
+	require.NoError(t, err)
+
+	// Copied state where finality happened long ago
+	require.NoError(t, sCopy.SetSlot(params.BeaconConfig().SlotsPerEpoch*1000))
+	sCopy, err = ProcessRewardsAndPenaltiesPrecompute(sCopy, balance, validators)
+	require.NoError(t, err)
+
+	balances := s.Balances()
+	inactivityBalances := sCopy.Balances()
+	// Balances decreased to 0 due to inactivity
+	require.Equal(t, uint64(2101898), balances[2])
+	require.Equal(t, uint64(2414946), balances[3])
+	require.Equal(t, uint64(0), inactivityBalances[2])
+	require.Equal(t, uint64(0), inactivityBalances[3])
+}
+
 func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
@@ -156,6 +239,36 @@ func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
 	require.Equal(t, uint64(0), inactivityScores[1])
 	require.Equal(t, uint64(0), inactivityScores[2])
 	require.Equal(t, uint64(0), inactivityScores[3])
+}
+
+func TestProcessRewardsAndPenaltiesPrecompute_GenesisEpoch(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(0))
+	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
+	require.NoError(t, err)
+
+	balances := s.Balances()
+	// Nothing should happen at genesis epoch
+	require.Equal(t, uint64(0), balances[0])
+	for i := 1; i < len(balances); i++ {
+		require.Equal(t, true, balances[i] == balances[i-1])
+	}
+}
+
+func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	_, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	_, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, []*precompute.Validator{})
+	require.ErrorContains(t, "validator registries not the same length as state's validator registries", err)
 }
 
 func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
