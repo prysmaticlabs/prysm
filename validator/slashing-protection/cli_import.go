@@ -3,6 +3,7 @@ package slashingprotection
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -32,6 +33,8 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 	// ensure that the validator.db is found under the specified dir or its subdirectories
 	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
 	if err != nil {

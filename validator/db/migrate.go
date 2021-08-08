@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -14,6 +15,8 @@ import (
 // MigrateUp for a validator database.
 func MigrateUp(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 
 	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
 		return errors.New("No validator db found at path, nothing to migrate")
@@ -32,6 +35,8 @@ func MigrateUp(cliCtx *cli.Context) error {
 // MigrateDown for a validator database.
 func MigrateDown(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 
 	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
 		return errors.New("No validator db found at path, nothing to rollback")

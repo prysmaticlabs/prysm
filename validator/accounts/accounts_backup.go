@@ -206,7 +206,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 	}
 	// Marshal and zip all keystore files together and write the zip file
 	// to the specified output directory.
-	archivePath := filepath.Join(outputDir, archiveFilename)
+	archivePath := filepath.Join(filepath.Clean(outputDir), archiveFilename)
 	if fileutil.FileExists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}

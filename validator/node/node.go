@@ -198,6 +198,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 	if c.wallet != nil {
 		dataDir = c.wallet.AccountsDir()
 	}
@@ -300,6 +302,8 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
 	}
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
@@ -567,6 +571,8 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	// Sanitize user input paths
+	walletDir = filepath.Clean(walletDir)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
 	if fileutil.FileExists(defaultWalletPasswordFilePath) {
 		// Ensure file has proper permissions.

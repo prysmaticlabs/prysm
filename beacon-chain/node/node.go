@@ -249,6 +249,8 @@ func (b *BeaconNode) startForkChoice() {
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+	// Sanitize user input paths
+	baseDir = filepath.Clean(baseDir)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)

@@ -37,6 +37,8 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 
 	// ensure that the validator.db is found under the specified dir or its subdirectories
 	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
@@ -65,6 +67,8 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		"Enter your desired output directory for your slashing protection history",
 		flags.SlashingProtectionExportDirFlag,
 	)
+	// Sanitize user input paths
+	outputDir = filepath.Clean(outputDir)
 	if err != nil {
 		return errors.Wrap(err, "could not get slashing protection json file")
 	}

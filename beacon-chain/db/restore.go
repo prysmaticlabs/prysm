@@ -3,6 +3,7 @@ package db
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -20,6 +21,9 @@ const dbExistsYesNoPrompt = "A database file already exists in the target direct
 func Restore(cliCtx *cli.Context) error {
 	sourceFile := cliCtx.String(cmd.RestoreSourceFileFlag.Name)
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
+	// Sanitize user input paths
+	sourceFile = filepath.Clean(sourceFile)
+	targetDir = filepath.Clean(targetDir)
 
 	restoreDir := path.Join(targetDir, kv.BeaconNodeDbDirName)
 	if fileutil.FileExists(path.Join(restoreDir, kv.DatabaseFileName)) {

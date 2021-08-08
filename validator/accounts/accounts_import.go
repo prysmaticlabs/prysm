@@ -155,6 +155,8 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
+	// Sanitize user input paths
+	keysDir = filepath.Clean(keysDir)
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
 	isDir, err := fileutil.HasDir(keysDir)
 	if err != nil {
