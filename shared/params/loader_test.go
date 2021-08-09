@@ -115,7 +115,7 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 					} else {
 						assert.Equal(t, v1, v2, "%s: %s", name, field)
 					}
-					break;
+					break
 				}
 			}
 			if !found {
