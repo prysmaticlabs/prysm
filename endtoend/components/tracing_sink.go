@@ -2,7 +2,6 @@ package components
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"io"
@@ -20,7 +19,7 @@ import (
 // are normally sent to a jaeger (https://www.jaegertracing.io/docs/1.25/getting-started/)
 // endpoint, but here we instead replace that with our own http request sink.
 // The request sink receives any requests, raw marshals them and base64-encodes them,
-// then writes them newline-delimited into a gzipped file.
+// then writes them newline-delimited into a file.
 //
 // The output file from this component can then be used by tools/replay-http in
 // the Prysm repository to replay requests to a jaeger collector endpoint. This
@@ -65,18 +64,14 @@ func (ts *TracingSink) initializeSink() {
 		log.WithError(err).Error("Failed to create stdout file")
 		return
 	}
-	gzout := gzip.NewWriter(stdOutFile)
 	cleanup := func() {
-		if err := gzout.Close(); err != nil {
-			log.WithError(err).Error("Could not close gzip")
-		}
 		if err := stdOutFile.Close(); err != nil {
 			log.WithError(err).Error("Could not close stdout file")
 		}
 	}
 
 	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
-		if err := captureRequest(gzout, r); err != nil {
+		if err := captureRequest(stdOutFile, r); err != nil {
 			log.WithError(err).Error("Failed to capture http request")
 			return
 		}

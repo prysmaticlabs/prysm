@@ -1,5 +1,5 @@
 /**
-Tool for replaying http requests from a gzipped file of base64 encoded, line-delimited
+Tool for replaying http requests from a file of base64 encoded, line-delimited
 Go http raw requests. Credits to https://gist.github.com/kasey/c9e663eae5baebbf8fbe548c2b1d961b.
 */
 package main
@@ -7,11 +7,11 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"flag"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 
@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	filePath = flag.String("file", "", "gzipped file of line-delimited, base64-encoded Go http requests")
+	filePath = flag.String("file", "", "file of line-delimited, base64-encoded Go http requests")
 	endpoint = flag.String("endpoint", "", "host:port endpoint to make HTTP requests to")
 )
 
@@ -36,19 +36,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	gzreader, err := gzip.NewReader(f)
-	if err != nil {
-		log.Fatal(err)
-	}
 	defer func() {
-		if err := gzreader.Close(); err != nil {
-			log.WithError(err).Error("Could not close gzip")
-		}
 		if err := f.Close(); err != nil {
 			log.WithError(err).Error("Could not close stdout file")
 		}
 	}()
-	lr := bufio.NewReader(gzreader)
+	lr := bufio.NewReader(f)
 	for {
 		line, err := lr.ReadBytes([]byte("\n")[0])
 		if err == io.EOF {
@@ -68,8 +61,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		req.URL.Scheme = "http"
-		req.URL.Host = *endpoint
+		parsed, err := url.Parse(*endpoint)
+		if err != nil {
+			log.Fatal(err)
+		}
+		req.URL = parsed
 		req.RequestURI = ""
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
