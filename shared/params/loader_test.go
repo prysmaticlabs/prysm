@@ -245,7 +245,7 @@ func fieldsFromYaml(t *testing.T, fp string) []string {
 	require.NoError(t, yaml.Unmarshal(yamlFile, &m))
 
 	var keys []string
-	for k, _ := range m {
+	for k := range m {
 		keys = append(keys, k)
 	}
 
