@@ -2,6 +2,7 @@ package params
 
 const (
 	Mainnet ConfigName = iota
+	Minimal
 	EndToEnd
 	Pyrmont
 	Toledo
@@ -11,6 +12,7 @@ const (
 // ConfigNames provides network configuration names.
 var ConfigNames = map[ConfigName]string{
 	Mainnet:  "mainnet",
+	Minimal:  "minimal",
 	EndToEnd: "end-to-end",
 	Pyrmont:  "pyrmont",
 	Toledo:   "toledo",
