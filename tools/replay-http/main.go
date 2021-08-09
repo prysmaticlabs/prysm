@@ -1,6 +1,6 @@
 /**
-Tool for replaying http request from a gzipped file of base64, line-delimited
-http raw requests. Credits to https://gist.github.com/kasey/c9e663eae5baebbf8fbe548c2b1d961b.
+Tool for replaying http requests from a gzipped file of base64 encoded, line-delimited
+Go http raw requests. Credits to https://gist.github.com/kasey/c9e663eae5baebbf8fbe548c2b1d961b.
 */
 package main
 
@@ -13,18 +13,26 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	filePath = flag.String("file", "", "http base64 encoded requests file")
-	endpoint = flag.String("endpoint", "", "jaeger endpoint")
+	filePath = flag.String("file", "", "gzipped file of line-delimited, base64-encoded Go http requests")
+	endpoint = flag.String("endpoint", "", "host:port endpoint to make HTTP requests to")
 )
 
 func main() {
 	flag.Parse()
-	f, err := os.Open(*filePath)
+	if *filePath == "" {
+		log.Fatal("Must provide --file")
+	}
+	if *endpoint == "" {
+		log.Fatal("Must provide --endpoint")
+	}
+
+	f, err := os.Open(path.Clean(*filePath))
 	if err != nil {
 		log.Fatal(err)
 	}
