@@ -94,7 +94,7 @@ func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 	diff := (rand.NewGenerator().Uint64() % subComCount) + 1
 	joinEpoch, err := epoch.SafeSub(diff)
 	if err != nil {
-		// If we overflow here, we simply set the value to join
+		// If we underflow here, we simply set the value to join
 		// at 0.
 		joinEpoch = 0
 	}
