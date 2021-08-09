@@ -64,7 +64,9 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	return root
 }
 
-// Version of the beacon state.
+// Version of the beacon state. This method
+// is strictly meant to be used without a lock
+// internally.
 func (b *BeaconState) Version() int {
 	return version.Phase0
 }
