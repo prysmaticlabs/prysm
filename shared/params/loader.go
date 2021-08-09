@@ -3,6 +3,7 @@ package params
 import (
 	"encoding/hex"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -12,7 +13,7 @@ import (
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
 func LoadChainConfigFile(chainConfigFileName string) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+	yamlFile, err := ioutil.ReadFile(filepath.Clean(chainConfigFileName))
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
