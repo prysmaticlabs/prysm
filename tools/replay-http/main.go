@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -70,6 +69,5 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Print(respBuf.String())
-		time.Sleep(time.Second)
 	}
 }
