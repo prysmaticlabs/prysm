@@ -24,6 +24,34 @@ func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 
 // AttestationParticipationFlagIndices retrieves a map of attestation scoring based on Altair's participation flag indices.
 // This is used to facilitate process attestation during state transition and during upgrade to altair state.
+//
+// Spec code:
+// def get_attestation_participation_flag_indices(state: BeaconState,
+//                                               data: AttestationData,
+//                                               inclusion_delay: uint64) -> Sequence[int]:
+//    """
+//    Return the flag indices that are satisfied by an attestation.
+//    """
+//    if data.target.epoch == get_current_epoch(state):
+//        justified_checkpoint = state.current_justified_checkpoint
+//    else:
+//        justified_checkpoint = state.previous_justified_checkpoint
+//
+//    # Matching roots
+//    is_matching_source = data.source == justified_checkpoint
+//    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
+//    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
+//    assert is_matching_source
+//
+//    participation_flag_indices = []
+//    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+//        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+//    if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
+//        participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
+//    if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+//        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+//
+//    return participation_flag_indices
 func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	var justifiedCheckpt *ethpb.Checkpoint
@@ -33,11 +61,11 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, da
 		justifiedCheckpt = beaconState.PreviousJustifiedCheckpoint()
 	}
 
-	matchingSource, matchedTgt, matchedHead, err := MatchingStatus(beaconState, data, justifiedCheckpt)
+	matchedSrc, matchedTgt, matchedHead, err := MatchingStatus(beaconState, data, justifiedCheckpt)
 	if err != nil {
 		return nil, err
 	}
-	if !matchingSource {
+	if !matchedSrc {
 		return nil, errors.New("source epoch does not match")
 	}
 
@@ -48,20 +76,26 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, da
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 	slotsPerEpoch := cfg.SlotsPerEpoch
 	sqtRootSlots := cfg.SqrRootSlotsPerEpoch
-	if matchingSource && delay <= sqtRootSlots {
+	if matchedSrc && delay <= sqtRootSlots {
 		participatedFlags[sourceFlagIndex] = true
 	}
-	if matchedTgt && delay <= slotsPerEpoch {
+	matchedSrcTgt := matchedSrc && matchedTgt
+	if matchedSrcTgt && delay <= slotsPerEpoch {
 		participatedFlags[targetFlagIndex] = true
 	}
-	matchingHeadTarget := matchedHead && matchedTgt
-	if matchingHeadTarget && delay == cfg.MinAttestationInclusionDelay {
+	matchedSrcTgtHead := matchedHead && matchedSrcTgt
+	if matchedSrcTgtHead && delay == cfg.MinAttestationInclusionDelay {
 		participatedFlags[headFlagIndex] = true
 	}
 	return participatedFlags, nil
 }
 
 // MatchingStatus returns the matching statues for attestation data's source target and head.
+//
+// Spec code:
+//    is_matching_source = data.source == justified_checkpoint
+//    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
+//    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
 func MatchingStatus(beaconState state.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (matchedSrc bool, matchedTgt bool, matchedHead bool, err error) {
 	matchedSrc = attestationutil.CheckPointIsEqual(data.Source, cp)
 
