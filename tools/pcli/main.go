@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -208,7 +209,7 @@ func main() {
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data fssz.Unmarshaler) error {
-	rawFile, err := ioutil.ReadFile(fPath)
+	rawFile, err := ioutil.ReadFile(filepath.Clean(fPath))
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package graffiti
 import (
 	"encoding/hex"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -26,7 +27,7 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
-	yamlFile, err := ioutil.ReadFile(f)
+	yamlFile, err := ioutil.ReadFile(filepath.Clean(f))
 	if err != nil {
 		return nil, err
 	}

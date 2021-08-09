@@ -28,8 +28,6 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 	}
 
 	dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-	// Sanitize user input paths
-	dataDir = filepath.Clean(dataDir)
 	if dataDir == "" {
 		dataDir = cmd.DefaultDataDir()
 		if dataDir == "" {
@@ -39,12 +37,14 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 			)
 		}
 	}
+	// Sanitize user input paths
+	dataDir = filepath.Clean(dataDir)
 
 	return
 }
 
 func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName)
+	fileContent, err := ioutil.ReadFile(filepath.Clean(fileName))
 	if err != nil {
 		return nil, err
 	}
