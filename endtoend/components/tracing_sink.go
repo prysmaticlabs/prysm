@@ -15,14 +15,23 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 )
 
-// TracingSink to capture HTTP requests from opentracing pushes.
+// TracingSink to capture HTTP requests from opentracing pushes. This is meant
+// to capture all opentracing spans from Prysm during an end-to-end test. Spans
+// are normally sent to a jaeger (https://www.jaegertracing.io/docs/1.25/getting-started/)
+// endpoint, but here we instead replace that with our own http request sink.
+// The request sink receives any requests, raw marshals them and base64-encodes them,
+// then writes them newline-delimited into a gzipped file.
+//
+// The output file from this component can then be used by tools/replay-http in
+// the Prysm repository to replay requests to a jaeger collector endpoint. This
+// can then be used to visualize the spans themselves in the jaeger UI.
 type TracingSink struct {
 	started  chan struct{}
 	endpoint string
 	server   *http.Server
 }
 
-// NewTracingSink --
+// NewTracingSink initializes the tracing sink component.
 func NewTracingSink(endpoint string) *TracingSink {
 	return &TracingSink{
 		started:  make(chan struct{}, 1),
