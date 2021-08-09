@@ -20,16 +20,13 @@ import (
 
 var (
 	filePath = flag.String("file", "", "file of line-delimited, base64-encoded Go http requests")
-	endpoint = flag.String("endpoint", "", "host:port endpoint to make HTTP requests to")
+	endpoint = flag.String("endpoint", "http://localhost:14268/api/traces", "host:port endpoint to make HTTP requests to")
 )
 
 func main() {
 	flag.Parse()
 	if *filePath == "" {
 		log.Fatal("Must provide --file")
-	}
-	if *endpoint == "" {
-		log.Fatal("Must provide --endpoint")
 	}
 
 	f, err := os.Open(path.Clean(*filePath))
