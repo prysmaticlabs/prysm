@@ -249,5 +249,9 @@ func fieldsFromYaml(t *testing.T, fp string) []string {
 		keys = append(keys, k)
 	}
 
+	if len(keys) == 0 {
+		t.Errorf("No fields loaded from yaml file %s", fp)
+	}
+
 	return keys
 }
