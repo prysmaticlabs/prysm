@@ -11,11 +11,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -23,28 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
-
-// processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, state.BeaconState, block.SignedBeaconBlock) (state.BeaconState, error)
-
-var processDepositsFunc = func(ctx context.Context, s state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessDeposits(ctx, s, blk.Block().Body().Deposits())
-}
-var processProposerSlashingFunc = func(ctx context.Context, s state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessProposerSlashings(ctx, s, blk.Block().Body().ProposerSlashings(), v.SlashValidator)
-}
-
-var processAttesterSlashingFunc = func(ctx context.Context, s state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessAttesterSlashings(ctx, s, blk.Block().Body().AttesterSlashings(), v.SlashValidator)
-}
-
-var processEth1DataFunc = func(ctx context.Context, s state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessEth1DataInBlock(ctx, s, blk.Block().Body().Eth1Data())
-}
-
-var processExitFunc = func(ctx context.Context, s state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
-	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
-}
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
