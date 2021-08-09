@@ -58,7 +58,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println(req.RequestURI)
 		parsed, err := url.Parse(*endpoint)
 		if err != nil {
 			log.Fatal(err)
@@ -74,5 +73,6 @@ func main() {
 		if err := resp.Write(respBuf); err != nil {
 			log.Fatal(err)
 		}
+		log.Println(respBuf.String())
 	}
 }
