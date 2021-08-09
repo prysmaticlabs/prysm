@@ -61,12 +61,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println(req.RequestURI)
 		parsed, err := url.Parse(*endpoint)
 		if err != nil {
 			log.Fatal(err)
 		}
 		req.URL = parsed
 		req.RequestURI = ""
+		log.Println(req)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Fatal(err)
@@ -75,6 +77,5 @@ func main() {
 		if err := resp.Write(respBuf); err != nil {
 			log.Fatal(err)
 		}
-		log.Print(respBuf.String())
 	}
 }
