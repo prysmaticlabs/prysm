@@ -373,7 +373,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	w.configFilePath = configFilePath
-	return os.Open(configFilePath)
+	return os.Open(filepath.Clean(configFilePath))
 
 }
 
@@ -390,7 +390,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) 
 }
 
 func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error) {
-	walletItem, err := os.Open(walletPath)
+	walletItem, err := os.Open(filepath.Clean(walletPath))
 	if err != nil {
 		return 0, err
 	}

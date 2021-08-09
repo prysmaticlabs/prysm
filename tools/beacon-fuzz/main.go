@@ -48,7 +48,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("%s does not end in an integer for the filename.", p))
 		}
-		b, err := ioutil.ReadFile(p)
+		b, err := ioutil.ReadFile(filepath.Clean(p))
 		if err != nil {
 			panic(err)
 		}

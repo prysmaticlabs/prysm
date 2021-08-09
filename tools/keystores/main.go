@@ -90,7 +90,7 @@ func decrypt(cliCtx *cli.Context) error {
 	if keystorePath == "" {
 		return errors.New("--keystore must be set")
 	}
-	fullPath, err := fileutil.ExpandPath(filepath.Clean(keystorePath))
+	fullPath, err := fileutil.ExpandPath(keystorePath)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", keystorePath)
 	}

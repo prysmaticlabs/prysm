@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 	"gopkg.in/yaml.v2"
@@ -31,7 +32,7 @@ func main() {
 	}
 	inFile := os.Args[1]
 
-	in, err := ioutil.ReadFile(inFile)
+	in, err := ioutil.ReadFile(filepath.Clean(inFile))
 	if err != nil {
 		log.Fatalf("Failed to read file %s: %v", inFile, err)
 	}

@@ -201,7 +201,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	var accountsPassword string
 	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
 		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
+		data, err := ioutil.ReadFile(filepath.Clean(passwordFilePath))
 		if err != nil {
 			return err
 		}

@@ -109,7 +109,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return err
 	}
 	keystorePath := path.Join(eth1Path, fmt.Sprintf("keystore/%s", strings.TrimSpace(string(fileName))))
-	jsonBytes, err := ioutil.ReadFile(keystorePath)
+	jsonBytes, err := ioutil.ReadFile(path.Clean(keystorePath))
 	if err != nil {
 		return err
 	}
