@@ -81,42 +81,6 @@ func TestFuzzProcessSlots_1000(t *testing.T) {
 	}
 }
 
-func TestFuzzProcessBlock_1000(t *testing.T) {
-	SkipSlotCache.Disable()
-	defer SkipSlotCache.Enable()
-	ctx := context.Background()
-	state := &v1.BeaconState{}
-	sb := &ethpb.SignedBeaconBlock{}
-	fuzzer := fuzz.NewWithSeed(0)
-	fuzzer.NilChance(0.1)
-	for i := 0; i < 1000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(sb)
-		s, err := ProcessBlock(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(sb))
-		if err != nil && s != nil {
-			t.Fatalf("state should be nil on err. found: %v on error: %v for signed block: %v", s, err, sb)
-		}
-	}
-}
-
-func TestFuzzProcessOperations_1000(t *testing.T) {
-	SkipSlotCache.Disable()
-	defer SkipSlotCache.Enable()
-	ctx := context.Background()
-	state := &v1.BeaconState{}
-	bb := &ethpb.SignedBeaconBlock{}
-	fuzzer := fuzz.NewWithSeed(0)
-	fuzzer.NilChance(0.1)
-	for i := 0; i < 1000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(bb)
-		s, err := ProcessBlock(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(bb))
-		if err != nil && s != nil {
-			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
-		}
-	}
-}
-
 func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
