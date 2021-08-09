@@ -137,12 +137,12 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 //            for flag_index in participation_flag_indices:
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
 func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
-	for _, att := range atts {
-		epochParticipation, err := state.PreviousEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
+	epochParticipation, err := state.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
 
+	for _, att := range atts {
 		participatedFlags, err := AttestationParticipationFlagIndices(state, att.Data, att.InclusionDelay)
 		if err != nil {
 			return nil, err
@@ -170,10 +170,11 @@ func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.Pendin
 				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
 			}
 		}
-
-		if err := state.SetPreviousParticipationBits(epochParticipation); err != nil {
-			return nil, err
-		}
 	}
+
+	if err := state.SetPreviousParticipationBits(epochParticipation); err != nil {
+		return nil, err
+	}
+
 	return state, nil
 }
