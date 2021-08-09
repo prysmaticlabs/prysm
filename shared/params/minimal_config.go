@@ -39,6 +39,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
+	minimalConfig.SqrRootSlotsPerEpoch = 2
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.EpochsPerEth1VotingPeriod = 4
