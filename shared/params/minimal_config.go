@@ -95,5 +95,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
 	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
 
+	minimalConfig.ConfigName = 	ConfigNames[Minimal]
+
 	return minimalConfig
 }
