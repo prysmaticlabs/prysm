@@ -277,7 +277,7 @@ func HashDir(dir string) (string, error) {
 	files = append([]string(nil), files...)
 	sort.Strings(files)
 	for _, file := range files {
-		fd, err := os.Open(filepath.Join(dir, file))
+		fd, err := os.Open(filepath.Join(filepath.Clean(dir), filepath.Clean(file)))
 		if err != nil {
 			return "", err
 		}
