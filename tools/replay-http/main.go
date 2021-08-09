@@ -26,9 +26,12 @@ func main() {
 	flag.Parse()
 	f, err := os.Open(*filePath)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	gzreader, err := gzip.NewReader(f)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := gzreader.Close(); err != nil {
 			log.WithError(err).Error("Could not close gzip")
