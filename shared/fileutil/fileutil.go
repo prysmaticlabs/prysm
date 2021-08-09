@@ -205,11 +205,11 @@ func CopyFile(src, dst string) error {
 	if !FileExists(src) {
 		return errors.New("source file does not exist at provided path")
 	}
-	f, err := os.Open(src)
+	f, err := os.Open(filepath.Clean(src))
 	if err != nil {
 		return err
 	}
-	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions)
+	dstFile, err := os.OpenFile(filepath.Clean(dst), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
 		return err
 	}

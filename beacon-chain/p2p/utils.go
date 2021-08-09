@@ -88,8 +88,8 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 }
 
 // Retrieves a p2p networking private key from a file path.
-func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
-	src, err := ioutil.ReadFile(path)
+func privKeyFromFile(Path string) (*ecdsa.PrivateKey, error) {
+	src, err := ioutil.ReadFile(path.Clean(Path))
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -135,7 +135,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(metaDataPath)
+	src, err := ioutil.ReadFile(path.Clean(metaDataPath))
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
