@@ -27,8 +27,7 @@ func newSyncSubnetIDs() *syncSubnetIDs {
 	return &syncSubnetIDs{sCommittee: persistentCache}
 }
 
-// GetSyncCommitteeSubnets retrieves the sync committee subnet and expiration time of that validator's
-// subscription.
+// GetSyncCommitteeSubnets retrieves the sync committee subnet and expiration time of that validator's subscription.
 func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch) ([]uint64, types.Epoch, bool, time.Time) {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
@@ -42,17 +41,19 @@ func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 	if !ok {
 		return []uint64{}, 0, ok, time.Time{}
 	}
-	// If no committees are saved, we return
-	// nothing.
+	// If no committees are saved, we return nothing.
 	if len(idxs) <= 1 {
 		return []uint64{}, 0, ok, time.Time{}
 	}
+
+	// Index 0 was used to store validator's expiration time.
+	// Index 1 and beyond were used to store subnets.
 	return idxs[1:], types.Epoch(idxs[0]), ok, duration
 }
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
 // in the cache. This method also takes the epoch as an argument to only retrieve
-// assingments for epochs that have happened.
+// assignments for epochs that have happened.
 func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
@@ -91,6 +92,7 @@ func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 	subComCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	// To join a sync committee subnet, select a random number of epochs before the end of the
 	// current sync committee period between 1 and SYNC_COMMITTEE_SUBNET_COUNT, inclusive.
+	// This is to smoothing out the join and exiting of the subnets so not everyone surging at the same time.
 	diff := (rand.NewGenerator().Uint64() % subComCount) + 1
 	joinEpoch, err := epoch.SafeSub(diff)
 	if err != nil {
