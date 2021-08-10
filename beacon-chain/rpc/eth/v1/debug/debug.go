@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	statepb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,7 +12,7 @@ import (
 )
 
 // GetBeaconState returns the full beacon state for a given state id.
-func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (*statepb.BeaconStateResponse, error) {
+func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconState")
 	defer span.End()
 
@@ -32,13 +31,13 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}
 
-	return &statepb.BeaconStateResponse{
+	return &ethpb.BeaconStateResponse{
 		Data: protoState,
 	}, nil
 }
 
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given stateId.
-func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest) (*statepb.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZ")
 	defer span.End()
 
@@ -57,12 +56,12 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
 
-	return &statepb.BeaconStateSSZResponse{Data: sszState}, nil
+	return &ethpb.BeaconStateSSZResponse{Data: sszState}, nil
 }
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
+	ctx, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
 	defer span.End()
 
 	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
