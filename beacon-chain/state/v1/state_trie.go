@@ -509,14 +509,13 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	fTrieMutex := b.stateFieldLeaves[index].RWMutex
 	if fTrie.FieldReference().Refs() > 1 {
-		fTrieMutex.Lock()
+		fTrie.Lock()
+		defer fTrie.Unlock()
 		fTrie.FieldReference().MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
-		fTrieMutex.Unlock()
 	}
 	// remove duplicate indexes
 	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
