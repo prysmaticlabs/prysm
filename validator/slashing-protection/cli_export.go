@@ -2,6 +2,7 @@ package slashingprotection
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
 		dataDir, err = prompt.InputDirectory(cliCtx, prompt.DataDirDirPromptText, cmd.DataDirFlag)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "could not read directory value from input")
 		}
 	}
 	// ensure that the validator.db is found under the specified dir or its subdirectories
@@ -47,7 +48,10 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
 	if !found {
-		return errors.Wrapf(err, "validator database not found at path %s", dataDir)
+		return fmt.Errorf(
+			"validator.db file (validator database) was not found at path %s, so nothing to export",
+			dataDir,
+		)
 	}
 
 	validatorDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{})

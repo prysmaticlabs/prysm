@@ -57,7 +57,8 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := slashingprotection.ImportSlashingProtectionCLI(cliCtx); err != nil {
+				err := slashingprotection.ImportSlashingProtectionCLI(cliCtx)
+				if err != nil {
 					logrus.Fatalf("Could not import slashing protection cli: %v", err)
 				}
 				return nil
