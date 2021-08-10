@@ -29,6 +29,10 @@ const (
 // from the validator's db into an EIP standard slashing protection format
 // 4. Format and save the JSON file to a user's specified output directory.
 func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
+	log.Info(
+		"This command exports your validator's attestation and proposal history into " +
+			"a file that can then be imported into any other Prysm setup across computers",
+	)
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
@@ -37,7 +41,6 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-
 	// ensure that the validator.db is found under the specified dir or its subdirectories
 	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
 	if err != nil {
@@ -62,7 +65,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	}
 	outputDir, err := prompt.InputDirectory(
 		cliCtx,
-		"Enter your desired output directory for your slashing protection history",
+		"Enter your desired output directory for your slashing protection history file",
 		flags.SlashingProtectionExportDirFlag,
 	)
 	if err != nil {
@@ -81,9 +84,18 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		}
 	}
 	outputFilePath := filepath.Join(outputDir, jsonExportFileName)
+	log.Infof("Writing slashing protection export JSON file to %s", outputFilePath)
 	encoded, err := json.MarshalIndent(eipJSON, "", "\t")
 	if err != nil {
 		return errors.Wrap(err, "could not JSON marshal slashing protection history")
 	}
-	return fileutil.WriteFile(outputFilePath, encoded)
+	if err := fileutil.WriteFile(outputFilePath, encoded); err != nil {
+		return errors.Wrapf(err, "could not write file to path %s", outputFilePath)
+	}
+	log.Infof(
+		"Successfully wrote %s. You can import this file using Prysm's "+
+			"validator slashing-protection import command in another machine",
+		outputFilePath,
+	)
+	return nil
 }
