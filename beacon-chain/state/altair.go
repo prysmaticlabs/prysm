@@ -1,14 +1,14 @@
 package state
 
-import statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 // BeaconStateAltair has read and write access to beacon state methods.
 type BeaconStateAltair interface {
 	BeaconState
-	CurrentSyncCommittee() (*statepb.SyncCommittee, error)
-	NextSyncCommittee() (*statepb.SyncCommittee, error)
-	SetCurrentSyncCommittee(val *statepb.SyncCommittee) error
-	SetNextSyncCommittee(val *statepb.SyncCommittee) error
+	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
+	NextSyncCommittee() (*ethpb.SyncCommittee, error)
+	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
+	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
 	InactivityScores() ([]uint64, error)
