@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-const signatureVerificationInterval = 200 * time.Millisecond
+const signatureVerificationInterval = 50 * time.Millisecond
 
-const verifierLimit = 400
+const verifierLimit = 50
 
 type signatureVerifier struct {
 	set     *bls.SignatureSet

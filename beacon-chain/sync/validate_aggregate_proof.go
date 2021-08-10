@@ -178,15 +178,38 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 	set := bls.NewSet()
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
-	valid, err := set.Verify()
-	if err != nil {
-		traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
-		return pubsub.ValidationIgnore
+
+	resChan := make(chan error)
+	verificationSet := &signatureVerifier{set: set, resChan: resChan}
+	s.signatureChan <- verificationSet
+
+	resErr := <-resChan
+	close(resChan)
+	if resErr != nil {
+		log.WithError(resErr).Debug("Could not perform batch verification")
+		verified, err := set.Verify()
+		if err != nil {
+			log.WithError(err).Debug("Could not verify attestation")
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		if !verified {
+			log.Debug("Verification of attestation failed")
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
 	}
-	if !valid {
-		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
-		return pubsub.ValidationReject
-	}
+	/*
+		valid, err := set.Verify()
+		if err != nil {
+			traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
+			return pubsub.ValidationIgnore
+		}
+		if !valid {
+			traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
+			return pubsub.ValidationReject
+		}
+	*/
 
 	return pubsub.ValidationAccept
 }
