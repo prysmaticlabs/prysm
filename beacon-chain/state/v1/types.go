@@ -5,7 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -14,63 +16,23 @@ import (
 var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
 
 	// Initialize the fixed sized arrays.
-	fieldMap[blockRoots] = basicArray
-	fieldMap[stateRoots] = basicArray
-	fieldMap[randaoMixes] = basicArray
+	fieldMap[types.BlockRoots] = types.BasicArray
+	fieldMap[types.StateRoots] = types.BasicArray
+	fieldMap[types.RandaoMixes] = types.BasicArray
 
 	// Initialize the composite arrays.
-	fieldMap[eth1DataVotes] = compositeArray
-	fieldMap[validators] = compositeArray
-	fieldMap[previousEpochAttestations] = compositeArray
-	fieldMap[currentEpochAttestations] = compositeArray
+	fieldMap[types.Eth1DataVotes] = types.CompositeArray
+	fieldMap[types.Validators] = types.CompositeArray
+	fieldMap[types.PreviousEpochAttestations] = types.CompositeArray
+	fieldMap[types.CurrentEpochAttestations] = types.CompositeArray
 }
-
-type fieldIndex int
-
-// dataType signifies the data type of the field.
-type dataType int
-
-// Below we define a set of useful enum values for the field
-// indices of the beacon state. For example, genesisTime is the
-// 0th field of the beacon state. This is helpful when we are
-// updating the Merkle branches up the trie representation
-// of the beacon state.
-const (
-	genesisTime fieldIndex = iota
-	genesisValidatorRoot
-	slot
-	fork
-	latestBlockHeader
-	blockRoots
-	stateRoots
-	historicalRoots
-	eth1Data
-	eth1DataVotes
-	eth1DepositIndex
-	validators
-	balances
-	randaoMixes
-	slashings
-	previousEpochAttestations
-	currentEpochAttestations
-	justificationBits
-	previousJustifiedCheckpoint
-	currentJustifiedCheckpoint
-	finalizedCheckpoint
-)
-
-// List of current data types the state supports.
-const (
-	basicArray dataType = iota
-	compositeArray
-)
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
-var fieldMap map[fieldIndex]dataType
+var fieldMap map[types.FieldIndex]types.DataType
 
 // ErrNilInnerState returns when the inner state is nil and no copy set or get
 // operations can be performed on state.
@@ -81,61 +43,36 @@ var ErrNilInnerState = errors.New("nil inner state")
 type BeaconState struct {
 	state                 *ethpb.BeaconState
 	lock                  sync.RWMutex
-	dirtyFields           map[fieldIndex]bool
-	dirtyIndices          map[fieldIndex][]uint64
-	stateFieldLeaves      map[fieldIndex]*FieldTrie
-	rebuildTrie           map[fieldIndex]bool
+	dirtyFields           map[types.FieldIndex]bool
+	dirtyIndices          map[types.FieldIndex][]uint64
+	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][32]byte
-	sharedFieldReferences map[fieldIndex]*stateutil.Reference
+	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
 
-// String returns the name of the field index.
-func (f fieldIndex) String() string {
-	switch f {
-	case genesisTime:
-		return "genesisTime"
-	case genesisValidatorRoot:
-		return "genesisValidatorRoot"
-	case slot:
-		return "slot"
-	case fork:
-		return "fork"
-	case latestBlockHeader:
-		return "latestBlockHeader"
-	case blockRoots:
-		return "blockRoots"
-	case stateRoots:
-		return "stateRoots"
-	case historicalRoots:
-		return "historicalRoots"
-	case eth1Data:
-		return "eth1Data"
-	case eth1DataVotes:
-		return "eth1DataVotes"
-	case eth1DepositIndex:
-		return "eth1DepositIndex"
-	case validators:
-		return "validators"
-	case balances:
-		return "balances"
-	case randaoMixes:
-		return "randaoMixes"
-	case slashings:
-		return "slashings"
-	case previousEpochAttestations:
-		return "previousEpochAttestations"
-	case currentEpochAttestations:
-		return "currentEpochAttestations"
-	case justificationBits:
-		return "justificationBits"
-	case previousJustifiedCheckpoint:
-		return "previousJustifiedCheckpoint"
-	case currentJustifiedCheckpoint:
-		return "currentJustifiedCheckpoint"
-	case finalizedCheckpoint:
-		return "finalizedCheckpoint"
-	default:
-		return ""
-	}
-}
+// Field Aliases for values from the types package.
+const (
+	genesisTime                 = types.GenesisTime
+	genesisValidatorRoot        = types.GenesisValidatorRoot
+	slot                        = types.Slot
+	fork                        = types.Fork
+	latestBlockHeader           = types.LatestBlockHeader
+	blockRoots                  = types.BlockRoots
+	stateRoots                  = types.StateRoots
+	historicalRoots             = types.HistoricalRoots
+	eth1Data                    = types.Eth1Data
+	eth1DataVotes               = types.Eth1DataVotes
+	eth1DepositIndex            = types.Eth1DepositIndex
+	validators                  = types.Validators
+	balances                    = types.Balances
+	randaoMixes                 = types.RandaoMixes
+	slashings                   = types.Slashings
+	previousEpochAttestations   = types.PreviousEpochAttestations
+	currentEpochAttestations    = types.CurrentEpochAttestations
+	justificationBits           = types.JustificationBits
+	previousJustifiedCheckpoint = types.PreviousJustifiedCheckpoint
+	currentJustifiedCheckpoint  = types.CurrentJustifiedCheckpoint
+	finalizedCheckpoint         = types.FinalizedCheckpoint
+)

@@ -1,4 +1,4 @@
-package v1
+package fieldtrie
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 )
 
 // FieldTrie is the representation of the representative
@@ -14,52 +15,52 @@ type FieldTrie struct {
 	*sync.RWMutex
 	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
-	field       fieldIndex
+	field       types.FieldIndex
+	dataType    types.DataType
 	length      uint64
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:     field,
+			dataType:  dataType,
 			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 			length:    length,
 		}, nil
 	}
-	datType, ok := fieldMap[field]
-	if !ok {
-		return nil, errors.Errorf("unrecognized field in trie")
-	}
-	fieldRoots, err := convertToRoots(field, []uint64{}, elements, true)
+	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
 	if err != nil {
 		return nil, err
 	}
 	if err := validateElements(field, elements, length); err != nil {
 		return nil, err
 	}
-	switch datType {
-	case basicArray:
+	switch dataType {
+	case types.BasicArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayer(fieldRoots, length),
 			field:       field,
+			dataType:    dataType,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
 		}, nil
-	case compositeArray:
+	case types.CompositeArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
+			dataType:    dataType,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
 		}, nil
 	default:
-		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
+		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
 	}
 
 }
@@ -74,32 +75,28 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if len(indices) == 0 {
 		return f.TrieRoot()
 	}
-	datType, ok := fieldMap[f.field]
-	if !ok {
-		return [32]byte{}, errors.Errorf("unrecognized field in trie")
-	}
-	fieldRoots, err := convertToRoots(f.field, indices, elements, false)
+	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
-	switch datType {
-	case basicArray:
+	switch f.dataType {
+	case types.BasicArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		return fieldRoot, nil
-	case compositeArray:
+	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	default:
-		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
 	}
 }
 
@@ -109,6 +106,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
+			dataType:  f.dataType,
 			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 			length:    f.length,
@@ -122,6 +120,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
+		dataType:    f.dataType,
 		reference:   stateutil.NewRef(1),
 		RWMutex:     new(sync.RWMutex),
 		length:      f.length,
@@ -130,17 +129,32 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
-	datType, ok := fieldMap[f.field]
-	if !ok {
-		return [32]byte{}, errors.Errorf("unrecognized field in trie")
-	}
-	switch datType {
-	case basicArray:
+	switch f.dataType {
+	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
-	case compositeArray:
+	case types.CompositeArray:
 		trieRoot := *f.fieldLayers[len(f.fieldLayers)-1][0]
 		return stateutil.AddInMixin(trieRoot, uint64(len(f.fieldLayers[0])))
 	default:
-		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
 	}
+}
+
+// FieldReference returns the underlying field reference
+// object for the trie.
+func (f *FieldTrie) FieldReference() *stateutil.Reference {
+	return f.reference
+}
+
+// Empty checks whether the underlying field trie is
+// empty or not.
+func (f *FieldTrie) Empty() bool {
+	return f == nil || len(f.fieldLayers) == 0
+}
+
+// InsertFieldLayer manually inserts a field layer. This method
+// bypasses the normal method of field computation, it is only
+// meant to be used in tests.
+func (f *FieldTrie) InsertFieldLayer(layer [][]*[32]byte) {
+	f.fieldLayers = layer
 }
