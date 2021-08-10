@@ -12,7 +12,6 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -89,7 +88,7 @@ func TestGetState(t *testing.T) {
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
-				FinalizedCheckPoint: &eth.Checkpoint{
+				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Root: stateRoot[:],
 				},
 			},
@@ -109,7 +108,7 @@ func TestGetState(t *testing.T) {
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
-				CurrentJustifiedCheckPoint: &eth.Checkpoint{
+				CurrentJustifiedCheckPoint: &ethpb.Checkpoint{
 					Root: stateRoot[:],
 				},
 			},
@@ -249,7 +248,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		cp := &eth.Checkpoint{
+		cp := &ethpb.Checkpoint{
 			Epoch: 5,
 			Root:  root[:],
 		}
@@ -280,7 +279,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		cp := &eth.Checkpoint{
+		cp := &ethpb.Checkpoint{
 			Epoch: 5,
 			Root:  root[:],
 		}
