@@ -124,7 +124,7 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	participatedFlags, err := attestationParticipationFlagIndices(
+	participatedFlags, err := AttestationParticipationFlagIndices(
 		beaconState,
 		att.Data,
 		delay)
