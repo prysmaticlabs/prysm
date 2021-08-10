@@ -18,12 +18,12 @@ var (
 
 	// SyncCommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	SyncCommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "sync_committee_index_cache_miss",
+		Name: "sync_committee_index_cache_miss_total",
 		Help: "The number of committee requests that aren't present in the sync committee index cache.",
 	})
 	// SyncCommitteeCacheHit tracks the number of committee requests that are in the cache.
 	SyncCommitteeCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "sync_committee_index_cache_hit",
+		Name: "sync_committee_index_cache_hit_total",
 		Help: "The number of committee requests that are present in the sync committee index cache.",
 	})
 )
@@ -58,8 +58,8 @@ func NewSyncCommittee() *SyncCommitteeCache {
 
 // CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
 // sync committee. If the input validator index has no assignment, an empty list will be returned.
-// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
-// Then performing manual checking of state for index position in state is recommended.
+// If the input root does not exist in cache, `ErrNonExistingSyncCommitteeKey` is returned.
+// Manual checking of state for index position in state is recommended when `ErrNonExistingSyncCommitteeKey` is returned.
 func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -77,8 +77,8 @@ func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx ty
 
 // NextPeriodIndexPosition returns next period index position of a validator index in respect with sync committee.
 // If the input validator index has no assignment, an empty list will be returned.
-// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
-// Then performing manual checking of state for index position in state is recommended.
+// If the input root does not exist in cache, `ErrNonExistingSyncCommitteeKey` is returned.
+// Manual checking of state for index position in state is recommended when `ErrNonExistingSyncCommitteeKey` is returned.
 func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

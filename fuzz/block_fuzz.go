@@ -199,7 +199,7 @@ func BeaconFuzzBlock(b []byte) {
 		_ = err
 	}
 
-	if _, err := state.ProcessBlock(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
+	if _, _, err := state.ProcessBlockNoVerifyAnySig(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
 		_ = err
 	}
 }

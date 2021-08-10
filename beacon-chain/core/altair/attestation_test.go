@@ -14,6 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -397,5 +402,163 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
+	}
+}
+
+func TestAttestationParticipationFlagIndices(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+
+	tests := []struct {
+		name                 string
+		inputState           state.BeaconState
+		inputData            *ethpb.AttestationData
+		inputDelay           types.Slot
+		participationIndices map[uint8]bool
+	}{
+		{
+			name: "none",
+			inputState: func() state.BeaconState {
+				return beaconState
+			}(),
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{},
+			},
+			inputDelay:           params.BeaconConfig().SlotsPerEpoch,
+			participationIndices: map[uint8]bool{},
+		},
+		{
+			name: "participated source",
+			inputState: func() state.BeaconState {
+				return beaconState
+			}(),
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{},
+			},
+			inputDelay: types.Slot(mathutil.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			participationIndices: map[uint8]bool{
+				sourceFlagIndex: true,
+			},
+		},
+		{
+			name: "participated source and target",
+			inputState: func() state.BeaconState {
+				return beaconState
+			}(),
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+			},
+			inputDelay: types.Slot(mathutil.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			participationIndices: map[uint8]bool{
+				sourceFlagIndex: true,
+				targetFlagIndex: true,
+			},
+		},
+		{
+			name: "participated source and target and head",
+			inputState: func() state.BeaconState {
+				return beaconState
+			}(),
+			inputData: &ethpb.AttestationData{
+				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
+				Source:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+			},
+			inputDelay: 1,
+			participationIndices: map[uint8]bool{
+				sourceFlagIndex: true,
+				targetFlagIndex: true,
+				headFlagIndex:   true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		flagIndices, err := altair.AttestationParticipationFlagIndices(test.inputState, test.inputData, test.inputDelay)
+		require.NoError(t, err)
+		require.DeepEqual(t, test.participationIndices, flagIndices)
+	}
+}
+
+func TestMatchingStatus(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	tests := []struct {
+		name          string
+		inputState    state.BeaconState
+		inputData     *ethpb.AttestationData
+		inputCheckpt  *ethpb.Checkpoint
+		matchedSource bool
+		matchedTarget bool
+		matchedHead   bool
+	}{
+		{
+			name:       "non matched",
+			inputState: beaconState,
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 1},
+				Target: &ethpb.Checkpoint{},
+			},
+			inputCheckpt: &ethpb.Checkpoint{},
+		},
+		{
+			name:       "source matched",
+			inputState: beaconState,
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
+			},
+			inputCheckpt:  &ethpb.Checkpoint{},
+			matchedSource: true,
+		},
+		{
+			name:       "target matched",
+			inputState: beaconState,
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Epoch: 1},
+				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+			},
+			inputCheckpt:  &ethpb.Checkpoint{},
+			matchedTarget: true,
+		},
+		{
+			name:       "head matched",
+			inputState: beaconState,
+			inputData: &ethpb.AttestationData{
+				Source:          &ethpb.Checkpoint{Epoch: 1},
+				Target:          &ethpb.Checkpoint{},
+				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
+			},
+			inputCheckpt: &ethpb.Checkpoint{},
+			matchedHead:  true,
+		},
+		{
+			name:       "everything matched",
+			inputState: beaconState,
+			inputData: &ethpb.AttestationData{
+				Source:          &ethpb.Checkpoint{},
+				Target:          &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
+			},
+			inputCheckpt:  &ethpb.Checkpoint{},
+			matchedSource: true,
+			matchedTarget: true,
+			matchedHead:   true,
+		},
+	}
+
+	for _, test := range tests {
+		src, tgt, head, err := altair.MatchingStatus(test.inputState, test.inputData, test.inputCheckpt)
+		require.NoError(t, err)
+		require.Equal(t, test.matchedSource, bool(src))
+		require.Equal(t, test.matchedTarget, bool(tgt))
+		require.Equal(t, test.matchedHead, bool(head))
 	}
 }

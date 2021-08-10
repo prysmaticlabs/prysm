@@ -98,6 +98,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinAttestationInclusionDelay:     1,
 	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
+	SqrRootSlotsPerEpoch:             5,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
 	EpochsPerEth1VotingPeriod:        64,

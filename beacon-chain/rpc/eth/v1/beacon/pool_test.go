@@ -10,6 +10,7 @@ import (
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -778,31 +779,30 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		HeadFetcher:      chainService,
-		ChainInfoFetcher: chainService,
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
 		Data: []*ethpb.Attestation{att1, att2},
 	})
 	require.NoError(t, err)
-	savedAtts := s.AttestationsPool.AggregatedAttestations()
-	require.Equal(t, 2, len(savedAtts))
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
 	expectedAtt1, err := att1.HashTreeRoot()
 	require.NoError(t, err)
 	expectedAtt2, err := att2.HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt1, err := savedAtts[0].HashTreeRoot()
+	actualAtt1, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt2, err := savedAtts[1].HashTreeRoot()
+	actualAtt2, err := broadcaster.BroadcastAttestations[1].HashTreeRoot()
 	require.NoError(t, err)
 	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
 		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
@@ -854,23 +854,6 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	attInvalidTarget := &ethpb.Attestation{
-		AggregationBits: b,
-		Data: &ethpb.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: 99,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
 	attInvalidSignature := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
@@ -887,40 +870,34 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	// Don't sign attInvalidSignature.
-	for _, att := range []*ethpb.Attestation{attValid, attInvalidTarget} {
-		sb, err := helpers.ComputeDomainAndSign(
-			state,
-			helpers.SlotToEpoch(att.Data.Slot),
-			att.Data,
-			params.BeaconConfig().DomainBeaconAttester,
-			keys[0],
-		)
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		att.Signature = sig.Marshal()
-	}
+	sb, err := helpers.ComputeDomainAndSign(
+		state,
+		helpers.SlotToEpoch(attValid.Data.Slot),
+		attValid.Data,
+		params.BeaconConfig().DomainBeaconAttester,
+		keys[0],
+	)
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	attValid.Signature = sig.Marshal()
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	chainService := &chainMock.ChainService{State: state}
 	s := &Server{
-		HeadFetcher:      chainService,
-		ChainInfoFetcher: chainService,
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{attValid, attInvalidTarget, attInvalidSignature},
+		Data: []*ethpb.Attestation{attValid, attInvalidSignature},
 	})
 	require.ErrorContains(t, "One or more attestations failed validation", err)
-	savedAtts := s.AttestationsPool.AggregatedAttestations()
-	require.Equal(t, 1, len(savedAtts))
 	expectedAtt, err := attValid.HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt, err := savedAtts[0].HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, expectedAtt, actualAtt)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	require.Equal(t, 1, len(broadcaster.BroadcastAttestations))
 	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
@@ -928,7 +905,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
 }
 
-func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
+func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
@@ -970,30 +947,21 @@ func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
 				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: 99,
+				Epoch: 1,
 				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: make([]byte, 96),
+		Signature: nil,
 	}
 
-	sb, err := helpers.ComputeDomainAndSign(
-		state,
-		helpers.SlotToEpoch(att.Data.Slot),
-		att.Data,
-		params.BeaconConfig().DomainBeaconAttester,
-		keys[0],
-	)
-	require.NoError(t, err)
-	sig, err := bls.SignatureFromBytes(sb)
-	require.NoError(t, err)
-	att.Signature = sig.Marshal()
-
+	chain := &chainMock.ChainService{State: state}
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
-		AttestationsPool: &attestations.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chain,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &notifiermock.MockOperationNotifier{},
+		HeadFetcher:       chain,
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
@@ -1007,7 +975,7 @@ func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
 	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 	assert.DeepEqual(
 		t,
-		[]string{"{\"failures\":[{\"index\":0,\"message\":\"expected target epoch (99) to be the previous epoch (0) or the current epoch (1)\"}]}"},
+		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: signature must be 96 bytes\"}]}"},
 		v,
 	)
 }

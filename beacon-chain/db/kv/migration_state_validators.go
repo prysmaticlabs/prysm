@@ -3,7 +3,9 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -109,7 +111,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 					}
 					// no validators in state to migrate
 					if len(protoState.Validators) == 0 {
-						continue
+						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
 					}
 					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
 					if insertErr != nil {
@@ -138,7 +140,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 					}
 					// no validators in state to migrate
 					if len(protoState.Validators) == 0 {
-						continue
+						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
 					}
 					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
 					if insertErr != nil {
