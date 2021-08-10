@@ -16,68 +16,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProcessAttestations applies processing operations to a block's inner attestation
-// records.
-func ProcessAttestations(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	b block.SignedBeaconBlock,
-) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	var err error
-	for idx, attestation := range b.Block().Body().Attestations() {
-		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
-		}
-	}
-	return beaconState, nil
-}
-
-// ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
-//
-// Spec pseudocode definition:
-//  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//    data = attestation.data
-//    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-//    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
-//
-//    committee = get_beacon_committee(state, data.slot, data.index)
-//    assert len(attestation.aggregation_bits) == len(committee)
-//
-//    pending_attestation = PendingAttestation(
-//        data=data,
-//        aggregation_bits=attestation.aggregation_bits,
-//        inclusion_delay=state.slot - data.slot,
-//        proposer_index=get_beacon_proposer_index(state),
-//    )
-//
-//    if data.target.epoch == get_current_epoch(state):
-//        assert data.source == state.current_justified_checkpoint
-//        state.current_epoch_attestations.append(pending_attestation)
-//    else:
-//        assert data.source == state.previous_justified_checkpoint
-//        state.previous_epoch_attestations.append(pending_attestation)
-//
-//    # Verify signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-func ProcessAttestation(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	att *ethpb.Attestation,
-) (state.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
-	if err != nil {
-		return nil, err
-	}
-	return beaconState, VerifyAttestationSignature(ctx, beaconState, att)
-}
-
 // ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
 func ProcessAttestationsNoVerifySignature(

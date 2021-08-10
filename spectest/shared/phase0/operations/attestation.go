@@ -1,12 +1,16 @@
 package operations
 
 import (
+	"context"
 	"path"
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/pkg/errors"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -27,7 +31,26 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
-			RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
+			processAtt := func(ctx context.Context, st state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
+				st, err = b.ProcessAttestationsNoVerifySignature(ctx, st, blk)
+				if err != nil {
+					return nil, err
+				}
+				aSet, err := b.AttestationSignatureSet(ctx, st, blk.Block().Body().Attestations())
+				if err != nil {
+					return nil, err
+				}
+				verified, err := aSet.Verify()
+				if err != nil {
+					return nil, err
+				}
+				if !verified {
+					return nil, errors.New("could not batch verify attestation signature")
+				}
+				return st, nil
+			}
+
+			RunBlockOperationTest(t, folderPath, body, processAtt)
 		})
 	}
 }

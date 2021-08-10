@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -326,7 +327,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 
 // assertRefCount checks whether reference count for a given state
 // at a given index is equal to expected amount.
-func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint) {
+func assertRefCount(t *testing.T, b *BeaconState, idx types.FieldIndex, want uint) {
 	if cnt := b.sharedFieldReferences[idx].Refs(); cnt != want {
 		t.Errorf("Unexpected count of references for index %d, want: %v, got: %v", idx, want, cnt)
 	}

@@ -341,6 +341,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
 func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
+	defer span.End()
+
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
@@ -381,6 +384,9 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 // to gain information on the most current chain.
 func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock, root [32]byte,
 	st state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
+	defer span.End()
+
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
 	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {

@@ -137,6 +137,9 @@ func (s *Service) verifyBlkFinalizedSlot(b block.BeaconBlock) error {
 // Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
 // See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
 func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.shouldUpdateCurrentJustified")
+	defer span.End()
+
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
@@ -189,6 +192,9 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 }
 
 func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.updateJustified")
+	defer span.End()
+
 	cpt := state.CurrentJustifiedCheckpoint()
 	if cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
 		s.bestJustifiedCheckpt = cpt
@@ -223,6 +229,9 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.updateFinalized")
+	defer span.End()
+
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {

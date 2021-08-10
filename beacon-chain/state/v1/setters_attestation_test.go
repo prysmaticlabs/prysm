@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -53,7 +54,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	for i := fieldIndex(0); i < fieldIndex(params.BeaconConfig().BeaconStateFieldCount); i++ {
+	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateFieldCount); i++ {
 		st.dirtyFields[i] = true
 	}
 	_, err = st.HashTreeRoot(context.Background())

@@ -142,11 +142,11 @@ type SlasherDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*eth.ProposerSlashing, error)
 	PruneAttestationsAtEpoch(
-		ctx context.Context, minEpoch types.Epoch,
-	) (uint, error)
+		ctx context.Context, maxEpoch types.Epoch,
+	) (numPruned uint, err error)
 	PruneProposalsAtEpoch(
-		ctx context.Context, minEpoch types.Epoch,
-	) (uint, error)
+		ctx context.Context, maxEpoch types.Epoch,
+	) (numPruned uint, err error)
 	DatabasePath() string
 	ClearDB() error
 }

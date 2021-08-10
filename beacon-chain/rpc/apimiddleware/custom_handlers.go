@@ -151,7 +151,6 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Length", strconv.Itoa(len(responseSsz)))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.WriteHeader(grpcResp.StatusCode)
 	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
 		return gateway.InternalServerErrorWithMessage(err, "could not write response message")
 	}

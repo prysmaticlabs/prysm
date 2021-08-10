@@ -5,8 +5,6 @@ go_library(
     srcs = [
         "doc.go",
         "field_roots.go",
-        "field_trie.go",
-        "field_trie_helpers.go",
         "getters_attestation.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -46,7 +44,9 @@ go_library(
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state/types:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -72,12 +72,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "field_trie_test.go",
         "getters_attestation_test.go",
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",
-        "helpers_test.go",
         "readonly_validator_test.go",
         "references_test.go",
         "setters_attestation_test.go",
@@ -89,6 +87,7 @@ go_test(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state/types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/copyutil:go_default_library",
