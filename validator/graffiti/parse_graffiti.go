@@ -40,7 +40,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	}
 
 	for i, o := range g.Specific {
-		g.Specific[types.ValidatorIndex(i)] = ParseHexGraffiti(o)
+		g.Specific[i] = ParseHexGraffiti(o)
 	}
 
 	for i, v := range g.Ordered {

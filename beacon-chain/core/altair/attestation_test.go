@@ -269,8 +269,8 @@ func TestMatchingStatus(t *testing.T) {
 	for _, test := range tests {
 		src, tgt, head, err := altair.MatchingStatus(test.inputState, test.inputData, test.inputCheckpt)
 		require.NoError(t, err)
-		require.Equal(t, test.matchedSource, bool(src))
-		require.Equal(t, test.matchedTarget, bool(tgt))
-		require.Equal(t, test.matchedHead, bool(head))
+		require.Equal(t, test.matchedSource, src)
+		require.Equal(t, test.matchedTarget, tgt)
+		require.Equal(t, test.matchedHead, head)
 	}
 }
