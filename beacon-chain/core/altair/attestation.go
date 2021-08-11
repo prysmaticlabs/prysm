@@ -74,6 +74,25 @@ func ProcessAttestationNoVerifySignature(
 
 // SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
 // the proposer in state.
+//
+// Spec code:
+//     # Update epoch participation flags
+//    if data.target.epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//
+//    proposer_reward_numerator = 0
+//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
+//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+//                proposer_reward_numerator += get_base_reward(state, index) * weight
+//
+//    # Reward proposer
+//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 func SetParticipationAndRewardProposer(
 	beaconState state.BeaconState,
 	targetEpoch types.Epoch,
