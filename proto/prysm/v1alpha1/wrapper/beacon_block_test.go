@@ -83,7 +83,7 @@ func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
-	b := []byte{}
+	var b []byte
 	b, err = wsb.MarshalSSZTo(b)
 	assert.NoError(t, err)
 	assert.NotEqual(t, 0, len(b))

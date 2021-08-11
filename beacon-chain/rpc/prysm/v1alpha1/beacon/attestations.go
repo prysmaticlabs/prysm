@@ -80,8 +80,8 @@ func (bs *Server) ListAttestations(
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
-	for _, block := range blocks {
-		atts = append(atts, block.Block().Body().Attestations()...)
+	for _, blk := range blocks {
+		atts = append(atts, blk.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -135,8 +135,8 @@ func (bs *Server) ListIndexedAttestations(
 	}
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
-	for _, block := range blocks {
-		attsArray = append(attsArray, block.Block().Body().Attestations()...)
+	for _, b := range blocks {
+		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(attsArray))
@@ -151,7 +151,7 @@ func (bs *Server) ListIndexedAttestations(
 			NextPageToken:       strconv.Itoa(0),
 		}, nil
 	}
-	// We use the retrieved committees for the block root to convert all attestations
+	// We use the retrieved committees for the b root to convert all attestations
 	// into indexed form effectively.
 	mappedAttestations := mapAttestationsByTargetRoot(attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
