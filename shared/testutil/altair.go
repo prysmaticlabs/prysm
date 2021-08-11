@@ -42,23 +42,23 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.
 
 // GenesisBeaconState returns the genesis beacon state.
 func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
-	state, err := emptyGenesisState()
+	st, err := emptyGenesisState()
 	if err != nil {
 		return nil, err
 	}
 
 	// Process initial deposits.
-	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	st, err = helpers.UpdateGenesisEth1Data(st, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
 
-	state, err = processPreGenesisDeposits(ctx, state, deposits)
+	st, err = processPreGenesisDeposits(ctx, st, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return buildGenesisBeaconState(genesisTime, state, state.Eth1Data())
+	return buildGenesisBeaconState(genesisTime, st, st.Eth1Data())
 }
 
 // processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
@@ -81,7 +81,7 @@ func processPreGenesisDeposits(
 
 func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
 	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
+		return nil, errors.New("no eth1data provided for genesis st")
 	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
@@ -127,7 +127,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err != nil {
 		return nil, err
 	}
-	state := &ethpb.BeaconStateAltair{
+	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
@@ -191,7 +191,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
-	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+	st.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],
@@ -201,20 +201,20 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	state.CurrentSyncCommittee = &ethpb.SyncCommittee{
+	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	state.NextSyncCommittee = &ethpb.SyncCommittee{
+	st.NextSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	return stateAltair.InitializeFromProto(state)
+	return stateAltair.InitializeFromProto(st)
 }
 
 func emptyGenesisState() (state.BeaconStateAltair, error) {
-	state := &ethpb.BeaconStateAltair{
+	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
@@ -237,7 +237,7 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateAltair.InitializeFromProto(state)
+	return stateAltair.InitializeFromProto(st)
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.

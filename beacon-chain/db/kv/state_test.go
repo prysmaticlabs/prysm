@@ -596,7 +596,7 @@ func validators(limit int) []*ethpb.Validator {
 		val := &ethpb.Validator{
 			PublicKey:                  pubKey,
 			WithdrawalCredentials:      bytesutil.ToBytes(rand.Uint64(), 32),
-			EffectiveBalance:           uint64(rand.Uint64()),
+			EffectiveBalance:           rand.Uint64(),
 			Slashed:                    i%2 != 0,
 			ActivationEligibilityEpoch: types.Epoch(rand.Uint64()),
 			ActivationEpoch:            types.Epoch(rand.Uint64()),
