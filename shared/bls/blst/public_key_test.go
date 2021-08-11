@@ -78,7 +78,7 @@ func TestPublicKey_Copy(t *testing.T) {
 }
 
 func TestPublicKeysEmpty(t *testing.T) {
-	pubs := [][]byte{}
+	var pubs [][]byte
 	_, err := blst.AggregatePublicKeys(pubs)
 	require.ErrorContains(t, "nil or empty public keys", err)
 }

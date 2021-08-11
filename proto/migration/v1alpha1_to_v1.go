@@ -3,7 +3,7 @@ package migration
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"google.golang.org/protobuf/proto"
 )
@@ -27,7 +27,7 @@ func BlockIfaceToV1BlockHeader(block block.SignedBeaconBlock) (*ethpb.SignedBeac
 }
 
 // V1Alpha1BlockToV1BlockHeader converts a v1alpha1 SignedBeaconBlock proto to a v1 SignedBeaconBlockHeader proto.
-func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+func V1Alpha1BlockToV1BlockHeader(block *eth.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
@@ -45,7 +45,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 }
 
 // V1Alpha1ToV1SignedBlock converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
-func V1Alpha1ToV1SignedBlock(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
+func V1Alpha1ToV1SignedBlock(alphaBlk *eth.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
@@ -58,12 +58,12 @@ func V1Alpha1ToV1SignedBlock(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.Si
 }
 
 // V1ToV1Alpha1SignedBlock converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
-func V1ToV1Alpha1SignedBlock(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
+func V1ToV1Alpha1SignedBlock(alphaBlk *ethpb.SignedBeaconBlock) (*eth.SignedBeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v1alpha1Block := &ethpb_alpha.SignedBeaconBlock{}
+	v1alpha1Block := &eth.SignedBeaconBlock{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -71,7 +71,7 @@ func V1ToV1Alpha1SignedBlock(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.Si
 }
 
 // V1Alpha1ToV1Block converts a v1alpha1 BeaconBlock proto to a v1 proto.
-func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.BeaconBlock) (*ethpb.BeaconBlock, error) {
+func V1Alpha1ToV1Block(alphaBlk *eth.BeaconBlock) (*ethpb.BeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
@@ -84,7 +84,7 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.BeaconBlock) (*ethpb.BeaconBlock, e
 }
 
 // V1Alpha1AggregateAttAndProofToV1 converts a v1alpha1 aggregate attestation and proof to v1.
-func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *ethpb_alpha.AggregateAttestationAndProof) *ethpb.AggregateAttestationAndProof {
+func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *eth.AggregateAttestationAndProof) *ethpb.AggregateAttestationAndProof {
 	if v1alpha1Att == nil {
 		return &ethpb.AggregateAttestationAndProof{}
 	}
@@ -96,12 +96,12 @@ func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *ethpb_alpha.AggregateAttestat
 }
 
 // V1SignedAggregateAttAndProofToV1Alpha1 converts a v1 signed aggregate attestation and proof to v1alpha1.
-func V1SignedAggregateAttAndProofToV1Alpha1(v1Att *ethpb.SignedAggregateAttestationAndProof) *ethpb_alpha.SignedAggregateAttestationAndProof {
+func V1SignedAggregateAttAndProofToV1Alpha1(v1Att *ethpb.SignedAggregateAttestationAndProof) *eth.SignedAggregateAttestationAndProof {
 	if v1Att == nil {
-		return &ethpb_alpha.SignedAggregateAttestationAndProof{}
+		return &eth.SignedAggregateAttestationAndProof{}
 	}
-	return &ethpb_alpha.SignedAggregateAttestationAndProof{
-		Message: &ethpb_alpha.AggregateAttestationAndProof{
+	return &eth.SignedAggregateAttestationAndProof{
+		Message: &eth.AggregateAttestationAndProof{
 			AggregatorIndex: v1Att.Message.AggregatorIndex,
 			Aggregate:       V1AttestationToV1Alpha1(v1Att.Message.Aggregate),
 			SelectionProof:  v1Att.Message.SelectionProof,
@@ -111,7 +111,7 @@ func V1SignedAggregateAttAndProofToV1Alpha1(v1Att *ethpb.SignedAggregateAttestat
 }
 
 // V1Alpha1IndexedAttToV1 converts a v1alpha1 indexed attestation to v1.
-func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.IndexedAttestation {
+func V1Alpha1IndexedAttToV1(v1alpha1Att *eth.IndexedAttestation) *ethpb.IndexedAttestation {
 	if v1alpha1Att == nil {
 		return &ethpb.IndexedAttestation{}
 	}
@@ -123,7 +123,7 @@ func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.
 }
 
 // V1Alpha1AttestationToV1 converts a v1alpha1 attestation to v1.
-func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attestation {
+func V1Alpha1AttestationToV1(v1alpha1Att *eth.Attestation) *ethpb.Attestation {
 	if v1alpha1Att == nil {
 		return &ethpb.Attestation{}
 	}
@@ -135,11 +135,11 @@ func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attest
 }
 
 // V1AttestationToV1Alpha1 converts a v1 attestation to v1alpha1.
-func V1AttestationToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
+func V1AttestationToV1Alpha1(v1Att *ethpb.Attestation) *eth.Attestation {
 	if v1Att == nil {
-		return &ethpb_alpha.Attestation{}
+		return &eth.Attestation{}
 	}
-	return &ethpb_alpha.Attestation{
+	return &eth.Attestation{
 		AggregationBits: v1Att.AggregationBits,
 		Data:            V1AttDataToV1Alpha1(v1Att.Data),
 		Signature:       v1Att.Signature,
@@ -147,7 +147,7 @@ func V1AttestationToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation 
 }
 
 // V1Alpha1AttDataToV1 converts a v1alpha1 attestation data to v1.
-func V1Alpha1AttDataToV1(v1alpha1AttData *ethpb_alpha.AttestationData) *ethpb.AttestationData {
+func V1Alpha1AttDataToV1(v1alpha1AttData *eth.AttestationData) *ethpb.AttestationData {
 	if v1alpha1AttData == nil || v1alpha1AttData.Source == nil || v1alpha1AttData.Target == nil {
 		return &ethpb.AttestationData{}
 	}
@@ -167,7 +167,7 @@ func V1Alpha1AttDataToV1(v1alpha1AttData *ethpb_alpha.AttestationData) *ethpb.At
 }
 
 // V1Alpha1AttSlashingToV1 converts a v1alpha1 attester slashing to v1.
-func V1Alpha1AttSlashingToV1(v1alpha1Slashing *ethpb_alpha.AttesterSlashing) *ethpb.AttesterSlashing {
+func V1Alpha1AttSlashingToV1(v1alpha1Slashing *eth.AttesterSlashing) *ethpb.AttesterSlashing {
 	if v1alpha1Slashing == nil {
 		return &ethpb.AttesterSlashing{}
 	}
@@ -178,7 +178,7 @@ func V1Alpha1AttSlashingToV1(v1alpha1Slashing *ethpb_alpha.AttesterSlashing) *et
 }
 
 // V1Alpha1SignedHeaderToV1 converts a v1alpha1 signed beacon block header to v1.
-func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpb_alpha.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
+func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *eth.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
 	if v1alpha1Hdr == nil || v1alpha1Hdr.Header == nil {
 		return &ethpb.SignedBeaconBlockHeader{}
 	}
@@ -195,12 +195,12 @@ func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpb_alpha.SignedBeaconBlockHeader) 
 }
 
 // V1SignedHeaderToV1Alpha1 converts a v1 signed beacon block header to v1alpha1.
-func V1SignedHeaderToV1Alpha1(v1Header *ethpb.SignedBeaconBlockHeader) *ethpb_alpha.SignedBeaconBlockHeader {
+func V1SignedHeaderToV1Alpha1(v1Header *ethpb.SignedBeaconBlockHeader) *eth.SignedBeaconBlockHeader {
 	if v1Header == nil || v1Header.Message == nil {
-		return &ethpb_alpha.SignedBeaconBlockHeader{}
+		return &eth.SignedBeaconBlockHeader{}
 	}
-	return &ethpb_alpha.SignedBeaconBlockHeader{
-		Header: &ethpb_alpha.BeaconBlockHeader{
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
 			Slot:          v1Header.Message.Slot,
 			ProposerIndex: v1Header.Message.ProposerIndex,
 			ParentRoot:    v1Header.Message.ParentRoot,
@@ -212,7 +212,7 @@ func V1SignedHeaderToV1Alpha1(v1Header *ethpb.SignedBeaconBlockHeader) *ethpb_al
 }
 
 // V1Alpha1ProposerSlashingToV1 converts a v1alpha1 proposer slashing to v1.
-func V1Alpha1ProposerSlashingToV1(v1alpha1Slashing *ethpb_alpha.ProposerSlashing) *ethpb.ProposerSlashing {
+func V1Alpha1ProposerSlashingToV1(v1alpha1Slashing *eth.ProposerSlashing) *ethpb.ProposerSlashing {
 	if v1alpha1Slashing == nil {
 		return &ethpb.ProposerSlashing{}
 	}
@@ -223,7 +223,7 @@ func V1Alpha1ProposerSlashingToV1(v1alpha1Slashing *ethpb_alpha.ProposerSlashing
 }
 
 // V1Alpha1ExitToV1 converts a v1alpha1 SignedVoluntaryExit to v1.
-func V1Alpha1ExitToV1(v1alpha1Exit *ethpb_alpha.SignedVoluntaryExit) *ethpb.SignedVoluntaryExit {
+func V1Alpha1ExitToV1(v1alpha1Exit *eth.SignedVoluntaryExit) *ethpb.SignedVoluntaryExit {
 	if v1alpha1Exit == nil || v1alpha1Exit.Exit == nil {
 		return &ethpb.SignedVoluntaryExit{}
 	}
@@ -237,12 +237,12 @@ func V1Alpha1ExitToV1(v1alpha1Exit *ethpb_alpha.SignedVoluntaryExit) *ethpb.Sign
 }
 
 // V1ExitToV1Alpha1 converts a v1 SignedVoluntaryExit to v1alpha1.
-func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *ethpb_alpha.SignedVoluntaryExit {
+func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *eth.SignedVoluntaryExit {
 	if v1Exit == nil || v1Exit.Message == nil {
-		return &ethpb_alpha.SignedVoluntaryExit{}
+		return &eth.SignedVoluntaryExit{}
 	}
-	return &ethpb_alpha.SignedVoluntaryExit{
-		Exit: &ethpb_alpha.VoluntaryExit{
+	return &eth.SignedVoluntaryExit{
+		Exit: &eth.VoluntaryExit{
 			Epoch:          v1Exit.Message.Epoch,
 			ValidatorIndex: v1Exit.Message.ValidatorIndex,
 		},
@@ -251,11 +251,11 @@ func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *ethpb_alpha.SignedVolu
 }
 
 // V1AttToV1Alpha1 converts a v1 attestation to v1alpha1.
-func V1AttToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
+func V1AttToV1Alpha1(v1Att *ethpb.Attestation) *eth.Attestation {
 	if v1Att == nil {
-		return &ethpb_alpha.Attestation{}
+		return &eth.Attestation{}
 	}
-	return &ethpb_alpha.Attestation{
+	return &eth.Attestation{
 		AggregationBits: v1Att.AggregationBits,
 		Data:            V1AttDataToV1Alpha1(v1Att.Data),
 		Signature:       v1Att.Signature,
@@ -263,11 +263,11 @@ func V1AttToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
 }
 
 // V1IndexedAttToV1Alpha1 converts a v1 indexed attestation to v1alpha1.
-func V1IndexedAttToV1Alpha1(v1Att *ethpb.IndexedAttestation) *ethpb_alpha.IndexedAttestation {
+func V1IndexedAttToV1Alpha1(v1Att *ethpb.IndexedAttestation) *eth.IndexedAttestation {
 	if v1Att == nil {
-		return &ethpb_alpha.IndexedAttestation{}
+		return &eth.IndexedAttestation{}
 	}
-	return &ethpb_alpha.IndexedAttestation{
+	return &eth.IndexedAttestation{
 		AttestingIndices: v1Att.AttestingIndices,
 		Data:             V1AttDataToV1Alpha1(v1Att.Data),
 		Signature:        v1Att.Signature,
@@ -275,19 +275,19 @@ func V1IndexedAttToV1Alpha1(v1Att *ethpb.IndexedAttestation) *ethpb_alpha.Indexe
 }
 
 // V1AttDataToV1Alpha1 converts a v1 attestation data to v1alpha1.
-func V1AttDataToV1Alpha1(v1AttData *ethpb.AttestationData) *ethpb_alpha.AttestationData {
+func V1AttDataToV1Alpha1(v1AttData *ethpb.AttestationData) *eth.AttestationData {
 	if v1AttData == nil || v1AttData.Source == nil || v1AttData.Target == nil {
-		return &ethpb_alpha.AttestationData{}
+		return &eth.AttestationData{}
 	}
-	return &ethpb_alpha.AttestationData{
+	return &eth.AttestationData{
 		Slot:            v1AttData.Slot,
 		CommitteeIndex:  v1AttData.Index,
 		BeaconBlockRoot: v1AttData.BeaconBlockRoot,
-		Source: &ethpb_alpha.Checkpoint{
+		Source: &eth.Checkpoint{
 			Root:  v1AttData.Source.Root,
 			Epoch: v1AttData.Source.Epoch,
 		},
-		Target: &ethpb_alpha.Checkpoint{
+		Target: &eth.Checkpoint{
 			Root:  v1AttData.Target.Root,
 			Epoch: v1AttData.Target.Epoch,
 		},
@@ -295,29 +295,29 @@ func V1AttDataToV1Alpha1(v1AttData *ethpb.AttestationData) *ethpb_alpha.Attestat
 }
 
 // V1AttSlashingToV1Alpha1 converts a v1 attester slashing to v1alpha1.
-func V1AttSlashingToV1Alpha1(v1Slashing *ethpb.AttesterSlashing) *ethpb_alpha.AttesterSlashing {
+func V1AttSlashingToV1Alpha1(v1Slashing *ethpb.AttesterSlashing) *eth.AttesterSlashing {
 	if v1Slashing == nil {
-		return &ethpb_alpha.AttesterSlashing{}
+		return &eth.AttesterSlashing{}
 	}
-	return &ethpb_alpha.AttesterSlashing{
+	return &eth.AttesterSlashing{
 		Attestation_1: V1IndexedAttToV1Alpha1(v1Slashing.Attestation_1),
 		Attestation_2: V1IndexedAttToV1Alpha1(v1Slashing.Attestation_2),
 	}
 }
 
 // V1ProposerSlashingToV1Alpha1 converts a v1 proposer slashing to v1alpha1.
-func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alpha.ProposerSlashing {
+func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *eth.ProposerSlashing {
 	if v1Slashing == nil {
-		return &ethpb_alpha.ProposerSlashing{}
+		return &eth.ProposerSlashing{}
 	}
-	return &ethpb_alpha.ProposerSlashing{
+	return &eth.ProposerSlashing{
 		Header_1: V1SignedHeaderToV1Alpha1(v1Slashing.SignedHeader_1),
 		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.SignedHeader_2),
 	}
 }
 
 // V1Alpha1ValidatorToV1 converts a v1alpha1 validator to v1.
-func V1Alpha1ValidatorToV1(v1Alpha1Validator *ethpb_alpha.Validator) *ethpb.Validator {
+func V1Alpha1ValidatorToV1(v1Alpha1Validator *eth.Validator) *ethpb.Validator {
 	if v1Alpha1Validator == nil {
 		return &ethpb.Validator{}
 	}
@@ -334,11 +334,11 @@ func V1Alpha1ValidatorToV1(v1Alpha1Validator *ethpb_alpha.Validator) *ethpb.Vali
 }
 
 // V1ValidatorToV1Alpha1 converts a v1 validator to v1alpha1.
-func V1ValidatorToV1Alpha1(v1Validator *ethpb.Validator) *ethpb_alpha.Validator {
+func V1ValidatorToV1Alpha1(v1Validator *ethpb.Validator) *eth.Validator {
 	if v1Validator == nil {
-		return &ethpb_alpha.Validator{}
+		return &eth.Validator{}
 	}
-	return &ethpb_alpha.Validator{
+	return &eth.Validator{
 		PublicKey:                  v1Validator.Pubkey,
 		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
 		EffectiveBalance:           v1Validator.EffectiveBalance,

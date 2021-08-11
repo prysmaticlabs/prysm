@@ -13,7 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpb_v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -48,8 +48,8 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedBlock := testutil.HydrateSignedBeaconBlock(&ethpb_v1alpha1.SignedBeaconBlock{
-			Block: &ethpb_v1alpha1.BeaconBlock{
+		wantedBlock := testutil.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
 				Slot: 8,
 			},
 		})
@@ -88,8 +88,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedAttV1alpha1 := testutil.HydrateAttestation(&ethpb_v1alpha1.Attestation{
-			Data: &ethpb_v1alpha1.AttestationData{
+		wantedAttV1alpha1 := testutil.HydrateAttestation(&eth.Attestation{
+			Data: &eth.AttestationData{
 				Slot: 8,
 			},
 		})
@@ -122,8 +122,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedAttV1alpha1 := &ethpb_v1alpha1.AggregateAttestationAndProof{
-			Aggregate: testutil.HydrateAttestation(&ethpb_v1alpha1.Attestation{}),
+		wantedAttV1alpha1 := &eth.AggregateAttestationAndProof{
+			Aggregate: testutil.HydrateAttestation(&eth.Attestation{}),
 		}
 		wantedAtt := migration.V1Alpha1AggregateAttAndProofToV1(wantedAttV1alpha1)
 		genericResponse, err := anypb.New(wantedAtt)
@@ -154,8 +154,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedExitV1alpha1 := &ethpb_v1alpha1.SignedVoluntaryExit{
-			Exit: &ethpb_v1alpha1.VoluntaryExit{
+		wantedExitV1alpha1 := &eth.SignedVoluntaryExit{
+			Exit: &eth.VoluntaryExit{
 				Epoch:          1,
 				ValidatorIndex: 1,
 			},
