@@ -20,11 +20,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
 	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
 	}
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
@@ -32,11 +32,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not retrieve proposer public keys from DB")
 	}
 	attestedPublicKeys, err := validatorDB.AttestedPublicKeys(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
 	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 
@@ -47,11 +47,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	for _, pubKey := range proposedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
 		signedBlocks, err := signedBlocksByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not retrieve signed blocks for public key %s", pubKeyHex)
 		}
 		dataByPubKey[pubKey] = &format.ProtectionData{
 			Pubkey:             pubKeyHex,
@@ -65,16 +65,16 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 
 	// Extract the signed attestations by public key.
 	progress = progressutil.InitializeProgressBar(
-		len(proposedPublicKeys), "Extracting signed attestations by validator public key",
+		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
 		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not retrieve signed attestations for public key %s", pubKeyHex)
 		}
 		if _, ok := dataByPubKey[pubKey]; ok {
 			dataByPubKey[pubKey].SignedAttestations = signedAttestations
@@ -138,7 +138,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		if !bytes.Equal(att.SigningRoot[:], params.BeaconConfig().ZeroHash[:]) {
 			root, err = rootToHexString(att.SigningRoot[:])
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not convert signing root to hex string")
 			}
 		}
 		signedAttestations = append(signedAttestations, &format.SignedAttestation{
@@ -157,16 +157,16 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 	// of signed blocks.
 	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not get proposal history for public key: %#x", pubKey)
 	}
 	signedBlocks := make([]*format.SignedBlock, 0)
 	for _, proposal := range proposalHistory {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, errors.Wrap(err, "context canceled")
 		}
 		signingRootHex, err := rootToHexString(proposal.SigningRoot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert signing root to hex string")
 		}
 		signedBlocks = append(signedBlocks, &format.SignedBlock{
 			Slot:        fmt.Sprintf("%d", proposal.Slot),
