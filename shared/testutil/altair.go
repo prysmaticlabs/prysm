@@ -81,7 +81,7 @@ func processPreGenesisDeposits(
 
 func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
 	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis st")
+		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
