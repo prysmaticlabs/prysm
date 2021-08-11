@@ -22,6 +22,65 @@ func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 	return flag | (1 << flagPosition)
 }
 
+// EpochParticipation sets and returns the epoch participation and the proposer reward numerator.
+//
+// Spec code:
+//    proposer_reward_numerator = 0
+//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
+//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+//                proposer_reward_numerator += get_base_reward(state, index) * weight
+func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochParticipation []byte, participatedFlags map[uint8]bool) (uint64, []byte, error) {
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+	proposerRewardNumerator := uint64(0)
+	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	if err != nil {
+		return 0, nil, err
+	}
+	for _, index := range indices {
+		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
+		if err != nil {
+			return 0, nil, err
+		}
+		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelySourceWeight
+		}
+		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelyTargetWeight
+		}
+		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelyHeadWeight
+		}
+	}
+
+	return proposerRewardNumerator, epochParticipation, nil
+}
+
+// RewardProposer rewards proposer by increasing proposer's balance with input reward numerator and calculated reward denominator.
+//
+// Spec code:
+//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+func RewardProposer(beaconState state.BeaconState, proposerRewardNumerator uint64) error {
+	cfg := params.BeaconConfig()
+	d := (cfg.WeightDenominator - cfg.ProposerWeight) * cfg.WeightDenominator / cfg.ProposerWeight
+	proposerReward := proposerRewardNumerator / d
+	i, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return err
+	}
+
+	return helpers.IncreaseBalance(beaconState, i, proposerReward)
+}
+
 // AttestationParticipationFlagIndices retrieves a map of attestation scoring based on Altair's participation flag indices.
 // This is used to facilitate process attestation during state transition and during upgrade to altair state.
 //
