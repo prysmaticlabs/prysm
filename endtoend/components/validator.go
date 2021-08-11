@@ -202,7 +202,7 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 	defer client.Close()
 	web3 := ethclient.NewClient(client)
 
-	keystoreBytes, err := ioutil.ReadFile(keystorePath)
+	keystoreBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304
 	if err != nil {
 		return err
 	}

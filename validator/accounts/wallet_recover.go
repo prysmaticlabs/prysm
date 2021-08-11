@@ -152,7 +152,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	if cliCtx.IsSet(flags.MnemonicFileFlag.Name) {
 		mnemonicFilePath := cliCtx.String(flags.MnemonicFileFlag.Name)
-		data, err := ioutil.ReadFile(mnemonicFilePath)
+		data, err := ioutil.ReadFile(mnemonicFilePath) // #nosec G304
 		if err != nil {
 			return "", err
 		}

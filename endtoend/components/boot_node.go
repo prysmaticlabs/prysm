@@ -84,7 +84,7 @@ func (node *BootNode) Started() <-chan struct{} {
 }
 
 func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name)
+	byteContent, err := ioutil.ReadFile(name) // #nosec G304
 	if err != nil {
 		return "", err
 	}

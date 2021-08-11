@@ -63,7 +63,7 @@ func main() {
 			log.Printf("Could not expand file path %s: %v", inputFile, err)
 			return
 		}
-		inputJSON, err := os.Open(expanded)
+		inputJSON, err := os.Open(expanded) // #nosec G304
 		if err != nil {
 			log.Printf("Could not open JSON file for reading: %v", err)
 			return
