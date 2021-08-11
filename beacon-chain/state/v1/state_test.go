@@ -73,11 +73,11 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			for _, f := range st.stateFieldLeaves {
 				f.Lock()
-				if len(f.fieldLayers) == 0 {
-					f.fieldLayers = make([][]*[32]byte, 10)
+				if f.Empty() {
+					f.InsertFieldLayer(make([][]*[32]byte, 10))
 				}
 				f.Unlock()
-				f.reference.AddRef()
+				f.FieldReference().AddRef()
 			}
 		}
 		wg.Done()
