@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -446,5 +447,31 @@ func Test_isDoubleProposal(t *testing.T) {
 				t.Errorf("isDoubleProposal() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func createAttestationWrapper(t testing.TB, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+	data := &ethpb.AttestationData{
+		BeaconBlockRoot: bytesutil.PadTo(signingRoot, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: source,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: target,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+	}
+	signRoot, err := data.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: &ethpb.IndexedAttestation{
+			AttestingIndices: indices,
+			Data:             data,
+			Signature:        params.BeaconConfig().EmptySignature[:],
+		},
+		SigningRoot: signRoot,
 	}
 }
