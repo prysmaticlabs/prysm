@@ -48,7 +48,7 @@ service BeaconNodeValidator {
     // validator is fully aware of any sudden chain reorg.
     rpc GetDuties(DutiesRequest) returns (DutiesResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/duties"
+            get: "/eth/v1alpha1/validator/duties"
         };
     }
 
@@ -59,7 +59,7 @@ service BeaconNodeValidator {
     //   Attester — a validator that is part of a committee that needs to sign off on a beacon chain
     rpc StreamDuties(DutiesRequest) returns (stream DutiesResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/duties/stream"
+            get: "/eth/v1alpha1/validator/duties/stream"
         };
     }
 
@@ -68,7 +68,7 @@ service BeaconNodeValidator {
     // blocks and attestations appropriately based on their duty.
     rpc DomainData(DomainRequest) returns (DomainResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/domain"
+            get: "/eth/v1alpha1/validator/domain"
         };
     }
 
@@ -81,7 +81,7 @@ service BeaconNodeValidator {
     rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse) {
         option deprecated = true;
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/chainstart/stream"
+            get: "/eth/v1alpha1/validator/chainstart/stream"
         };
     }
 
@@ -95,7 +95,7 @@ service BeaconNodeValidator {
     // keys is activated.
     rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/activation/stream"
+            get: "/eth/v1alpha1/validator/activation/stream"
         };
     }
 
@@ -105,7 +105,7 @@ service BeaconNodeValidator {
     // specified in the request.
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/index"
+            get: "/eth/v1alpha1/validator/index"
         };
     }
 
@@ -122,7 +122,7 @@ service BeaconNodeValidator {
     //	UNKNOWN_STATUS - validator does not have a known status in the network.
     rpc ValidatorStatus(ValidatorStatusRequest) returns (ValidatorStatusResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/status"
+            get: "/eth/v1alpha1/validator/status"
         };
     }
 
@@ -132,7 +132,7 @@ service BeaconNodeValidator {
     // Returns a list of ValidatorStatusResponses.
     rpc MultipleValidatorStatus(MultipleValidatorStatusRequest) returns (MultipleValidatorStatusResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/statuses"
+            get: "/eth/v1alpha1/validator/statuses"
         };
     }
 
@@ -143,7 +143,7 @@ service BeaconNodeValidator {
     // data for proposer to sign.
     rpc GetBlock(BlockRequest) returns (BeaconBlock) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/block"
+            get: "/eth/v1alpha1/validator/block"
         };
     }
 
@@ -154,7 +154,7 @@ service BeaconNodeValidator {
     // beacon block into its state.
     rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/validator/block"
+            post: "/eth/v1alpha1/validator/block"
             body: "*"
         };
     }
@@ -165,7 +165,7 @@ service BeaconNodeValidator {
     // for the head of the beacon chain.
     rpc GetAttestationData(AttestationDataRequest) returns (AttestationData) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/attestation"
+            get: "/eth/v1alpha1/validator/attestation"
         };
     }
 
@@ -176,7 +176,7 @@ service BeaconNodeValidator {
     // appropriate committee subnet.
     rpc ProposeAttestation(Attestation) returns (AttestResponse) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/validator/attestation"
+            post: "/eth/v1alpha1/validator/attestation"
             body: "*"
         };
     }
@@ -186,7 +186,7 @@ service BeaconNodeValidator {
     // the beacon node responses with an aggregate and proof object back to validator to sign over.
     rpc SubmitAggregateSelectionProof(AggregateSelectionRequest) returns (AggregateSelectionResponse) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/validator/aggregate"
+            post: "/eth/v1alpha1/validator/aggregate"
             body: "*"
         };
     }
@@ -195,7 +195,7 @@ service BeaconNodeValidator {
     // signed aggregated attestation and proof object.
     rpc SubmitSignedAggregateSelectionProof(SignedAggregateSubmitRequest) returns (SignedAggregateSubmitResponse) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/validator/aggregate"
+            post: "/eth/v1alpha1/validator/aggregate"
             body: "*"
         };
     }
@@ -206,7 +206,7 @@ service BeaconNodeValidator {
     // the next proposed block.
     rpc ProposeExit(SignedVoluntaryExit) returns (ProposeExitResponse) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/validator/exit"
+            post: "/eth/v1alpha1/validator/exit"
             body: "*"
         };
     }
@@ -227,7 +227,7 @@ service BeaconNodeValidator {
     // attesting/proposing for you.
     rpc CheckDoppelGanger(DoppelGangerRequest) returns (DoppelGangerResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/validator/doppelganger"
+            get: "/eth/v1alpha1/validator/doppelganger"
         };
     }
 
