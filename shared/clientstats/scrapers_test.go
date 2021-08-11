@@ -62,7 +62,7 @@ func TestBeaconNodeScraper(t *testing.T) {
 // helper function to wrap up all the scrape logic so tests can focus on data cases and assertions
 func scrapeBeaconNodeStats(body string) (*BeaconNodeStats, error) {
 	if !strings.HasSuffix(body, "\n") {
-		return nil, fmt.Errorf("Bad test fixture -- make sure there is a trailing newline unless you want to waste time debugging tests")
+		return nil, fmt.Errorf("bad test fixture -- make sure there is a trailing newline unless you want to waste time debugging tests")
 	}
 	bnScraper := beaconNodeScraper{}
 	bnScraper.tripper = &mockRT{body: body}
