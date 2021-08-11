@@ -52,7 +52,7 @@ func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
 // in the cache. This method also takes the epoch as an argument to only retrieve
-// assingments for epochs that have happened.
+// assignments for epochs that have happened.
 func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
