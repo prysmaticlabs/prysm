@@ -54,7 +54,7 @@ func ProcessAttestationNoVerifySignature(
 
 	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("att slot %d can't be greater than slot slot %d", att.Data.Slot, beaconState.Slot())
 	}
 	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
 	if err != nil {
