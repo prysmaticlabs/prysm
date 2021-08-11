@@ -7,9 +7,8 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
@@ -83,7 +82,7 @@ func TestGetStateRoot(t *testing.T) {
 		},
 	}
 
-	resp, err := server.GetStateRoot(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
@@ -92,8 +91,8 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetStateFork(t *testing.T) {
-	fillFork := func(state *statepb.BeaconState) error {
-		state.Fork = &statepb.Fork{
+	fillFork := func(state *ethpb.BeaconState) error {
+		state.Fork = &ethpb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
@@ -108,7 +107,7 @@ func TestGetStateFork(t *testing.T) {
 		},
 	}
 
-	resp, err := server.GetStateFork(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
@@ -120,16 +119,16 @@ func TestGetStateFork(t *testing.T) {
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
-	fillCheckpoints := func(state *statepb.BeaconState) error {
-		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+	fillCheckpoints := func(state *ethpb.BeaconState) error {
+		state.PreviousJustifiedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,
 		}
-		state.CurrentJustifiedCheckpoint = &eth.Checkpoint{
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("current"), 32),
 			Epoch: 123,
 		}
-		state.FinalizedCheckpoint = &eth.Checkpoint{
+		state.FinalizedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("finalized"), 32),
 			Epoch: 103,
 		}
@@ -143,7 +142,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		},
 	}
 
-	resp, err := server.GetFinalityCheckpoints(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
