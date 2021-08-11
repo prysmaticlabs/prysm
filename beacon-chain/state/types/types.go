@@ -116,7 +116,7 @@ const (
 	NextSyncCommittee
 )
 
-// State Fields Added in Altair.
+// Altair fields which replaced previous phase 0 fields.
 const (
 	// Epoch Attestations is switched with participation bits in
 	// Altair.
