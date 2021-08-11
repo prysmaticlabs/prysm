@@ -2,6 +2,7 @@ package altair
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -42,6 +43,9 @@ func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochPa
 		return 0, nil, err
 	}
 	for _, index := range indices {
+		if index >= uint64(len(epochParticipation)) {
+			return 0, nil, fmt.Errorf("index %d exceeds participation length %d", index, len(epochParticipation))
+		}
 		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
 		if err != nil {
 			return 0, nil, err
