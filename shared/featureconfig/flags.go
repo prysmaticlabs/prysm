@@ -43,7 +43,7 @@ var (
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
-			"transmitting a slashable offence over the network.",
+			"transmitting a slashable offense over the network.",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",

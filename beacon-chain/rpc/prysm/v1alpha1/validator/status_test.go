@@ -26,6 +26,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const testHeadEpoch = types.Epoch(4)
+
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
@@ -782,7 +784,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.Equal(t, len(pubKeys), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -878,7 +880,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	assert.Equal(t, len(beaconState.Validators), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -937,7 +939,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys := createStateSetup(t, mockGen)
 				// Previous Epoch State
 				for i := 0; i < 3; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -983,7 +985,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys := createStateSetup(t, mockGen)
 				// Previous Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1050,7 +1052,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys := createStateSetup(t, mockGen)
 				// Previous Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1117,7 +1119,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys := createStateSetup(t, mockGen)
 				// Previous Epoch State
 				for i := 10; i < 15; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1178,7 +1180,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys := createStateSetup(t, mockGen)
 				// Previous Epoch State
 				for i := 10; i < 15; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1237,18 +1239,17 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 	}
 }
 
-func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStateManager) (state.BeaconState,
+func createStateSetup(t *testing.T, mockgen *stategen.MockStateManager) (state.BeaconState,
 	state.BeaconState, state.BeaconState, []bls.SecretKey) {
 	gs, keys := testutil.DeterministicGenesisState(t, 64)
 	hs := gs.Copy()
 	// Head State
-	headEpoch := head
-	headSlot := types.Slot(headEpoch) * params.BeaconConfig().SlotsPerEpoch
+	headSlot := types.Slot(testHeadEpoch) * params.BeaconConfig().SlotsPerEpoch
 	assert.NoError(t, hs.SetSlot(headSlot))
 	mockgen.StatesBySlot[headSlot] = hs
 
 	// Previous Epoch State
-	prevEpoch := headEpoch - 1
+	prevEpoch := testHeadEpoch - 1
 	ps := gs.Copy()
 	prevSlot := types.Slot(prevEpoch) * params.BeaconConfig().SlotsPerEpoch
 	assert.NoError(t, ps.SetSlot(prevSlot))

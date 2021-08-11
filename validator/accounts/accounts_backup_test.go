@@ -23,6 +23,8 @@ import (
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
+const fakePassword = "Passw0rdz4938"
+
 func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	// Specify the password locally to this file for convenience.
@@ -37,7 +39,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
 	err := ioutil.WriteFile(
 		backupPasswordFile,
-		[]byte("Passw0rdz4938%%"),
+		[]byte(fakePassword),
 		params.BeaconIoConfig().ReadWritePermissions,
 	)
 	require.NoError(t, err)
@@ -150,7 +152,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
 	err := ioutil.WriteFile(
 		backupPasswordFile,
-		[]byte("Passw0rdz4938%%"),
+		[]byte(fakePassword),
 		params.BeaconIoConfig().ReadWritePermissions,
 	)
 	require.NoError(t, err)

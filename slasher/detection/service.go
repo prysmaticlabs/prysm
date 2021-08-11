@@ -21,7 +21,7 @@ import (
 type Status int
 
 const (
-	// None slasher was not initialised.
+	// None slasher was not initialized.
 	None Status = iota
 	// Started service start has been called,
 	Started

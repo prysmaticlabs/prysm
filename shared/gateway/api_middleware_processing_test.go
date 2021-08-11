@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
+const fooEncoding = "Zm9v"
+
 type testRequestContainer struct {
 	TestString    string
 	TestHexString string `hex:"true"`
@@ -36,7 +38,7 @@ type testResponseContainer struct {
 func defaultResponseContainer() *testResponseContainer {
 	return &testResponseContainer{
 		TestString: "test string",
-		TestHex:    "Zm9v", // base64 encoding of "foo"
+		TestHex:    fooEncoding, // base64 encoding of "foo"
 		TestEnum:   "Test Enum",
 		TestTime:   "2006-01-02T15:04:05Z",
 	}
@@ -91,7 +93,7 @@ func TestProcessRequestContainerFields(t *testing.T) {
 
 		errJson := ProcessRequestContainerFields(container)
 		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "Zm9v", container.TestHexString)
+		assert.Equal(t, fooEncoding, container.TestHexString)
 	})
 
 	t.Run("error", func(t *testing.T) {

@@ -71,7 +71,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	preForkState := st.Copy()
 	aState, err := altair.UpgradeToAltair(context.Background(), st)
 	require.NoError(t, err)
-	_, ok := aState.(state.BeaconStateAltair)
+	_, ok := aState.(state.BeaconStateAltair) //nolint:gosimple
 	require.Equal(t, true, ok)
 
 	require.Equal(t, preForkState.GenesisTime(), aState.GenesisTime())

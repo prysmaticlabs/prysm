@@ -20,7 +20,7 @@ import (
 var (
 	beaconRPC               = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port                    = flag.Int("port", 8000, "Port to serve on")
-	ethApiPort              = flag.Int("port", 8001, "Port to serve Ethereum API on")
+	ethAPIPort              = flag.Int("port", 8001, "Port to serve Ethereum API on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
@@ -48,7 +48,7 @@ func main() {
 		fmt.Sprintf("%s:%d", *host, *port),
 	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
 		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
-		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *ethApiPort), &apimiddleware.BeaconEndpointFactory{})
+		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *ethAPIPort), &apimiddleware.BeaconEndpointFactory{})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())

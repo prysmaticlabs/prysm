@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -46,12 +47,13 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 		},
 	}
 
-	runner := func(atts []*ethpb.Attestation) {
+	runner := func(atts []*ethpb.Attestation) error {
 		attsCopy := make(proposerAtts, len(atts))
 		for i, att := range atts {
 			attsCopy[i] = copyutil.CopyAttestation(att)
 		}
-		attsCopy.sortByProfitability()
+		_, err := attsCopy.sortByProfitability()
+		return err
 	}
 
 	for _, tt := range tests {
@@ -64,7 +66,7 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {
-				runner(atts)
+				require.NoError(b, runner(atts))
 			}
 		})
 		b.Run(fmt.Sprintf("max-cover_%s", tt.name), func(b *testing.B) {
@@ -76,7 +78,7 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {
-				runner(atts)
+				require.NoError(b, runner(atts))
 			}
 		})
 	}

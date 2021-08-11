@@ -92,7 +92,7 @@ func TestScorers_Service_Score(t *testing.T) {
 		return scores
 	}
 
-	pack := func(scorer *scorers.Service, s1, s2, s3 float64) map[string]float64 {
+	pack := func(s1, s2, s3 float64) map[string]float64 {
 		return map[string]float64{
 			"peer1": roundScore(s1),
 			"peer2": roundScore(s2),
@@ -141,16 +141,16 @@ func TestScorers_Service_Score(t *testing.T) {
 
 		// Update peers' stats and test the effect on peer order.
 		s.BadResponsesScorer().Increment("peer2")
-		assert.DeepEqual(t, pack(s, startScore, startScore+penalty, startScore), peerScores(s, pids))
+		assert.DeepEqual(t, pack(startScore, startScore+penalty, startScore), peerScores(s, pids))
 		s.BadResponsesScorer().Increment("peer1")
 		s.BadResponsesScorer().Increment("peer1")
-		assert.DeepEqual(t, pack(s, startScore+2*penalty, startScore+penalty, startScore), peerScores(s, pids))
+		assert.DeepEqual(t, pack(startScore+2*penalty, startScore+penalty, startScore), peerScores(s, pids))
 
 		// See how decaying affects order of peers.
 		s.BadResponsesScorer().Decay()
-		assert.DeepEqual(t, pack(s, startScore+penalty, startScore, startScore), peerScores(s, pids))
+		assert.DeepEqual(t, pack(startScore+penalty, startScore, startScore), peerScores(s, pids))
 		s.BadResponsesScorer().Decay()
-		assert.DeepEqual(t, pack(s, startScore, startScore, startScore), peerScores(s, pids))
+		assert.DeepEqual(t, pack(startScore, startScore, startScore), peerScores(s, pids))
 	})
 
 	t.Run("block providers score", func(t *testing.T) {
@@ -165,26 +165,26 @@ func TestScorers_Service_Score(t *testing.T) {
 
 		// Single batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize)
-		assert.DeepEqual(t, pack(s, batchWeight, startScore, startScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(batchWeight, startScore, startScore), peerScores(s, pids), "Unexpected scores")
 
 		// Multiple batches.
 		s1.IncrementProcessedBlocks("peer2", batchSize*4)
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, startScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(batchWeight, batchWeight*4, startScore), peerScores(s, pids), "Unexpected scores")
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer3", batchSize/2)
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
 
 		// See effect of decaying.
 		assert.Equal(t, batchSize+batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*4, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, batchSize/2, s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
 		s1.Decay()
 		assert.Equal(t, batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*3, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, uint64(0), s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, 0, batchWeight*3, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(0, batchWeight*3, 0), peerScores(s, pids), "Unexpected scores")
 	})
 
 	t.Run("overall score", func(t *testing.T) {

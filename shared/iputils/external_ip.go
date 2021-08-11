@@ -6,6 +6,8 @@ import (
 	"sort"
 )
 
+const localhost = "127.0.0.1"
+
 // ExternalIPv4 returns the first IPv4 available.
 func ExternalIPv4() (string, error) {
 	ips, err := ipAddrs()
@@ -13,7 +15,7 @@ func ExternalIPv4() (string, error) {
 		return "", err
 	}
 	if len(ips) == 0 {
-		return "127.0.0.1", nil
+		return localhost, nil
 	}
 	for _, ip := range ips {
 		ip = ip.To4()
@@ -22,7 +24,7 @@ func ExternalIPv4() (string, error) {
 		}
 		return ip.String(), nil
 	}
-	return "127.0.0.1", nil
+	return localhost, nil
 }
 
 // ExternalIP returns the first IPv4/IPv6 available.
@@ -32,7 +34,7 @@ func ExternalIP() (string, error) {
 		return "", err
 	}
 	if len(ips) == 0 {
-		return "127.0.0.1", nil
+		return localhost, nil
 	}
 	return ips[0].String(), nil
 }

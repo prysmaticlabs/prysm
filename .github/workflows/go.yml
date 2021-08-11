@@ -34,7 +34,7 @@ jobs:
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          args: --print-issued-lines --disable=gosec
+          args: --print-issued-lines --sort-results --disable-all -E deadcode -E errcheck -E gosimple -E govet -E ineffassign -E staticcheck -E structcheck -E typecheck -E unused -E varcheck -E misspell -E unparam --skip-dirs=validator/testing
 
   build:
     name: Build

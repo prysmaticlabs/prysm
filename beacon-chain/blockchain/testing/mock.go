@@ -380,7 +380,7 @@ func (s *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attes
 // VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
 func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) error {
 	if !bytes.Equal(r, s.FinalizedCheckPoint.Root) {
-		return errors.New("Root and finalized store are not consistent")
+		return errors.New("root and finalized store are not consistent")
 	}
 	return nil
 }

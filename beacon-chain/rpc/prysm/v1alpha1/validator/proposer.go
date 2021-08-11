@@ -41,11 +41,13 @@ var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
 
+//nolint:unused
 type eth1DataSingleVote struct {
 	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
+//nolint:unused
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
@@ -253,6 +255,7 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
+//nolint:unused,unparam,deadcode
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
 	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {

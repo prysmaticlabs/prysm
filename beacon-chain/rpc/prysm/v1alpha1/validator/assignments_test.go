@@ -260,7 +260,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
+		assert.ErrorContains(tt, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
 	<-exitRoutine
 	cancel()
@@ -318,7 +318,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
+		assert.ErrorContains(tt, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
 	// Fire a reorg event. This needs to trigger
 	// a recomputation and resending of duties over the stream.

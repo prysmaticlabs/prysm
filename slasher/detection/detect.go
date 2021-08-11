@@ -17,7 +17,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// DetectAttesterSlashings detects double, surround and surrounding attestation offences given an attestation.
+// DetectAttesterSlashings detects double, surround and surrounding attestation offenses given an attestation.
 func (s *Service) DetectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,

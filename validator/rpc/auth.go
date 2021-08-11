@@ -164,7 +164,7 @@ func (s *Server) SaveHashedPassword(password string) error {
 // Interval in which we should check if a user has not yet used the RPC Signup endpoint
 // which means they are using the --web flag and someone could come in and signup for them
 // if they have their web host:port exposed to the Internet.
-func (s *Server) checkUserSignup(ctx context.Context) {
+func (s *Server) checkUserSignup(_ context.Context) {
 	ticker := time.NewTicker(checkUserSignupInterval)
 	defer ticker.Stop()
 	for {

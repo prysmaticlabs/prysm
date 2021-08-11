@@ -235,7 +235,7 @@ func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[4
 	return signedAttestationsByPubKey, nil
 }
 
-func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[48]byte]kv.ProposalHistoryForPubkey) [][48]byte {
+func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[48]byte]kv.ProposalHistoryForPubkey) [][48]byte {
 	// Given signing roots are optional in the EIP standard, we behave as follows:
 	// For a given block:
 	//   If we have a previous block with the same slot in our history:
@@ -311,7 +311,7 @@ func filterSlashablePubKeysFromAttestations(
 	return slashablePubKeys, nil
 }
 
-func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
+func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := SlotFromString(proposal.Slot)

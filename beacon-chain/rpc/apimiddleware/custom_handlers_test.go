@@ -18,6 +18,8 @@ import (
 	"github.com/r3labs/sse"
 )
 
+const base64EncodedFoo = "Zm9v"
+
 func TestSSZRequested(t *testing.T) {
 	t.Run("ssz_requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
@@ -64,7 +66,7 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		ssz, errJson := serializeMiddlewareResponseIntoSSZ("Zm9v")
+		ssz, errJson := serializeMiddlewareResponseIntoSSZ(base64EncodedFoo)
 		require.Equal(t, true, errJson == nil)
 		assert.DeepEqual(t, []byte("foo"), ssz)
 	})
@@ -151,7 +153,7 @@ func TestReceiveEvents(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	go func() {
-		base64Val := "Zm9v"
+		base64Val := base64EncodedFoo
 		data := &eventFinalizedCheckpointJson{
 			Block: base64Val,
 			State: base64Val,
@@ -192,10 +194,9 @@ func TestReceiveEvents_EventNotSupported(t *testing.T) {
 }
 
 func TestWriteEvent(t *testing.T) {
-	base64Val := "Zm9v"
 	data := &eventFinalizedCheckpointJson{
-		Block: base64Val,
-		State: base64Val,
+		Block: base64EncodedFoo,
+		State: base64EncodedFoo,
 		Epoch: "1",
 	}
 	bData, err := json.Marshal(data)

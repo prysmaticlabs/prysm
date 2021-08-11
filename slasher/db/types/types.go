@@ -21,7 +21,8 @@ const (
 	// UseCache is used to mark when calling a DB function, to save it to the cache.
 	UseCache = true
 	// UseDB is used to mark when calling a DB function, to save it to the DB.
-	UseDB = false
+	UseDB         = false
+	UnknownStatus = "Unknown"
 )
 
 func (s SlashingStatus) String() string {
@@ -32,7 +33,7 @@ func (s SlashingStatus) String() string {
 		"Reverted"}
 
 	if s < Active || s > Reverted {
-		return "Unknown"
+		return UnknownStatus
 	}
 	// return the name of a SlashingStatus
 	// constant from the names array
@@ -58,7 +59,7 @@ func (t SlashingType) String() string {
 	}
 
 	if t < Active || t > Reverted {
-		return "Unknown"
+		return UnknownStatus
 	}
 	return names[t]
 }

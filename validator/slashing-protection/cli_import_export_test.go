@@ -19,6 +19,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const protectionFileName = "slashing_history_import.json"
+
 func setupCliCtx(
 	tb testing.TB,
 	dbPath,
@@ -41,7 +43,6 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
 	err := fileutil.MkdirAll(outputPath)
 	require.NoError(t, err)
-	protectionFileName := "slashing_history_import.json"
 
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
