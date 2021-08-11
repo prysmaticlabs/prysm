@@ -2,6 +2,7 @@ package altair
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -55,14 +56,10 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	participatedFlags, err := AttestationParticipationFlagIndices(
-		beaconState,
-		att.Data,
-		delay)
+	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
 	if err != nil {
 		return nil, err
 	}
-
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -72,9 +69,19 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
+	return SetParticipationAndRewardProposer(beaconState, att.Data.Target.Epoch, indices, participatedFlags)
+}
+
+// SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
+// the proposer in state.
+func SetParticipationAndRewardProposer(
+	beaconState state.BeaconState,
+	targetEpoch types.Epoch,
+	indices []uint64,
+	participatedFlags map[uint8]bool) (state.BeaconState, error) {
 	var epochParticipation []byte
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	targetEpoch := att.Data.Target.Epoch
+	var err error
 	if targetEpoch == currentEpoch {
 		epochParticipation, err = beaconState.CurrentEpochParticipation()
 		if err != nil {
@@ -87,31 +94,9 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
-	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
-	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
-	proposerRewardNumerator := uint64(0)
-	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not calculate active balance")
-	}
-	for _, index := range indices {
-		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
-		if err != nil {
-			return nil, err
-		}
-		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelySourceWeight
-		}
-		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelyTargetWeight
-		}
-		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelyHeadWeight
-		}
+		return nil, err
 	}
 
 	if targetEpoch == currentEpoch {
@@ -124,10 +109,10 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	// Reward proposer.
-	if err := Reward(beaconState, proposerRewardNumerator); err != nil {
+	if err := RewardProposer(beaconState, proposerRewardNumerator); err != nil {
 		return nil, err
 	}
+
 	return beaconState, nil
 }
 
