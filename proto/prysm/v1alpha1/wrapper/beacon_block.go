@@ -85,7 +85,7 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 	return w.b, nil
 }
 
-// AltairBlock returns the underlying protobuf object.
+// PbAltairBlock returns the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
