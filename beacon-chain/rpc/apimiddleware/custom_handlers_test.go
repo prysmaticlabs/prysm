@@ -193,6 +193,40 @@ func TestReceiveEvents_EventNotSupported(t *testing.T) {
 	assert.Equal(t, "Event type 'not_supported' not supported", errJson.Msg())
 }
 
+func TestReceiveEvents_TrailingSpace(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := &eventFinalizedCheckpointJson{
+			Block: base64Val,
+			State: base64Val,
+			Epoch: "1",
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte("finalized_checkpoint "),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+	assert.Equal(t, `event: finalized_checkpoint
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1"}
+
+`, w.Body.String())
+}
+
 func TestWriteEvent(t *testing.T) {
 	data := &eventFinalizedCheckpointJson{
 		Block: base64EncodedFoo,
