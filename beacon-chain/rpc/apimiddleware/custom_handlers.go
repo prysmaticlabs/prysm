@@ -185,7 +185,11 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 		case msg := <-eventChan:
 			var data interface{}
 
-			switch strings.TrimSpace(string(msg.Event)) {
+			// The message's event comes to us with trailing whitespace.  Remove it here for
+			// ease of future procesing.
+			msg.Event = bytes.TrimSpace(msg.Event)
+
+			switch string(msg.Event) {
 			case events.HeadTopic:
 				data = &eventHeadJson{}
 			case events.BlockTopic:
@@ -215,7 +219,7 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &eventErrorJson{}
 			default:
 				return &gateway.DefaultErrorJson{
-					Message: fmt.Sprintf("Event type '%s' not supported", strings.TrimSpace(string(msg.Event))),
+					Message: fmt.Sprintf("Event type '%s' not supported", string(msg.Event)),
 					Code:    http.StatusInternalServerError,
 				}
 			}
