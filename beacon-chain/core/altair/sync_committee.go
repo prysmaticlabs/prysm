@@ -182,7 +182,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
 }
 
-// Validate Sync Message to ensure that the provided slot is valid.
+// ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
 func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := helpers.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
