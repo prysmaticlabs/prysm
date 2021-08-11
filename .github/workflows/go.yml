@@ -33,6 +33,8 @@ jobs:
 
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v2
+        with:
+          args: --output-format=colored-line-number --print-issued-lines
 
   build:
     name: Build
