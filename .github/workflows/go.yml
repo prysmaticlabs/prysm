@@ -31,6 +31,9 @@ jobs:
         with:
           goimports-path: ./
 
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v2
+
   build:
     name: Build
     runs-on: ubuntu-latest
