@@ -110,6 +110,10 @@ const (
 	PreviousJustifiedCheckpoint
 	CurrentJustifiedCheckpoint
 	FinalizedCheckpoint
+	// State Fields Added in Altair.
+	InactivityScores
+	CurrentSyncCommittee
+	NextSyncCommittee
 )
 
 // State Fields Added in Altair.
@@ -118,8 +122,4 @@ const (
 	// Altair.
 	PreviousEpochParticipationBits = PreviousEpochAttestations
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
-	// Below 3 fields follow on from the finalized checkpoint.
-	InactivityScores = iota + FinalizedCheckpoint + 1
-	CurrentSyncCommittee
-	NextSyncCommittee
 )
