@@ -677,12 +677,6 @@ def prysm_deps():
         sum = "h1:cNcG4c2n5xanQzp2hMyxDxPYVQmZ91y4WN6fJFlndLo=",
         version = "v0.0.4-0.20210318174700-74754f61e018",
     )
-    go_repository(
-        name = "com_github_dgrijalva_jwt_go",
-        importpath = "github.com/dgrijalva/jwt-go",
-        sum = "h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=",
-        version = "v3.2.0+incompatible",
-    )
 
     go_repository(
         name = "com_github_dgryski_go_bitstream",
@@ -863,12 +857,6 @@ def prysm_deps():
         importpath = "github.com/fogleman/gg",
         sum = "h1:WXb3TSNmHp2vHoCroCIB1foO/yQ36swABL8aOVeDpgg=",
         version = "v1.2.1-0.20190220221249-0403632d5b90",
-    )
-    go_repository(
-        name = "com_github_form3tech_oss_jwt_go",
-        importpath = "github.com/form3tech-oss/jwt-go",
-        sum = "h1:xdtqez379uWVJ9P3qQMX8W+F/nqsTdUvyMZB36tnacA=",
-        version = "v3.2.1+incompatible",
     )
 
     go_repository(
@@ -4276,4 +4264,10 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
+    )
+    go_repository(
+        name = "com_github_golang_jwt_jwt",
+        importpath = "github.com/golang-jwt/jwt",
+        sum = "h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=",
+        version = "v3.2.2+incompatible",
     )

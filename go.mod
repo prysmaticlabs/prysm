@@ -22,7 +22,6 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210719200358-90640294cb9c
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
-	github.com/form3tech-oss/jwt-go v3.2.1+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -31,6 +30,7 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
