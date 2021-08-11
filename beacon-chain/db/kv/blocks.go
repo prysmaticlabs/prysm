@@ -26,21 +26,21 @@ var errInvalidSlotRange = errors.New("invalid end slot and start slot provided")
 func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
-	// Return block from cache if it exists.
+	// Return blk from cache if it exists.
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return v.(block.SignedBeaconBlock), nil
 	}
-	var block *ethpb.SignedBeaconBlock
+	var blk *ethpb.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
-		block = &ethpb.SignedBeaconBlock{}
-		return decode(ctx, enc, block)
+		blk = &ethpb.SignedBeaconBlock{}
+		return decode(ctx, enc, blk)
 	})
-	return wrapper.WrappedPhase0SignedBeaconBlock(block), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
 }
 
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
@@ -81,11 +81,11 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]block.Sig
 
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(ctx, encoded, block); err != nil {
+			blk := &ethpb.SignedBeaconBlock{}
+			if err := decode(ctx, encoded, blk); err != nil {
 				return err
 			}
-			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(block))
+			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
@@ -153,11 +153,11 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []bloc
 
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(ctx, encoded, block); err != nil {
+			blk := &ethpb.SignedBeaconBlock{}
+			if err := decode(ctx, encoded, blk); err != nil {
 				return err
 			}
-			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(block))
+			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 		}
 		return nil
 	})
@@ -196,11 +196,11 @@ func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if enc == nil {
 			return nil
 		}
-		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(ctx, enc, block); err != nil {
+		blk := &ethpb.SignedBeaconBlock{}
+		if err := decode(ctx, enc, blk); err != nil {
 			return err
 		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(block.Block))
+		indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(blk.Block))
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -221,11 +221,11 @@ func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if enc == nil {
 				return nil
 			}
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(ctx, enc, block); err != nil {
+			blk := &ethpb.SignedBeaconBlock{}
+			if err := decode(ctx, enc, blk); err != nil {
 				return err
 			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(block.Block))
+			indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(blk.Block))
 			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
@@ -260,8 +260,8 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for _, block := range blocks {
-			blockRoot, err := block.Block().HashTreeRoot()
+		for _, blk := range blocks {
+			blockRoot, err := blk.Block().HashTreeRoot()
 			if err != nil {
 				return err
 			}
@@ -269,15 +269,15 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 				continue
 			}
-			enc, err := encode(ctx, block.Proto())
+			enc, err := encode(ctx, blk.Proto())
 			if err != nil {
 				return err
 			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block())
+			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 			if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			s.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
+			s.blockCache.Set(string(blockRoot[:]), blk, int64(len(enc)))
 
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
@@ -307,7 +307,7 @@ func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 func (s *Store) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlock")
 	defer span.End()
-	var block *ethpb.SignedBeaconBlock
+	var blk *ethpb.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		root := bkt.Get(genesisBlockRootKey)
@@ -315,10 +315,10 @@ func (s *Store) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, erro
 		if enc == nil {
 			return nil
 		}
-		block = &ethpb.SignedBeaconBlock{}
-		return decode(ctx, enc, block)
+		blk = &ethpb.SignedBeaconBlock{}
+		return decode(ctx, enc, blk)
 	})
-	return wrapper.WrappedPhase0SignedBeaconBlock(block), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
 }
 
 // SaveGenesisBlockRoot to the db.

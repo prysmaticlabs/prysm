@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
@@ -112,12 +112,12 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
-	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {
 		return nil, status.Error(codes.NotFound, "Peer not found")
 	}
 
-	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
-	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(eth.ConnectionState(state))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(eth.PeerDirection(direction))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
 	}
@@ -349,11 +349,11 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
-	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {
 		return nil, nil
 	}
-	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
-	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(eth.ConnectionState(connectionState))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(eth.PeerDirection(direction))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not handle peer direction")
 	}
