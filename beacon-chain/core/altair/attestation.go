@@ -23,7 +23,7 @@ func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 	return flag | (1 << flagPosition)
 }
 
-// EpochParticipation sets and returns the proposer reward numerator and epoch participation. 
+// EpochParticipation sets and returns the proposer reward numerator and epoch participation.
 //
 // Spec code:
 //    proposer_reward_numerator = 0
