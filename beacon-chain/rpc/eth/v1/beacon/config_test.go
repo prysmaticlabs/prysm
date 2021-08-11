@@ -18,6 +18,7 @@ func TestGetSpec(t *testing.T) {
 	config := params.BeaconConfig()
 
 	config.ConfigName = "ConfigName"
+	config.PresetBase = "PresetBase"
 	config.MaxCommitteesPerSlot = 1
 	config.TargetCommitteeSize = 2
 	config.MaxValidatorsPerCommittee = 3
@@ -45,6 +46,11 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
 	config.AltairForkVersion = []byte("AltairForkVersion")
 	config.AltairForkEpoch = 100
+	config.MergeForkVersion = []byte("MergeForkVersion")
+	config.MergeForkEpoch = 101
+	config.ShardingForkVersion = []byte("ShardingForkVersion")
+	config.ShardingForkEpoch = 102
+	config.MinAnchorPowBlockDifficulty = 1000
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -118,11 +124,13 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 83, len(resp.Data))
+	assert.Equal(t, 89, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
 			assert.Equal(t, "ConfigName", v)
+		case "PRESET_BASE":
+			assert.Equal(t, "PresetBase", v)
 		case "MAX_COMMITTEES_PER_SLOT":
 			assert.Equal(t, "1", v)
 		case "TARGET_COMMITTEE_SIZE":
@@ -177,6 +185,16 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
+		case "MERGE_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
+		case "MERGE_FORK_EPOCH":
+			assert.Equal(t, "101", v)
+		case "SHARDING_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
+		case "SHARDING_FORK_EPOCH":
+			assert.Equal(t, "102", v)
+		case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
+			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
 			assert.Equal(t, "0x62", v)
 		case "GENESIS_DELAY":

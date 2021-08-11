@@ -20,6 +20,7 @@ type BeaconChainConfig struct {
 	JustificationBitsLength  uint64      `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines number of epochs to track when implementing k-finality in Casper FFG.
 
 	// Misc constants.
+	PresetBase                     string `yaml:"PRESET_BASE" spec:"true"`                        // PresetBase represents the underlying spec preset this config is based on.
 	ConfigName                     string `yaml:"CONFIG_NAME" spec:"true"`                        // ConfigName for allowing an easy human-readable way of knowing what chain is being used.
 	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE" spec:"true"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
 	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE" spec:"true"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
@@ -128,10 +129,15 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`  // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`    // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	MergeForkVersion            []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
+	MergeForkEpoch              types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
+	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of the merge.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
