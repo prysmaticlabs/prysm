@@ -125,14 +125,14 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
-		mainnetConfigFile := presetsFilePath(t, "mainnet")
+		mainnetConfigFile := configFilePath(t, "mainnet")
 		LoadChainConfigFile(mainnetConfigFile)
 		fields := fieldsFromYaml(t, mainnetConfigFile)
 		assertVals("mainnet", fields, MainnetConfig(), BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		minimalConfigFile := presetsFilePath(t, "minimal")
+		minimalConfigFile := configFilePath(t, "minimal")
 		LoadChainConfigFile(minimalConfigFile)
 		fields := fieldsFromYaml(t, minimalConfigFile)
 		assertVals("minimal", fields, MinimalSpecConfig(), BeaconConfig())
