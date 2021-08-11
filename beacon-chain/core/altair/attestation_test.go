@@ -5,6 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -114,6 +115,97 @@ func TestValidatorFlag_Add(t *testing.T) {
 				require.Equal(t, true, altair.HasValidatorFlag(b, f))
 			}
 		})
+	}
+}
+
+func TestSetEpochParticipation(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+	tests := []struct {
+		name                     string
+		indices                  []uint64
+		epochParticipation       []byte
+		participatedFlags        map[uint8]bool
+		wantedNumerator          uint64
+		wantedEpochParticipation []byte
+	}{
+		{name: "none participated",
+			indices: []uint64{}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
+				sourceFlagIndex: false,
+				targetFlagIndex: false,
+				headFlagIndex:   false,
+			},
+			wantedNumerator:          0,
+			wantedEpochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{name: "some participated without flags",
+			indices: []uint64{0, 1, 2, 3}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
+				sourceFlagIndex: false,
+				targetFlagIndex: false,
+				headFlagIndex:   false,
+			},
+			wantedNumerator:          0,
+			wantedEpochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{name: "some participated with some flags",
+			indices: []uint64{0, 1, 2, 3}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
+				sourceFlagIndex: true,
+				targetFlagIndex: true,
+				headFlagIndex:   false,
+			},
+			wantedNumerator:          40473600,
+			wantedEpochParticipation: []byte{3, 3, 3, 3, 0, 0, 0, 0},
+		},
+		{name: "all participated with some flags",
+			indices: []uint64{0, 1, 2, 3, 4, 5, 6, 7}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
+				sourceFlagIndex: true,
+				targetFlagIndex: false,
+				headFlagIndex:   false,
+			},
+			wantedNumerator:          28331520,
+			wantedEpochParticipation: []byte{1, 1, 1, 1, 1, 1, 1, 1},
+		},
+		{name: "all participated with all flags",
+			indices: []uint64{0, 1, 2, 3, 4, 5, 6, 7}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
+				sourceFlagIndex: true,
+				targetFlagIndex: true,
+				headFlagIndex:   true,
+			},
+			wantedNumerator:          109278720,
+			wantedEpochParticipation: []byte{7, 7, 7, 7, 7, 7, 7, 7},
+		},
+	}
+	for _, test := range tests {
+		n, p, err := altair.EpochParticipation(beaconState, test.indices, test.epochParticipation, test.participatedFlags)
+		require.NoError(t, err)
+		require.Equal(t, test.wantedNumerator, n)
+		require.DeepSSZEqual(t, test.wantedEpochParticipation, p)
+	}
+}
+
+func TestRewardProposer(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	tests := []struct {
+		rewardNumerator uint64
+		want            uint64
+	}{
+		{rewardNumerator: 1, want: 32000000000},
+		{rewardNumerator: 10000, want: 32000000022},
+		{rewardNumerator: 1000000, want: 32000002254},
+		{rewardNumerator: 1000000000, want: 32002234396},
+		{rewardNumerator: 1000000000000, want: 34234377253},
+	}
+	for _, test := range tests {
+		require.NoError(t, altair.RewardProposer(beaconState, test.rewardNumerator))
+		i, err := helpers.BeaconProposerIndex(beaconState)
+		require.NoError(t, err)
+		b, err := beaconState.BalanceAtIndex(i)
+		require.NoError(t, err)
+		require.Equal(t, test.want, b)
 	}
 }
 
