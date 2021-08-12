@@ -1063,6 +1063,13 @@ def prysm_deps():
         sum = "h1:1r7pUrabqp18hOBcwBwiTsbnFeTZHV9eER/QT5JVZxY=",
         version = "v0.0.0-20200121045136-8c9f03a8e57e",
     )
+
+    go_repository(
+        name = "com_github_golang_jwt_jwt",
+        importpath = "github.com/golang-jwt/jwt",
+        sum = "h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=",
+        version = "v3.2.2+incompatible",
+    )
     go_repository(
         name = "com_github_golang_lint",
         importpath = "github.com/golang/lint",
@@ -2774,8 +2781,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:9rrmgQval2GOmtMAgGLdqcCEZLraNaN3k2mY+07cx64=",
-        version = "v0.0.0-20210706153858-5cb5ce8bdbfe",
+        sum = "h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=",
+        version = "v0.0.0-20210809151128-385d8c5e3fb7",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
