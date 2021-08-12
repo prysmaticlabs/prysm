@@ -2,16 +2,138 @@ package altair
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
+
+// ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
+// records. The only difference would be that the attestation signature would not be verified.
+func ProcessAttestationsNoVerifySignature(
+	ctx context.Context,
+	beaconState state.BeaconState,
+	b block.SignedBeaconBlock,
+) (state.BeaconState, error) {
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
+	}
+	body := b.Block().Body()
+	var err error
+	for idx, attestation := range body.Attestations() {
+		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		}
+	}
+	return beaconState, nil
+}
+
+// ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
+// method is used to validate attestations whose signatures have already been verified or will be verified later.
+func ProcessAttestationNoVerifySignature(
+	ctx context.Context,
+	beaconState state.BeaconStateAltair,
+	att *ethpb.Attestation,
+) (state.BeaconStateAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
+	defer span.End()
+
+	if err := blocks.VerifyAttestationNoVerifySignature(ctx, beaconState, att); err != nil {
+		return nil, err
+	}
+
+	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.Data.Slot, beaconState.Slot())
+	}
+	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
+	if err != nil {
+		return nil, err
+	}
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	if err != nil {
+		return nil, err
+	}
+
+	return SetParticipationAndRewardProposer(beaconState, att.Data.Target.Epoch, indices, participatedFlags)
+}
+
+// SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
+// the proposer in state.
+//
+// Spec code:
+//     # Update epoch participation flags
+//    if data.target.epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//
+//    proposer_reward_numerator = 0
+//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
+//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+//                proposer_reward_numerator += get_base_reward(state, index) * weight
+//
+//    # Reward proposer
+//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+func SetParticipationAndRewardProposer(
+	beaconState state.BeaconState,
+	targetEpoch types.Epoch,
+	indices []uint64,
+	participatedFlags map[uint8]bool) (state.BeaconState, error) {
+	var epochParticipation []byte
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	var err error
+	if targetEpoch == currentEpoch {
+		epochParticipation, err = beaconState.CurrentEpochParticipation()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		epochParticipation, err = beaconState.PreviousEpochParticipation()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags)
+	if err != nil {
+		return nil, err
+	}
+
+	if targetEpoch == currentEpoch {
+		if err := beaconState.SetCurrentParticipationBits(epochParticipation); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := beaconState.SetPreviousParticipationBits(epochParticipation); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := RewardProposer(beaconState, proposerRewardNumerator); err != nil {
+		return nil, err
+	}
+
+	return beaconState, nil
+}
 
 // HasValidatorFlag returns true if the flag at position has set.
 func HasValidatorFlag(flag, flagPosition uint8) bool {
