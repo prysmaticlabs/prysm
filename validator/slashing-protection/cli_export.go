@@ -59,7 +59,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not access validator database at path %s", dataDir)
 	}
 	defer func() {
-		if err := validatorDB.Close(); err != nil {
+		if err = validatorDB.Close(); err != nil {
 			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
@@ -83,7 +83,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not check if output directory %s already exists", outputDir)
 	}
 	if !exists {
-		if err := fileutil.MkdirAll(outputDir); err != nil {
+		if err = fileutil.MkdirAll(outputDir); err != nil {
 			return errors.Wrapf(err, "could not create output directory %s", outputDir)
 		}
 	}
