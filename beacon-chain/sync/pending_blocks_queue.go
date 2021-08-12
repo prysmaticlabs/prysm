@@ -309,7 +309,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if sszutil.DeepEqual(blk, b) {
+		if sszutil.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
