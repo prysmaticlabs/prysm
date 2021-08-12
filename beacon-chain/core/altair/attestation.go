@@ -3,6 +3,7 @@ package altair
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -15,75 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
-
-// ProcessAttestations applies processing operations to a block's inner attestation
-// records.
-func ProcessAttestations(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	b block.SignedBeaconBlock,
-) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	var err error
-	for idx, attestation := range b.Block().Body().Attestations() {
-		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
-		}
-	}
-	return beaconState, nil
-}
-
-// ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
-//
-// Spec code:
-//  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//    data = attestation.data
-//    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-//    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
-//
-//    committee = get_beacon_committee(state, data.slot, data.index)
-//    assert len(attestation.aggregation_bits) == len(committee)
-//
-//    # Participation flag indices
-//    participation_flag_indices = get_attestation_participation_flag_indices(state, data, state.slot - data.slot)
-//
-//    # Verify signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-//
-//    # Update epoch participation flags
-//    if data.target.epoch == get_current_epoch(state):
-//        epoch_participation = state.current_epoch_participation
-//    else:
-//        epoch_participation = state.previous_epoch_participation
-//
-//    proposer_reward_numerator = 0
-//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
-//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
-//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-//                proposer_reward_numerator += get_base_reward(state, index) * weight
-//
-//    # Reward proposer
-//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
-//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
-//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
-func ProcessAttestation(
-	ctx context.Context,
-	beaconState state.BeaconStateAltair,
-	att *ethpb.Attestation,
-) (state.BeaconStateAltair, error) {
-	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
-	if err != nil {
-		return nil, err
-	}
-	return beaconState, blocks.VerifyAttestationSignature(ctx, beaconState, att)
-}
 
 // ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
@@ -122,16 +54,12 @@ func ProcessAttestationNoVerifySignature(
 
 	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("att slot %d can't be greater than state slot %d", att.Data.Slot, beaconState.Slot())
 	}
-	participatedFlags, err := AttestationParticipationFlagIndices(
-		beaconState,
-		att.Data,
-		delay)
+	participatedFlags, err := AttestationParticipationFlagIndices(beaconState, att.Data, delay)
 	if err != nil {
 		return nil, err
 	}
-
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -141,9 +69,38 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
+	return SetParticipationAndRewardProposer(beaconState, att.Data.Target.Epoch, indices, participatedFlags)
+}
+
+// SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
+// the proposer in state.
+//
+// Spec code:
+//     # Update epoch participation flags
+//    if data.target.epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//
+//    proposer_reward_numerator = 0
+//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
+//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+//                proposer_reward_numerator += get_base_reward(state, index) * weight
+//
+//    # Reward proposer
+//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+func SetParticipationAndRewardProposer(
+	beaconState state.BeaconState,
+	targetEpoch types.Epoch,
+	indices []uint64,
+	participatedFlags map[uint8]bool) (state.BeaconState, error) {
 	var epochParticipation []byte
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	targetEpoch := att.Data.Target.Epoch
+	var err error
 	if targetEpoch == currentEpoch {
 		epochParticipation, err = beaconState.CurrentEpochParticipation()
 		if err != nil {
@@ -156,31 +113,9 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
-	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
-	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
-	proposerRewardNumerator := uint64(0)
-	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not calculate active balance")
-	}
-	for _, index := range indices {
-		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
-		if err != nil {
-			return nil, err
-		}
-		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelySourceWeight
-		}
-		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelyTargetWeight
-		}
-		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelyHeadWeight
-		}
+		return nil, err
 	}
 
 	if targetEpoch == currentEpoch {
@@ -193,23 +128,11 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	// Reward proposer.
-	if err := rewardProposer(beaconState, proposerRewardNumerator); err != nil {
+	if err := RewardProposer(beaconState, proposerRewardNumerator); err != nil {
 		return nil, err
 	}
+
 	return beaconState, nil
-}
-
-// This rewards proposer by increasing proposer's balance with input reward numerator and calculated reward denominator.
-func rewardProposer(beaconState state.BeaconState, proposerRewardNumerator uint64) error {
-	proposerRewardDenominator := (params.BeaconConfig().WeightDenominator - params.BeaconConfig().ProposerWeight) * params.BeaconConfig().WeightDenominator / params.BeaconConfig().ProposerWeight
-	proposerReward := proposerRewardNumerator / proposerRewardDenominator
-	i, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return err
-	}
-
-	return helpers.IncreaseBalance(beaconState, i, proposerReward)
 }
 
 // HasValidatorFlag returns true if the flag at position has set.
@@ -220,6 +143,68 @@ func HasValidatorFlag(flag, flagPosition uint8) bool {
 // AddValidatorFlag adds new validator flag to existing one.
 func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 	return flag | (1 << flagPosition)
+}
+
+// EpochParticipation sets and returns the proposer reward numerator and epoch participation.
+//
+// Spec code:
+//    proposer_reward_numerator = 0
+//    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
+//            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
+//                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+//                proposer_reward_numerator += get_base_reward(state, index) * weight
+func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochParticipation []byte, participatedFlags map[uint8]bool) (uint64, []byte, error) {
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+	proposerRewardNumerator := uint64(0)
+	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	if err != nil {
+		return 0, nil, err
+	}
+	for _, index := range indices {
+		if index >= uint64(len(epochParticipation)) {
+			return 0, nil, fmt.Errorf("index %d exceeds participation length %d", index, len(epochParticipation))
+		}
+		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
+		if err != nil {
+			return 0, nil, err
+		}
+		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelySourceWeight
+		}
+		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelyTargetWeight
+		}
+		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			proposerRewardNumerator += br * cfg.TimelyHeadWeight
+		}
+	}
+
+	return proposerRewardNumerator, epochParticipation, nil
+}
+
+// RewardProposer rewards proposer by increasing proposer's balance with input reward numerator and calculated reward denominator.
+//
+// Spec code:
+//    proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
+//    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+//    increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+func RewardProposer(beaconState state.BeaconState, proposerRewardNumerator uint64) error {
+	cfg := params.BeaconConfig()
+	d := (cfg.WeightDenominator - cfg.ProposerWeight) * cfg.WeightDenominator / cfg.ProposerWeight
+	proposerReward := proposerRewardNumerator / d
+	i, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return err
+	}
+
+	return helpers.IncreaseBalance(beaconState, i, proposerReward)
 }
 
 // AttestationParticipationFlagIndices retrieves a map of attestation scoring based on Altair's participation flag indices.
