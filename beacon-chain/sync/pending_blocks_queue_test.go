@@ -523,3 +523,65 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 }
+
+func TestService_ProcessBadPendingBlocks(t *testing.T) {
+	ctx := context.Background()
+	db := dbtest.SetupDB(t)
+
+	p1 := p2ptest.NewTestP2P(t)
+	mockChain := mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r := &Service{
+		cfg: &Config{
+			P2P:      p1,
+			DB:       db,
+			Chain:    &mockChain,
+			StateGen: stategen.New(db),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	err := r.initCaches()
+	require.NoError(t, err)
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(parentBlock)))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	require.NoError(t, err)
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	mockChain.Root = bRoot[:]
+	mockChain.State = st
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.ParentRoot = bRoot[:]
+	b1.Block.Slot = 1
+	b1Root, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b1.Block.ProposerIndex = proposerIdx
+	b1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = 55
+	b.Block.ParentRoot = []byte{'A', 'B', 'C'}
+	bA := wrapper.WrappedPhase0SignedBeaconBlock(b)
+	assert.NoError(t, err)
+
+	// Add block1 for slot 55
+	require.NoError(t, r.insertBlockToPendingQueue(b.Block.Slot, bA, b1Root))
+	bB := wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock())
+	assert.NoError(t, err)
+	// remove with a different block from the same slot.
+	require.NoError(t, r.deleteBlockFromPendingQueue(b.Block.Slot, bB, b1Root))
+}

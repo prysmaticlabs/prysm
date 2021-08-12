@@ -307,6 +307,11 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 		return nil
 	}
 
+	// Defensive check to ignore nil blocks
+	if b.IsNil() {
+		return nil
+	}
+
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		if sszutil.DeepEqual(blk.Proto(), b.Proto()) {
