@@ -308,8 +308,8 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 	}
 
 	// Defensive check to ignore nil blocks
-	if b.IsNil() {
-		return nil
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
 	}
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
