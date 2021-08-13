@@ -26,7 +26,7 @@ var APIGatewayV1Alpha1VerifyIntegrity = e2etypes.Evaluator{
 }
 
 type chainHeadResponse struct {
-	HeadSlot uint64
+	HeadSlot string
 }
 
 func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
@@ -49,8 +49,8 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 		if err = json.NewDecoder(apiresp.Body).Decode(&httpChainHeadResp); err != nil {
 			return err
 		}
-		if httpChainHeadResp.HeadSlot != uint64(resp.HeadSlot) {
-			return fmt.Errorf("HTTP gateway chainhead %v does not match gRPC chainhead %v", httpChainHeadResp, resp)
+		if httpChainHeadResp.HeadSlot != fmt.Sprintf("%d", resp.HeadSlot) {
+			return fmt.Errorf("HTTP gateway chainhead %s does not match gRPC chainhead %d", httpChainHeadResp.HeadSlot, resp.HeadSlot)
 		}
 	}
 	return nil
