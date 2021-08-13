@@ -6,13 +6,14 @@ package mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	gateway "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	service "github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
-	reflect "reflect"
 )
 
 // MockEventsClient is a mock of EventsClient interface
