@@ -1,5 +1,5 @@
 package beacon
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+import ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 
-var _ ethpb.BeaconChainServer = (*Server)(nil)
+var _ ethpbservice.BeaconChainServer = (*Server)(nil)
