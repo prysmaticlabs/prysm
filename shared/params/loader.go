@@ -16,6 +16,8 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
+	// Default to using mainnet.
+	conf := MainnetConfig().Copy()
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
@@ -23,13 +25,16 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
 			continue
 		}
+		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") {
+			conf = MinimalSpecConfig().Copy()
+		}
+
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := replaceHexStringWithYAMLFormat(line)
 			lines[i] = strings.Join(parts, "\n")
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
-	conf := MainnetConfig().Copy()
 	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
 			log.WithError(err).Fatal("Failed to parse chain config yaml file.")
