@@ -85,7 +85,7 @@ func (s *Service) registerSubscribers() {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
-	base := p2p.GossipTopicMappings[topic]
+	base := p2p.GossipTopicMappings(topic, 0)
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
@@ -198,7 +198,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler) {
-	base := p2p.GossipTopicMappings[topic]
+	base := p2p.GossipTopicMappings(topic, 0)
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
@@ -248,7 +248,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	validate pubsub.ValidatorEx,
 	handle subHandler,
 ) {
-	base := p2p.GossipTopicMappings[topicFormat]
+	base := p2p.GossipTopicMappings(topicFormat, 0)
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
