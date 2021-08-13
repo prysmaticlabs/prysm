@@ -19,14 +19,13 @@ import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
-import "proto/eth/ext/options.proto";
+import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v1/beacon_state.proto";
-import "proto/eth/v1/beacon_chain_service.proto";
 
-option csharp_namespace = "Ethereum.Eth.v1";
+option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
 option java_multiple_files = true;
-option java_outer_classname = "BeaconDebugProto";
+option java_outer_classname = "BeaconDebugServiceProto";
 option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
@@ -56,21 +55,4 @@ service BeaconDebug {
       get: "/eth/v1/debug/beacon/heads"
     };
   }
-}
-
-message ForkChoiceHeadsResponse {
-  repeated ForkChoiceHead data = 1;
-}
-
-message ForkChoiceHead {
-  bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-}
-
-message BeaconStateResponse {
-  BeaconState data = 1;
-}
-
-message BeaconStateSSZResponse {
-  bytes data = 1;
 }
