@@ -246,6 +246,17 @@ func presetsFilePath(t *testing.T, config string) string {
 	return configFilePath
 }
 
+// Deprecated: This sets the proper config and returns the relevant
+// config file path from eth2-spec-tests directory. From altair onwards
+// we use the other methods to retrieve the spec config.
+func deprecatedConfigFilePath(t *testing.T, config string) string {
+	configFolderPath := path.Join("tests", config)
+	filepath, err := bazel.Runfile(configFolderPath)
+	require.NoError(t, err)
+	configFilePath := path.Join(filepath, "config", "phase0.yaml")
+	return configFilePath
+}
+
 func fieldsFromYaml(t *testing.T, fp string) []string {
 	yamlFile, err := ioutil.ReadFile(fp)
 	require.NoError(t, err)
