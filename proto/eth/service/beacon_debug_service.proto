@@ -26,7 +26,7 @@ import "proto/eth/v2/beacon_state.proto";
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
 option java_multiple_files = true;
-option java_outer_classname = "BeaconChainServiceProto";
+option java_outer_classname = "BeaconDebugServiceProto";
 option java_package = "org.ethereum.eth.service";
 option php_namespace = "Ethereum\\Eth\\Service";
 
