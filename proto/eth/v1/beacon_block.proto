@@ -19,7 +19,7 @@ import "google/protobuf/descriptor.proto";
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 
-option csharp_namespace = "Ethereum.Eth.v1";
+option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconBlockProto";
@@ -44,37 +44,10 @@ message BeaconBlock {
     BeaconBlockBody body = 5;
 }
 
-// The Ethereum consensus beacon block for Hard Fork 1. The message does not contain a validator signature.
-message BeaconBlockV1 {
-    // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-
-    // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
-
-    // 32 byte root of the parent block.
-    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // 32 byte root of the resulting state after processing this block.
-    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // The Hard Fork 1 block body itself.
-    BeaconBlockBodyV1 body = 5;
-}
-
 // The signed version of beacon block.
 message SignedBeaconBlock {
     // The unsigned beacon block itself.
     BeaconBlock block = 1;
-
-    // 96 byte BLS signature from the validator that produced this block.
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
-// The signed version of Hard Fork 1 beacon block.
-message SignedBeaconBlockV1 {
-    // The unsigned beacon block itself.
-    BeaconBlockV1 block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -110,44 +83,6 @@ message BeaconBlockBody {
     // At most MAX_VOLUNTARY_EXITS.
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 }
-
-// The block body of an Ethereum consensus beacon block for Hard Fork 1.
-message BeaconBlockBodyV1 {
-    // The validators RANDAO reveal 96 byte value.
-    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
-
-    // A reference to the Ethereum 1.x chain.
-    Eth1Data eth1_data = 2;
-
-    // 32 byte field of arbitrary data. This field may contain any data and
-    // is not used for anything other than a fun message.
-    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // Block operations
-    // Refer to spec constants at https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
-
-    // At most MAX_PROPOSER_SLASHINGS.
-    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
-
-    // At most MAX_ATTESTER_SLASHINGS.
-    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
-
-    // At most MAX_ATTESTATIONS.
-    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
-
-    // At most MAX_DEPOSITS.
-    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
-
-    // At most MAX_VOLUNTARY_EXITS.
-    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
-
-    // Bitvector used to track sync committee voting bits.
-    bytes sync_committee_bits = 10 [(ethereum.eth.ext.ssz_size) = "64", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector512"];
-
-    // BLS aggregated signature of the sync committee for the ones that voted.
-    bytes sync_committee_signature = 11 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
 
 // Proposer slashings are proofs that a slashable offense has been committed by
 // proposing two conflicting blocks from the same validator.

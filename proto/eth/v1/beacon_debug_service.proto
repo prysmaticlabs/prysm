@@ -13,20 +13,19 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1;
+package ethereum.eth.service;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
-import "proto/eth/ext/options.proto";
+import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v1/beacon_state.proto";
-import "proto/eth/v1/beacon_chain_service.proto";
 
-option csharp_namespace = "Ethereum.Eth.v1";
+option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
 option java_multiple_files = true;
-option java_outer_classname = "BeaconDebugProto";
+option java_outer_classname = "BeaconDebugServiceProto";
 option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
@@ -37,40 +36,23 @@ option php_namespace = "Ethereum\\Eth\\v1";
 // This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
 service BeaconDebug {
   // GetBeaconState returns full BeaconState object for given stateId.
-  rpc GetBeaconState(StateRequest) returns (BeaconStateResponse) {
+  rpc GetBeaconState(v1.StateRequest) returns (v1.BeaconStateResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/states/{state_id}"
     };
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSSZ(StateRequest) returns (BeaconStateSSZResponse) {
+  rpc GetBeaconStateSSZ(v1.StateRequest) returns (v1.BeaconStateSSZResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/states/{state_id}/ssz"
     };
   }
 
   // ListForkChoiceHeads retrieves all possible chain heads (leaves of fork choice tree).
-  rpc ListForkChoiceHeads(google.protobuf.Empty) returns (ForkChoiceHeadsResponse) {
+  rpc ListForkChoiceHeads(google.protobuf.Empty) returns (v1.ForkChoiceHeadsResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/heads"
     };
   }
-}
-
-message ForkChoiceHeadsResponse {
-  repeated ForkChoiceHead data = 1;
-}
-
-message ForkChoiceHead {
-  bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-}
-
-message BeaconStateResponse {
-  BeaconState data = 1;
-}
-
-message BeaconStateSSZResponse {
-  bytes data = 1;
 }
