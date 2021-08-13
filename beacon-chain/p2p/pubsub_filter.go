@@ -30,7 +30,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 	if parts[1] != "eth2" {
 		return false
 	}
-	fd, err := s.forkDigest()
+	fd, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not determine fork digest")
 		return false

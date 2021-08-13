@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -17,6 +18,7 @@ func TestGetSpec(t *testing.T) {
 	config := params.BeaconConfig()
 
 	config.ConfigName = "ConfigName"
+	config.PresetBase = "PresetBase"
 	config.MaxCommitteesPerSlot = 1
 	config.TargetCommitteeSize = 2
 	config.MaxValidatorsPerCommittee = 3
@@ -44,6 +46,11 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
 	config.AltairForkVersion = []byte("AltairForkVersion")
 	config.AltairForkEpoch = 100
+	config.MergeForkVersion = []byte("MergeForkVersion")
+	config.MergeForkEpoch = 101
+	config.ShardingForkVersion = []byte("ShardingForkVersion")
+	config.ShardingForkEpoch = 102
+	config.MinAnchorPowBlockDifficulty = 1000
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -117,11 +124,13 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 83, len(resp.Data))
+	assert.Equal(t, 89, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
 			assert.Equal(t, "ConfigName", v)
+		case "PRESET_BASE":
+			assert.Equal(t, "PresetBase", v)
 		case "MAX_COMMITTEES_PER_SLOT":
 			assert.Equal(t, "1", v)
 		case "TARGET_COMMITTEE_SIZE":
@@ -176,6 +185,16 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
+		case "MERGE_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
+		case "MERGE_FORK_EPOCH":
+			assert.Equal(t, "101", v)
+		case "SHARDING_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
+		case "SHARDING_FORK_EPOCH":
+			assert.Equal(t, "102", v)
+		case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
+			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
 			assert.Equal(t, "0x62", v)
 		case "GENESIS_DELAY":
@@ -318,18 +337,18 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("First"), types.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Second"), types.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Third"), types.Epoch(300)
+	firstForkVersion, firstForkEpoch := []byte("Firs"), types.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Seco"), types.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Thir"), types.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[types.Epoch][]byte, 3)
-	schedule[secondForkEpoch] = secondForkVersion
-	schedule[firstForkEpoch] = firstForkVersion
-	schedule[thirdForkEpoch] = thirdForkVersion
+	schedule := make(map[[4]byte]types.Epoch, 3)
+	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
+	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
+	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
 	config.ForkVersionSchedule = schedule
 	params.OverrideBeaconConfig(config)
 
@@ -339,7 +358,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
 	assert.DeepEqual(t, genesisForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, firstForkVersion, fork.CurrentVersion)
+	assert.DeepEqual(t, string(firstForkVersion), string(fork.CurrentVersion))
 	assert.Equal(t, firstForkEpoch, fork.Epoch)
 	fork = resp.Data[1]
 	assert.DeepEqual(t, firstForkVersion, fork.PreviousVersion)
@@ -351,9 +370,10 @@ func TestForkSchedule_Ok(t *testing.T) {
 	assert.Equal(t, thirdForkEpoch, fork.Epoch)
 }
 
-func TestForkSchedule_NoForks(t *testing.T) {
+func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(resp.Data))
+	// Genesis and Altair.
+	assert.Equal(t, 2, len(resp.Data))
 }
