@@ -55,7 +55,7 @@ func TestService_Broadcast(t *testing.T) {
 	topic := "/eth2/%x/testing"
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
-	digest, err := p.forkDigest()
+	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
 	topic = fmt.Sprintf(topic, digest)
 
@@ -169,7 +169,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 
 	topic := AttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
-	digest, err := p.forkDigest()
+	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
 	topic = fmt.Sprintf(topic, digest, subnet)
 
@@ -326,7 +326,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	msg := testutil.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	topic := AttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
-	digest, err := p.forkDigest()
+	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
 	topic = fmt.Sprintf(topic, digest, subnet)
 
