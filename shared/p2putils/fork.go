@@ -89,7 +89,10 @@ func Fork(
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	forkEpoch := types.Epoch(0)
 	for _, forkVersion := range sortedForkVersions {
-		epoch := fSchedule[forkVersion]
+		epoch, ok := fSchedule[forkVersion]
+		if !ok {
+			return nil, errors.Errorf("fork version %x doesn't exist in schedule", forkVersion)
+		}
 		if targetEpoch >= epoch {
 			previousForkVersion = currentForkVersion
 			currentForkVersion = forkVersion
@@ -121,13 +124,16 @@ func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([
 
 // NextForkData retrieves the next fork data according to the
 // provided current epoch.
-func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
+func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	nextForkEpoch := types.Epoch(math.MaxUint64)
 	nextForkVersion := [4]byte{}
 	for _, forkVersion := range sortedForkVersions {
-		epoch := fSchedule[forkVersion]
+		epoch, ok := fSchedule[forkVersion]
+		if !ok {
+			return [4]byte{}, 0, errors.Errorf("fork version %x doesn't exist in schedule", forkVersion)
+		}
 		// If we get an epoch larger than out current epoch
 		// we set this as our next fork epoch and exit the
 		// loop.
@@ -145,7 +151,7 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
 			nextForkVersion = forkVersion
 		}
 	}
-	return nextForkVersion, nextForkEpoch
+	return nextForkVersion, nextForkEpoch, nil
 }
 
 // SortedForkVersions sorts the provided fork schedule in ascending order
