@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.service;
+package ethereum.eth.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
@@ -33,34 +33,34 @@ option php_namespace = "Ethereum\\Eth\\v1";
 // The beacon chain node API is a set of endpoints to query node information.
 service BeaconNode {
   // GetIdentity retrieves data about the node's network presence.
-  rpc GetIdentity(google.protobuf.Empty) returns (v1.IdentityResponse) {
+  rpc GetIdentity(google.protobuf.Empty) returns (IdentityResponse) {
     option (google.api.http) = {get: "/eth/v1/node/identity"};
   }
 
   // ListPeers retrieves data about the node's network peers.
-  rpc ListPeers(v1.PeersRequest) returns (v1.PeersResponse) {
+  rpc ListPeers(PeersRequest) returns (PeersResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peers"};
   }
 
   // GetPeer retrieves data about the given peer.
-  rpc GetPeer(v1.PeerRequest) returns (v1.PeerResponse) {
+  rpc GetPeer(PeerRequest) returns (PeerResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peers/{peer_id}"};
   }
 
   // PeerCount retrieves number of known peers.
-  rpc PeerCount(google.protobuf.Empty) returns (v1.PeerCountResponse) {
+  rpc PeerCount(google.protobuf.Empty) returns (PeerCountResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peer_count"};
   }
 
   // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
   // if it is, what block it is up to.
-  rpc GetSyncStatus(google.protobuf.Empty) returns (v1.SyncingResponse) {
+  rpc GetSyncStatus(google.protobuf.Empty) returns (SyncingResponse) {
     option (google.api.http) = {get: "/eth/v1/node/syncing"};
   }
 
   // GetVersion requests that the beacon node identify information about its implementation in a
   // format similar to a HTTP User-Agent field.
-  rpc GetVersion(google.protobuf.Empty) returns (v1.VersionResponse) {
+  rpc GetVersion(google.protobuf.Empty) returns (VersionResponse) {
     option (google.api.http) = {get: "/eth/v1/node/version"};
   }
 

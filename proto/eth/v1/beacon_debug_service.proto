@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.service;
+package ethereum.eth.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
@@ -36,21 +36,21 @@ option php_namespace = "Ethereum\\Eth\\v1";
 // This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
 service BeaconDebug {
   // GetBeaconState returns full BeaconState object for given stateId.
-  rpc GetBeaconState(v1.StateRequest) returns (v1.BeaconStateResponse) {
+  rpc GetBeaconState(StateRequest) returns (BeaconStateResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/states/{state_id}"
     };
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSSZ(v1.StateRequest) returns (v1.BeaconStateSSZResponse) {
+  rpc GetBeaconStateSSZ(StateRequest) returns (BeaconStateSSZResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/states/{state_id}/ssz"
     };
   }
 
   // ListForkChoiceHeads retrieves all possible chain heads (leaves of fork choice tree).
-  rpc ListForkChoiceHeads(google.protobuf.Empty) returns (v1.ForkChoiceHeadsResponse) {
+  rpc ListForkChoiceHeads(google.protobuf.Empty) returns (ForkChoiceHeadsResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/heads"
     };

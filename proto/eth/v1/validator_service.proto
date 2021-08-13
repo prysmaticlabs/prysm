@@ -13,13 +13,12 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.service;
+package ethereum.eth.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
-import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
@@ -43,7 +42,7 @@ service BeaconValidator {
   //  - 400: Invalid epoch or index
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc GetAttesterDuties(v1.AttesterDutiesRequest) returns (v1.AttesterDutiesResponse) {
+  rpc GetAttesterDuties(AttesterDutiesRequest) returns (AttesterDutiesResponse) {
     option (google.api.http) = {
       post: "/eth/v1/validator/duties/attester/{epoch}"
       body: "*"
@@ -58,7 +57,7 @@ service BeaconValidator {
   //  - 400: Invalid epoch
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc GetProposerDuties(v1.ProposerDutiesRequest) returns (v1.ProposerDutiesResponse) {
+  rpc GetProposerDuties(ProposerDutiesRequest) returns (ProposerDutiesResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
   }
 
@@ -70,7 +69,7 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
+  rpc ProduceBlock(ProduceBlockRequest) returns (ProduceBlockResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
   }
 
@@ -82,7 +81,7 @@ service BeaconValidator {
   //  - 400: Invalid request syntax
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc ProduceAttestationData(v1.ProduceAttestationDataRequest) returns (v1.ProduceAttestationDataResponse) {
+  rpc ProduceAttestationData(ProduceAttestationDataRequest) returns (ProduceAttestationDataResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/attestation_data" };
   }
 
@@ -93,7 +92,7 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
-  rpc GetAggregateAttestation(v1.AggregateAttestationRequest) returns (v1.AggregateAttestationResponse) {
+  rpc GetAggregateAttestation(AggregateAttestationRequest) returns (AggregateAttestationResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/aggregate_attestation" };
   }
 
@@ -103,7 +102,7 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
-  rpc SubmitAggregateAndProofs(v1.SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
+  rpc SubmitAggregateAndProofs(SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/aggregate_and_proofs"
       body: "*"
@@ -123,7 +122,7 @@ service BeaconValidator {
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
   // - 503: Beacon node is currently syncing, try again later
-  rpc SubmitBeaconCommitteeSubscription(v1.SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
+  rpc SubmitBeaconCommitteeSubscription(SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/beacon_committee_subscriptions"
       body: "*"
