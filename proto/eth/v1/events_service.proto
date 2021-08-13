@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.service;
+package ethereum.eth.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
@@ -32,7 +32,7 @@ option php_namespace = "Ethereum\\Eth\\v1";
 //
 // This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
 service Events {
-    rpc StreamEvents(v1.StreamEventsRequest) returns (stream gateway.EventSource) {
+    rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
         option (google.api.http) = {
             get: "/eth/v1/events"
         };
