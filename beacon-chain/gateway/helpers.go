@@ -2,7 +2,7 @@ package gateway
 
 import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
@@ -25,14 +25,14 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 		pbrpc.RegisterHealthHandler,
 	}
 	v1Registrations := []gateway.PbHandlerRegistration{
-		ethpbv1.RegisterBeaconNodeHandler,
-		ethpbv1.RegisterBeaconChainHandler,
-		ethpbv1.RegisterBeaconValidatorHandler,
-		ethpbv1.RegisterEventsHandler,
+		ethpbservice.RegisterBeaconNodeHandler,
+		ethpbservice.RegisterBeaconChainHandler,
+		ethpbservice.RegisterBeaconValidatorHandler,
+		ethpbservice.RegisterEventsHandler,
 	}
 	if enableDebugRPCEndpoints {
 		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbv1.RegisterBeaconDebugHandler)
+		v1Registrations = append(v1Registrations, ethpbservice.RegisterBeaconDebugHandler)
 
 	}
 	v1Alpha1Mux := gwruntime.NewServeMux(
