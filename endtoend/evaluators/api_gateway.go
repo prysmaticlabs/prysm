@@ -49,8 +49,8 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 		if err = json.NewDecoder(apiresp.Body).Decode(&httpChainHeadResp); err != nil {
 			return err
 		}
-		if chainHeadResponse.HeadSlot != uint64(resp.HeadSlot) {
-			return fmt.Errorf("HTTP gateway chainhead %v does not match gRPC chainhead %v", chainHeadResponse, resp)
+		if httpChainHeadResp.HeadSlot != uint64(resp.HeadSlot) {
+			return fmt.Errorf("HTTP gateway chainhead %v does not match gRPC chainhead %v", httpChainHeadResp, resp)
 		}
 	}
 	return nil
