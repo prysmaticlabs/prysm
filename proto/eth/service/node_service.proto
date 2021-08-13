@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1;
+package ethereum.eth.service;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
@@ -21,46 +21,46 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/v1/node.proto";
 
-option csharp_namespace = "Ethereum.Eth.V1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
+option csharp_namespace = "Ethereum.Eth.Service";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
 option java_multiple_files = true;
-option java_outer_classname = "NodeServiceProto";
-option java_package = "org.ethereum.eth.v1";
-option php_namespace = "Ethereum\\Eth\\v1";
+option java_outer_classname = "BeaconChainServiceProto";
+option java_package = "org.ethereum.eth.service";
+option php_namespace = "Ethereum\\Eth\\Service";
 
 // Beacon chain node API
 //
 // The beacon chain node API is a set of endpoints to query node information.
 service BeaconNode {
   // GetIdentity retrieves data about the node's network presence.
-  rpc GetIdentity(google.protobuf.Empty) returns (IdentityResponse) {
+  rpc GetIdentity(google.protobuf.Empty) returns (v1.IdentityResponse) {
     option (google.api.http) = {get: "/eth/v1/node/identity"};
   }
 
   // ListPeers retrieves data about the node's network peers.
-  rpc ListPeers(PeersRequest) returns (PeersResponse) {
+  rpc ListPeers(v1.PeersRequest) returns (v1.PeersResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peers"};
   }
 
   // GetPeer retrieves data about the given peer.
-  rpc GetPeer(PeerRequest) returns (PeerResponse) {
+  rpc GetPeer(v1.PeerRequest) returns (v1.PeerResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peers/{peer_id}"};
   }
 
   // PeerCount retrieves number of known peers.
-  rpc PeerCount(google.protobuf.Empty) returns (PeerCountResponse) {
+  rpc PeerCount(google.protobuf.Empty) returns (v1.PeerCountResponse) {
     option (google.api.http) = {get: "/eth/v1/node/peer_count"};
   }
 
   // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
   // if it is, what block it is up to.
-  rpc GetSyncStatus(google.protobuf.Empty) returns (SyncingResponse) {
+  rpc GetSyncStatus(google.protobuf.Empty) returns (v1.SyncingResponse) {
     option (google.api.http) = {get: "/eth/v1/node/syncing"};
   }
 
   // GetVersion requests that the beacon node identify information about its implementation in a
   // format similar to a HTTP User-Agent field.
-  rpc GetVersion(google.protobuf.Empty) returns (VersionResponse) {
+  rpc GetVersion(google.protobuf.Empty) returns (v1.VersionResponse) {
     option (google.api.http) = {get: "/eth/v1/node/version"};
   }
 
