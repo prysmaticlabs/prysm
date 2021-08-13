@@ -1,7 +1,7 @@
 package node
 
 import (
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 )
 
-var _ ethpb.BeaconNodeServer = (*Server)(nil)
+var _ ethpbservice.BeaconNodeServer = (*Server)(nil)

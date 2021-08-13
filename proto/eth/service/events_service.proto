@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1;
+package ethereum.eth.service;
 
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
@@ -21,18 +21,18 @@ import "google/protobuf/descriptor.proto";
 import "proto/eth/v1/events.proto";
 import "proto/gateway/event_source.proto";
 
-option csharp_namespace = "Ethereum.Eth.V1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
+option csharp_namespace = "Ethereum.Eth.Service";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "EventsServiceProto";
-option java_package = "org.ethereum.eth.v1";
-option php_namespace = "Ethereum\\Eth\\v1";
+option java_package = "org.ethereum.eth.service";
+option php_namespace = "Ethereum\\Eth\\Service";
 
 // Events API
 //
 // This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
 service Events {
-    rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
+    rpc StreamEvents(v1.StreamEventsRequest) returns (stream gateway.EventSource) {
         option (google.api.http) = {
             get: "/eth/v1/events"
         };

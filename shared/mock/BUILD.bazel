@@ -20,6 +20,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
