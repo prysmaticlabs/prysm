@@ -71,6 +71,11 @@ func (r *testRunner) run() {
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 
+	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
+	g.Go(func() error {
+		return tracingSink.Start(ctx)
+	})
+
 	// ETH1 node.
 	eth1Node := components.NewEth1Node()
 	g.Go(func() error {
@@ -130,7 +135,7 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			eth1Node, bootNode, beaconNodes, validatorNodes,
+			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
 		if config.TestSlasher && slasherNodes != nil {
 			requiredComponents = append(requiredComponents, slasherNodes)

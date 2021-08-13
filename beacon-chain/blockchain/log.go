@@ -18,7 +18,7 @@ var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
 func logStateTransitionData(b block.BeaconBlock) {
-	log := log.WithField("slot", b.Slot)
+	log := log.WithField("slot", b.Slot())
 	if len(b.Body().Attestations()) > 0 {
 		log = log.WithField("attestations", len(b.Body().Attestations()))
 	}

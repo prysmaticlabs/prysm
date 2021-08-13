@@ -98,6 +98,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinAttestationInclusionDelay:     1,
 	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
+	SqrRootSlotsPerEpoch:             5,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
 	EpochsPerEth1VotingPeriod:        64,
@@ -173,6 +174,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SlotsPerArchivedPoint:       2048,
 	GenesisCountdownInterval:    time.Minute,
 	ConfigName:                  ConfigNames[Mainnet],
+	PresetBase:                  "mainnet",
 	BeaconStateFieldCount:       21,
 	BeaconStateAltairFieldCount: 24,
 
@@ -185,9 +187,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion: []byte{0, 0, 0, 0},
-	AltairForkVersion:  []byte{1, 0, 0, 0},
-	AltairForkEpoch:    mainnetAltairForkEpoch,
+	GenesisForkVersion:          []byte{0, 0, 0, 0},
+	AltairForkVersion:           []byte{1, 0, 0, 0},
+	AltairForkEpoch:             mainnetAltairForkEpoch,
+	MergeForkVersion:            []byte{2, 0, 0, 0},
+	MergeForkEpoch:              math.MaxUint64,
+	ShardingForkVersion:         []byte{3, 0, 0, 0},
+	ShardingForkEpoch:           math.MaxUint64,
+	MinAnchorPowBlockDifficulty: 4294967296,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,

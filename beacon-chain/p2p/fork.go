@@ -93,7 +93,10 @@ func addForkEntry(
 	if timeutils.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}
-	nextForkVersion, nextForkEpoch := p2putils.NextForkData(currentEpoch)
+	nextForkVersion, nextForkEpoch, err := p2putils.NextForkData(currentEpoch)
+	if err != nil {
+		return nil, err
+	}
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
 		NextForkVersion:   nextForkVersion[:],

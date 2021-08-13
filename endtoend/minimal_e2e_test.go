@@ -35,10 +35,13 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-
+	const tracingEndpoint = "127.0.0.1:9411"
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
+			fmt.Sprintf("--tracing-endpoint=http://%s", tracingEndpoint),
+			"--enable-tracing",
+			"--trace-sample-fraction=1.0",
 		},
 		ValidatorFlags:      []string{},
 		EpochsToRun:         uint64(epochsToRun),
@@ -47,6 +50,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		TestSlasher:         false,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
+		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,

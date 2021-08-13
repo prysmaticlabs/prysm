@@ -40,6 +40,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
+	minimalConfig.SqrRootSlotsPerEpoch = 2
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.EpochsPerEth1VotingPeriod = 4
@@ -87,6 +88,10 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// New Altair params
 	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
 	minimalConfig.AltairForkEpoch = math.MaxUint64
+	minimalConfig.MergeForkVersion = []byte{2, 0, 0, 1}
+	minimalConfig.MergeForkEpoch = math.MaxUint64
+	minimalConfig.ShardingForkVersion = []byte{3, 0, 0, 1}
+	minimalConfig.ShardingForkEpoch = math.MaxUint64
 	// Manually set fork version schedule here.
 	minimalConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
 		{0, 0, 0, 1}: 0,
@@ -95,6 +100,14 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
+
+	// Ethereum PoW parameters.
+	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
+	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
+	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
+
+	minimalConfig.ConfigName = ConfigNames[Minimal]
+	minimalConfig.PresetBase = "minimal"
 
 	return minimalConfig
 }

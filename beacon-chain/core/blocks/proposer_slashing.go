@@ -10,10 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(state.BeaconState, types.ValidatorIndex) (state.BeaconState, error)
+type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -54,7 +55,12 @@ func ProcessProposerSlashings(
 		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex)
+		cfg := params.BeaconConfig()
+		slashingQuotient := cfg.MinSlashingPenaltyQuotient
+		if beaconState.Version() == version.Altair {
+			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+		}
+		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}

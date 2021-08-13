@@ -34,7 +34,8 @@ import (
 //    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
-func SlashValidator(state state.BeaconState, slashedIdx types.ValidatorIndex) (state.BeaconState, error) {
+func SlashValidator(state state.BeaconState, slashedIdx types.ValidatorIndex, penaltyQuotient uint64,
+	proposerRewardQuotient uint64) (state.BeaconState, error) {
 	state, err := validators.InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
@@ -61,7 +62,7 @@ func SlashValidator(state state.BeaconState, slashedIdx types.ValidatorIndex) (s
 	); err != nil {
 		return nil, err
 	}
-	if err := helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotientAltair); err != nil {
+	if err := helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/penaltyQuotient); err != nil {
 		return nil, err
 	}
 

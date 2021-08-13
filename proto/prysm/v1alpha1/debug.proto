@@ -24,43 +24,43 @@ service Debug {
     // Returns a beacon state by filter criteria from the beacon node.
     rpc GetBeaconState(BeaconStateRequest) returns (SSZResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/state"
+            get: "/eth/v1alpha1/debug/state"
         };
     }
     // Returns a beacon state by filter criteria from the beacon node.
     rpc GetBlock(BlockRequestByRoot) returns (SSZResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/block"
+            get: "/eth/v1alpha1/debug/block"
         };
     }
     // SetLoggingLevel sets the log-level of the beacon node programmatically.
     rpc SetLoggingLevel(LoggingLevelRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
-            post: "/prysm/v1alpha1/debug/logging"
+            post: "/eth/v1alpha1/debug/logging"
         };
     }
     // Returns a proto array fork choice object from the beacon node.
     rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/forkchoice"
+            get: "/eth/v1alpha1/debug/forkchoice"
         };
     }
     // Returns all the related data for every peer tracked by the host node.
     rpc ListPeers(google.protobuf.Empty) returns (DebugPeerResponses){
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/peers"
+            get: "/eth/v1alpha1/debug/peers"
         };
     }
     // Returns requested peer with specified peer id if it exists.
     rpc GetPeer(ethereum.eth.v1alpha1.PeerRequest) returns (DebugPeerResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/peer"
+            get: "/eth/v1alpha1/debug/peer"
         };
     }
     // Returns the inclusion slot of a given attester id and slot.
     rpc GetInclusionSlot(InclusionSlotRequest) returns (InclusionSlotResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/debug/inclusion"
+            get: "/eth/v1alpha1/debug/inclusion"
         };
     }
 }

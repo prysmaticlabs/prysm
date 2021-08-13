@@ -23,6 +23,22 @@ func TestFork(t *testing.T) {
 		setConfg    func()
 	}{
 		{
+			name:        "no fork",
+			targetEpoch: 0,
+			want: &ethpb.Fork{
+				Epoch:           0,
+				CurrentVersion:  []byte{'A', 'B', 'C', 'D'},
+				PreviousVersion: []byte{'A', 'B', 'C', 'D'},
+			},
+			wantErr: false,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
 			name:        "genesis fork",
 			targetEpoch: 0,
 			want: &ethpb.Fork{
@@ -353,7 +369,8 @@ func TestNextForkData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setConfg()
-			fVersion, fEpoch := NextForkData(tt.currEpoch)
+			fVersion, fEpoch, err := NextForkData(tt.currEpoch)
+			assert.NoError(t, err)
 			if fVersion != tt.wantedForkVerison {
 				t.Errorf("NextForkData() fork version = %v, want %v", fVersion, tt.wantedForkVerison)
 			}

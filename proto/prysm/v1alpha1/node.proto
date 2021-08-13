@@ -36,21 +36,21 @@ service Node {
     // Retrieve the current network sync status of the node.
 	rpc GetSyncStatus(google.protobuf.Empty) returns (SyncStatus) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/syncing"
+            get: "/eth/v1alpha1/node/syncing"
         };
     }
 
     // Retrieve information about the genesis of Ethereum proof of stake.
     rpc GetGenesis(google.protobuf.Empty) returns (Genesis) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/genesis"
+            get: "/eth/v1alpha1/node/genesis"
         };
     }
 
     // Retrieve information about the running Ethereum Beacon Node.
     rpc GetVersion(google.protobuf.Empty) returns (Version) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/version"
+            get: "/eth/v1alpha1/node/version"
         };
     }
 
@@ -61,28 +61,28 @@ service Node {
     // reflection.
     rpc ListImplementedServices(google.protobuf.Empty) returns (ImplementedServices) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/services"
+            get: "/eth/v1alpha1/node/services"
         };
     }
 
     // Retrieves the peer data of the local peer.
     rpc GetHost(google.protobuf.Empty) returns (HostData) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/p2p"
+            get: "/eth/v1alpha1/node/p2p"
         };
     }
 
     // Retrieve the peer corresponding to the provided peer id.
     rpc GetPeer(PeerRequest) returns (Peer) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/peer"
+            get: "/eth/v1alpha1/node/peer"
         };
     }
 
     // Retrieve the list of peers currently connected to this node.
     rpc ListPeers(google.protobuf.Empty) returns (Peers) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/node/peers"
+            get: "/eth/v1alpha1/node/peers"
         };
     }
 }

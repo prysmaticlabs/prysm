@@ -19,7 +19,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 service Health {
     rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
         option (google.api.http) = {
-            get: "/prysm/v1alpha1/health/logs/stream"
+            get: "/eth/v1alpha1/health/logs/stream"
         };
     }
 }

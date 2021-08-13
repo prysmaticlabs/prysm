@@ -3,17 +3,19 @@ package params
 import (
 	"io/ioutil"
 	"path"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"gopkg.in/yaml.v2"
 )
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/master/tests/minimal/config/phase0.yaml
-	assertVals := func(name string, c1, c2 *BeaconChainConfig) {
+	assertVals := func(name string, fields []string, c1, c2 *BeaconChainConfig) {
 		//  Misc params.
 		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
 		assert.Equal(t, c1.TargetCommitteeSize, c2.TargetCommitteeSize, "%s: TargetCommitteeSize", name)
@@ -97,22 +99,43 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 		assert.Equal(t, c1.DomainVoluntaryExit, c2.DomainVoluntaryExit, "%s: DomainVoluntaryExit", name)
 		assert.Equal(t, c1.DomainSelectionProof, c2.DomainSelectionProof, "%s: DomainSelectionProof", name)
 		assert.Equal(t, c1.DomainAggregateAndProof, c2.DomainAggregateAndProof, "%s: DomainAggregateAndProof", name)
+
+		// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
+		ft1 := reflect.TypeOf(*c1)
+		for _, field := range fields {
+			var found bool
+			for i := 0; i < ft1.NumField(); i++ {
+				v, ok := ft1.Field(i).Tag.Lookup("yaml")
+				if ok && v == field {
+					found = true
+					v1 := reflect.ValueOf(*c1).Field(i).Interface()
+					v2 := reflect.ValueOf(*c2).Field(i).Interface()
+					if reflect.ValueOf(v1).Kind() == reflect.Slice {
+						assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
+					} else {
+						assert.Equal(t, v1, v2, "%s: %s", name, field)
+					}
+					break
+				}
+			}
+			if !found {
+				t.Errorf("No struct tag found `yaml:%s`", field)
+			}
+		}
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
 		mainnetConfigFile := configFilePath(t, "mainnet")
 		LoadChainConfigFile(mainnetConfigFile)
-		mainnetPresetFile := configFilePath(t, "mainnet")
-		LoadChainConfigFile(mainnetPresetFile)
-		assertVals("mainnet", MainnetConfig(), BeaconConfig())
+		fields := fieldsFromYaml(t, mainnetConfigFile)
+		assertVals("mainnet", fields, MainnetConfig(), BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
 		minimalConfigFile := configFilePath(t, "minimal")
 		LoadChainConfigFile(minimalConfigFile)
-		minimalPresetFile := presetsFilePath(t, "minimal")
-		LoadChainConfigFile(minimalPresetFile)
-		assertVals("minimal", MinimalSpecConfig(), BeaconConfig())
+		fields := fieldsFromYaml(t, minimalConfigFile)
+		assertVals("minimal", fields, MinimalSpecConfig(), BeaconConfig())
 	})
 }
 
@@ -221,4 +244,33 @@ func presetsFilePath(t *testing.T, config string) string {
 	require.NoError(t, err)
 	configFilePath := path.Join(filepath, "presets", config, "phase0.yaml")
 	return configFilePath
+}
+
+// Deprecated: This sets the proper config and returns the relevant
+// config file path from eth2-spec-tests directory. From altair onwards
+// we use the other methods to retrieve the spec config.
+func deprecatedConfigFilePath(t *testing.T, config string) string {
+	configFolderPath := path.Join("tests", config)
+	filepath, err := bazel.Runfile(configFolderPath)
+	require.NoError(t, err)
+	configFilePath := path.Join(filepath, "config", "phase0.yaml")
+	return configFilePath
+}
+
+func fieldsFromYaml(t *testing.T, fp string) []string {
+	yamlFile, err := ioutil.ReadFile(fp)
+	require.NoError(t, err)
+	m := make(map[string]interface{})
+	require.NoError(t, yaml.Unmarshal(yamlFile, &m))
+
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	if len(keys) == 0 {
+		t.Errorf("No fields loaded from yaml file %s", fp)
+	}
+
+	return keys
 }
