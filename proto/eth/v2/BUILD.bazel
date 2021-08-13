@@ -66,3 +66,10 @@ go_proto_library(
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
     ],
 )
+
+go_library(
+    name = "go_default_library",
+    embed = [":go_grpc_gateway_library"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2",
+    visibility = ["//visibility:public"],
+)
