@@ -1,4 +1,4 @@
-package evaluators
+package main
 
 import (
 	"context"
@@ -8,24 +8,21 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 )
 
-// APIGatewayV1Alpha1VerifyIntegrity of our API gateway for the Prysm v1alpha1 API.
-// This ensures our gRPC HTTP gateway returns and processes the same data _for the same endpoints_
-// as using a gRPC connection to interact with the API. Running this in end-to-end tests helps us
-// ensure parity between our HTTP gateway for our API and gRPC never breaks.
-// This evaluator checks a few request/response trips for both GET and POST requests.
-var APIGatewayV1Alpha1VerifyIntegrity = e2etypes.Evaluator{
-	Name:       "api_gateway_v1alpha1_verify_integrity_epoch_%d",
-	Policy:     policies.OnEpoch(2),
-	Evaluation: apiGatewayV1Alpha1Verify,
-}
-
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
+
+func main() {
+	conn, err := grpc.Dial("localhost:4000", grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	if err := apiGatewayV1Alpha1Verify(conn); err != nil {
+		panic(err)
+	}
+}
 
 func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 	for beaconNodeIdx, conn := range conns {
@@ -43,10 +40,10 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 
 func withCompareValidators(beacon int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
-	beaconClient := ethpb.NewBeaconClient(conn)
-	resp, err := beaconClient.GetValidators(ctx, &ethpb.ListValidatorsRequest{
-		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
-			Epoch: 1,
+	beaconClient := ethpb.NewBeaconChainClient(conn)
+	resp, err := beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{
+			Genesis: true,
 		},
 		PageSize: 4,
 	})
@@ -54,9 +51,9 @@ func withCompareValidators(beacon int, conn *grpc.ClientConn) error {
 		return err
 	}
 	_ = resp
-	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", e2e.TestParams.BeaconNodeRPCPort+beacon+40)
+	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beacon)
 	httpResp, err := http.Get(
-		basePath + "/beacon/validators?epoch=1&page_size=4",
+		basePath + "/beacon/validators?genesis=true&page_size=4",
 	)
 	if err != nil {
 		return err
