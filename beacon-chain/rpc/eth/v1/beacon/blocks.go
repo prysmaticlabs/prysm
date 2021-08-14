@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -39,7 +40,7 @@ func (e *blockIdParseError) Error() string {
 }
 
 // GetBlockHeader retrieves block header for given block id.
-func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockHeaderResponse, error) {
+func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
 	defer span.End()
 
@@ -76,11 +77,11 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 	}
 
-	return &ethpb.BlockHeaderResponse{
-		Data: &ethpb.BlockHeaderContainer{
+	return &ethpbv1.BlockHeaderResponse{
+		Data: &ethpbv1.BlockHeaderContainer{
 			Root:      root[:],
 			Canonical: canonical,
-			Header: &ethpb.BeaconBlockHeaderContainer{
+			Header: &ethpbv1.BeaconBlockHeaderContainer{
 				Message:   v1BlockHdr.Message,
 				Signature: v1BlockHdr.Signature,
 			},
@@ -89,7 +90,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 }
 
 // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
-func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersRequest) (*ethpb.BlockHeadersResponse, error) {
+func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeadersRequest) (*ethpbv1.BlockHeadersResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockHeaders")
 	defer span.End()
 
@@ -119,7 +120,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		return nil, status.Error(codes.NotFound, "Could not find requested blocks")
 	}
 
-	blkHdrs := make([]*ethpb.BlockHeaderContainer, len(blks))
+	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
 		blk, err := bl.PbPhase0Block()
 		if err != nil {
@@ -137,17 +138,17 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
-		blkHdrs[i] = &ethpb.BlockHeaderContainer{
+		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
 			Root:      root[:],
 			Canonical: canonical,
-			Header: &ethpb.BeaconBlockHeaderContainer{
+			Header: &ethpbv1.BeaconBlockHeaderContainer{
 				Message:   blkHdr.Message,
 				Signature: blkHdr.Signature,
 			},
 		}
 	}
 
-	return &ethpb.BlockHeadersResponse{Data: blkHdrs}, nil
+	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
@@ -155,12 +156,12 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContainer) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitBlock")
 	defer span.End()
 
 	blk := req.Message
-	rBlock, err := migration.V1ToV1Alpha1SignedBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
+	rBlock, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
@@ -194,7 +195,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 }
 
 // GetBlock retrieves block details for given block ID.
-func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockResponse, error) {
+func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
 	defer span.End()
 
@@ -210,8 +211,8 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
-	return &ethpb.BlockResponse{
-		Data: &ethpb.BeaconBlockContainer{
+	return &ethpbv1.BlockResponse{
+		Data: &ethpbv1.BeaconBlockContainer{
 			Message:   signedBeaconBlock.Block,
 			Signature: signedBeaconBlock.Signature,
 		},
@@ -219,7 +220,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 }
 
 // GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
-func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockSSZResponse, error) {
+func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
 	defer span.End()
 
@@ -239,11 +240,19 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpb.BlockRequest) (*et
 		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 	}
 
-	return &ethpb.BlockSSZResponse{Data: sszBlock}, nil
+	return &ethpbv1.BlockSSZResponse{Data: sszBlock}, nil
+}
+
+func (bs *Server) GetBlockAltair(ctx context.Context, request *ethpbv2.BlockRequest) (*ethpbv2.BlockResponse, error) {
+	panic("implement me")
+}
+
+func (bs *Server) GetBlockSSZAltair(ctx context.Context, request *ethpbv2.BlockRequest) (*ethpbv2.BlockSSZResponse, error) {
+	panic("implement me")
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
-func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockRootResponse, error) {
+func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockRoot")
 	defer span.End()
 
@@ -315,15 +324,15 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		}
 	}
 
-	return &ethpb.BlockRootResponse{
-		Data: &ethpb.BlockRootContainer{
+	return &ethpbv1.BlockRootResponse{
+		Data: &ethpbv1.BlockRootContainer{
 			Root: root,
 		},
 	}, nil
 }
 
 // ListBlockAttestations retrieves attestation included in requested block.
-func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockAttestationsResponse, error) {
+func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockAttestationsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockAttestations")
 	defer span.End()
 
@@ -347,7 +356,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
 	}
-	return &ethpb.BlockAttestationsResponse{
+	return &ethpbv1.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
 	}, nil
 }
