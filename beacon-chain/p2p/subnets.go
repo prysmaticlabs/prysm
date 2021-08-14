@@ -47,6 +47,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	iterator := s.dv5Listener.RandomNodes()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
+		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
 		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
 	default:
