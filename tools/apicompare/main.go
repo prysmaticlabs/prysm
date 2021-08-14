@@ -70,7 +70,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	validatorsRespJSON := &ethpb.Validators{}
+	validatorsRespJSON := &validatorsResponseJSON{}
 	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + "/beacon/validators?genesis=true&page_size=4",
@@ -81,7 +81,44 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err = json.NewDecoder(httpResp.Body).Decode(&validatorsRespJSON); err != nil {
 		return err
 	}
-	_ = resp
+
+	// Begin comparisons.
+	if validatorsRespJSON.Epoch != fmt.Sprintf("%d", resp.Epoch) {
+		return fmt.Errorf(
+			"HTTP gateway epoch %s does not match gRPC %d",
+			validatorsRespJSON.Epoch,
+			resp.Epoch,
+		)
+	}
+	if validatorsRespJSON.NextPageToken != resp.NextPageToken {
+		return fmt.Errorf(
+			"HTTP gateway next page token %s does not match gRPC %s",
+			validatorsRespJSON.NextPageToken,
+			resp.NextPageToken,
+		)
+	}
+	if validatorsRespJSON.TotalSize != fmt.Sprintf("%d", resp.TotalSize) {
+		return fmt.Errorf(
+			"HTTP gateway total size %s does not match gRPC %d",
+			validatorsRespJSON.TotalSize,
+			resp.TotalSize,
+		)
+	}
+
+	// Compare validators.
+	for i, val := range validatorsRespJSON.ValidatorList {
+		_ = val
+		if val.Index != fmt.Sprintf("%d", resp.ValidatorList[i].Index) {
+			return fmt.Errorf(
+				"HTTP gateway validator %d index %s does not match gRPC %d",
+				i,
+				val.Index,
+				resp.ValidatorList[i].Index,
+			)
+		}
+		continue
+	}
+
 	return nil
 }
 
