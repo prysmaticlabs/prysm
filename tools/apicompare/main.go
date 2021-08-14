@@ -39,6 +39,26 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 }
 
 func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type validatorJSON struct {
+		PublicKey                  []string `json:"publicKey"`
+		WithdrawalCredentials      []string `json:"withdrawalCredentials"`
+		EffectiveBalance           string   `json:"effectiveBalance"`
+		Slashed                    string   `json:"slashed"`
+		ActivationEligibilityEpoch string   `json:"activationEligibilityEpoch"`
+		ActivationEpoch            string   `json:"activationEpoch"`
+		ExitEpoch                  string   `json:"exitEpoch"`
+		WithdrawableEpoch          string   `json:"withdrawableEpoch"`
+	}
+	type validatorContainerJSON struct {
+		Index     string         `json:"index"`
+		Validator *validatorJSON `json:"validator"`
+	}
+	type validatorsResponseJSON struct {
+		Epoch         string                    `json:"epoch"`
+		ValidatorList []*validatorContainerJSON `json:"validatorList"`
+		NextPageToken string                    `json:"nextPageToken"`
+		TotalSize     string                    `json:"totalSize"`
+	}
 	ctx := context.Background()
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
@@ -50,7 +70,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	_ = resp
+	validatorsRespJSON := &ethpb.Validators{}
 	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + "/beacon/validators?genesis=true&page_size=4",
@@ -58,14 +78,10 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	//jsonResp := make(map[string]string)
-	//if err = json.NewDecoder(httpResp.Body).Decode(&jsonResp); err != nil {
-	//return err
-	//}
-	//if fmt.Sprintf("%d", resp.Epoch) != jsonResp["epoch"] {
-	//return fmt.Errorf("gRPC got %d, gateway got %s", resp.Epoch, jsonResp["epoch"])
-	//}
-	_ = httpResp
+	if err = json.NewDecoder(httpResp.Body).Decode(&validatorsRespJSON); err != nil {
+		return err
+	}
+	_ = resp
 	return nil
 }
 
