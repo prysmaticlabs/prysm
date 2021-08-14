@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "altair.go",
         "archived_point.go",
         "backup.go",
         "blocks.go",
@@ -50,6 +51,7 @@ go_library(
         "//shared/progressutil:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/traceutil:go_default_library",
+        "//shared/version:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
@@ -72,6 +74,7 @@ go_test(
     srcs = [
         "archived_point_test.go",
         "backup_test.go",
+        "block_altair_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
