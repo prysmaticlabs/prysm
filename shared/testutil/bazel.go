@@ -26,7 +26,7 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileBytes, err := ioutil.ReadFile(filepath)
+	fileBytes, err := ioutil.ReadFile(filepath) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
