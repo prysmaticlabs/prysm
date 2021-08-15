@@ -1,9 +1,7 @@
 package helpers
 
 import (
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -51,18 +49,6 @@ func TotalBalance(state state.ReadOnlyValidators, indices []types.ValidatorIndex
 func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	// Check if the active balance exists in cache.
 	epoch := SlotToEpoch(s.Slot())
-
-	seed, err := Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get seed")
-	}
-	activeBalance, err := committeeCache.ActiveBalance(seed)
-	if err == nil {
-		return activeBalance, nil
-	}
-	if err != cache.ErrNonCommitteeKey {
-		return 0, errors.Wrap(err, "could not interface with committee cache")
-	}
 
 	// Cache miss. Manually compute the active balance and fill the cache.
 	total := uint64(0)
