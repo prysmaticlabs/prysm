@@ -155,7 +155,7 @@ func ReloadHTTP(w http.ResponseWriter, _ *http.Request) {
 
 // OpenAddresses from text file (name:address)
 func OpenAddresses(filename string) error {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) // #nosec G304
 	if err != nil {
 		return err
 	}
