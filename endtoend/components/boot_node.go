@@ -55,7 +55,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 		"--debug",
 	}
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 	cmd.Stdout = stdOutFile
 	cmd.Stderr = stdOutFile
 	log.Infof("Starting boot node with flags: %s", strings.Join(args[1:], " "))
@@ -84,7 +84,7 @@ func (node *BootNode) Started() <-chan struct{} {
 }
 
 func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name)
+	byteContent, err := ioutil.ReadFile(name) // #nosec G304
 	if err != nil {
 		return "", err
 	}

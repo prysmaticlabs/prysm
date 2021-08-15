@@ -199,7 +199,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	var accountsPassword string
 	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
 		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath)
+		data, err := ioutil.ReadFile(passwordFilePath) // #nosec G304
 		if err != nil {
 			return err
 		}
@@ -248,7 +248,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *i
 	if !fileutil.FileExists(fullPath) {
 		return fmt.Errorf("file %s does not exist", fullPath)
 	}
-	privKeyHex, err := ioutil.ReadFile(fullPath)
+	privKeyHex, err := ioutil.ReadFile(fullPath) // #nosec G304
 	if err != nil {
 		return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
 	}
@@ -288,7 +288,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *i
 }
 
 func readKeystoreFile(_ context.Context, keystoreFilePath string) (*keymanager.Keystore, error) {
-	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath)
+	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath) // #nosec G304
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keystore file")
 	}
