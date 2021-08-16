@@ -73,12 +73,55 @@ func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	); err != nil {
 		return err
 	}
-	if len(respJSON.Peers) == len(resp.Peers) {
+	if len(respJSON.Peers) != len(resp.Peers) {
 		return fmt.Errorf(
 			"HTTP gateway number of peers %d does not match gRPC %d",
 			len(respJSON.Peers),
 			len(resp.Peers),
 		)
+	}
+	for i, peer := range respJSON.Peers {
+		grpcPeer := resp.Peers[i]
+		if peer.Address != grpcPeer.Address {
+			return fmt.Errorf(
+				"HTTP gateway peer %d address %s does not match gRPC %s",
+				i,
+				peer.Address,
+				grpcPeer.Address,
+			)
+		}
+		if peer.Direction != grpcPeer.Direction.String() {
+			return fmt.Errorf(
+				"HTTP gateway peer %d direction %s does not match gRPC %s",
+				i,
+				peer.Direction,
+				grpcPeer.Direction,
+			)
+		}
+		if peer.ConnectionState != grpcPeer.ConnectionState.String() {
+			return fmt.Errorf(
+				"HTTP gateway peer %d connection state %s does not match gRPC %s",
+				i,
+				peer.ConnectionState,
+				grpcPeer.ConnectionState,
+			)
+		}
+		if peer.PeerId != grpcPeer.PeerId {
+			return fmt.Errorf(
+				"HTTP gateway peer %d peer id %s does not match gRPC %s",
+				i,
+				peer.PeerId,
+				grpcPeer.PeerId,
+			)
+		}
+		if peer.Enr != grpcPeer.Enr {
+			return fmt.Errorf(
+				"HTTP gateway peer %d enr %s does not match gRPC %s",
+				i,
+				peer.Enr,
+				grpcPeer.Enr,
+			)
+		}
 	}
 	return nil
 }
