@@ -281,6 +281,9 @@ func (s *Service) Status() error {
 	if s.startupErr != nil {
 		return s.startupErr
 	}
+	if s.genesisTime.IsZero() {
+		return errors.New("no genesis time set")
+	}
 	return nil
 }
 
