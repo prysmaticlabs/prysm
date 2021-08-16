@@ -24,7 +24,9 @@ var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
 // The value used with the subnet, inorder
 // to create an appropriate key tor retrieve
-// the relevant lock.
+// the relevant lock. This is used to differentiate
+// sync subnets from attestation subnets. This is deliberately
+// chosen as more than 64(attestation subnet count).
 const syncLockerVal = 100
 
 // FindPeersWithSubnet performs a network search for peers
