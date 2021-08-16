@@ -29,11 +29,72 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
+			withCompareAttestationPool,
 			withCompareValidators,
 			withCompareChainHead,
 		); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type checkpointJSON struct {
+		Epoch string `json:"epoch"`
+		Root  string `json:"root"`
+	}
+	type attestationDataJSON struct {
+		Slot            string          `json:"slot"`
+		CommitteeIndex  string          `json:"committeeIndex"`
+		BeaconBlockRoot string          `json:"beaconBlockRoot"`
+		Source          *checkpointJSON `json:"source"`
+		Target          *checkpointJSON `json:"target"`
+	}
+	type attestationJSON struct {
+		AggregationBits string `json:"aggregationBits"`
+		Data            string `json:"data"`
+		Signature       string `json:"signature"`
+	}
+	type attestationPoolResponseJSON struct {
+		Attestations  []*attestationJSON `json:"attestations"`
+		NextPageToken string             `json:"nextPageToken"`
+		TotalSize     int32              `json:"totalSize"`
+	}
+	ctx := context.Background()
+	beaconClient := ethpb.NewBeaconChainClient(conn)
+	resp, err := beaconClient.AttestationPool(ctx, &ethpb.AttestationPoolRequest{
+		PageSize: 4,
+	})
+	if err != nil {
+		return err
+	}
+	respJSON := &attestationPoolResponseJSON{}
+	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
+	httpResp, err := http.Get(
+		basePath + "/beacon/attestations/pool?page_size=4",
+	)
+	if err != nil {
+		return err
+	}
+	if err = json.NewDecoder(httpResp.Body).Decode(&respJSON); err != nil {
+		return err
+	}
+
+	// Begin comparisons.
+	if respJSON.NextPageToken != resp.NextPageToken {
+		return fmt.Errorf(
+			"HTTP gateway next page token %s does not match gRPC %s",
+			respJSON.NextPageToken,
+			resp.NextPageToken,
+		)
+	}
+	if respJSON.TotalSize != resp.TotalSize {
+		return fmt.Errorf(
+			"HTTP gateway total size %d does not match gRPC %d",
+			respJSON.TotalSize,
+			resp.TotalSize,
+		)
 	}
 	return nil
 }
