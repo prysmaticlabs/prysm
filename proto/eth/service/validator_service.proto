@@ -20,6 +20,7 @@ import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
 import "proto/eth/v1/validator.proto";
+import "proto/eth/v2/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
@@ -61,6 +62,20 @@ service BeaconValidator {
     option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
   }
 
+  // GetSyncCommitteeDuties requests the beacon node to provide a set of sync committee duties for a particular epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch or index
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc GetSyncCommitteeDuties(v2.SyncCommitteeDutiesRequest) returns (v2.SyncCommitteeDutiesResponse) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/duties/sync/{epoch}"
+      body: "*"
+    };
+  }
+
   // ProduceBlock requests the beacon node to produce a valid unsigned beacon block,
   // which can then be signed by a proposer and submitted.
   //
@@ -71,6 +86,19 @@ service BeaconValidator {
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
+  }
+
+
+  // ProduceBlockAltair requests the beacon node to produce a valid unsigned beacon block,
+  // which can then be signed by a proposer and submitted.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlockAltair(v2.ProduceBlockRequest) returns (v2.ProduceBlockResponse) {
+    option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
   }
 
   // ProduceAttestationData requests that the beacon node produces attestation data for
@@ -125,6 +153,43 @@ service BeaconValidator {
   rpc SubmitBeaconCommitteeSubscription(v1.SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/beacon_committee_subscriptions"
+      body: "*"
+    };
+  }
+
+  // SubmitSyncCommitteeSubscription subscribes to a number of sync committee subnets
+  //
+  // Response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitSyncCommitteeSubscription(v2.SubmitSyncCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/sync_committee_subscriptions"
+      body: "*"
+    };
+  }
+
+  // ProduceSyncCommitteeContribution requests that the beacon node produces a sync committee contribution.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid request syntax
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceSyncCommitteeContribution(v2.ProduceSyncCommitteeContributionRequest) returns (v2.ProduceSyncCommitteeContributionResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/sync_committee_contribution" };
+  }
+
+  // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
+  //
+  // Response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitContributionAndProofs(v2.SubmitContributionAndProofsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/contribution_and_proofs"
       body: "*"
     };
   }

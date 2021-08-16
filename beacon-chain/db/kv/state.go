@@ -199,6 +199,9 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				if err != nil {
 					return err
 				}
+				if pbState == nil {
+					return errors.New("nil state")
+				}
 				valEntries := pbState.Validators
 				pbState.Validators = make([]*ethpb.Validator, 0)
 				encodedState, err := encode(ctx, pbState)

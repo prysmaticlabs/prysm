@@ -197,7 +197,7 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not determine absolute path of password file")
 	}
-	return ioutil.ReadFile(filePath)
+	return ioutil.ReadFile(filePath) // #nosec G304
 }
 
 // CopyFile copy a file from source to destination path.
@@ -205,11 +205,11 @@ func CopyFile(src, dst string) error {
 	if !FileExists(src) {
 		return errors.New("source file does not exist at provided path")
 	}
-	f, err := os.Open(src)
+	f, err := os.Open(src) // #nosec G304
 	if err != nil {
 		return err
 	}
-	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions)
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions) // #nosec G304
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func HashDir(dir string) (string, error) {
 	files = append([]string(nil), files...)
 	sort.Strings(files)
 	for _, file := range files {
-		fd, err := os.Open(filepath.Join(dir, file))
+		fd, err := os.Open(filepath.Join(dir, file)) // #nosec G304
 		if err != nil {
 			return "", err
 		}
