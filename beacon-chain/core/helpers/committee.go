@@ -274,7 +274,7 @@ func VerifyAttestationBitfieldLengths(state state.ReadOnlyBeaconState, att *ethp
 }
 
 // Returns the active indices of the validators in input `state` and during input `epoch`.
-func activeIndicesAndBalance(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func activeIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	indices := make([]types.ValidatorIndex, 0, s.NumValidators())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
@@ -301,7 +301,7 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return nil
 		}
 
-		indices, err := activeIndicesAndBalance(state, e)
+		indices, err := activeIndices(state, e)
 		if err != nil {
 			return err
 		}
