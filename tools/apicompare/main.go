@@ -43,7 +43,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		PublicKey                  string `json:"publicKey"`
 		WithdrawalCredentials      string `json:"withdrawalCredentials"`
 		EffectiveBalance           string `json:"effectiveBalance"`
-		Slashed                    string `json:"slashed"`
+		Slashed                    bool   `json:"slashed"`
 		ActivationEligibilityEpoch string `json:"activationEligibilityEpoch"`
 		ActivationEpoch            string `json:"activationEpoch"`
 		ExitEpoch                  string `json:"exitEpoch"`
@@ -57,7 +57,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		Epoch         string                    `json:"epoch"`
 		ValidatorList []*validatorContainerJSON `json:"validatorList"`
 		NextPageToken string                    `json:"nextPageToken"`
-		TotalSize     string                    `json:"totalSize"`
+		TotalSize     int32                     `json:"totalSize"`
 	}
 	ctx := context.Background()
 	beaconClient := ethpb.NewBeaconChainClient(conn)
@@ -73,7 +73,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	validatorsRespJSON := &validatorsResponseJSON{}
 	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
 	httpResp, err := http.Get(
-		basePath + "/beacon/validators?genesis=true&page_size=4",
+		basePath + "/validators?genesis=true&page_size=4",
 	)
 	if err != nil {
 		return err
@@ -97,9 +97,9 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			resp.NextPageToken,
 		)
 	}
-	if validatorsRespJSON.TotalSize != fmt.Sprintf("%d", resp.TotalSize) {
+	if validatorsRespJSON.TotalSize != resp.TotalSize {
 		return fmt.Errorf(
-			"HTTP gateway total size %s does not match gRPC %d",
+			"HTTP gateway total size %d does not match gRPC %d",
 			validatorsRespJSON.TotalSize,
 			resp.TotalSize,
 		)
@@ -107,7 +107,6 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 	// Compare validators.
 	for i, val := range validatorsRespJSON.ValidatorList {
-		_ = val
 		if val.Index != fmt.Sprintf("%d", resp.ValidatorList[i].Index) {
 			return fmt.Errorf(
 				"HTTP gateway validator %d index %s does not match gRPC %d",
@@ -128,7 +127,6 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		}
 		continue
 	}
-
 	return nil
 }
 
