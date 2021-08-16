@@ -40,14 +40,14 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 
 func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type validatorJSON struct {
-		PublicKey                  []string `json:"publicKey"`
-		WithdrawalCredentials      []string `json:"withdrawalCredentials"`
-		EffectiveBalance           string   `json:"effectiveBalance"`
-		Slashed                    string   `json:"slashed"`
-		ActivationEligibilityEpoch string   `json:"activationEligibilityEpoch"`
-		ActivationEpoch            string   `json:"activationEpoch"`
-		ExitEpoch                  string   `json:"exitEpoch"`
-		WithdrawableEpoch          string   `json:"withdrawableEpoch"`
+		PublicKey                  string `json:"publicKey"`
+		WithdrawalCredentials      string `json:"withdrawalCredentials"`
+		EffectiveBalance           string `json:"effectiveBalance"`
+		Slashed                    string `json:"slashed"`
+		ActivationEligibilityEpoch string `json:"activationEligibilityEpoch"`
+		ActivationEpoch            string `json:"activationEpoch"`
+		ExitEpoch                  string `json:"exitEpoch"`
+		WithdrawableEpoch          string `json:"withdrawableEpoch"`
 	}
 	type validatorContainerJSON struct {
 		Index     string         `json:"index"`
@@ -114,6 +114,16 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				i,
 				val.Index,
 				resp.ValidatorList[i].Index,
+			)
+		}
+		httpVal := val.Validator
+		grpcVal := resp.ValidatorList[i].Validator
+		if httpVal.PublicKey != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcVal.PublicKey)) {
+			return fmt.Errorf(
+				"HTTP gateway validator %d public key %s does not match gRPC %d",
+				i,
+				httpVal.PublicKey,
+				grpcVal.PublicKey,
 			)
 		}
 		continue
