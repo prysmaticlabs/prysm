@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/r3labs/sse"
