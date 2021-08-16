@@ -7,6 +7,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"google.golang.org/grpc/codes"
@@ -43,7 +44,7 @@ var casesHandled = map[string]bool{
 // The topics supported include block events, attestations, chain reorgs, voluntary exits,
 // chain finality, and more.
 func (s *Server) StreamEvents(
-	req *ethpb.StreamEventsRequest, stream ethpb.Events_StreamEventsServer,
+	req *ethpb.StreamEventsRequest, stream ethpbservice.Events_StreamEventsServer,
 ) error {
 	if req == nil || len(req.Topics) == 0 {
 		return status.Error(codes.InvalidArgument, "No topics specified to subscribe to")
@@ -95,7 +96,7 @@ func (s *Server) StreamEvents(
 }
 
 func (s *Server) handleBlockEvents(
-	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
 	case blockfeed.ReceivedBlock:
@@ -125,7 +126,7 @@ func (s *Server) handleBlockEvents(
 }
 
 func (s *Server) handleBlockOperationEvents(
-	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
@@ -164,7 +165,7 @@ func (s *Server) handleBlockOperationEvents(
 }
 
 func (s *Server) handleStateEvents(
-	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
 	case statefeed.NewHead:
@@ -199,7 +200,7 @@ func (s *Server) handleStateEvents(
 	}
 }
 
-func (s *Server) streamData(stream ethpb.Events_StreamEventsServer, name string, data proto.Message) error {
+func (s *Server) streamData(stream ethpbservice.Events_StreamEventsServer, name string, data proto.Message) error {
 	returnData, err := anypb.New(data)
 	if err != nil {
 		return err

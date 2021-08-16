@@ -39,7 +39,7 @@ import (
 type source struct{}
 
 var lock sync.RWMutex
-var _ mrand.Source64 = (*source)(nil)
+var _ mrand.Source64 = (*source)(nil) /* #nosec G404 */
 
 // Seed does nothing when crypto/rand is used as source.
 func (s *source) Seed(_ int64) {}
@@ -62,7 +62,7 @@ func (s *source) Uint64() (val uint64) {
 }
 
 // Rand is alias for underlying random generator.
-type Rand = mrand.Rand
+type Rand = mrand.Rand /* #nosec G404 */
 
 // NewGenerator returns a new generator that uses random values from crypto/rand as a source
 // (cryptographically secure random number generator).
@@ -70,7 +70,7 @@ type Rand = mrand.Rand
 // Use it for everything where crypto secure non-deterministic randomness is required. Performance
 // takes a hit, so use sparingly.
 func NewGenerator() *Rand {
-	return mrand.New(&source{})
+	return mrand.New(&source{}) /* #nosec G404 */
 }
 
 // NewDeterministicGenerator returns a random generator which is only seeded with crypto/rand,
@@ -80,5 +80,5 @@ func NewGenerator() *Rand {
 // Otherwise, rely on NewGenerator().
 func NewDeterministicGenerator() *Rand {
 	randGen := NewGenerator()
-	return mrand.New(mrand.NewSource(randGen.Int63()))
+	return mrand.New(mrand.NewSource(randGen.Int63())) /* #nosec G404 */
 }
