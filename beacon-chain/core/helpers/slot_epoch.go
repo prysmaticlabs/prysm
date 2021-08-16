@@ -208,8 +208,8 @@ func PrevSlot(slot types.Slot) types.Slot {
 // Spec code:
 // def compute_sync_committee_period(epoch: Epoch) -> uint64:
 //    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
-func SyncCommitteePeriod(e types.Epoch) uint64 {
-	return uint64(e / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+func SyncCommitteePeriod(epoch types.Epoch) uint64 {
+	return uint64(epoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 }
 
 // SyncCommitteePeriodStartEpoch returns the start epoch of a sync committee period.
