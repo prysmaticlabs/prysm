@@ -149,9 +149,8 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         iface.BeaconState
-
 	// vanguard properties
-	genesisPublicKeys []string
+	genesisPublicKeys map[int64]string
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -240,7 +239,6 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			return nil, errors.Wrap(err, "could not initialize caches")
 		}
 	}
-
 	if s.cfg.EnableVanguardNode {
 		if err := s.retrieveGenesisPublicKeys(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not initialize powchain")
@@ -979,11 +977,11 @@ func (s *Service) retrieveGenesisPublicKeys(ctx context.Context) error {
 		return nil
 	}
 
-	s.genesisPublicKeys = make([]string, genesisState.NumValidators())
-	for i := eth2Types.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
-		pubKey := genesisState.PubkeyAtIndex(i)
+	s.genesisPublicKeys = make(map[int64]string, genesisState.NumValidators())
+	for i := 0; i < genesisState.NumValidators(); i++ {
+		pubKey := genesisState.PubkeyAtIndex(eth2Types.ValidatorIndex(i))
 		pubKeyHex := hexutil.Encode(pubKey[:])
-		s.genesisPublicKeys[i] = pubKeyHex
+		s.genesisPublicKeys[int64(i)] = pubKeyHex
 	}
 	return nil
 }

@@ -64,7 +64,6 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// pending queue is not empty that means syncing and verification process does not complete yet so skipped the
 	// slot
 	if vs.EnableVanguardNode {
-		log.WithField("slot", req.Slot).Debug("checking pending queue length before preparing block")
 		if err := vs.PendingQueueFetcher.CanPropose(); err != nil {
 			return nil, status.Errorf(codes.Unavailable, "Pending queue is not fully processed yet")
 		}
@@ -462,14 +461,6 @@ func (vs *Server) deposits(
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*dbpb.DepositContainer
 	for _, dep := range allPendingContainers {
-
-		log.WithField("index", dep.Index).
-			WithField("Eth1BlockHeight", dep.Eth1BlockHeight).
-			WithField("publicKey", hexutil.Encode(dep.Deposit.Data.PublicKey)).
-			WithField("canonicalEth1DataDepositCount", canonicalEth1Data.DepositCount).
-			WithField("Eth1DepositIndex", beaconState.Eth1DepositIndex()).
-			Debug("deposit container info")
-
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
@@ -534,6 +525,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
+
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
@@ -545,7 +537,6 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 		depositTrie.Insert(depHash[:], int(insertIndex))
 		insertIndex++
 	}
-
 	return depositTrie, nil
 }
 

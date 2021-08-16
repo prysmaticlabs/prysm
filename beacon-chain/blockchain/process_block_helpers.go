@@ -422,6 +422,20 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// We can be confident that these deposits will be included in some block
 	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
 	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+	if s.enableVanguardNode {
+		genesisState, err := s.cfg.BeaconDB.GenesisState(ctx)
+		if err != nil {
+			return err
+		}
+		// Exit early if no genesis state is saved.
+		if genesisState == nil {
+			return nil
+		}
+		// We do not call the InsertFinalizedDeposits method if all genesis deposits have not deposited yet
+		if uint64(eth1DepositIndex) < genesisState.Eth1Data().DepositCount {
+			return nil
+		}
+	}
 	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
 	if err = s.cfg.DepositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
