@@ -46,14 +46,15 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 }
 
 func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
-	type peersJSON struct {
-		Epoch string `json:"epoch"`
-		Root  string `json:"root"`
+	type peerJSON struct {
+		Address         string `json:"address"`
+		Direction       string `json:"direction"`
+		ConnectionState string `json:"connectionState"`
+		PeerId          string `json:"peerId"`
+		Enr             string `json:"enr"`
 	}
 	type peersResponseJSON struct {
-		Peers         []*peersJSON `json:"attestations"`
-		NextPageToken string       `json:"nextPageToken"`
-		TotalSize     int32        `json:"totalSize"`
+		Peers []*peerJSON `json:"peers"`
 	}
 	ctx := context.Background()
 	nodeClient := ethpb.NewNodeClient(conn)
@@ -69,7 +70,13 @@ func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	); err != nil {
 		return err
 	}
-	_ = resp
+	if len(respJSON.Peers) == len(resp.Peers) {
+		return fmt.Errorf(
+			"HTTP gateway number of peers %d does not match gRPC %d",
+			len(respJSON.Peers),
+			len(resp.Peers),
+		)
+	}
 	return nil
 }
 
