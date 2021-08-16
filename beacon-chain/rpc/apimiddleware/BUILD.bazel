@@ -29,6 +29,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/rpc/eth/events:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
