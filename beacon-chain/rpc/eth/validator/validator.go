@@ -5,6 +5,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -14,9 +15,11 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -27,7 +30,7 @@ import (
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
-func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesRequest) (*v1.AttesterDutiesResponse, error) {
+func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDutiesRequest) (*ethpbv1.AttesterDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAttesterDuties")
 	defer span.End()
 
@@ -61,7 +64,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 	}
 	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
-	duties := make([]*v1.AttesterDuty, len(req.Index))
+	duties := make([]*ethpbv1.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
@@ -80,7 +83,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 				break
 			}
 		}
-		duties[i] = &v1.AttesterDuty{
+		duties[i] = &ethpbv1.AttesterDuty{
 			Pubkey:                  pubkey[:],
 			ValidatorIndex:          index,
 			CommitteeIndex:          committee.CommitteeIndex,
@@ -96,14 +99,14 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
-	return &v1.AttesterDutiesResponse{
+	return &ethpbv1.AttesterDutiesResponse{
 		DependentRoot: root,
 		Data:          duties,
 	}, nil
 }
 
 // GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
-func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesRequest) (*v1.ProposerDutiesResponse, error) {
+func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDutiesRequest) (*ethpbv1.ProposerDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetProposerDuties")
 	defer span.End()
 
@@ -132,7 +135,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
-	duties := make([]*v1.ProposerDuty, 0)
+	duties := make([]*ethpbv1.ProposerDuty, 0)
 	for index, slots := range proposals {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if err != nil {
@@ -141,7 +144,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, s := range slots {
-			duties = append(duties, &v1.ProposerDuty{
+			duties = append(duties, &ethpbv1.ProposerDuty{
 				Pubkey:         pubkey,
 				ValidatorIndex: index,
 				Slot:           s,
@@ -157,18 +160,22 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
-	return &v1.ProposerDutiesResponse{
+	return &ethpbv1.ProposerDutiesResponse{
 		DependentRoot: root,
 		Data:          duties,
 	}, nil
 }
 
+func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, request *eth.SyncCommitteeDutiesRequest) (*eth.SyncCommitteeDutiesResponse, error) {
+	panic("implement me")
+}
+
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
-func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest) (*v1.ProduceBlockResponse, error) {
+func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.ProduceBlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceBlock")
 	defer span.End()
 
-	v1alpha1req := &v1alpha1.BlockRequest{
+	v1alpha1req := &ethpbalpha.BlockRequest{
 		Slot:         req.Slot,
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
@@ -183,16 +190,20 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest)
 		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 	}
 
-	return &v1.ProduceBlockResponse{Data: block}, nil
+	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
+}
+
+func (vs *Server) ProduceBlockAltair(ctx context.Context, request *eth.ProduceBlockRequest) (*eth.ProduceBlockResponse, error) {
+	panic("implement me")
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
-func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error) {
+func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.ProduceAttestationDataRequest) (*ethpbv1.ProduceAttestationDataResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceAttestationData")
 	defer span.End()
 
-	v1alpha1req := &v1alpha1.AttestationDataRequest{
+	v1alpha1req := &ethpbalpha.AttestationDataRequest{
 		Slot:           req.Slot,
 		CommitteeIndex: req.CommitteeIndex,
 	}
@@ -203,16 +214,16 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAtt
 	}
 	attData := migration.V1Alpha1AttDataToV1(v1alpha1resp)
 
-	return &v1.ProduceAttestationDataResponse{Data: attData}, nil
+	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
-func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.AggregateAttestationRequest) (*v1.AggregateAttestationResponse, error) {
+func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
 	defer span.End()
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *v1alpha1.Attestation
+	var bestMatchingAtt *ethpbalpha.Attestation
 	for _, att := range allAtts {
 		if att.Data.Slot == req.Slot {
 			root, err := att.Data.HashTreeRoot()
@@ -230,13 +241,13 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.Aggregate
 	if bestMatchingAtt == nil {
 		return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
 	}
-	return &v1.AggregateAttestationResponse{
+	return &ethpbv1.AggregateAttestationResponse{
 		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
 	}, nil
 }
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
 	defer span.End()
 
@@ -286,7 +297,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
-func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
@@ -357,6 +368,21 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 	return &emptypb.Empty{}, nil
 }
 
+func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, request *ethpbv2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
+	panic("implement me")
+}
+
+func (vs *Server) ProduceSyncCommitteeContribution(
+	ctx context.Context,
+	request *ethpbv2.ProduceSyncCommitteeContributionRequest,
+) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
+	panic("implement me")
+}
+
+func (vs *Server) SubmitContributionAndProofs(ctx context.Context, request *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
+	panic("implement me")
+}
+
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
 func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
@@ -425,15 +451,15 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 }
 
 // Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
-func v1ValidatorStatusToV1Alpha1(valStatus v1.ValidatorStatus) v1alpha1.ValidatorStatus {
+func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.ValidatorStatus {
 	switch valStatus {
-	case v1.ValidatorStatus_ACTIVE:
-		return v1alpha1.ValidatorStatus_ACTIVE
-	case v1.ValidatorStatus_PENDING:
-		return v1alpha1.ValidatorStatus_PENDING
-	case v1.ValidatorStatus_WITHDRAWAL:
-		return v1alpha1.ValidatorStatus_EXITED
+	case ethpbv1.ValidatorStatus_ACTIVE:
+		return ethpbalpha.ValidatorStatus_ACTIVE
+	case ethpbv1.ValidatorStatus_PENDING:
+		return ethpbalpha.ValidatorStatus_PENDING
+	case ethpbv1.ValidatorStatus_WITHDRAWAL:
+		return ethpbalpha.ValidatorStatus_EXITED
 	default:
-		return v1alpha1.ValidatorStatus_UNKNOWN_STATUS
+		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
 	}
 }

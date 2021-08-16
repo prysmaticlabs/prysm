@@ -155,7 +155,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		log.Warning("Using latest release validator via prysm.sh")
 	}
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 
 	// Write stdout and stderr to log files.
 	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stdout.log", index)))
@@ -202,7 +202,7 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 	defer client.Close()
 	web3 := ethclient.NewClient(client)
 
-	keystoreBytes, err := ioutil.ReadFile(keystorePath)
+	keystoreBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304
 	if err != nil {
 		return err
 	}
