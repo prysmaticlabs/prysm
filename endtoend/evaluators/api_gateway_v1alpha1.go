@@ -182,7 +182,7 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 	}
 	for i, att := range respJSON.Attestations {
 		grpcAtt := resp.Attestations[i]
-		if att.AggregationBits != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcAtt.AggregationBits)) {
+		if att.AggregationBits != base64.StdEncoding.EncodeToString(grpcAtt.AggregationBits) {
 			return fmt.Errorf(
 				"HTTP gateway attestation %d aggregation bits %s does not match gRPC %d",
 				i,
@@ -208,7 +208,7 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 				grpcData.CommitteeIndex,
 			)
 		}
-		if data.BeaconBlockRoot != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.BeaconBlockRoot)) {
+		if data.BeaconBlockRoot != base64.StdEncoding.EncodeToString(grpcData.BeaconBlockRoot) {
 			return fmt.Errorf(
 				"HTTP gateway attestation %d beacon block root %s does not match gRPC %d",
 				i,
@@ -224,7 +224,7 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 				grpcData.Source.Epoch,
 			)
 		}
-		if data.Source.Root != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.Source.Root)) {
+		if data.Source.Root != base64.StdEncoding.EncodeToString(grpcData.Source.Root) {
 			return fmt.Errorf(
 				"HTTP gateway attestation %d source root %s does not match gRPC %d",
 				i,
@@ -240,7 +240,7 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 				grpcData.Target.Epoch,
 			)
 		}
-		if data.Target.Root != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.Target.Root)) {
+		if data.Target.Root != base64.StdEncoding.EncodeToString(grpcData.Target.Root) {
 			return fmt.Errorf(
 				"HTTP gateway attestation %d target root %s does not match gRPC %d",
 				i,
@@ -248,7 +248,7 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 				grpcData.Target.Root,
 			)
 		}
-		if att.Signature != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcAtt.Signature)) {
+		if att.Signature != base64.StdEncoding.EncodeToString(grpcAtt.Signature) {
 			return fmt.Errorf(
 				"HTTP gateway attestation %d signature %s does not match gRPC %d",
 				i,
@@ -336,7 +336,7 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		}
 		httpVal := val.Validator
 		grpcVal := resp.ValidatorList[i].Validator
-		if httpVal.PublicKey != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcVal.PublicKey)) {
+		if httpVal.PublicKey != base64.StdEncoding.EncodeToString(grpcVal.PublicKey) {
 			return fmt.Errorf(
 				"HTTP gateway validator %d public key %s does not match gRPC %d",
 				i,
@@ -451,10 +451,7 @@ func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}
 	if err != nil {
 		return err
 	}
-	if err = json.NewDecoder(httpResp.Body).Decode(&dst); err != nil {
-		return err
-	}
-	return nil
+	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
 func runAPIComparisonFunctions(beaconNodeIdx int, conn *grpc.ClientConn, fs ...apiComparisonFunc) error {
