@@ -12,7 +12,7 @@ import (
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
 func LoadChainConfigFile(chainConfigFileName string) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+	yamlFile, err := ioutil.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
