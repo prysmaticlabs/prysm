@@ -36,9 +36,10 @@ type validatorJson struct {
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
 }
 
-// ApiVerifyValidators ensures the Ethereum API returns correct validator data.
-var ApiVerifyValidators = e2etypes.Evaluator{
-	Name:       "api_verify_validators_epoch_%d",
+// APIGatewayV1VerifyIntegrity of our API gateway for the Prysm v1 API.
+// This ensures our gRPC HTTP gateway returns good data compared to some fixtures.
+var APIGatewayV1VerifyIntegrity = e2etypes.Evaluator{
+	Name:       "api_gateway_v1_verify_integrity_epoch_%d",
 	Policy:     policies.OnEpoch(1),
 	Evaluation: apiVerifyValidators,
 }
