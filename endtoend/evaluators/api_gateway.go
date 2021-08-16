@@ -30,10 +30,6 @@ const (
 	v1Alpha1GatewayPathTemplate = "http://localhost:%d/eth/v1alpha1"
 )
 
-var (
-	v1Alpha1GatewayPort = e2e.TestParams.BeaconNodeRPCPort
-)
-
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
 func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
@@ -405,7 +401,7 @@ func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
 }
 
 func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(v1Alpha1GatewayPathTemplate, v1Alpha1GatewayPort+beaconNodeIdx)
+	basePath := fmt.Sprintf(v1Alpha1GatewayPathTemplate, e2e.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)
