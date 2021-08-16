@@ -12,6 +12,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	v1Alpha1GatewayPathTemplate = "http://localhost:%d/eth/v1alpha1"
+	v1Alpha1GatewayPort         = 3500
+)
+
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
 func main() {
@@ -52,9 +57,9 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 		Target          *checkpointJSON `json:"target"`
 	}
 	type attestationJSON struct {
-		AggregationBits string `json:"aggregationBits"`
-		Data            string `json:"data"`
-		Signature       string `json:"signature"`
+		AggregationBits string               `json:"aggregationBits"`
+		Data            *attestationDataJSON `json:"data"`
+		Signature       string               `json:"signature"`
 	}
 	type attestationPoolResponseJSON struct {
 		Attestations  []*attestationJSON `json:"attestations"`
@@ -70,14 +75,11 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 		return err
 	}
 	respJSON := &attestationPoolResponseJSON{}
-	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
-	httpResp, err := http.Get(
-		basePath + "/beacon/attestations/pool?page_size=4",
-	)
-	if err != nil {
-		return err
-	}
-	if err = json.NewDecoder(httpResp.Body).Decode(&respJSON); err != nil {
+	if err := doGatewayJSONRequest(
+		"/beacon/attestations/pool?page_size=4",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
 		return err
 	}
 
@@ -95,6 +97,83 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 			respJSON.TotalSize,
 			resp.TotalSize,
 		)
+	}
+	for i, att := range respJSON.Attestations {
+		grpcAtt := resp.Attestations[i]
+		if att.AggregationBits != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcAtt.AggregationBits)) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d aggregation bits %s does not match gRPC %d",
+				i,
+				att.AggregationBits,
+				grpcAtt.AggregationBits,
+			)
+		}
+		data := att.Data
+		grpcData := grpcAtt.Data
+		if data.Slot != fmt.Sprintf("%d", grpcData.Slot) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d slot %s does not match gRPC %d",
+				i,
+				data.Slot,
+				grpcData.Slot,
+			)
+		}
+		if data.CommitteeIndex != fmt.Sprintf("%d", grpcData.CommitteeIndex) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d committee index %s does not match gRPC %d",
+				i,
+				data.CommitteeIndex,
+				grpcData.CommitteeIndex,
+			)
+		}
+		if data.BeaconBlockRoot != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.BeaconBlockRoot)) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d beacon block root %s does not match gRPC %d",
+				i,
+				data.BeaconBlockRoot,
+				grpcData.BeaconBlockRoot,
+			)
+		}
+		if data.Source.Epoch != fmt.Sprintf("%d", grpcData.Source.Epoch) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d source epoch %s does not match gRPC %d",
+				i,
+				data.Source.Epoch,
+				grpcData.Source.Epoch,
+			)
+		}
+		if data.Source.Root != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.Source.Root)) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d source root %s does not match gRPC %d",
+				i,
+				data.Source.Root,
+				grpcData.Source.Root,
+			)
+		}
+		if data.Target.Epoch != fmt.Sprintf("%d", grpcData.Target.Epoch) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d target epoch %s does not match gRPC %d",
+				i,
+				data.Target.Epoch,
+				grpcData.Target.Epoch,
+			)
+		}
+		if data.Target.Root != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcData.Target.Root)) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d target root %s does not match gRPC %d",
+				i,
+				data.Target.Root,
+				grpcData.Target.Root,
+			)
+		}
+		if att.Signature != fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(grpcAtt.Signature)) {
+			return fmt.Errorf(
+				"HTTP gateway attestation %d signature %s does not match gRPC %d",
+				i,
+				att.Signature,
+				grpcAtt.Signature,
+			)
+		}
 	}
 	return nil
 }
@@ -131,43 +210,40 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	validatorsRespJSON := &validatorsResponseJSON{}
-	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
-	httpResp, err := http.Get(
-		basePath + "/validators?genesis=true&page_size=4",
-	)
-	if err != nil {
-		return err
-	}
-	if err = json.NewDecoder(httpResp.Body).Decode(&validatorsRespJSON); err != nil {
+	respJSON := &validatorsResponseJSON{}
+	if err := doGatewayJSONRequest(
+		"/validators?genesis=true&page_size=4",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
 		return err
 	}
 
 	// Begin comparisons.
-	if validatorsRespJSON.Epoch != fmt.Sprintf("%d", resp.Epoch) {
+	if respJSON.Epoch != fmt.Sprintf("%d", resp.Epoch) {
 		return fmt.Errorf(
 			"HTTP gateway epoch %s does not match gRPC %d",
-			validatorsRespJSON.Epoch,
+			respJSON.Epoch,
 			resp.Epoch,
 		)
 	}
-	if validatorsRespJSON.NextPageToken != resp.NextPageToken {
+	if respJSON.NextPageToken != resp.NextPageToken {
 		return fmt.Errorf(
 			"HTTP gateway next page token %s does not match gRPC %s",
-			validatorsRespJSON.NextPageToken,
+			respJSON.NextPageToken,
 			resp.NextPageToken,
 		)
 	}
-	if validatorsRespJSON.TotalSize != resp.TotalSize {
+	if respJSON.TotalSize != resp.TotalSize {
 		return fmt.Errorf(
 			"HTTP gateway total size %d does not match gRPC %d",
-			validatorsRespJSON.TotalSize,
+			respJSON.TotalSize,
 			resp.TotalSize,
 		)
 	}
 
 	// Compare validators.
-	for i, val := range validatorsRespJSON.ValidatorList {
+	for i, val := range respJSON.ValidatorList {
 		if val.Index != fmt.Sprintf("%d", resp.ValidatorList[i].Index) {
 			return fmt.Errorf(
 				"HTTP gateway validator %d index %s does not match gRPC %d",
@@ -210,79 +286,91 @@ func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	basePath := fmt.Sprintf("http://localhost:%d/eth/v1alpha1", 3500+beaconNodeIdx)
-	apiresp, err := http.Get(
-		basePath + "/beacon/chainhead",
+	respJSON := &chainHeadResponseJSON{}
+	if err := doGatewayJSONRequest(
+		"/beacon/chainhead",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+
+	if respJSON.HeadSlot != fmt.Sprintf("%d", resp.HeadSlot) {
+		return fmt.Errorf(
+			"HTTP gateway head slot %s does not match gRPC %d",
+			respJSON.HeadSlot,
+			resp.HeadSlot,
+		)
+	}
+	if respJSON.HeadEpoch != fmt.Sprintf("%d", resp.HeadEpoch) {
+		return fmt.Errorf(
+			"HTTP gateway head epoch %s does not match gRPC %d",
+			respJSON.HeadEpoch,
+			resp.HeadEpoch,
+		)
+	}
+	if respJSON.HeadBlockRoot != base64.StdEncoding.EncodeToString(resp.HeadBlockRoot) {
+		return fmt.Errorf(
+			"HTTP gateway head block root %s does not match gRPC %s",
+			respJSON.HeadBlockRoot,
+			resp.HeadBlockRoot,
+		)
+	}
+	if respJSON.FinalizedSlot != fmt.Sprintf("%d", resp.FinalizedSlot) {
+		return fmt.Errorf(
+			"HTTP gateway finalized slot %s does not match gRPC %d",
+			respJSON.FinalizedSlot,
+			resp.FinalizedSlot,
+		)
+	}
+	if respJSON.FinalizedEpoch != fmt.Sprintf("%d", resp.FinalizedEpoch) {
+		return fmt.Errorf(
+			"HTTP gateway finalized epoch %s does not match gRPC %d",
+			respJSON.FinalizedEpoch,
+			resp.FinalizedEpoch,
+		)
+	}
+	if respJSON.FinalizedBlockRoot != base64.StdEncoding.EncodeToString(resp.FinalizedBlockRoot) {
+		return fmt.Errorf(
+			"HTTP gateway finalized block root %s does not match gRPC %s",
+			respJSON.FinalizedBlockRoot,
+			resp.FinalizedBlockRoot,
+		)
+	}
+	if respJSON.JustifiedSlot != fmt.Sprintf("%d", resp.JustifiedSlot) {
+		return fmt.Errorf(
+			"HTTP gateway justified slot %s does not match gRPC %d",
+			respJSON.FinalizedSlot,
+			resp.FinalizedSlot,
+		)
+	}
+	if respJSON.JustifiedEpoch != fmt.Sprintf("%d", resp.JustifiedEpoch) {
+		return fmt.Errorf(
+			"HTTP gateway justified epoch %s does not match gRPC %d",
+			respJSON.FinalizedEpoch,
+			resp.FinalizedEpoch,
+		)
+	}
+	if respJSON.JustifiedBlockRoot != base64.StdEncoding.EncodeToString(resp.JustifiedBlockRoot) {
+		return fmt.Errorf(
+			"HTTP gateway justified block root %s does not match gRPC %s",
+			respJSON.JustifiedBlockRoot,
+			resp.JustifiedBlockRoot,
+		)
+	}
+	return nil
+}
+
+func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}) error {
+	basePath := fmt.Sprintf(v1Alpha1GatewayPathTemplate, v1Alpha1GatewayPort+beaconNodeIdx)
+	httpResp, err := http.Get(
+		basePath + requestPath,
 	)
 	if err != nil {
 		return err
 	}
-	httpChainHeadResp := &chainHeadResponseJSON{}
-	if err = json.NewDecoder(apiresp.Body).Decode(&httpChainHeadResp); err != nil {
+	if err = json.NewDecoder(httpResp.Body).Decode(&dst); err != nil {
 		return err
-	}
-	if httpChainHeadResp.HeadSlot != fmt.Sprintf("%d", resp.HeadSlot) {
-		return fmt.Errorf(
-			"HTTP gateway head slot %s does not match gRPC %d",
-			httpChainHeadResp.HeadSlot,
-			resp.HeadSlot,
-		)
-	}
-	if httpChainHeadResp.HeadEpoch != fmt.Sprintf("%d", resp.HeadEpoch) {
-		return fmt.Errorf(
-			"HTTP gateway head epoch %s does not match gRPC %d",
-			httpChainHeadResp.HeadEpoch,
-			resp.HeadEpoch,
-		)
-	}
-	if httpChainHeadResp.HeadBlockRoot != base64.StdEncoding.EncodeToString(resp.HeadBlockRoot) {
-		return fmt.Errorf(
-			"HTTP gateway head block root %s does not match gRPC %s",
-			httpChainHeadResp.HeadBlockRoot,
-			resp.HeadBlockRoot,
-		)
-	}
-	if httpChainHeadResp.FinalizedSlot != fmt.Sprintf("%d", resp.FinalizedSlot) {
-		return fmt.Errorf(
-			"HTTP gateway finalized slot %s does not match gRPC %d",
-			httpChainHeadResp.FinalizedSlot,
-			resp.FinalizedSlot,
-		)
-	}
-	if httpChainHeadResp.FinalizedEpoch != fmt.Sprintf("%d", resp.FinalizedEpoch) {
-		return fmt.Errorf(
-			"HTTP gateway finalized epoch %s does not match gRPC %d",
-			httpChainHeadResp.FinalizedEpoch,
-			resp.FinalizedEpoch,
-		)
-	}
-	if httpChainHeadResp.FinalizedBlockRoot != base64.StdEncoding.EncodeToString(resp.FinalizedBlockRoot) {
-		return fmt.Errorf(
-			"HTTP gateway finalized block root %s does not match gRPC %s",
-			httpChainHeadResp.FinalizedBlockRoot,
-			resp.FinalizedBlockRoot,
-		)
-	}
-	if httpChainHeadResp.JustifiedSlot != fmt.Sprintf("%d", resp.JustifiedSlot) {
-		return fmt.Errorf(
-			"HTTP gateway justified slot %s does not match gRPC %d",
-			httpChainHeadResp.FinalizedSlot,
-			resp.FinalizedSlot,
-		)
-	}
-	if httpChainHeadResp.JustifiedEpoch != fmt.Sprintf("%d", resp.JustifiedEpoch) {
-		return fmt.Errorf(
-			"HTTP gateway justified epoch %s does not match gRPC %d",
-			httpChainHeadResp.FinalizedEpoch,
-			resp.FinalizedEpoch,
-		)
-	}
-	if httpChainHeadResp.JustifiedBlockRoot != base64.StdEncoding.EncodeToString(resp.JustifiedBlockRoot) {
-		return fmt.Errorf(
-			"HTTP gateway justified block root %s does not match gRPC %s",
-			httpChainHeadResp.JustifiedBlockRoot,
-			resp.JustifiedBlockRoot,
-		)
 	}
 	return nil
 }
