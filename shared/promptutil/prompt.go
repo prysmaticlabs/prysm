@@ -132,7 +132,7 @@ func InputPassword(
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
-		data, err := ioutil.ReadFile(passwordFilePath)
+		data, err := ioutil.ReadFile(passwordFilePath) // #nosec G304
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
 		}

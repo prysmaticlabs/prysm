@@ -22,7 +22,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	_ "net/http/pprof" // required to serve pprof http endpoints.
+
+	// We are safe to expose this import as we are using a custom
+	// handler only enabled if the pprof flag is on.
+	_ "net/http/pprof" // #nosec G108
 	"os"
 	"os/user"
 	"path/filepath"

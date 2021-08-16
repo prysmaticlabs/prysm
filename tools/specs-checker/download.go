@@ -50,7 +50,7 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}()
 
 	// Download spec doc.
-	resp, err := http.Get(specDocUrl)
+	resp, err := http.Get(specDocUrl) /* #nosec G107 */
 	if err != nil {
 		return err
 	}

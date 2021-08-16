@@ -117,7 +117,7 @@ func IsValid(walletDir string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	f, err := os.Open(expanded)
+	f, err := os.Open(expanded) // #nosec G304
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") ||
 			strings.Contains(err.Error(), "cannot find the file") ||
@@ -373,7 +373,7 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	w.configFilePath = configFilePath
-	return os.Open(configFilePath)
+	return os.Open(configFilePath) // #nosec G304
 
 }
 
@@ -390,7 +390,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(_ context.Context, encoded []byte) 
 }
 
 func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error) {
-	walletItem, err := os.Open(walletPath)
+	walletItem, err := os.Open(walletPath) // #nosec G304
 	if err != nil {
 		return 0, err
 	}

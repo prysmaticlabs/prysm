@@ -26,7 +26,7 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
-	yamlFile, err := ioutil.ReadFile(f)
+	yamlFile, err := ioutil.ReadFile(f) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
