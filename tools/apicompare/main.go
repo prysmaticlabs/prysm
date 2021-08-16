@@ -34,6 +34,7 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
+			withComparePeers,
 			withCompareAttestationPool,
 			withCompareValidators,
 			withCompareChainHead,
@@ -41,6 +42,34 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type peersJSON struct {
+		Epoch string `json:"epoch"`
+		Root  string `json:"root"`
+	}
+	type peersResponseJSON struct {
+		Peers         []*peersJSON `json:"attestations"`
+		NextPageToken string       `json:"nextPageToken"`
+		TotalSize     int32        `json:"totalSize"`
+	}
+	ctx := context.Background()
+	nodeClient := ethpb.NewNodeClient(conn)
+	resp, err := nodeClient.ListPeers(ctx, &empty.Empty{})
+	if err != nil {
+		return err
+	}
+	respJSON := &peersResponseJSON{}
+	if err := doGatewayJSONRequest(
+		"/node/peers",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	_ = resp
 	return nil
 }
 
