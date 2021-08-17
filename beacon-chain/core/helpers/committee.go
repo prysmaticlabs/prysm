@@ -520,7 +520,7 @@ func NextPeriodSyncSubcommitteeIndices(
 }
 
 // UpdateSyncCommitteeCache updates sync committee cache.
-// It uses `state`'s latest block header root as key. To avoid miss usage, it disallows
+// It uses `state`'s latest block header root as key. To avoid misuse, it disallows
 // block header with state root zeroed out.
 func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
 	nextSlot := st.Slot() + 1
