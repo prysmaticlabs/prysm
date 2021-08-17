@@ -82,6 +82,9 @@ func (cs proposerSyncContributions) mostProfitable() *eth.SyncCommitteeContribut
 		return nil
 	}
 	mostProfitable := cs[0]
+	if len(cs) == 1 {
+		return mostProfitable
+	}
 	for _, c := range cs[1:] {
 		if c.AggregationBits.Count() > mostProfitable.AggregationBits.Count() {
 			mostProfitable = c
