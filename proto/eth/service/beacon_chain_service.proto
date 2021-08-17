@@ -152,14 +152,14 @@ service BeaconChain {
   }
 
   // GetBlockAltair retrieves block details for given block id.
-  rpc GetBlockAltair(v2.BlockRequest) returns (v2.BlockResponse) {
+  rpc GetBlockAltair(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}"
     };
   }
 
   // GetBlockSSZAltair returns the SSZ-serialized version of block details for given block id.
-  rpc GetBlockSSZAltair(v2.BlockRequest) returns (v2.BlockSSZResponse) {
+  rpc GetBlockSSZAltair(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}/ssz"
     };
@@ -243,7 +243,7 @@ service BeaconChain {
   }
 
   // Submits sync committee signature objects to the node.
-  rpc SubmitSyncCommitteeSignature(v2.SyncCommitteeMessage) returns (google.protobuf.Empty) {
+  rpc SubmitSyncCommitteeSignature(v2.SyncCommitteeMessageV2) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/beacon/pool/sync_committees"
       body: "*"

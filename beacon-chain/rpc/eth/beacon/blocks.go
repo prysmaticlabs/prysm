@@ -243,11 +243,11 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	return &ethpbv1.BlockSSZResponse{Data: sszBlock}, nil
 }
 
-func (bs *Server) GetBlockAltair(ctx context.Context, request *ethpbv2.BlockRequest) (*ethpbv2.BlockResponse, error) {
+func (bs *Server) GetBlockAltair(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
 	panic("implement me")
 }
 
-func (bs *Server) GetBlockSSZAltair(ctx context.Context, request *ethpbv2.BlockRequest) (*ethpbv2.BlockSSZResponse, error) {
+func (bs *Server) GetBlockSSZAltair(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
 	panic("implement me")
 }
 

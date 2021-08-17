@@ -19,7 +19,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth_0 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -164,7 +164,7 @@ func local_request_BeaconValidator_GetProposerDuties_0(ctx context.Context, mars
 }
 
 func request_BeaconValidator_GetSyncCommitteeDuties_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeDutiesRequest
+	var protoReq eth.SyncCommitteeDutiesRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -199,7 +199,7 @@ func request_BeaconValidator_GetSyncCommitteeDuties_0(ctx context.Context, marsh
 }
 
 func local_request_BeaconValidator_GetSyncCommitteeDuties_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeDutiesRequest
+	var protoReq eth.SyncCommitteeDutiesRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -310,7 +310,7 @@ var (
 )
 
 func request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.ProduceBlockRequest
+	var protoReq eth.ProduceBlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -344,7 +344,7 @@ func request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler
 }
 
 func local_request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.ProduceBlockRequest
+	var protoReq eth.ProduceBlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -518,7 +518,7 @@ func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx conte
 }
 
 func request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SubmitSyncCommitteeSubscriptionsRequest
+	var protoReq eth.SubmitSyncCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -535,7 +535,7 @@ func request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Conte
 }
 
 func local_request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SubmitSyncCommitteeSubscriptionsRequest
+	var protoReq eth.SubmitSyncCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -556,7 +556,7 @@ var (
 )
 
 func request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.ProduceSyncCommitteeContributionRequest
+	var protoReq eth.ProduceSyncCommitteeContributionRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -572,7 +572,7 @@ func request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Cont
 }
 
 func local_request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.ProduceSyncCommitteeContributionRequest
+	var protoReq eth.ProduceSyncCommitteeContributionRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -588,7 +588,7 @@ func local_request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx contex
 }
 
 func request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SubmitContributionAndProofsRequest
+	var protoReq eth.SubmitContributionAndProofsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -605,7 +605,7 @@ func request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, 
 }
 
 func local_request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SubmitContributionAndProofsRequest
+	var protoReq eth.SubmitContributionAndProofsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

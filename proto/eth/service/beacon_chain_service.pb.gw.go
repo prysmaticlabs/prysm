@@ -19,7 +19,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth_0 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -516,7 +516,7 @@ var (
 )
 
 func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.StateSyncCommitteesRequest
+	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -550,7 +550,7 @@ func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler run
 }
 
 func local_request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.StateSyncCommitteesRequest
+	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -870,7 +870,7 @@ func local_request_BeaconChain_GetBlockSSZ_0(ctx context.Context, marshaler runt
 }
 
 func request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -897,7 +897,7 @@ func request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime
 }
 
 func local_request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -924,7 +924,7 @@ func local_request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler r
 }
 
 func request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -951,7 +951,7 @@ func request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runt
 }
 
 func local_request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -1258,7 +1258,7 @@ func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marsha
 }
 
 func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeMessage
+	var protoReq eth.SyncCommitteeMessageV2
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1275,7 +1275,7 @@ func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, mar
 }
 
 func local_request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeMessage
+	var protoReq eth.SyncCommitteeMessageV2
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

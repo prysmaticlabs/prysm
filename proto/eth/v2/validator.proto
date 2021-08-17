@@ -48,7 +48,7 @@ message SyncCommitteeDuty {
   repeated uint64 sync_committee_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 }
 
-message ProduceBlockRequest {
+message ProduceBlockRequestV2 {
   // The slot to request a block for.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -60,7 +60,7 @@ message ProduceBlockRequest {
   optional bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message ProduceBlockResponse {
+message ProduceBlockResponseV2 {
   v1alpha1.BeaconBlockAltair data = 1;
 }
 
@@ -91,11 +91,11 @@ message ProduceSyncCommitteeContributionRequest {
 }
 
 message ProduceSyncCommitteeContributionResponse {
-  SyncCommitteeContribution data = 1;
+  SyncCommitteeContributionV2 data = 1;
 }
 
 // Aggregated sync committee object to support light client.
-message SyncCommitteeContribution {
+message SyncCommitteeContributionV2 {
   // Slot to which this contribution pertains.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -114,23 +114,23 @@ message SyncCommitteeContribution {
 }
 
 message SubmitContributionAndProofsRequest {
-  SignedContributionAndProof message = 1;
+  SignedContributionAndProofV2 message = 1;
 }
 
 // Aggregated sync committee signature object with selection proof to support light client.
-message ContributionAndProof {
+message ContributionAndProofV2 {
   // Index of the aggregator that produced this proof.
   uint64 aggregator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 
-  SyncCommitteeContribution contribution = 2;
+  SyncCommitteeContributionV2 contribution = 2;
 
   // The selection proof itself.
   bytes selection_proof = 3 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 // Signed aggregated sync committee signature object with selection proof to support light client.
-message SignedContributionAndProof {
-  ContributionAndProof message = 1;
+message SignedContributionAndProofV2 {
+  ContributionAndProofV2 message = 1;
 
   // Signature of the aggregator that produced `message`.
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];

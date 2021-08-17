@@ -97,7 +97,7 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc ProduceBlockAltair(v2.ProduceBlockRequest) returns (v2.ProduceBlockResponse) {
+  rpc ProduceBlockAltair(v2.ProduceBlockRequestV2) returns (v2.ProduceBlockResponseV2) {
     option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
   }
 
