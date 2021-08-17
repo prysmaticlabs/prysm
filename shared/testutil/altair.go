@@ -197,16 +197,19 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		BodyRoot:   bodyRoot[:],
 	}
 
-	var pubKeys [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	vals := preState.Validators()
+	valsCount := len(vals)
+	for i := 0; i < len(syncCommittee); i++ {
+		// Wrap around in case the number of validators is less than sync committee size.
+		syncCommittee[i] = vals[i%valsCount].PublicKey
 	}
 	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         pubKeys,
+		Pubkeys:         syncCommittee,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	st.NextSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
+		Pubkeys:         bytesutil.Copy2dBytes(syncCommittee),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
