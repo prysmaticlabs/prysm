@@ -166,7 +166,8 @@ func SlashValidator(
 	if err != nil {
 		return nil, err
 	}
-	err = helpers.IncreaseBalance(s, whistleBlowerIdx, proposerReward)
+	whistleblowerReward := validator.EffectiveBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
+	err = helpers.IncreaseBalance(s, whistleBlowerIdx, whistleblowerReward-proposerReward)
 	if err != nil {
 		return nil, err
 	}
