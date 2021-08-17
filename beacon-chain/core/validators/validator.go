@@ -125,7 +125,7 @@ func SlashValidator(
 	s state.BeaconState,
 	slashedIdx types.ValidatorIndex,
 	penaltyQuotient uint64,
-	proposerRewardQuotient uint64) (state.BeaconState, error) {
+	proposerReward uint64) (state.BeaconState, error) {
 	s, err := InitiateValidatorExit(s, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
@@ -162,13 +162,11 @@ func SlashValidator(
 	}
 	// In phase 0, the proposer is the whistleblower.
 	whistleBlowerIdx := proposerIdx
-	whistleblowerReward := validator.EffectiveBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
-	proposerReward := whistleblowerReward / proposerRewardQuotient
 	err = helpers.IncreaseBalance(s, proposerIdx, proposerReward)
 	if err != nil {
 		return nil, err
 	}
-	err = helpers.IncreaseBalance(s, whistleBlowerIdx, whistleblowerReward-proposerReward)
+	err = helpers.IncreaseBalance(s, whistleBlowerIdx, proposerReward)
 	if err != nil {
 		return nil, err
 	}

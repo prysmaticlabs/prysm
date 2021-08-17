@@ -55,7 +55,14 @@ func ProcessProposerSlashings(
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		cfg := params.BeaconConfig()
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
+		slashedIndex := slashing.Header_1.Header.ProposerIndex
+		validator, err := beaconState.ValidatorAtIndex(slashedIndex)
+		if err != nil {
+			return nil, err
+		}
+		whistleblowerReward := validator.EffectiveBalance / cfg.WhistleBlowerRewardQuotient
+		proposerReward := whistleblowerReward / cfg.ProposerRewardQuotient
+		beaconState, err = slashFunc(beaconState, slashedIndex, cfg.MinSlashingPenaltyQuotient, proposerReward)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}
