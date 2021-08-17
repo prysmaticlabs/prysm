@@ -28,6 +28,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    go_proto = ":go_proto",
+    includes = [
+        "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
+    objs = [
+        "BeaconBlockContainerV2",
+    ],
+)
+
 go_proto_library(
     name = "go_proto",
     compilers = [
@@ -69,7 +81,11 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
+    srcs = [
+            ":ssz_generated_files",  # keep
+    ],
     embed = [":go_grpc_gateway_library"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2",
     visibility = ["//visibility:public"],
+    deps = SSZ_DEPS
 )

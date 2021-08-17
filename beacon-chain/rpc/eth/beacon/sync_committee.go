@@ -11,6 +11,6 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, request *eth.StateSync
 	panic("implement me")
 }
 
-func (bs *Server) SubmitSyncCommitteeSignature(ctx context.Context, message *eth.SyncCommitteeMessage) (*empty.Empty, error) {
+func (bs *Server) SubmitSyncCommitteeSignature(ctx context.Context, message *eth.SyncCommitteeMessageV2) (*empty.Empty, error) {
 	panic("implement me")
 }

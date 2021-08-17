@@ -25,21 +25,21 @@ option java_outer_classname = "SyncCommitteeProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
-message BlockRequest {
+message BlockRequestV2 {
   // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
   // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
   bytes block_id = 1;
 }
 
-message BlockResponse {
-  BeaconBlockContainer data = 1;
+message BlockResponseV2 {
+  BeaconBlockContainerV2 data = 1;
 }
 
-message BlockSSZResponse {
+message BlockSSZResponseV2 {
   bytes data = 1;
 }
 
-message BeaconBlockContainer {
+message BeaconBlockContainerV2 {
   v1alpha1.BeaconBlockAltair message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.

@@ -25,11 +25,11 @@ option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
 message SubmitSyncCommitteeSignaturesRequest {
-  repeated SyncCommitteeMessage data = 1;
+  repeated SyncCommitteeMessageV2 data = 1;
 }
 
 // Sync committee object to support light client.
-message SyncCommitteeMessage {
+message SyncCommitteeMessageV2 {
   // Slot to which this contribution pertains.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -53,10 +53,10 @@ message StateSyncCommitteesRequest {
 }
 
 message StateSyncCommitteesResponse {
-  SyncCommittee data = 1;
+  SyncCommitteeV2 data = 1;
 }
 
-message SyncCommittee {
+message SyncCommitteeV2 {
   // All of the validator indices in the current sync committee.
   repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 

@@ -29,7 +29,7 @@ option java_outer_classname = "SyncCommitteeProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
-message BeaconState {
+message BeaconStateV2 {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -74,16 +74,16 @@ message BeaconState {
   v1alpha1.SyncCommittee next_sync_committee = 9003; // [New in Altair]
 }
 
-message StateRequest {
+message StateRequestV2 {
   // The state id which can be any of: "head" (canonical head in node's view),
   // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
   bytes state_id = 1;
 }
 
-message BeaconStateResponse {
-  BeaconState data = 1;
+message BeaconStateResponseV2 {
+  BeaconStateV2 data = 1;
 }
 
-message BeaconStateSSZResponse {
+message BeaconStateSSZResponseV2 {
   bytes data = 1;
 }
