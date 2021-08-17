@@ -10,6 +10,7 @@ go_library(
         "reward.go",
         "sync_committee.go",
         "upgrade.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
     visibility = [
@@ -20,6 +21,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
@@ -48,6 +50,7 @@ go_test(
         "reward_test.go",
         "sync_committee_test.go",
         "upgrade_test.go",
+        "validator_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
