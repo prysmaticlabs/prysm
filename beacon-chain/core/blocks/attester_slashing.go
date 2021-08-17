@@ -61,10 +61,12 @@ func ProcessAttesterSlashings(
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
 				cfg := params.BeaconConfig()
 				slashingQuotient := cfg.MinSlashingPenaltyQuotient
+				proposerRewardQuotient := cfg.ProposerRewardQuotient
 				if beaconState.Version() == version.Altair {
 					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+					proposerRewardQuotient = cfg.WeightDenominator / cfg.ProposerRewardQuotient
 				}
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
+				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, proposerRewardQuotient)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)

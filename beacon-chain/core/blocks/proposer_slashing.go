@@ -57,10 +57,12 @@ func ProcessProposerSlashings(
 		}
 		cfg := params.BeaconConfig()
 		slashingQuotient := cfg.MinSlashingPenaltyQuotient
+		proposerRewardQuotient := cfg.ProposerRewardQuotient
 		if beaconState.Version() == version.Altair {
 			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+			proposerRewardQuotient = cfg.WeightDenominator / cfg.ProposerRewardQuotient
 		}
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, proposerRewardQuotient)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}
