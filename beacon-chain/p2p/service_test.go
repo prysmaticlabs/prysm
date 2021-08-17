@@ -136,6 +136,16 @@ func TestService_Status_NotRunning(t *testing.T) {
 	assert.ErrorContains(t, "not running", s.Status(), "Status returned wrong error")
 }
 
+func TestService_Status_NoGenesisTimeSet(t *testing.T) {
+	s := &Service{started: true}
+	s.dv5Listener = &mockListener{}
+	assert.ErrorContains(t, "no genesis time set", s.Status(), "Status returned wrong error")
+
+	s.genesisTime = time.Now()
+
+	assert.NoError(t, s.Status(), "Status returned error")
+}
+
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
