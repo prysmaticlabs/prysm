@@ -102,7 +102,6 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
-	t.Skip("TODO: Fix FSSZ HTR for sync committee and participation roots")
 	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	type test struct {
 		name        string
@@ -171,7 +170,6 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
-	t.Skip("TODO: Fix FSSZ HTR for sync committee and participation roots")
 	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 
 	type test struct {
