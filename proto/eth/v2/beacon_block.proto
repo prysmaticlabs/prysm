@@ -31,11 +31,11 @@ message BlockRequestV2 {
   bytes block_id = 1;
 }
 
-message BlockResponseV2 {
+message BlockResponse {
   BeaconBlockContainerV2 data = 1;
 }
 
-message BlockSSZResponseV2 {
+message BlockSSZResponse {
   bytes data = 1;
 }
 

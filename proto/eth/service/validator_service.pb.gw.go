@@ -310,7 +310,7 @@ var (
 )
 
 func request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.ProduceBlockRequestV2
+	var protoReq eth.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -344,7 +344,7 @@ func request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler
 }
 
 func local_request_BeaconValidator_ProduceBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.ProduceBlockRequestV2
+	var protoReq eth.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
 	var (

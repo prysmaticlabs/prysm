@@ -48,7 +48,7 @@ message SyncCommitteeDuty {
   repeated uint64 sync_committee_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 }
 
-message ProduceBlockRequestV2 {
+message ProduceBlockRequest {
   // The slot to request a block for.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -60,7 +60,7 @@ message ProduceBlockRequestV2 {
   optional bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message ProduceBlockResponseV2 {
+message ProduceBlockResponse {
   v1alpha1.BeaconBlockAltair data = 1;
 }
 
