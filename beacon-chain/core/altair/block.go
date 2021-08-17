@@ -160,7 +160,7 @@ func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVot
 }
 
 // SyncRewards returns the proposer reward and the sync participant reward given the total active balance in state.
-func SyncRewards(activeBalance uint64) (proposerReward uint64, participantReward uint64, err error) {
+func SyncRewards(activeBalance uint64) (proposerReward, participantReward uint64, err error) {
 	cfg := params.BeaconConfig()
 	totalActiveIncrements := activeBalance / cfg.EffectiveBalanceIncrement
 	baseRewardPerInc, err := BaseRewardPerIncrement(activeBalance)
