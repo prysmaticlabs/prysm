@@ -25,11 +25,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
@@ -39,7 +39,7 @@ import (
 	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -276,12 +276,12 @@ func (s *Service) Start() {
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
+	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterSlasherServer(s.grpcServer, slasherServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
+	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
 		BlockNotifier:     s.cfg.BlockNotifier,
@@ -308,10 +308,10 @@ func (s *Service) Start() {
 			},
 		}
 		prysmv2.RegisterDebugServer(s.grpcServer, debugServer)
-		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
+		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
+	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 

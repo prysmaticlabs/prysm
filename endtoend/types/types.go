@@ -11,17 +11,17 @@ import (
 
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
+	TestSync            bool
+	UsePrysmShValidator bool
+	UsePprof            bool
+	TestDeposits        bool
+	EpochsToRun         uint64
+	TracingSinkEndpoint string
+	Evaluators          []Evaluator // Evaluators that run on regular beacon nodes in the E2E test.
+	PostSyncEvaluators  []Evaluator // Evaluators that will be run after a beacon node syncs.
 	BeaconFlags         []string
 	SyncingBeaconFlags  []string // Flags for a beacon node that will attempt to sync after e2e evaluation.
 	ValidatorFlags      []string
-	EpochsToRun         uint64
-	EpochsToRunPostSync uint64
-	TestSync            bool
-	TestDeposits        bool
-	UsePprof            bool
-	UsePrysmShValidator bool
-	Evaluators          []Evaluator // Evaluators that run on regular beacon nodes in the E2E test.
-	PostSyncEvaluators  []Evaluator // Evaluators that will be run after a beacon node syncs.
 }
 
 // Evaluator defines the structure of the evaluators used to
