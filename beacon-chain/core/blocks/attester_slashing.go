@@ -64,7 +64,7 @@ func ProcessAttesterSlashings(
 				proposerRewardQuotient := cfg.ProposerRewardQuotient
 				if beaconState.Version() == version.Altair {
 					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-					proposerRewardQuotient = cfg.WeightDenominator / cfg.ProposerRewardQuotient
+					proposerRewardQuotient = cfg.WeightDenominator / cfg.ProposerWeight
 				}
 				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, proposerRewardQuotient)
 				if err != nil {
