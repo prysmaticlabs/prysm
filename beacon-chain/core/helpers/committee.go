@@ -273,8 +273,14 @@ func VerifyAttestationBitfieldLengths(state state.ReadOnlyBeaconState, att *ethp
 	return nil
 }
 
-// Returns the active indices of the validators in input `state` and during input `epoch`.
-func activeIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
+// the shuffled indices then can be used to break up into committees.
+func ShuffledIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+	seed, err := Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
+	}
+
 	indices := make([]types.ValidatorIndex, 0, s.NumValidators())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
@@ -285,7 +291,8 @@ func activeIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.Vali
 		return nil, err
 	}
 
-	return indices, nil
+	// UnshuffleList is used as an optimized implementation for raw speed.
+	return UnshuffleList(indices, seed)
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
@@ -301,13 +308,7 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return nil
 		}
 
-		indices, err := activeIndices(state, e)
-		if err != nil {
-			return err
-		}
-
-		// Get the shuffled indices based on the seed.
-		shuffledIndices, err := UnshuffleList(indices, seed)
+		shuffledIndices, err := ShuffledIndices(state, e)
 		if err != nil {
 			return err
 		}
