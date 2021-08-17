@@ -25,7 +25,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
 			continue
 		}
-		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") {
+		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") || strings.HasPrefix(line, "# Minimal preset") {
 			conf = MinimalSpecConfig().Copy()
 		}
 
