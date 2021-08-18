@@ -243,8 +243,8 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	return &ethpbv1.BlockSSZResponse{Data: sszBlock}, nil
 }
 
-// GetBlockAltair retrieves block details for given block ID.
-func (bs *Server) GetBlockAltair(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
+// GetBlockV2 retrieves block details for given block ID.
+func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockAltair")
 	defer span.End()
 
@@ -289,7 +289,7 @@ func (bs *Server) GetBlockAltair(ctx context.Context, req *ethpbv2.BlockRequestV
 	}
 }
 
-func (bs *Server) GetBlockSSZAltair(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
+func (bs *Server) GetBlockSSZV2(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
 	panic("implement me")
 }
 
