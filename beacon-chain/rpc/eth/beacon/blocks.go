@@ -219,7 +219,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	}, nil
 }
 
-// GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
+// GetBlockSSZ returns the SSZ-serialized version of the beacon block for given block ID.
 func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
 	defer span.End()
@@ -289,6 +289,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 }
 
+// GetBlockSSZV2 returns the SSZ-serialized version of the beacon block for given block ID.
 func (bs *Server) GetBlockSSZV2(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
 	panic("implement me")
 }
