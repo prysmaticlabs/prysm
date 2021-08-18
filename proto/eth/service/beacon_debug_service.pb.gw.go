@@ -148,7 +148,7 @@ func local_request_BeaconDebug_GetBeaconStateSSZ_0(ctx context.Context, marshale
 }
 
 func request_BeaconDebug_GetBeaconStateAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconDebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.StateRequest
+	var protoReq eth.StateRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -175,7 +175,7 @@ func request_BeaconDebug_GetBeaconStateAltair_0(ctx context.Context, marshaler r
 }
 
 func local_request_BeaconDebug_GetBeaconStateAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconDebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.StateRequest
+	var protoReq eth.StateRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -202,7 +202,7 @@ func local_request_BeaconDebug_GetBeaconStateAltair_0(ctx context.Context, marsh
 }
 
 func request_BeaconDebug_GetBeaconStateSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconDebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.StateRequest
+	var protoReq eth.StateRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -229,7 +229,7 @@ func request_BeaconDebug_GetBeaconStateSSZAltair_0(ctx context.Context, marshale
 }
 
 func local_request_BeaconDebug_GetBeaconStateSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconDebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.StateRequest
+	var protoReq eth.StateRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
