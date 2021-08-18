@@ -57,6 +57,10 @@ func (m mockSignature) Copy() bls.Signature {
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	validatorKey, err := bls.RandKey()
 	require.NoError(t, err)
+	return setupWithKey(t, validatorKey)
+}
+
+func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
@@ -64,7 +68,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+		signExitFunc: func(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}
