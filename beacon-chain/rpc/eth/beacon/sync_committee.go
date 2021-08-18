@@ -53,13 +53,13 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 	}
 
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
-	subcommittees := make([]*eth.SyncSubcommittee, subcommitteeCount)
+	subcommittees := make([]*eth.SyncSubcommitteeValidators, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get subcommittee pubkeys: %v", err)
 		}
-		subcommittee := &eth.SyncSubcommittee{Validators: make([]types.ValidatorIndex, len(pubkeys))}
+		subcommittee := &eth.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
 			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 			if !ok {
@@ -71,7 +71,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 	}
 
 	return &eth.StateSyncCommitteesResponse{
-		Data: &eth.SyncCommittee{
+		Data: &eth.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
