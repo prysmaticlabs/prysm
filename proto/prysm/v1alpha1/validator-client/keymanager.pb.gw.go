@@ -2,11 +2,11 @@
 // source: proto/prysm/v1alpha1/validator-client/keymanager.proto
 
 /*
-Package validator_client is a reverse proxy.
+Package validatorpb is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package validator_client
+package validatorpb
 
 import (
 	"context"
