@@ -69,6 +69,8 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 			ev.ColdStateCheckpoint,
 			ev.ApiVerifyValidators,
 			ev.ForkTransition,
+			ev.APIGatewayV1VerifyIntegrity,
+			ev.APIGatewayV1Alpha1VerifyIntegrity,
 		},
 	}
 

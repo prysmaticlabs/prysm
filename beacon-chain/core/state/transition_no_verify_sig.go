@@ -337,11 +337,11 @@ func altairOperations(
 	ctx context.Context,
 	state state.BeaconState,
 	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), altair.SlashValidator)
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), altair.SlashValidator)
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}

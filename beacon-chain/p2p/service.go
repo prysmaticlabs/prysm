@@ -146,6 +146,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+	// Reinitialize them in the event we are running a custom config.
+	attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {

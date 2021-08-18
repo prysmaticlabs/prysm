@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -31,7 +31,7 @@ func RunProposerSlashingTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBodyAltair{ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
-				return blocks.ProcessProposerSlashings(ctx, s, b.Block().Body().ProposerSlashings(), altair.SlashValidator)
+				return blocks.ProcessProposerSlashings(ctx, s, b.Block().Body().ProposerSlashings(), validators.SlashValidator)
 			})
 		})
 	}
