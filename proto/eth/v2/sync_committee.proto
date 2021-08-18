@@ -28,6 +28,12 @@ message SubmitSyncCommitteeSignaturesRequest {
   repeated SyncCommitteeMessage data = 1;
 }
 
+// SyncCommittee serves as committees to facilitate light client syncing to beacon chain.
+message SyncCommittee {
+  repeated bytes pubkeys = 1  [(ethereum.eth.ext.ssz_size) = "sync_committee_bits.size,48"];
+  bytes aggregate_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
 // Sync committee object to support light client.
 message SyncCommitteeMessage {
   // Slot to which this contribution pertains.
@@ -53,17 +59,17 @@ message StateSyncCommitteesRequest {
 }
 
 message StateSyncCommitteesResponse {
-  SyncCommittee data = 1;
+  SyncCommitteeValidators data = 1;
 }
 
-message SyncCommittee {
+message SyncCommitteeValidators {
   // All of the validator indices in the current sync committee.
   repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 
-  repeated SyncSubcommittee validator_aggregates = 2;
+  repeated SyncSubcommitteeValidators validator_aggregates = 2;
 }
 
-message SyncSubcommittee {
+message SyncSubcommitteeValidators {
   // Subcommittee slices of the current sync committee.
   repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 }

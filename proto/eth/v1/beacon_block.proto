@@ -199,3 +199,13 @@ message IndexedAttestation {
     // 96 bytes aggregate signature.
     bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
 }
+
+// The sync aggregate object for the beacon chain to track sync committee votes and to
+// support light client infra.
+message SyncAggregate {
+    // Sync committee bits as Bitvector to track votes.
+    bytes sync_committee_bits = 1 [(ethereum.eth.ext.ssz_size) = "64", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector512"];
+
+    // BLS aggregated signature of the sync committee for the ones that voted.
+    bytes sync_committee_signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
