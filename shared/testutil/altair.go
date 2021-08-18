@@ -199,10 +199,11 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	vals := preState.Validators()
-	valsCount := len(vals)
+	if len(vals) < len(syncCommittee) {
+		return nil, fmt.Errorf("at least %d validators are required to fill out the sync committee", len(syncCommittee))
+	}
 	for i := 0; i < len(syncCommittee); i++ {
-		// Wrap around in case the number of validators is less than sync committee size.
-		syncCommittee[i] = vals[i%valsCount].PublicKey
+		syncCommittee[i] = vals[i].PublicKey
 	}
 	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         syncCommittee,
