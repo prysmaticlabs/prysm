@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -153,7 +154,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
-	sig, err := validator.keyManager.Sign(context.Background(), &ethpb.SignRequest{
+	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
 		PublicKey:   validatorKey.PublicKey().Marshal(),
 		SigningRoot: root[:],
 	})

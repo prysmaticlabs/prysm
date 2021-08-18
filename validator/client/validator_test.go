@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -72,7 +73,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	return keys, nil
 }
 
-func (m *mockKeymanager) Sign(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
+func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
