@@ -206,7 +206,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
+	signedBeaconBlock, err := migration.SignedBeaconBlockV1(block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -231,7 +231,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
+	signedBeaconBlock, err := migration.SignedBeaconBlockV1(block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -243,8 +243,50 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	return &ethpbv1.BlockSSZResponse{Data: sszBlock}, nil
 }
 
-func (bs *Server) GetBlockAltair(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
-	panic("implement me")
+// GetBlockAltair retrieves block details for given block ID.
+func (bs *Server) GetBlockAltair(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockAltair")
+	defer span.End()
+
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+	}
+
+	phase0Blk, err := blk.PbPhase0Block()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
+	}
+	if phase0Blk != nil {
+		v1Blk, err := migration.SignedBeaconBlockV1(blk)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Phase0Block: v1Blk.Block,
+				Signature:   v1Blk.Signature,
+			},
+		}, nil
+	} else {
+		altairBlk, err := blk.PbAltairBlock()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				AltairBlock: v2Blk,
+				Signature:   blk.Signature(),
+			},
+		}, nil
+	}
 }
 
 func (bs *Server) GetBlockSSZAltair(ctx context.Context, request *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
