@@ -614,7 +614,7 @@ func local_request_SlashingProtection_ImportSlashingProtection_0(ctx context.Con
 
 }
 
-func request_ValidatorHealth_GetBeaconNodeConnection_0(ctx context.Context, marshaler runtime.Marshaler, client ValidatorHealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Health_GetBeaconNodeConnection_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -623,7 +623,7 @@ func request_ValidatorHealth_GetBeaconNodeConnection_0(ctx context.Context, mars
 
 }
 
-func local_request_ValidatorHealth_GetBeaconNodeConnection_0(ctx context.Context, marshaler runtime.Marshaler, server ValidatorHealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Health_GetBeaconNodeConnection_0(ctx context.Context, marshaler runtime.Marshaler, server HealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -632,7 +632,7 @@ func local_request_ValidatorHealth_GetBeaconNodeConnection_0(ctx context.Context
 
 }
 
-func request_ValidatorHealth_GetLogsEndpoints_0(ctx context.Context, marshaler runtime.Marshaler, client ValidatorHealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Health_GetLogsEndpoints_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -641,7 +641,7 @@ func request_ValidatorHealth_GetLogsEndpoints_0(ctx context.Context, marshaler r
 
 }
 
-func local_request_ValidatorHealth_GetLogsEndpoints_0(ctx context.Context, marshaler runtime.Marshaler, server ValidatorHealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Health_GetLogsEndpoints_0(ctx context.Context, marshaler runtime.Marshaler, server HealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -650,7 +650,7 @@ func local_request_ValidatorHealth_GetLogsEndpoints_0(ctx context.Context, marsh
 
 }
 
-func request_ValidatorHealth_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, client ValidatorHealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Health_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -659,7 +659,7 @@ func request_ValidatorHealth_GetVersion_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_ValidatorHealth_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, server ValidatorHealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Health_GetVersion_0(ctx context.Context, marshaler runtime.Marshaler, server HealthServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -668,7 +668,7 @@ func local_request_ValidatorHealth_GetVersion_0(ctx context.Context, marshaler r
 
 }
 
-func request_ValidatorHealth_StreamBeaconLogs_0(ctx context.Context, marshaler runtime.Marshaler, client ValidatorHealthClient, req *http.Request, pathParams map[string]string) (ValidatorHealth_StreamBeaconLogsClient, runtime.ServerMetadata, error) {
+func request_Health_StreamBeaconLogs_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (Health_StreamBeaconLogsClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -685,7 +685,7 @@ func request_ValidatorHealth_StreamBeaconLogs_0(ctx context.Context, marshaler r
 
 }
 
-func request_ValidatorHealth_StreamValidatorLogs_0(ctx context.Context, marshaler runtime.Marshaler, client ValidatorHealthClient, req *http.Request, pathParams map[string]string) (ValidatorHealth_StreamValidatorLogsClient, runtime.ServerMetadata, error) {
+func request_Health_StreamValidatorLogs_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (Health_StreamValidatorLogsClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1295,24 +1295,24 @@ func RegisterSlashingProtectionHandlerServer(ctx context.Context, mux *runtime.S
 	return nil
 }
 
-// RegisterValidatorHealthHandlerServer registers the http handlers for service ValidatorHealth to "mux".
-// UnaryRPC     :call ValidatorHealthServer directly.
+// RegisterHealthHandlerServer registers the http handlers for service Health to "mux".
+// UnaryRPC     :call HealthServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterValidatorHealthHandlerFromEndpoint instead.
-func RegisterValidatorHealthHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ValidatorHealthServer) error {
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterHealthHandlerFromEndpoint instead.
+func RegisterHealthHandlerServer(ctx context.Context, mux *runtime.ServeMux, server HealthServer) error {
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetBeaconNodeConnection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetBeaconNodeConnection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetBeaconNodeConnection")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ValidatorHealth_GetBeaconNodeConnection_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Health_GetBeaconNodeConnection_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1320,22 +1320,22 @@ func RegisterValidatorHealthHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_ValidatorHealth_GetBeaconNodeConnection_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetBeaconNodeConnection_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetLogsEndpoints_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetLogsEndpoints_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetLogsEndpoints")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ValidatorHealth_GetLogsEndpoints_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Health_GetLogsEndpoints_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1343,22 +1343,22 @@ func RegisterValidatorHealthHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_ValidatorHealth_GetLogsEndpoints_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetLogsEndpoints_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetVersion")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetVersion")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ValidatorHealth_GetVersion_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Health_GetVersion_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1366,18 +1366,18 @@ func RegisterValidatorHealthHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_ValidatorHealth_GetVersion_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetVersion_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_StreamBeaconLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_StreamBeaconLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
 		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 		return
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_StreamValidatorLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_StreamValidatorLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
 		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -2124,9 +2124,9 @@ var (
 	forward_SlashingProtection_ImportSlashingProtection_0 = runtime.ForwardResponseMessage
 )
 
-// RegisterValidatorHealthHandlerFromEndpoint is same as RegisterValidatorHealthHandler but
+// RegisterHealthHandlerFromEndpoint is same as RegisterHealthHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterValidatorHealthHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterHealthHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -2146,119 +2146,119 @@ func RegisterValidatorHealthHandlerFromEndpoint(ctx context.Context, mux *runtim
 		}()
 	}()
 
-	return RegisterValidatorHealthHandler(ctx, mux, conn)
+	return RegisterHealthHandler(ctx, mux, conn)
 }
 
-// RegisterValidatorHealthHandler registers the http handlers for service ValidatorHealth to "mux".
+// RegisterHealthHandler registers the http handlers for service Health to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterValidatorHealthHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterValidatorHealthHandlerClient(ctx, mux, NewValidatorHealthClient(conn))
+func RegisterHealthHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterHealthHandlerClient(ctx, mux, NewHealthClient(conn))
 }
 
-// RegisterValidatorHealthHandlerClient registers the http handlers for service ValidatorHealth
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "ValidatorHealthClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "ValidatorHealthClient"
+// RegisterHealthHandlerClient registers the http handlers for service Health
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "HealthClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "HealthClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "ValidatorHealthClient" to call the correct interceptors.
-func RegisterValidatorHealthHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ValidatorHealthClient) error {
+// "HealthClient" to call the correct interceptors.
+func RegisterHealthHandlerClient(ctx context.Context, mux *runtime.ServeMux, client HealthClient) error {
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetBeaconNodeConnection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetBeaconNodeConnection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetBeaconNodeConnection")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ValidatorHealth_GetBeaconNodeConnection_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Health_GetBeaconNodeConnection_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ValidatorHealth_GetBeaconNodeConnection_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetBeaconNodeConnection_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetLogsEndpoints_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetLogsEndpoints_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetLogsEndpoints")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ValidatorHealth_GetLogsEndpoints_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Health_GetLogsEndpoints_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ValidatorHealth_GetLogsEndpoints_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetLogsEndpoints_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_GetVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/GetVersion")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/GetVersion")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ValidatorHealth_GetVersion_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Health_GetVersion_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ValidatorHealth_GetVersion_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Health_GetVersion_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_StreamBeaconLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_StreamBeaconLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/StreamBeaconLogs")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/StreamBeaconLogs")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ValidatorHealth_StreamBeaconLogs_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Health_StreamBeaconLogs_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ValidatorHealth_StreamBeaconLogs_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Health_StreamBeaconLogs_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_ValidatorHealth_StreamValidatorLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Health_StreamValidatorLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.ValidatorHealth/StreamValidatorLogs")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.validator.accounts.v2.Health/StreamValidatorLogs")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ValidatorHealth_StreamValidatorLogs_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Health_StreamValidatorLogs_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ValidatorHealth_StreamValidatorLogs_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_Health_StreamValidatorLogs_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2266,27 +2266,27 @@ func RegisterValidatorHealthHandlerClient(ctx context.Context, mux *runtime.Serv
 }
 
 var (
-	pattern_ValidatorHealth_GetBeaconNodeConnection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "health", "node_connection"}, ""))
+	pattern_Health_GetBeaconNodeConnection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "health", "node_connection"}, ""))
 
-	pattern_ValidatorHealth_GetLogsEndpoints_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"v2", "validator", "health", "logs", "endpoints"}, ""))
+	pattern_Health_GetLogsEndpoints_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"v2", "validator", "health", "logs", "endpoints"}, ""))
 
-	pattern_ValidatorHealth_GetVersion_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "health", "version"}, ""))
+	pattern_Health_GetVersion_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "health", "version"}, ""))
 
-	pattern_ValidatorHealth_StreamBeaconLogs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"v2", "validator", "health", "logs", "beacon", "stream"}, ""))
+	pattern_Health_StreamBeaconLogs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"v2", "validator", "health", "logs", "beacon", "stream"}, ""))
 
-	pattern_ValidatorHealth_StreamValidatorLogs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 1, 2, 4}, []string{"v2", "validator", "health", "logs", "stream"}, ""))
+	pattern_Health_StreamValidatorLogs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 1, 2, 4}, []string{"v2", "validator", "health", "logs", "stream"}, ""))
 )
 
 var (
-	forward_ValidatorHealth_GetBeaconNodeConnection_0 = runtime.ForwardResponseMessage
+	forward_Health_GetBeaconNodeConnection_0 = runtime.ForwardResponseMessage
 
-	forward_ValidatorHealth_GetLogsEndpoints_0 = runtime.ForwardResponseMessage
+	forward_Health_GetLogsEndpoints_0 = runtime.ForwardResponseMessage
 
-	forward_ValidatorHealth_GetVersion_0 = runtime.ForwardResponseMessage
+	forward_Health_GetVersion_0 = runtime.ForwardResponseMessage
 
-	forward_ValidatorHealth_StreamBeaconLogs_0 = runtime.ForwardResponseStream
+	forward_Health_StreamBeaconLogs_0 = runtime.ForwardResponseStream
 
-	forward_ValidatorHealth_StreamValidatorLogs_0 = runtime.ForwardResponseStream
+	forward_Health_StreamValidatorLogs_0 = runtime.ForwardResponseStream
 )
 
 // RegisterAuthHandlerFromEndpoint is same as RegisterAuthHandler but

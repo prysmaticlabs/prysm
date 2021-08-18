@@ -138,7 +138,7 @@ service SlashingProtection {
     }
 }
 
-service ValidatorHealth {
+service Health {
     rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
         option (google.api.http) = {
             get: "/v2/validator/health/node_connection"
