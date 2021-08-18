@@ -151,15 +151,15 @@ service BeaconChain {
     };
   }
 
-  // GetBlockAltair retrieves block details for given block id.
-  rpc GetBlockAltair(v2.BlockRequest) returns (v2.BlockResponse) {
+  // GetBlockV2 retrieves block details for given block id.
+  rpc GetBlockV2(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}"
     };
   }
 
-  // GetBlockSSZAltair returns the SSZ-serialized version of block details for given block id.
-  rpc GetBlockSSZAltair(v2.BlockRequest) returns (v2.BlockSSZResponse) {
+  // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
+  rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}/ssz"
     };
