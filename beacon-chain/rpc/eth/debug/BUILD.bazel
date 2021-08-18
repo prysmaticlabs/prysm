@@ -6,7 +6,7 @@ go_library(
         "debug.go",
         "server.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",

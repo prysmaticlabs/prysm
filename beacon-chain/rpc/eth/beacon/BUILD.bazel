@@ -12,7 +12,7 @@ go_library(
         "sync_committee.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
