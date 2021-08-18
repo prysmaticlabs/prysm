@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -518,12 +519,12 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
-		pb.RegisterAuthHandler,
-		pb.RegisterWalletHandler,
+		validator_client.RegisterAuthHandler,
+		validator_client.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
-		pb.RegisterAccountsHandler,
-		pb.RegisterBeaconHandler,
-		pb.RegisterSlashingProtectionHandler,
+		validator_client.RegisterAccountsHandler,
+		validator_client.RegisterBeaconHandler,
+		validator_client.RegisterSlashingProtectionHandler,
 	}
 	mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

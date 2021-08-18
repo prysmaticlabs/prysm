@@ -6,7 +6,7 @@ Package eth is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package eth
+package validator_client
 
 import (
 	"context"

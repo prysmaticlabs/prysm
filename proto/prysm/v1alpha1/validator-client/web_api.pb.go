@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/prysm/v1alpha1/web_api.proto
 
-package eth
+package validator_client
 
 import (
 	context "context"
@@ -13,6 +13,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -1314,12 +1315,12 @@ type BeaconStatusResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BeaconNodeEndpoint     string     `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
-	Connected              bool       `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
-	Syncing                bool       `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
-	GenesisTime            uint64     `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	DepositContractAddress []byte     `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
-	ChainHead              *ChainHead `protobuf:"bytes,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
+	BeaconNodeEndpoint     string         `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
+	Connected              bool           `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
+	Syncing                bool           `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
+	GenesisTime            uint64         `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	DepositContractAddress []byte         `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	ChainHead              *eth.ChainHead `protobuf:"bytes,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
 }
 
 func (x *BeaconStatusResponse) Reset() {
@@ -1389,7 +1390,7 @@ func (x *BeaconStatusResponse) GetDepositContractAddress() []byte {
 	return nil
 }
 
-func (x *BeaconStatusResponse) GetChainHead() *ChainHead {
+func (x *BeaconStatusResponse) GetChainHead() *eth.ChainHead {
 	if x != nil {
 		return x.ChainHead
 	}
@@ -2296,49 +2297,49 @@ func file_proto_prysm_v1alpha1_web_api_proto_rawDescGZIP() []byte {
 var file_proto_prysm_v1alpha1_web_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_proto_prysm_v1alpha1_web_api_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_proto_prysm_v1alpha1_web_api_proto_goTypes = []interface{}{
-	(KeymanagerKind)(0),                      // 0: ethereum.eth.v1alpha1.KeymanagerKind
-	(*CreateWalletRequest)(nil),              // 1: ethereum.eth.v1alpha1.CreateWalletRequest
-	(*CreateWalletResponse)(nil),             // 2: ethereum.eth.v1alpha1.CreateWalletResponse
-	(*EditWalletConfigRequest)(nil),          // 3: ethereum.eth.v1alpha1.EditWalletConfigRequest
-	(*GenerateMnemonicResponse)(nil),         // 4: ethereum.eth.v1alpha1.GenerateMnemonicResponse
-	(*WalletResponse)(nil),                   // 5: ethereum.eth.v1alpha1.WalletResponse
-	(*RecoverWalletRequest)(nil),             // 6: ethereum.eth.v1alpha1.RecoverWalletRequest
-	(*ListAccountsRequest)(nil),              // 7: ethereum.eth.v1alpha1.ListAccountsRequest
-	(*ListAccountsResponse)(nil),             // 8: ethereum.eth.v1alpha1.ListAccountsResponse
-	(*Account)(nil),                          // 9: ethereum.eth.v1alpha1.Account
-	(*AccountRequest)(nil),                   // 10: ethereum.eth.v1alpha1.AccountRequest
-	(*AuthRequest)(nil),                      // 11: ethereum.eth.v1alpha1.AuthRequest
-	(*AuthResponse)(nil),                     // 12: ethereum.eth.v1alpha1.AuthResponse
-	(*NodeConnectionResponse)(nil),           // 13: ethereum.eth.v1alpha1.NodeConnectionResponse
-	(*LogsEndpointResponse)(nil),             // 14: ethereum.eth.v1alpha1.LogsEndpointResponse
-	(*VersionResponse)(nil),                  // 15: ethereum.eth.v1alpha1.VersionResponse
-	(*ChangePasswordRequest)(nil),            // 16: ethereum.eth.v1alpha1.ChangePasswordRequest
-	(*HasWalletResponse)(nil),                // 17: ethereum.eth.v1alpha1.HasWalletResponse
-	(*ImportKeystoresRequest)(nil),           // 18: ethereum.eth.v1alpha1.ImportKeystoresRequest
-	(*ImportKeystoresResponse)(nil),          // 19: ethereum.eth.v1alpha1.ImportKeystoresResponse
-	(*HasUsedWebResponse)(nil),               // 20: ethereum.eth.v1alpha1.HasUsedWebResponse
-	(*BeaconStatusResponse)(nil),             // 21: ethereum.eth.v1alpha1.BeaconStatusResponse
-	(*VoluntaryExitRequest)(nil),             // 22: ethereum.eth.v1alpha1.VoluntaryExitRequest
-	(*VoluntaryExitResponse)(nil),            // 23: ethereum.eth.v1alpha1.VoluntaryExitResponse
-	(*BackupAccountsRequest)(nil),            // 24: ethereum.eth.v1alpha1.BackupAccountsRequest
-	(*BackupAccountsResponse)(nil),           // 25: ethereum.eth.v1alpha1.BackupAccountsResponse
-	(*DeleteAccountsRequest)(nil),            // 26: ethereum.eth.v1alpha1.DeleteAccountsRequest
-	(*DeleteAccountsResponse)(nil),           // 27: ethereum.eth.v1alpha1.DeleteAccountsResponse
-	(*ExportSlashingProtectionResponse)(nil), // 28: ethereum.eth.v1alpha1.ExportSlashingProtectionResponse
-	(*ImportSlashingProtectionRequest)(nil),  // 29: ethereum.eth.v1alpha1.ImportSlashingProtectionRequest
-	(*ChainHead)(nil),                        // 30: ethereum.eth.v1alpha1.ChainHead
-	(*empty.Empty)(nil),                      // 31: google.protobuf.Empty
-	(*GetValidatorParticipationRequest)(nil), // 32: ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-	(*ValidatorPerformanceRequest)(nil),      // 33: ethereum.eth.v1alpha1.ValidatorPerformanceRequest
-	(*ListValidatorsRequest)(nil),            // 34: ethereum.eth.v1alpha1.ListValidatorsRequest
-	(*ListValidatorBalancesRequest)(nil),     // 35: ethereum.eth.v1alpha1.ListValidatorBalancesRequest
-	(*ValidatorParticipationResponse)(nil),   // 36: ethereum.eth.v1alpha1.ValidatorParticipationResponse
-	(*ValidatorPerformanceResponse)(nil),     // 37: ethereum.eth.v1alpha1.ValidatorPerformanceResponse
-	(*Validators)(nil),                       // 38: ethereum.eth.v1alpha1.Validators
-	(*ValidatorBalances)(nil),                // 39: ethereum.eth.v1alpha1.ValidatorBalances
-	(*ValidatorQueue)(nil),                   // 40: ethereum.eth.v1alpha1.ValidatorQueue
-	(*Peers)(nil),                            // 41: ethereum.eth.v1alpha1.Peers
-	(*LogsResponse)(nil),                     // 42: ethereum.eth.v1alpha1.LogsResponse
+	(KeymanagerKind)(0),                          // 0: ethereum.eth.v1alpha1.KeymanagerKind
+	(*CreateWalletRequest)(nil),                  // 1: ethereum.eth.v1alpha1.CreateWalletRequest
+	(*CreateWalletResponse)(nil),                 // 2: ethereum.eth.v1alpha1.CreateWalletResponse
+	(*EditWalletConfigRequest)(nil),              // 3: ethereum.eth.v1alpha1.EditWalletConfigRequest
+	(*GenerateMnemonicResponse)(nil),             // 4: ethereum.eth.v1alpha1.GenerateMnemonicResponse
+	(*WalletResponse)(nil),                       // 5: ethereum.eth.v1alpha1.WalletResponse
+	(*RecoverWalletRequest)(nil),                 // 6: ethereum.eth.v1alpha1.RecoverWalletRequest
+	(*ListAccountsRequest)(nil),                  // 7: ethereum.eth.v1alpha1.ListAccountsRequest
+	(*ListAccountsResponse)(nil),                 // 8: ethereum.eth.v1alpha1.ListAccountsResponse
+	(*Account)(nil),                              // 9: ethereum.eth.v1alpha1.Account
+	(*AccountRequest)(nil),                       // 10: ethereum.eth.v1alpha1.AccountRequest
+	(*AuthRequest)(nil),                          // 11: ethereum.eth.v1alpha1.AuthRequest
+	(*AuthResponse)(nil),                         // 12: ethereum.eth.v1alpha1.AuthResponse
+	(*NodeConnectionResponse)(nil),               // 13: ethereum.eth.v1alpha1.NodeConnectionResponse
+	(*LogsEndpointResponse)(nil),                 // 14: ethereum.eth.v1alpha1.LogsEndpointResponse
+	(*VersionResponse)(nil),                      // 15: ethereum.eth.v1alpha1.VersionResponse
+	(*ChangePasswordRequest)(nil),                // 16: ethereum.eth.v1alpha1.ChangePasswordRequest
+	(*HasWalletResponse)(nil),                    // 17: ethereum.eth.v1alpha1.HasWalletResponse
+	(*ImportKeystoresRequest)(nil),               // 18: ethereum.eth.v1alpha1.ImportKeystoresRequest
+	(*ImportKeystoresResponse)(nil),              // 19: ethereum.eth.v1alpha1.ImportKeystoresResponse
+	(*HasUsedWebResponse)(nil),                   // 20: ethereum.eth.v1alpha1.HasUsedWebResponse
+	(*BeaconStatusResponse)(nil),                 // 21: ethereum.eth.v1alpha1.BeaconStatusResponse
+	(*VoluntaryExitRequest)(nil),                 // 22: ethereum.eth.v1alpha1.VoluntaryExitRequest
+	(*VoluntaryExitResponse)(nil),                // 23: ethereum.eth.v1alpha1.VoluntaryExitResponse
+	(*BackupAccountsRequest)(nil),                // 24: ethereum.eth.v1alpha1.BackupAccountsRequest
+	(*BackupAccountsResponse)(nil),               // 25: ethereum.eth.v1alpha1.BackupAccountsResponse
+	(*DeleteAccountsRequest)(nil),                // 26: ethereum.eth.v1alpha1.DeleteAccountsRequest
+	(*DeleteAccountsResponse)(nil),               // 27: ethereum.eth.v1alpha1.DeleteAccountsResponse
+	(*ExportSlashingProtectionResponse)(nil),     // 28: ethereum.eth.v1alpha1.ExportSlashingProtectionResponse
+	(*ImportSlashingProtectionRequest)(nil),      // 29: ethereum.eth.v1alpha1.ImportSlashingProtectionRequest
+	(*eth.ChainHead)(nil),                        // 30: ethereum.eth.v1alpha1.ChainHead
+	(*empty.Empty)(nil),                          // 31: google.protobuf.Empty
+	(*eth.GetValidatorParticipationRequest)(nil), // 32: ethereum.eth.v1alpha1.GetValidatorParticipationRequest
+	(*eth.ValidatorPerformanceRequest)(nil),      // 33: ethereum.eth.v1alpha1.ValidatorPerformanceRequest
+	(*eth.ListValidatorsRequest)(nil),            // 34: ethereum.eth.v1alpha1.ListValidatorsRequest
+	(*eth.ListValidatorBalancesRequest)(nil),     // 35: ethereum.eth.v1alpha1.ListValidatorBalancesRequest
+	(*eth.ValidatorParticipationResponse)(nil),   // 36: ethereum.eth.v1alpha1.ValidatorParticipationResponse
+	(*eth.ValidatorPerformanceResponse)(nil),     // 37: ethereum.eth.v1alpha1.ValidatorPerformanceResponse
+	(*eth.Validators)(nil),                       // 38: ethereum.eth.v1alpha1.Validators
+	(*eth.ValidatorBalances)(nil),                // 39: ethereum.eth.v1alpha1.ValidatorBalances
+	(*eth.ValidatorQueue)(nil),                   // 40: ethereum.eth.v1alpha1.ValidatorQueue
+	(*eth.Peers)(nil),                            // 41: ethereum.eth.v1alpha1.Peers
+	(*eth.LogsResponse)(nil),                     // 42: ethereum.eth.v1alpha1.LogsResponse
 }
 var file_proto_prysm_v1alpha1_web_api_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.v1alpha1.CreateWalletRequest.keymanager:type_name -> ethereum.eth.v1alpha1.KeymanagerKind
@@ -2414,9 +2415,9 @@ func file_proto_prysm_v1alpha1_web_api_proto_init() {
 	if File_proto_prysm_v1alpha1_web_api_proto != nil {
 		return
 	}
-	file_proto_prysm_v1alpha1_health_proto_init()
-	file_proto_prysm_v1alpha1_beacon_chain_proto_init()
-	file_proto_prysm_v1alpha1_node_proto_init()
+	eth.file_proto_prysm_v1alpha1_health_proto_init()
+	eth.file_proto_prysm_v1alpha1_beacon_chain_proto_init()
+	eth.file_proto_prysm_v1alpha1_node_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_proto_prysm_v1alpha1_web_api_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateWalletRequest); i {
@@ -3233,12 +3234,12 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BeaconClient interface {
 	GetBeaconStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error)
-	GetValidatorParticipation(ctx context.Context, in *GetValidatorParticipationRequest, opts ...grpc.CallOption) (*ValidatorParticipationResponse, error)
-	GetValidatorPerformance(ctx context.Context, in *ValidatorPerformanceRequest, opts ...grpc.CallOption) (*ValidatorPerformanceResponse, error)
-	GetValidators(ctx context.Context, in *ListValidatorsRequest, opts ...grpc.CallOption) (*Validators, error)
-	GetValidatorBalances(ctx context.Context, in *ListValidatorBalancesRequest, opts ...grpc.CallOption) (*ValidatorBalances, error)
-	GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ValidatorQueue, error)
-	GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*Peers, error)
+	GetValidatorParticipation(ctx context.Context, in *eth.GetValidatorParticipationRequest, opts ...grpc.CallOption) (*eth.ValidatorParticipationResponse, error)
+	GetValidatorPerformance(ctx context.Context, in *eth.ValidatorPerformanceRequest, opts ...grpc.CallOption) (*eth.ValidatorPerformanceResponse, error)
+	GetValidators(ctx context.Context, in *eth.ListValidatorsRequest, opts ...grpc.CallOption) (*eth.Validators, error)
+	GetValidatorBalances(ctx context.Context, in *eth.ListValidatorBalancesRequest, opts ...grpc.CallOption) (*eth.ValidatorBalances, error)
+	GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*eth.ValidatorQueue, error)
+	GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*eth.Peers, error)
 }
 
 type beaconClient struct {
@@ -3258,8 +3259,8 @@ func (c *beaconClient) GetBeaconStatus(ctx context.Context, in *empty.Empty, opt
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorParticipation(ctx context.Context, in *GetValidatorParticipationRequest, opts ...grpc.CallOption) (*ValidatorParticipationResponse, error) {
-	out := new(ValidatorParticipationResponse)
+func (c *beaconClient) GetValidatorParticipation(ctx context.Context, in *eth.GetValidatorParticipationRequest, opts ...grpc.CallOption) (*eth.ValidatorParticipationResponse, error) {
+	out := new(eth.ValidatorParticipationResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetValidatorParticipation", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3267,8 +3268,8 @@ func (c *beaconClient) GetValidatorParticipation(ctx context.Context, in *GetVal
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorPerformance(ctx context.Context, in *ValidatorPerformanceRequest, opts ...grpc.CallOption) (*ValidatorPerformanceResponse, error) {
-	out := new(ValidatorPerformanceResponse)
+func (c *beaconClient) GetValidatorPerformance(ctx context.Context, in *eth.ValidatorPerformanceRequest, opts ...grpc.CallOption) (*eth.ValidatorPerformanceResponse, error) {
+	out := new(eth.ValidatorPerformanceResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetValidatorPerformance", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3276,8 +3277,8 @@ func (c *beaconClient) GetValidatorPerformance(ctx context.Context, in *Validato
 	return out, nil
 }
 
-func (c *beaconClient) GetValidators(ctx context.Context, in *ListValidatorsRequest, opts ...grpc.CallOption) (*Validators, error) {
-	out := new(Validators)
+func (c *beaconClient) GetValidators(ctx context.Context, in *eth.ListValidatorsRequest, opts ...grpc.CallOption) (*eth.Validators, error) {
+	out := new(eth.Validators)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetValidators", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3285,8 +3286,8 @@ func (c *beaconClient) GetValidators(ctx context.Context, in *ListValidatorsRequ
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *ListValidatorBalancesRequest, opts ...grpc.CallOption) (*ValidatorBalances, error) {
-	out := new(ValidatorBalances)
+func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *eth.ListValidatorBalancesRequest, opts ...grpc.CallOption) (*eth.ValidatorBalances, error) {
+	out := new(eth.ValidatorBalances)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetValidatorBalances", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3294,8 +3295,8 @@ func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *ListValidat
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ValidatorQueue, error) {
-	out := new(ValidatorQueue)
+func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*eth.ValidatorQueue, error) {
+	out := new(eth.ValidatorQueue)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetValidatorQueue", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3303,8 +3304,8 @@ func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, o
 	return out, nil
 }
 
-func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*Peers, error) {
-	out := new(Peers)
+func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*eth.Peers, error) {
+	out := new(eth.Peers)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.Beacon/GetPeers", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -3315,12 +3316,12 @@ func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...gr
 // BeaconServer is the server API for Beacon service.
 type BeaconServer interface {
 	GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error)
-	GetValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error)
-	GetValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error)
-	GetValidators(context.Context, *ListValidatorsRequest) (*Validators, error)
-	GetValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error)
-	GetValidatorQueue(context.Context, *empty.Empty) (*ValidatorQueue, error)
-	GetPeers(context.Context, *empty.Empty) (*Peers, error)
+	GetValidatorParticipation(context.Context, *eth.GetValidatorParticipationRequest) (*eth.ValidatorParticipationResponse, error)
+	GetValidatorPerformance(context.Context, *eth.ValidatorPerformanceRequest) (*eth.ValidatorPerformanceResponse, error)
+	GetValidators(context.Context, *eth.ListValidatorsRequest) (*eth.Validators, error)
+	GetValidatorBalances(context.Context, *eth.ListValidatorBalancesRequest) (*eth.ValidatorBalances, error)
+	GetValidatorQueue(context.Context, *empty.Empty) (*eth.ValidatorQueue, error)
+	GetPeers(context.Context, *empty.Empty) (*eth.Peers, error)
 }
 
 // UnimplementedBeaconServer can be embedded to have forward compatible implementations.
@@ -3330,22 +3331,22 @@ type UnimplementedBeaconServer struct {
 func (*UnimplementedBeaconServer) GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStatus not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorParticipation(context.Context, *GetValidatorParticipationRequest) (*ValidatorParticipationResponse, error) {
+func (*UnimplementedBeaconServer) GetValidatorParticipation(context.Context, *eth.GetValidatorParticipationRequest) (*eth.ValidatorParticipationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorParticipation not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorPerformance(context.Context, *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error) {
+func (*UnimplementedBeaconServer) GetValidatorPerformance(context.Context, *eth.ValidatorPerformanceRequest) (*eth.ValidatorPerformanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorPerformance not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidators(context.Context, *ListValidatorsRequest) (*Validators, error) {
+func (*UnimplementedBeaconServer) GetValidators(context.Context, *eth.ListValidatorsRequest) (*eth.Validators, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidators not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorBalances(context.Context, *ListValidatorBalancesRequest) (*ValidatorBalances, error) {
+func (*UnimplementedBeaconServer) GetValidatorBalances(context.Context, *eth.ListValidatorBalancesRequest) (*eth.ValidatorBalances, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorBalances not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorQueue(context.Context, *empty.Empty) (*ValidatorQueue, error) {
+func (*UnimplementedBeaconServer) GetValidatorQueue(context.Context, *empty.Empty) (*eth.ValidatorQueue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorQueue not implemented")
 }
-func (*UnimplementedBeaconServer) GetPeers(context.Context, *empty.Empty) (*Peers, error) {
+func (*UnimplementedBeaconServer) GetPeers(context.Context, *empty.Empty) (*eth.Peers, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPeers not implemented")
 }
 
@@ -3372,7 +3373,7 @@ func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec f
 }
 
 func _Beacon_GetValidatorParticipation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetValidatorParticipationRequest)
+	in := new(eth.GetValidatorParticipationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3384,13 +3385,13 @@ func _Beacon_GetValidatorParticipation_Handler(srv interface{}, ctx context.Cont
 		FullMethod: "/ethereum.eth.v1alpha1.Beacon/GetValidatorParticipation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidatorParticipation(ctx, req.(*GetValidatorParticipationRequest))
+		return srv.(BeaconServer).GetValidatorParticipation(ctx, req.(*eth.GetValidatorParticipationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Beacon_GetValidatorPerformance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidatorPerformanceRequest)
+	in := new(eth.ValidatorPerformanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3402,13 +3403,13 @@ func _Beacon_GetValidatorPerformance_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.eth.v1alpha1.Beacon/GetValidatorPerformance",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidatorPerformance(ctx, req.(*ValidatorPerformanceRequest))
+		return srv.(BeaconServer).GetValidatorPerformance(ctx, req.(*eth.ValidatorPerformanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Beacon_GetValidators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListValidatorsRequest)
+	in := new(eth.ListValidatorsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3420,13 +3421,13 @@ func _Beacon_GetValidators_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/ethereum.eth.v1alpha1.Beacon/GetValidators",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidators(ctx, req.(*ListValidatorsRequest))
+		return srv.(BeaconServer).GetValidators(ctx, req.(*eth.ListValidatorsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Beacon_GetValidatorBalances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListValidatorBalancesRequest)
+	in := new(eth.ListValidatorBalancesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -3438,7 +3439,7 @@ func _Beacon_GetValidatorBalances_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: "/ethereum.eth.v1alpha1.Beacon/GetValidatorBalances",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidatorBalances(ctx, req.(*ListValidatorBalancesRequest))
+		return srv.(BeaconServer).GetValidatorBalances(ctx, req.(*eth.ListValidatorBalancesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3686,7 +3687,7 @@ func (c *validatorHealthClient) StreamBeaconLogs(ctx context.Context, in *empty.
 }
 
 type ValidatorHealth_StreamBeaconLogsClient interface {
-	Recv() (*LogsResponse, error)
+	Recv() (*eth.LogsResponse, error)
 	grpc.ClientStream
 }
 
@@ -3694,8 +3695,8 @@ type validatorHealthStreamBeaconLogsClient struct {
 	grpc.ClientStream
 }
 
-func (x *validatorHealthStreamBeaconLogsClient) Recv() (*LogsResponse, error) {
-	m := new(LogsResponse)
+func (x *validatorHealthStreamBeaconLogsClient) Recv() (*eth.LogsResponse, error) {
+	m := new(eth.LogsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -3718,7 +3719,7 @@ func (c *validatorHealthClient) StreamValidatorLogs(ctx context.Context, in *emp
 }
 
 type ValidatorHealth_StreamValidatorLogsClient interface {
-	Recv() (*LogsResponse, error)
+	Recv() (*eth.LogsResponse, error)
 	grpc.ClientStream
 }
 
@@ -3726,8 +3727,8 @@ type validatorHealthStreamValidatorLogsClient struct {
 	grpc.ClientStream
 }
 
-func (x *validatorHealthStreamValidatorLogsClient) Recv() (*LogsResponse, error) {
-	m := new(LogsResponse)
+func (x *validatorHealthStreamValidatorLogsClient) Recv() (*eth.LogsResponse, error) {
+	m := new(eth.LogsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -3830,7 +3831,7 @@ func _ValidatorHealth_StreamBeaconLogs_Handler(srv interface{}, stream grpc.Serv
 }
 
 type ValidatorHealth_StreamBeaconLogsServer interface {
-	Send(*LogsResponse) error
+	Send(*eth.LogsResponse) error
 	grpc.ServerStream
 }
 
@@ -3838,7 +3839,7 @@ type validatorHealthStreamBeaconLogsServer struct {
 	grpc.ServerStream
 }
 
-func (x *validatorHealthStreamBeaconLogsServer) Send(m *LogsResponse) error {
+func (x *validatorHealthStreamBeaconLogsServer) Send(m *eth.LogsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -3851,7 +3852,7 @@ func _ValidatorHealth_StreamValidatorLogs_Handler(srv interface{}, stream grpc.S
 }
 
 type ValidatorHealth_StreamValidatorLogsServer interface {
-	Send(*LogsResponse) error
+	Send(*eth.LogsResponse) error
 	grpc.ServerStream
 }
 
@@ -3859,7 +3860,7 @@ type validatorHealthStreamValidatorLogsServer struct {
 	grpc.ServerStream
 }
 
-func (x *validatorHealthStreamValidatorLogsServer) Send(m *LogsResponse) error {
+func (x *validatorHealthStreamValidatorLogsServer) Send(m *eth.LogsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 

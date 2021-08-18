@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/prysm/v1alpha1/keymanager.proto
 
-package eth
+package validator_client
 
 import (
 	context "context"
@@ -15,6 +15,7 @@ import (
 	empty "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -212,28 +213,28 @@ func (m *SignRequest) GetObject() isSignRequest_Object {
 	return nil
 }
 
-func (x *SignRequest) GetBlock() *BeaconBlock {
+func (x *SignRequest) GetBlock() *eth.BeaconBlock {
 	if x, ok := x.GetObject().(*SignRequest_Block); ok {
 		return x.Block
 	}
 	return nil
 }
 
-func (x *SignRequest) GetAttestationData() *AttestationData {
+func (x *SignRequest) GetAttestationData() *eth.AttestationData {
 	if x, ok := x.GetObject().(*SignRequest_AttestationData); ok {
 		return x.AttestationData
 	}
 	return nil
 }
 
-func (x *SignRequest) GetAggregateAttestationAndProof() *AggregateAttestationAndProof {
+func (x *SignRequest) GetAggregateAttestationAndProof() *eth.AggregateAttestationAndProof {
 	if x, ok := x.GetObject().(*SignRequest_AggregateAttestationAndProof); ok {
 		return x.AggregateAttestationAndProof
 	}
 	return nil
 }
 
-func (x *SignRequest) GetExit() *VoluntaryExit {
+func (x *SignRequest) GetExit() *eth.VoluntaryExit {
 	if x, ok := x.GetObject().(*SignRequest_Exit); ok {
 		return x.Exit
 	}
@@ -254,7 +255,7 @@ func (x *SignRequest) GetEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	return github_com_prysmaticlabs_eth2_types.Epoch(0)
 }
 
-func (x *SignRequest) GetBlockV2() *BeaconBlockAltair {
+func (x *SignRequest) GetBlockV2() *eth.BeaconBlockAltair {
 	if x, ok := x.GetObject().(*SignRequest_BlockV2); ok {
 		return x.BlockV2
 	}
@@ -266,19 +267,19 @@ type isSignRequest_Object interface {
 }
 
 type SignRequest_Block struct {
-	Block *BeaconBlock `protobuf:"bytes,101,opt,name=block,proto3,oneof"`
+	Block *eth.BeaconBlock `protobuf:"bytes,101,opt,name=block,proto3,oneof"`
 }
 
 type SignRequest_AttestationData struct {
-	AttestationData *AttestationData `protobuf:"bytes,102,opt,name=attestation_data,json=attestationData,proto3,oneof"`
+	AttestationData *eth.AttestationData `protobuf:"bytes,102,opt,name=attestation_data,json=attestationData,proto3,oneof"`
 }
 
 type SignRequest_AggregateAttestationAndProof struct {
-	AggregateAttestationAndProof *AggregateAttestationAndProof `protobuf:"bytes,103,opt,name=aggregate_attestation_and_proof,json=aggregateAttestationAndProof,proto3,oneof"`
+	AggregateAttestationAndProof *eth.AggregateAttestationAndProof `protobuf:"bytes,103,opt,name=aggregate_attestation_and_proof,json=aggregateAttestationAndProof,proto3,oneof"`
 }
 
 type SignRequest_Exit struct {
-	Exit *VoluntaryExit `protobuf:"bytes,104,opt,name=exit,proto3,oneof"`
+	Exit *eth.VoluntaryExit `protobuf:"bytes,104,opt,name=exit,proto3,oneof"`
 }
 
 type SignRequest_Slot struct {
@@ -290,7 +291,7 @@ type SignRequest_Epoch struct {
 }
 
 type SignRequest_BlockV2 struct {
-	BlockV2 *BeaconBlockAltair `protobuf:"bytes,107,opt,name=blockV2,proto3,oneof"`
+	BlockV2 *eth.BeaconBlockAltair `protobuf:"bytes,107,opt,name=blockV2,proto3,oneof"`
 }
 
 func (*SignRequest_Block) isSignRequest_Object() {}
@@ -482,16 +483,16 @@ func file_proto_prysm_v1alpha1_keymanager_proto_rawDescGZIP() []byte {
 var file_proto_prysm_v1alpha1_keymanager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_proto_prysm_v1alpha1_keymanager_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proto_prysm_v1alpha1_keymanager_proto_goTypes = []interface{}{
-	(SignResponse_Status)(0),             // 0: ethereum.eth.v1alpha1.SignResponse.Status
-	(*ListPublicKeysResponse)(nil),       // 1: ethereum.eth.v1alpha1.ListPublicKeysResponse
-	(*SignRequest)(nil),                  // 2: ethereum.eth.v1alpha1.SignRequest
-	(*SignResponse)(nil),                 // 3: ethereum.eth.v1alpha1.SignResponse
-	(*BeaconBlock)(nil),                  // 4: ethereum.eth.v1alpha1.BeaconBlock
-	(*AttestationData)(nil),              // 5: ethereum.eth.v1alpha1.AttestationData
-	(*AggregateAttestationAndProof)(nil), // 6: ethereum.eth.v1alpha1.AggregateAttestationAndProof
-	(*VoluntaryExit)(nil),                // 7: ethereum.eth.v1alpha1.VoluntaryExit
-	(*BeaconBlockAltair)(nil),            // 8: ethereum.eth.v1alpha1.BeaconBlockAltair
-	(*empty.Empty)(nil),                  // 9: google.protobuf.Empty
+	(SignResponse_Status)(0),                 // 0: ethereum.eth.v1alpha1.SignResponse.Status
+	(*ListPublicKeysResponse)(nil),           // 1: ethereum.eth.v1alpha1.ListPublicKeysResponse
+	(*SignRequest)(nil),                      // 2: ethereum.eth.v1alpha1.SignRequest
+	(*SignResponse)(nil),                     // 3: ethereum.eth.v1alpha1.SignResponse
+	(*eth.BeaconBlock)(nil),                  // 4: ethereum.eth.v1alpha1.BeaconBlock
+	(*eth.AttestationData)(nil),              // 5: ethereum.eth.v1alpha1.AttestationData
+	(*eth.AggregateAttestationAndProof)(nil), // 6: ethereum.eth.v1alpha1.AggregateAttestationAndProof
+	(*eth.VoluntaryExit)(nil),                // 7: ethereum.eth.v1alpha1.VoluntaryExit
+	(*eth.BeaconBlockAltair)(nil),            // 8: ethereum.eth.v1alpha1.BeaconBlockAltair
+	(*empty.Empty)(nil),                      // 9: google.protobuf.Empty
 }
 var file_proto_prysm_v1alpha1_keymanager_proto_depIdxs = []int32{
 	4, // 0: ethereum.eth.v1alpha1.SignRequest.block:type_name -> ethereum.eth.v1alpha1.BeaconBlock
@@ -516,8 +517,8 @@ func file_proto_prysm_v1alpha1_keymanager_proto_init() {
 	if File_proto_prysm_v1alpha1_keymanager_proto != nil {
 		return
 	}
-	file_proto_prysm_v1alpha1_attestation_proto_init()
-	file_proto_prysm_v1alpha1_beacon_block_proto_init()
+	eth.file_proto_prysm_v1alpha1_attestation_proto_init()
+	eth.file_proto_prysm_v1alpha1_beacon_block_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_proto_prysm_v1alpha1_keymanager_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListPublicKeysResponse); i {

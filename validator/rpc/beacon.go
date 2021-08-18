@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
@@ -55,10 +56,10 @@ func (s *Server) registerBeaconClient() error {
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
-func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.BeaconStatusResponse, error) {
+func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validator_client.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return &pb.BeaconStatusResponse{
+		return &validator_client.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,
 			Syncing:            false,
@@ -74,7 +75,7 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.Beaco
 	if err != nil {
 		return nil, err
 	}
-	return &pb.BeaconStatusResponse{
+	return &validator_client.BeaconStatusResponse{
 		BeaconNodeEndpoint:     s.beaconClientEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus.Syncing,

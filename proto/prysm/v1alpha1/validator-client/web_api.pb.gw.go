@@ -6,7 +6,7 @@ Package eth is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package eth
+package validator_client
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -370,7 +371,7 @@ var (
 )
 
 func request_Beacon_GetValidatorParticipation_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetValidatorParticipationRequest
+	var protoReq eth.GetValidatorParticipationRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -386,7 +387,7 @@ func request_Beacon_GetValidatorParticipation_0(ctx context.Context, marshaler r
 }
 
 func local_request_Beacon_GetValidatorParticipation_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetValidatorParticipationRequest
+	var protoReq eth.GetValidatorParticipationRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -406,7 +407,7 @@ var (
 )
 
 func request_Beacon_GetValidatorPerformance_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ValidatorPerformanceRequest
+	var protoReq eth.ValidatorPerformanceRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -422,7 +423,7 @@ func request_Beacon_GetValidatorPerformance_0(ctx context.Context, marshaler run
 }
 
 func local_request_Beacon_GetValidatorPerformance_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ValidatorPerformanceRequest
+	var protoReq eth.ValidatorPerformanceRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -442,7 +443,7 @@ var (
 )
 
 func request_Beacon_GetValidators_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListValidatorsRequest
+	var protoReq eth.ListValidatorsRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -458,7 +459,7 @@ func request_Beacon_GetValidators_0(ctx context.Context, marshaler runtime.Marsh
 }
 
 func local_request_Beacon_GetValidators_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListValidatorsRequest
+	var protoReq eth.ListValidatorsRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -478,7 +479,7 @@ var (
 )
 
 func request_Beacon_GetValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListValidatorBalancesRequest
+	var protoReq eth.ListValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -494,7 +495,7 @@ func request_Beacon_GetValidatorBalances_0(ctx context.Context, marshaler runtim
 }
 
 func local_request_Beacon_GetValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListValidatorBalancesRequest
+	var protoReq eth.ListValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
