@@ -1258,7 +1258,7 @@ func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marsha
 }
 
 func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SyncCommitteeMessageV2
+	var protoReq eth.SyncCommitteeMessage
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1275,7 +1275,7 @@ func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, mar
 }
 
 func local_request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SyncCommitteeMessageV2
+	var protoReq eth.SyncCommitteeMessage
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
