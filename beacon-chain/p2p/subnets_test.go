@@ -210,7 +210,7 @@ func Test_AttSubnets(t *testing.T) {
 				convertedKey := convertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
-				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, determineSize(int(attestationSubnetCount))+1))
+				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+1))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
@@ -228,7 +228,7 @@ func Test_AttSubnets(t *testing.T) {
 				convertedKey := convertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
-				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, determineSize(int(attestationSubnetCount))+100))
+				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+100))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
@@ -376,7 +376,7 @@ func Test_SyncSubnets(t *testing.T) {
 				convertedKey := convertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
-				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, determineSize(int(syncCommsSubnetCount))+1))
+				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, byteCount(int(syncCommsSubnetCount))+1))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
@@ -394,7 +394,7 @@ func Test_SyncSubnets(t *testing.T) {
 				convertedKey := convertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
-				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, determineSize(int(syncCommsSubnetCount))+100))
+				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, byteCount(int(syncCommsSubnetCount))+100))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
