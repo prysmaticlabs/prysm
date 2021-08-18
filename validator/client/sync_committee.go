@@ -102,16 +102,9 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		return
 	}
 
-	selectionProofs := make([][]byte, len(indexRes.Indices))
-	for i, index := range indexRes.Indices {
-		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := uint64(index) / subCommitteeSize
-		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
-		if err != nil {
-			log.Errorf("Could not sign selection data: %v", err)
-			return
-		}
-		selectionProofs[i] = selectionProof
+	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
+	if err != nil {
+		log.Errorf("Could not get selection proofs: %v", err)
 	}
 
 	v.waitToSlotTwoThirds(ctx, slot)
@@ -172,6 +165,24 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),
 		}).Info("Submitted new sync contribution and proof")
 	}
+}
+
+// Signs and returns selection proofs per validator for slot and pub key.
+func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey [48]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
+	selectionProofs := make([][]byte, len(indexRes.Indices))
+	cfg := params.BeaconConfig()
+	size := cfg.SyncCommitteeSize
+	subCount := cfg.SyncCommitteeSubnetCount
+	for i, index := range indexRes.Indices {
+		subSize := size / subCount
+		subnet := uint64(index) / subSize
+		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
+		if err != nil {
+			return nil, err
+		}
+		selectionProofs[i] = selectionProof
+	}
+	return selectionProofs, nil
 }
 
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
