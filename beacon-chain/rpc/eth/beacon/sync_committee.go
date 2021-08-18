@@ -2,14 +2,13 @@ package beacon
 
 import (
 	"context"
-	"sort"
 	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,32 +17,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// ListSyncCommittees retrieves the sync committees for the given epoch.
+// If the epoch is not passed in, then the sync committees for the epoch of the state will be obtained.
 func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncCommitteesRequest) (*eth.StateSyncCommitteesResponse, error) {
 	var st state.BeaconState
 	if req.Epoch != nil {
-		slot, err := helpers.StartSlot(*req.Epoch)
+		slot, err := corehelpers.StartSlot(*req.Epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not calculate start slot for epoch %d: %v", *req.Epoch, err)
 		}
 		st, err = bs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
 		if err != nil {
-			if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-				return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-			} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-			}
-			return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
+			return nil, helpers.PrepareStateFetchGRPCError(err)
 		}
 	} else {
 		var err error
 		st, err = bs.StateFetcher.State(ctx, req.StateId)
 		if err != nil {
-			if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-				return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-			} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-			}
-			return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
+			return nil, helpers.PrepareStateFetchGRPCError(err)
 		}
 	}
 
@@ -60,18 +51,15 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 		}
 		committeeIndices[i] = index
 	}
-	sort.Slice(committeeIndices, func(i, j int) bool {
-		return committeeIndices[i] < committeeIndices[j]
-	})
 
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	subcommittees := make([]*eth.SyncSubcommittee, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
-		subcommittee := &eth.SyncSubcommittee{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get subcommittee pubkeys: %v", err)
 		}
+		subcommittee := &eth.SyncSubcommittee{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
 			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 			if !ok {
@@ -79,9 +67,6 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 			}
 			subcommittee.Validators[j] = index
 		}
-		sort.Slice(subcommittee.Validators, func(i, j int) bool {
-			return subcommittee.Validators[i] < subcommittee.Validators[j]
-		})
 		subcommittees[i] = subcommittee
 	}
 
