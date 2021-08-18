@@ -18,11 +18,11 @@ type readOnlyValidator struct {
 	validator *ethpb.Validator
 }
 
-var _ = state.ReadOnlyValidator(&readOnlyValidator{})
+var _ = state.ReadOnlyValidator(readOnlyValidator{})
 
 // NewValidator initializes the read only wrapper for validator.
 func NewValidator(v *ethpb.Validator) (state.ReadOnlyValidator, error) {
-	rov := &readOnlyValidator{
+	rov := readOnlyValidator{
 		validator: v,
 	}
 	if rov.IsNil() {

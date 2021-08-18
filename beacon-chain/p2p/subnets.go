@@ -23,8 +23,10 @@ var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
 // The value used with the subnet, inorder
-// to create an appropriate key tor retrieve
-// the relevant lock.
+// to create an appropriate key to retrieve
+// the relevant lock. This is used to differentiate
+// sync subnets from attestation subnets. This is deliberately
+// chosen as more than 64(attestation subnet count).
 const syncLockerVal = 100
 
 // FindPeersWithSubnet performs a network search for peers
@@ -150,15 +152,15 @@ func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 // with a new value for a bitfield of subnets tracked. It also record's
 // the sync committee subnet in the enr. It also updates the node's
 // metadata by increasing the sequence number and the subnets tracked by the node.
-func (s *Service) updateSubnetRecordWithMetadataV2(bitV bitfield.Bitvector64, bitS bitfield.Bitvector4) {
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	subEntry := enr.WithEntry(syncCommsSubnetEnrKey, &bitS)
+func (s *Service) updateSubnetRecordWithMetadataV2(bitVAtt bitfield.Bitvector64, bitVSync bitfield.Bitvector4) {
+	entry := enr.WithEntry(attSubnetEnrKey, &bitVAtt)
+	subEntry := enr.WithEntry(syncCommsSubnetEnrKey, &bitVSync)
 	s.dv5Listener.LocalNode().Set(entry)
 	s.dv5Listener.LocalNode().Set(subEntry)
 	s.metaData = wrapper.WrappedMetadataV1(&pb.MetaDataV1{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
-		Attnets:   bitV,
-		Syncnets:  bitS,
+		Attnets:   bitVAtt,
+		Syncnets:  bitVSync,
 	})
 }
 
@@ -187,7 +189,7 @@ func attSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(bitV) != determineSize(int(attestationSubnetCount)) {
+	if len(bitV) != byteCount(int(attestationSubnetCount)) {
 		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
 	var committeeIdxs []uint64
@@ -206,7 +208,7 @@ func syncSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(bitV) != determineSize(int(syncCommsSubnetCount)) {
+	if len(bitV) != byteCount(int(syncCommsSubnetCount)) {
 		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
 	var committeeIdxs []uint64
@@ -260,7 +262,9 @@ func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
 	return l
 }
 
-func determineSize(bitCount int) int {
+// Determines the number of bytes that are used
+// to represent the provided number of bits.
+func byteCount(bitCount int) int {
 	numOfBytes := bitCount / 8
 	if bitCount%8 != 0 {
 		numOfBytes++

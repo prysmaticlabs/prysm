@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
