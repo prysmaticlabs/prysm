@@ -519,12 +519,12 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
-		validator_client.RegisterAuthHandler,
-		validator_client.RegisterWalletHandler,
+		validatorpb.RegisterAuthHandler,
+		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
-		validator_client.RegisterAccountsHandler,
-		validator_client.RegisterBeaconHandler,
-		validator_client.RegisterSlashingProtectionHandler,
+		validatorpb.RegisterAccountsHandler,
+		validatorpb.RegisterBeaconHandler,
+		validatorpb.RegisterSlashingProtectionHandler,
 	}
 	mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

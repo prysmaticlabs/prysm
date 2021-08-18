@@ -183,12 +183,12 @@ func (s *Server) Start() {
 
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
-	validator_client.RegisterAuthServer(s.grpcServer, s)
-	validator_client.RegisterWalletServer(s.grpcServer, s)
-	validator_client.RegisterValidatorHealthServer(s.grpcServer, s)
-	validator_client.RegisterBeaconServer(s.grpcServer, s)
-	validator_client.RegisterAccountsServer(s.grpcServer, s)
-	validator_client.RegisterSlashingProtectionServer(s.grpcServer, s)
+	validatorpb.RegisterAuthServer(s.grpcServer, s)
+	validatorpb.RegisterWalletServer(s.grpcServer, s)
+	validatorpb.RegisterValidatorHealthServer(s.grpcServer, s)
+	validatorpb.RegisterBeaconServer(s.grpcServer, s)
+	validatorpb.RegisterAccountsServer(s.grpcServer, s)
+	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {
