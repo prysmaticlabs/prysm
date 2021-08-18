@@ -19,7 +19,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth_0 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -516,7 +516,7 @@ var (
 )
 
 func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.StateSyncCommitteesRequest
+	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -550,7 +550,7 @@ func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler run
 }
 
 func local_request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.StateSyncCommitteesRequest
+	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -869,8 +869,8 @@ func local_request_BeaconChain_GetBlockSSZ_0(ctx context.Context, marshaler runt
 
 }
 
-func request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+func request_BeaconChain_GetBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -891,13 +891,13 @@ func request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime
 	}
 	protoReq.BlockId = (block_id)
 
-	msg, err := client.GetBlockAltair(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.GetBlockV2(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+func local_request_BeaconChain_GetBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -918,13 +918,13 @@ func local_request_BeaconChain_GetBlockAltair_0(ctx context.Context, marshaler r
 	}
 	protoReq.BlockId = (block_id)
 
-	msg, err := server.GetBlockAltair(ctx, &protoReq)
+	msg, err := server.GetBlockV2(ctx, &protoReq)
 	return msg, metadata, err
 
 }
 
-func request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+func request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -945,13 +945,13 @@ func request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runt
 	}
 	protoReq.BlockId = (block_id)
 
-	msg, err := client.GetBlockSSZAltair(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.GetBlockSSZV2(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.BlockRequest
+func local_request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -972,7 +972,7 @@ func local_request_BeaconChain_GetBlockSSZAltair_0(ctx context.Context, marshale
 	}
 	protoReq.BlockId = (block_id)
 
-	msg, err := server.GetBlockSSZAltair(ctx, &protoReq)
+	msg, err := server.GetBlockSSZV2(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -1258,7 +1258,7 @@ func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marsha
 }
 
 func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeMessage
+	var protoReq eth.SyncCommitteeMessage
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1275,7 +1275,7 @@ func request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, mar
 }
 
 func local_request_BeaconChain_SubmitSyncCommitteeSignature_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth_0.SyncCommitteeMessage
+	var protoReq eth.SyncCommitteeMessage
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1696,18 +1696,18 @@ func RegisterBeaconChainHandlerServer(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
-	mux.Handle("GET", pattern_BeaconChain_GetBlockAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_GetBlockV2_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockAltair")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockV2")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BeaconChain_GetBlockAltair_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BeaconChain_GetBlockV2_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1715,22 +1715,22 @@ func RegisterBeaconChainHandlerServer(ctx context.Context, mux *runtime.ServeMux
 			return
 		}
 
-		forward_BeaconChain_GetBlockAltair_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_GetBlockV2_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_BeaconChain_GetBlockSSZAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_GetBlockSSZV2_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockSSZAltair")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockSSZV2")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BeaconChain_GetBlockSSZAltair_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BeaconChain_GetBlockSSZV2_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1738,7 +1738,7 @@ func RegisterBeaconChainHandlerServer(ctx context.Context, mux *runtime.ServeMux
 			return
 		}
 
-		forward_BeaconChain_GetBlockSSZAltair_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_GetBlockSSZV2_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2382,43 +2382,43 @@ func RegisterBeaconChainHandlerClient(ctx context.Context, mux *runtime.ServeMux
 
 	})
 
-	mux.Handle("GET", pattern_BeaconChain_GetBlockAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_GetBlockV2_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockAltair")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockV2")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconChain_GetBlockAltair_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconChain_GetBlockV2_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconChain_GetBlockAltair_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_GetBlockV2_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_BeaconChain_GetBlockSSZAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconChain_GetBlockSSZV2_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockSSZAltair")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.service.BeaconChain/GetBlockSSZV2")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconChain_GetBlockSSZAltair_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconChain_GetBlockSSZV2_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconChain_GetBlockSSZAltair_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconChain_GetBlockSSZV2_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2716,9 +2716,9 @@ var (
 
 	pattern_BeaconChain_GetBlockSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "blocks", "block_id", "ssz"}, ""))
 
-	pattern_BeaconChain_GetBlockAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v2", "beacon", "blocks", "block_id"}, ""))
+	pattern_BeaconChain_GetBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v2", "beacon", "blocks", "block_id"}, ""))
 
-	pattern_BeaconChain_GetBlockSSZAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v2", "beacon", "blocks", "block_id", "ssz"}, ""))
+	pattern_BeaconChain_GetBlockSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v2", "beacon", "blocks", "block_id", "ssz"}, ""))
 
 	pattern_BeaconChain_ListBlockAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "blocks", "block_id", "attestations"}, ""))
 
@@ -2778,9 +2778,9 @@ var (
 
 	forward_BeaconChain_GetBlockSSZ_0 = runtime.ForwardResponseMessage
 
-	forward_BeaconChain_GetBlockAltair_0 = runtime.ForwardResponseMessage
+	forward_BeaconChain_GetBlockV2_0 = runtime.ForwardResponseMessage
 
-	forward_BeaconChain_GetBlockSSZAltair_0 = runtime.ForwardResponseMessage
+	forward_BeaconChain_GetBlockSSZV2_0 = runtime.ForwardResponseMessage
 
 	forward_BeaconChain_ListBlockAttestations_0 = runtime.ForwardResponseMessage
 
