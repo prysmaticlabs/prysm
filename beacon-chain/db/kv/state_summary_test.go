@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestStateSummary_CanSaveRretrieve(t *testing.T) {
+func TestStateSummary_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	r1 := bytesutil.ToBytes32([]byte{'A'})
