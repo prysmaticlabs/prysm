@@ -20,6 +20,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
@@ -62,5 +63,6 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

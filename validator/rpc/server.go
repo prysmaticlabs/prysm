@@ -13,6 +13,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -182,12 +183,12 @@ func (s *Server) Start() {
 
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
-	pb.RegisterAuthServer(s.grpcServer, s)
-	pb.RegisterWalletServer(s.grpcServer, s)
-	pb.RegisterValidatorHealthServer(s.grpcServer, s)
-	pb.RegisterBeaconServer(s.grpcServer, s)
-	pb.RegisterAccountsServer(s.grpcServer, s)
-	pb.RegisterSlashingProtectionServer(s.grpcServer, s)
+	validatorpb.RegisterAuthServer(s.grpcServer, s)
+	validatorpb.RegisterWalletServer(s.grpcServer, s)
+	validatorpb.RegisterHealthServer(s.grpcServer, s)
+	validatorpb.RegisterBeaconServer(s.grpcServer, s)
+	validatorpb.RegisterAccountsServer(s.grpcServer, s)
+	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {
