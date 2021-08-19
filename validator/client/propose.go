@@ -168,7 +168,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockV2")
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockAltair")
 	defer span.End()
 
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
