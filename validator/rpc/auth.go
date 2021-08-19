@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/form3tech-oss/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"

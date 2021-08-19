@@ -6,12 +6,15 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 type proposerAtts []*ethpb.Attestation
@@ -19,11 +22,29 @@ type proposerAtts []*ethpb.Attestation
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (a proposerAtts) filter(ctx context.Context, state state.BeaconState) (proposerAtts, proposerAtts) {
+func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
+	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
+
+	switch st.Version() {
+	case version.Phase0:
+		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
+	case version.Altair:
+		// Use a wrapper here, as go needs strong typing for the function signature.
+		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
+			totalBalance, err := helpers.TotalActiveBalance(st)
+			if err != nil {
+				return nil, err
+			}
+			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
+		}
+	default:
+		// Exit early if there is an unknown state type.
+		return validAtts, invalidAtts
+	}
 	for _, att := range a {
-		if _, err := blocks.ProcessAttestationNoVerifySignature(ctx, state, att); err == nil {
+		if _, err := attestationProcessor(ctx, st, att); err == nil {
 			validAtts = append(validAtts, att)
 			continue
 		}

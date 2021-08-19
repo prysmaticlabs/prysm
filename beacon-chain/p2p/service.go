@@ -56,7 +56,6 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 type Service struct {
 	started               bool
 	isPreGenesis          bool
-	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
@@ -137,7 +136,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
-		pubsub.WithMessageIdFn(msgIDFunction),
+		pubsub.WithMessageIdFn(s.msgIDFunction),
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(256),
 		pubsub.WithValidateQueueSize(256),
@@ -147,6 +146,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+	// Reinitialize them in the event we are running a custom config.
+	attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -275,6 +277,9 @@ func (s *Service) Status() error {
 	if s.startupErr != nil {
 		return s.startupErr
 	}
+	if s.genesisTime.IsZero() {
+		return errors.New("no genesis time set")
+	}
 	return nil
 }
 
@@ -397,7 +402,7 @@ func (s *Service) awaitStateInitialized() {
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				_, err := s.forkDigest() // initialize fork digest cache
+				_, err := s.currentForkDigest() // initialize fork digest cache
 				if err != nil {
 					log.WithError(err).Error("Could not initialize fork digest")
 				}

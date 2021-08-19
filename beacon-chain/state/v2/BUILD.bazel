@@ -11,7 +11,6 @@ go_library(
         "field_root_validator.go",
         "field_root_vector.go",
         "field_roots.go",
-        "field_trie.go",
         "getters.go",
         "setters.go",
         "state_trie.go",
@@ -21,10 +20,13 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -50,20 +52,16 @@ go_test(
     srcs = [
         "deprecated_getters_test.go",
         "deprecated_setters_test.go",
-        "field_trie_test.go",
         "getters_test.go",
         "state_trie_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

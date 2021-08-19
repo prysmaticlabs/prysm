@@ -44,7 +44,7 @@ func (s *Service) RefreshENR() {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := bitvector(s.dv5Listener.Self().Record())
+	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
 	if err != nil {
 		log.Errorf("Could not retrieve bitfield: %v", err)
 		return
@@ -206,7 +206,7 @@ func (s *Service) createLocalNode(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
-	return intializeAttSubnets(localNode), nil
+	return initializeAttSubnets(localNode), nil
 }
 
 func (s *Service) startDiscoveryV5(

@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/pkg/errors"
 )
 
 // BazelDirectoryNonEmpty returns true if directory exists and is not empty.
@@ -26,9 +27,12 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileBytes, err := ioutil.ReadFile(filepath)
+	fileBytes, err := ioutil.ReadFile(filepath) // #nosec G304
 	if err != nil {
 		return nil, err
+	}
+	if len(fileBytes) == 0 {
+		return nil, errors.New("empty file")
 	}
 	return fileBytes, nil
 }
