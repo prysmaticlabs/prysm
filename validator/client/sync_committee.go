@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -49,7 +50,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
-	sig, err := v.keyManager.Sign(ctx, &ethpb.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
@@ -200,7 +201,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &ethpb.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -223,7 +224,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &ethpb.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
