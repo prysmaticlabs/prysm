@@ -1,4 +1,3 @@
-
 // Package helpers contains helper functions outlined in the Ethereum Beacon Chain spec, such as
 // computing committees, randao, rewards/penalties, and more.
 package helpers
@@ -386,7 +385,7 @@ func UpdateProposerIndicesInCache(state state.ReadOnlyBeaconState) error {
 	})
 }
 
-// ClearCache clears the committee cache
+// ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
