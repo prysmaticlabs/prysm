@@ -199,14 +199,14 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
 	defer span.End()
 
-	block, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := migration.SignedBeaconBlockV1(block)
+	signedBeaconBlock, err := migration.SignedBeaconBlockV1(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -224,14 +224,14 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
 	defer span.End()
 
-	block, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := migration.SignedBeaconBlockV1(block)
+	signedBeaconBlock, err := migration.SignedBeaconBlockV1(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -255,11 +255,15 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-
+	if blk == nil || blk.IsNil() {
+		return nil, status.Errorf(codes.Internal, "Could not find requested block")
+	}
 	phase0Blk, err := blk.PbPhase0Block()
-	if err != nil {
+	// Assume we have an Altair block when Phase 0 block is unsupported.
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
 	}
+
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlockV1(blk)
 		if err != nil {
