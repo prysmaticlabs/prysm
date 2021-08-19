@@ -86,6 +86,7 @@ go_test(
         "//beacon-chain/state/v1:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
