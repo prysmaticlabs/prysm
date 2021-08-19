@@ -18,7 +18,7 @@ import (
 // ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
 //
 // Reference spec implementation:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
 //
 // def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
 //    """
@@ -107,7 +107,7 @@ func ComputeWeakSubjectivityPeriod(st state.ReadOnlyBeaconState) (types.Epoch, e
 // at a given epoch matches that of the checkpoint.
 //
 // Reference implementation:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
 //
 // def is_within_weak_subjectivity_period(store: Store, ws_state: BeaconState, ws_checkpoint: Checkpoint) -> bool:
 //    # Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint

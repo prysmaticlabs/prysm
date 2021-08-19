@@ -1,6 +1,6 @@
 # Spec Tests
 
-Spec testing vectors: https://github.com/ethereum/eth2.0-spec-tests
+Spec testing vectors: https://github.com/ethereum/consensus-spec-tests
 
 To run all `mainnet` spec tests:
 
