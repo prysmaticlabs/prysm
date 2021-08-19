@@ -25,6 +25,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bls:go_default_library",
@@ -103,6 +104,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",

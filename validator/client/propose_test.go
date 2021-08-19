@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -30,7 +31,7 @@ import (
 type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
 	nodeClient      *mock.MockNodeClient
-	signExitFunc    func(context.Context, *ethpb.SignRequest) (bls.Signature, error)
+	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -68,7 +69,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *ethpb.SignRequest) (bls.Signature, error) {
+		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}

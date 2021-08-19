@@ -4,16 +4,16 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}})
@@ -26,7 +26,7 @@ func TestTotalBalance_OK(t *testing.T) {
 }
 
 func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{}})
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{Validators: []*ethpb.Validator{}})
 	require.NoError(t, err)
 
 	balance := TotalBalance(state, []types.ValidatorIndex{})
@@ -35,7 +35,7 @@ func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -55,14 +55,6 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	// Validate that cache miss to start with.
-	epoch := SlotToEpoch(state.Slot())
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-	_, err = committeeCache.ActiveBalance(seed)
-	require.Equal(t, cache.ErrNonCommitteeKey, err)
-
-	// Validate manual calculation passes.
 	balance, err := TotalActiveBalance(state)
 	assert.NoError(t, err)
 	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
@@ -82,7 +74,7 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Balances: test.b})
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{Balances: test.b})
 		require.NoError(t, err)
 		assert.Equal(t, test.b[test.i], state.Balances()[test.i], "Incorrect Validator balance")
 	}
@@ -100,7 +92,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
@@ -124,7 +116,7 @@ func TestDecreaseBalance_OK(t *testing.T) {
 		{i: 3, b: []uint64{27 * 1e9, 28 * 1e9, 1, 28 * 1e9}, nb: 28 * 1e9, eb: 0},
 	}
 	for _, test := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		state, err := v1.InitializeFromProto(&statepb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,
@@ -187,7 +179,7 @@ func TestIsInInactivityLeak(t *testing.T) {
 	assert.Equal(t, false, IsInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak false")
 }
 
-func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
+func buildState(slot types.Slot, validatorCount uint64) *statepb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -213,7 +205,7 @@ func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	return &ethpb.BeaconState{
+	return &statepb.BeaconState{
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,

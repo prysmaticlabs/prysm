@@ -1,3 +1,4 @@
+
 // Package helpers contains helper functions outlined in the Ethereum Beacon Chain spec, such as
 // computing committees, randao, rewards/penalties, and more.
 package helpers
@@ -273,21 +274,26 @@ func VerifyAttestationBitfieldLengths(state state.ReadOnlyBeaconState, att *ethp
 	return nil
 }
 
-// Returns the active indices and the total active balance of the validators in input `state` and during input `epoch`.
-func activeIndicesAndBalance(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, uint64, error) {
-	balances := uint64(0)
+// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
+// the shuffled indices then can be used to break up into committees.
+func ShuffledIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+	seed, err := Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
+	}
+
 	indices := make([]types.ValidatorIndex, 0, s.NumValidators())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
-			balances += val.EffectiveBalance()
 			indices = append(indices, types.ValidatorIndex(idx))
 		}
 		return nil
 	}); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	return indices, balances, nil
+	// UnshuffleList is used as an optimized implementation for raw speed.
+	return UnshuffleList(indices, seed)
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
@@ -303,13 +309,7 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return nil
 		}
 
-		indices, balance, err := activeIndicesAndBalance(state, e)
-		if err != nil {
-			return err
-		}
-
-		// Get the shuffled indices based on the seed.
-		shuffledIndices, err := UnshuffleList(indices, seed)
+		shuffledIndices, err := ShuffledIndices(state, e)
 		if err != nil {
 			return err
 		}
@@ -325,23 +325,11 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
-		// Only update active balance field in cache if it's current epoch.
-		// Using current epoch state to update next epoch field will cause insert an invalid
-		// active balance value.
-		b := &cache.Balance{}
-		if e == epoch {
-			b = &cache.Balance{
-				Exist: true,
-				Total: balance,
-			}
-		}
-
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
-			ActiveBalance:   b,
 		}); err != nil {
 			return err
 		}
@@ -398,7 +386,7 @@ func UpdateProposerIndicesInCache(state state.ReadOnlyBeaconState) error {
 	})
 }
 
-// ClearCache clears the beacon committee cache and sync committee cache.
+// ClearCache clears the committee cache
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
@@ -533,7 +521,7 @@ func NextPeriodSyncSubcommitteeIndices(
 }
 
 // UpdateSyncCommitteeCache updates sync committee cache.
-// It uses `state`'s latest block header root as key. To avoid miss usage, it disallows
+// It uses `state`'s latest block header root as key. To avoid misuse, it disallows
 // block header with state root zeroed out.
 func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
 	nextSlot := st.Slot() + 1

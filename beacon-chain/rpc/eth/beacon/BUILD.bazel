@@ -16,6 +16,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",
@@ -67,6 +68,7 @@ go_test(
         "pool_test.go",
         "server_test.go",
         "state_test.go",
+        "sync_committee_test.go",
         "validator_test.go",
     ],
     embed = [":go_default_library"],
