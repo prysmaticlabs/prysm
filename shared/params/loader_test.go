@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadConfigFileMainnet(t *testing.T) {
-	// See https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/master/tests/minimal/config/phase0.yaml
+	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
 	assertVals := func(name string, fields []string, c1, c2 *BeaconChainConfig) {
 		//  Misc params.
 		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)

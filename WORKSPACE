@@ -212,7 +212,7 @@ filegroup(
 )
     """,
     sha256 = "e9b4cc60a3e676c6b4a9348424e44cff1ebada603ffb31b0df600dbd70e7fbf6",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/general.tar.gz" % eth2_spec_version,
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -228,7 +228,7 @@ filegroup(
 )
     """,
     sha256 = "cf82dc729ffe7b924f852e57d1973e1a6377c5b52acc903c953277fa9b4e6de8",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/minimal.tar.gz" % eth2_spec_version,
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -244,7 +244,7 @@ filegroup(
 )
     """,
     sha256 = "6c6792375b81858037014e282d28a64b0cf12e12daf16054265c85403b8b329f",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/mainnet.tar.gz" % eth2_spec_version,
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -259,8 +259,8 @@ filegroup(
 )
     """,
     sha256 = "16094dad1bab4e8ab3adb60c10e311cd1e294cd7bbf5a89505f24bebd3d0e513",
-    strip_prefix = "eth2.0-specs-" + eth2_spec_version[1:],
-    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
+    strip_prefix = "consensus-specs-" + eth2_spec_version[1:],
+    url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
 )
 
 http_archive(

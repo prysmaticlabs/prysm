@@ -7,7 +7,7 @@ type FastAggregateVerifyTest struct {
 	Input struct {
 		Pubkeys []string `json:"pubkeys"`
 		Message string   `json:"message"`
-		// TODO(#7632): Remove when https://github.com/ethereum/eth2.0-spec-tests/issues/22 is resolved.
+		// TODO(#7632): Remove when https://github.com/ethereum/consensus-spec-tests/issues/22 is resolved.
 		Messages  string `json:"messages"`
 		Signature string `json:"signature"`
 	} `json:"input"`
