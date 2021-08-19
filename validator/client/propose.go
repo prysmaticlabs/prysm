@@ -168,13 +168,14 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockV2")
+	defer span.End()
+
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockV2")
-	defer span.End()
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
@@ -246,6 +247,9 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.WithFields(
 			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
@@ -261,6 +265,9 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.WithFields(
 			blockLogFields(pubKey, wb, sig),
 		).WithError(err).Error("Failed block slashing protection check")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
