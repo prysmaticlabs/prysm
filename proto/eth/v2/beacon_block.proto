@@ -48,7 +48,7 @@ message BeaconBlockContainerV2 {
   bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BeaconBlockContainerAltair {
+message SignedBeaconBlockAltair {
   BeaconBlockAltair message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
