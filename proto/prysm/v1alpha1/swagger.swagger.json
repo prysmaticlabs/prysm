@@ -59,6 +59,6 @@
   },
   "externalDocs": {
     "description": "Ethereum Consensus Specification on Github",
-    "url": "https://github.com/ethereum/eth2.0-specs"
+    "url": "https://github.com/ethereum/consensus-specs"
   }
 }

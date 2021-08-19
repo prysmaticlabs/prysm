@@ -20,7 +20,7 @@ import (
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/runtime/protoimpl"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -188,20 +188,20 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 	0x6e, 0x73, 0x65, 0x22, 0x2c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x65, 0x74,
 	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63,
 	0x6b, 0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x73, 0x73,
-	0x7a, 0x12, 0x79, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74,
-	0x61, 0x69, 0x72, 0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
-	0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x28, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x22, 0x12, 0x20, 0x2f, 0x65, 0x74, 0x68,
+	0x7a, 0x12, 0x79, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x56, 0x32, 0x12,
+	0x1f, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x56, 0x32,
+	0x1a, 0x20, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
+	0x76, 0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x56, 0x32, 0x22, 0x28, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x22, 0x12, 0x20, 0x2f, 0x65, 0x74, 0x68,
 	0x2f, 0x76, 0x32, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
 	0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69, 0x64, 0x7d, 0x12, 0x83, 0x01, 0x0a,
-	0x11, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x41, 0x6c, 0x74, 0x61,
-	0x69, 0x72, 0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x21, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x65,
+	0x0d, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x56, 0x32, 0x12, 0x1f,
+	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32,
+	0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x56, 0x32, 0x1a,
+	0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x32, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x56, 0x32, 0x22, 0x2c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x65,
 	0x74, 0x68, 0x2f, 0x76, 0x32, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f,
 	0x63, 0x6b, 0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x73,
 	0x73, 0x7a, 0x12, 0x99, 0x01, 0x0a, 0x15, 0x4c, 0x69, 0x73, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
@@ -339,7 +339,7 @@ var file_proto_eth_service_beacon_chain_service_proto_goTypes = []interface{}{
 	(*v1.BlockHeadersRequest)(nil),             // 7: ethereum.eth.v1.BlockHeadersRequest
 	(*v1.BlockRequest)(nil),                    // 8: ethereum.eth.v1.BlockRequest
 	(*v1.BeaconBlockContainer)(nil),            // 9: ethereum.eth.v1.BeaconBlockContainer
-	(*v2.BlockRequest)(nil),                    // 10: ethereum.eth.v2.BlockRequest
+	(*v2.BlockRequestV2)(nil),                  // 10: ethereum.eth.v2.BlockRequestV2
 	(*v1.AttestationsPoolRequest)(nil),         // 11: ethereum.eth.v1.AttestationsPoolRequest
 	(*v1.SubmitAttestationsRequest)(nil),       // 12: ethereum.eth.v1.SubmitAttestationsRequest
 	(*v1.AttesterSlashing)(nil),                // 13: ethereum.eth.v1.AttesterSlashing
@@ -360,8 +360,8 @@ var file_proto_eth_service_beacon_chain_service_proto_goTypes = []interface{}{
 	(*v1.BlockRootResponse)(nil),               // 28: ethereum.eth.v1.BlockRootResponse
 	(*v1.BlockResponse)(nil),                   // 29: ethereum.eth.v1.BlockResponse
 	(*v1.BlockSSZResponse)(nil),                // 30: ethereum.eth.v1.BlockSSZResponse
-	(*v2.BlockResponse)(nil),                   // 31: ethereum.eth.v2.BlockResponse
-	(*v2.BlockSSZResponse)(nil),                // 32: ethereum.eth.v2.BlockSSZResponse
+	(*v2.BlockResponseV2)(nil),                 // 31: ethereum.eth.v2.BlockResponseV2
+	(*v2.BlockSSZResponseV2)(nil),              // 32: ethereum.eth.v2.BlockSSZResponseV2
 	(*v1.BlockAttestationsResponse)(nil),       // 33: ethereum.eth.v1.BlockAttestationsResponse
 	(*v1.AttestationsPoolResponse)(nil),        // 34: ethereum.eth.v1.AttestationsPoolResponse
 	(*v1.AttesterSlashingsPoolResponse)(nil),   // 35: ethereum.eth.v1.AttesterSlashingsPoolResponse
@@ -387,8 +387,8 @@ var file_proto_eth_service_beacon_chain_service_proto_depIdxs = []int32{
 	8,  // 12: ethereum.eth.service.BeaconChain.GetBlockRoot:input_type -> ethereum.eth.v1.BlockRequest
 	8,  // 13: ethereum.eth.service.BeaconChain.GetBlock:input_type -> ethereum.eth.v1.BlockRequest
 	8,  // 14: ethereum.eth.service.BeaconChain.GetBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
-	10, // 15: ethereum.eth.service.BeaconChain.GetBlockAltair:input_type -> ethereum.eth.v2.BlockRequest
-	10, // 16: ethereum.eth.service.BeaconChain.GetBlockSSZAltair:input_type -> ethereum.eth.v2.BlockRequest
+	10, // 15: ethereum.eth.service.BeaconChain.GetBlockV2:input_type -> ethereum.eth.v2.BlockRequestV2
+	10, // 16: ethereum.eth.service.BeaconChain.GetBlockSSZV2:input_type -> ethereum.eth.v2.BlockRequestV2
 	8,  // 17: ethereum.eth.service.BeaconChain.ListBlockAttestations:input_type -> ethereum.eth.v1.BlockRequest
 	11, // 18: ethereum.eth.service.BeaconChain.ListPoolAttestations:input_type -> ethereum.eth.v1.AttestationsPoolRequest
 	12, // 19: ethereum.eth.service.BeaconChain.SubmitAttestations:input_type -> ethereum.eth.v1.SubmitAttestationsRequest
@@ -417,8 +417,8 @@ var file_proto_eth_service_beacon_chain_service_proto_depIdxs = []int32{
 	28, // 42: ethereum.eth.service.BeaconChain.GetBlockRoot:output_type -> ethereum.eth.v1.BlockRootResponse
 	29, // 43: ethereum.eth.service.BeaconChain.GetBlock:output_type -> ethereum.eth.v1.BlockResponse
 	30, // 44: ethereum.eth.service.BeaconChain.GetBlockSSZ:output_type -> ethereum.eth.v1.BlockSSZResponse
-	31, // 45: ethereum.eth.service.BeaconChain.GetBlockAltair:output_type -> ethereum.eth.v2.BlockResponse
-	32, // 46: ethereum.eth.service.BeaconChain.GetBlockSSZAltair:output_type -> ethereum.eth.v2.BlockSSZResponse
+	31, // 45: ethereum.eth.service.BeaconChain.GetBlockV2:output_type -> ethereum.eth.v2.BlockResponseV2
+	32, // 46: ethereum.eth.service.BeaconChain.GetBlockSSZV2:output_type -> ethereum.eth.v2.BlockSSZResponseV2
 	33, // 47: ethereum.eth.service.BeaconChain.ListBlockAttestations:output_type -> ethereum.eth.v1.BlockAttestationsResponse
 	34, // 48: ethereum.eth.service.BeaconChain.ListPoolAttestations:output_type -> ethereum.eth.v1.AttestationsPoolResponse
 	0,  // 49: ethereum.eth.service.BeaconChain.SubmitAttestations:output_type -> google.protobuf.Empty
@@ -490,8 +490,8 @@ type BeaconChainClient interface {
 	GetBlockRoot(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockRootResponse, error)
 	GetBlock(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockResponse, error)
 	GetBlockSSZ(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockSSZResponse, error)
-	GetBlockAltair(ctx context.Context, in *v2.BlockRequest, opts ...grpc.CallOption) (*v2.BlockResponse, error)
-	GetBlockSSZAltair(ctx context.Context, in *v2.BlockRequest, opts ...grpc.CallOption) (*v2.BlockSSZResponse, error)
+	GetBlockV2(ctx context.Context, in *v2.BlockRequestV2, opts ...grpc.CallOption) (*v2.BlockResponseV2, error)
+	GetBlockSSZV2(ctx context.Context, in *v2.BlockRequestV2, opts ...grpc.CallOption) (*v2.BlockSSZResponseV2, error)
 	ListBlockAttestations(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockAttestationsResponse, error)
 	ListPoolAttestations(ctx context.Context, in *v1.AttestationsPoolRequest, opts ...grpc.CallOption) (*v1.AttestationsPoolResponse, error)
 	SubmitAttestations(ctx context.Context, in *v1.SubmitAttestationsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -650,18 +650,18 @@ func (c *beaconChainClient) GetBlockSSZ(ctx context.Context, in *v1.BlockRequest
 	return out, nil
 }
 
-func (c *beaconChainClient) GetBlockAltair(ctx context.Context, in *v2.BlockRequest, opts ...grpc.CallOption) (*v2.BlockResponse, error) {
-	out := new(v2.BlockResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetBlockAltair", in, out, opts...)
+func (c *beaconChainClient) GetBlockV2(ctx context.Context, in *v2.BlockRequestV2, opts ...grpc.CallOption) (*v2.BlockResponseV2, error) {
+	out := new(v2.BlockResponseV2)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetBlockV2", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *beaconChainClient) GetBlockSSZAltair(ctx context.Context, in *v2.BlockRequest, opts ...grpc.CallOption) (*v2.BlockSSZResponse, error) {
-	out := new(v2.BlockSSZResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetBlockSSZAltair", in, out, opts...)
+func (c *beaconChainClient) GetBlockSSZV2(ctx context.Context, in *v2.BlockRequestV2, opts ...grpc.CallOption) (*v2.BlockSSZResponseV2, error) {
+	out := new(v2.BlockSSZResponseV2)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetBlockSSZV2", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -802,8 +802,8 @@ type BeaconChainServer interface {
 	GetBlockRoot(context.Context, *v1.BlockRequest) (*v1.BlockRootResponse, error)
 	GetBlock(context.Context, *v1.BlockRequest) (*v1.BlockResponse, error)
 	GetBlockSSZ(context.Context, *v1.BlockRequest) (*v1.BlockSSZResponse, error)
-	GetBlockAltair(context.Context, *v2.BlockRequest) (*v2.BlockResponse, error)
-	GetBlockSSZAltair(context.Context, *v2.BlockRequest) (*v2.BlockSSZResponse, error)
+	GetBlockV2(context.Context, *v2.BlockRequestV2) (*v2.BlockResponseV2, error)
+	GetBlockSSZV2(context.Context, *v2.BlockRequestV2) (*v2.BlockSSZResponseV2, error)
 	ListBlockAttestations(context.Context, *v1.BlockRequest) (*v1.BlockAttestationsResponse, error)
 	ListPoolAttestations(context.Context, *v1.AttestationsPoolRequest) (*v1.AttestationsPoolResponse, error)
 	SubmitAttestations(context.Context, *v1.SubmitAttestationsRequest) (*empty.Empty, error)
@@ -868,11 +868,11 @@ func (*UnimplementedBeaconChainServer) GetBlock(context.Context, *v1.BlockReques
 func (*UnimplementedBeaconChainServer) GetBlockSSZ(context.Context, *v1.BlockRequest) (*v1.BlockSSZResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlockSSZ not implemented")
 }
-func (*UnimplementedBeaconChainServer) GetBlockAltair(context.Context, *v2.BlockRequest) (*v2.BlockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBlockAltair not implemented")
+func (*UnimplementedBeaconChainServer) GetBlockV2(context.Context, *v2.BlockRequestV2) (*v2.BlockResponseV2, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockV2 not implemented")
 }
-func (*UnimplementedBeaconChainServer) GetBlockSSZAltair(context.Context, *v2.BlockRequest) (*v2.BlockSSZResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBlockSSZAltair not implemented")
+func (*UnimplementedBeaconChainServer) GetBlockSSZV2(context.Context, *v2.BlockRequestV2) (*v2.BlockSSZResponseV2, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockSSZV2 not implemented")
 }
 func (*UnimplementedBeaconChainServer) ListBlockAttestations(context.Context, *v1.BlockRequest) (*v1.BlockAttestationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListBlockAttestations not implemented")
@@ -1188,38 +1188,38 @@ func _BeaconChain_GetBlockSSZ_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconChain_GetBlockAltair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.BlockRequest)
+func _BeaconChain_GetBlockV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v2.BlockRequestV2)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).GetBlockAltair(ctx, in)
+		return srv.(BeaconChainServer).GetBlockV2(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/GetBlockAltair",
+		FullMethod: "/ethereum.eth.service.BeaconChain/GetBlockV2",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).GetBlockAltair(ctx, req.(*v2.BlockRequest))
+		return srv.(BeaconChainServer).GetBlockV2(ctx, req.(*v2.BlockRequestV2))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconChain_GetBlockSSZAltair_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.BlockRequest)
+func _BeaconChain_GetBlockSSZV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v2.BlockRequestV2)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).GetBlockSSZAltair(ctx, in)
+		return srv.(BeaconChainServer).GetBlockSSZV2(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/GetBlockSSZAltair",
+		FullMethod: "/ethereum.eth.service.BeaconChain/GetBlockSSZV2",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).GetBlockSSZAltair(ctx, req.(*v2.BlockRequest))
+		return srv.(BeaconChainServer).GetBlockSSZV2(ctx, req.(*v2.BlockRequestV2))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1523,12 +1523,12 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_GetBlockSSZ_Handler,
 		},
 		{
-			MethodName: "GetBlockAltair",
-			Handler:    _BeaconChain_GetBlockAltair_Handler,
+			MethodName: "GetBlockV2",
+			Handler:    _BeaconChain_GetBlockV2_Handler,
 		},
 		{
-			MethodName: "GetBlockSSZAltair",
-			Handler:    _BeaconChain_GetBlockSSZAltair_Handler,
+			MethodName: "GetBlockSSZV2",
+			Handler:    _BeaconChain_GetBlockSSZV2_Handler,
 		},
 		{
 			MethodName: "ListBlockAttestations",

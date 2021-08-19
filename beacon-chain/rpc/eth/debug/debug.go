@@ -60,11 +60,11 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 	return &ethpbv1.BeaconStateSSZResponse{Data: sszState}, nil
 }
 
-func (ds *Server) GetBeaconStateAltair(ctx context.Context, request *ethpbv2.StateRequest) (*ethpbv2.BeaconStateResponse, error) {
+func (ds *Server) GetBeaconStateV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
 	panic("implement me")
 }
 
-func (ds *Server) GetBeaconStateSSZAltair(ctx context.Context, request *ethpbv2.StateRequest) (*ethpbv2.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
 	panic("implement me")
 }
 
