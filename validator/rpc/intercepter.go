@@ -17,19 +17,19 @@ import (
 // authentication from our API.
 var (
 	noAuthPaths = map[string]bool{
-		"/ethereum.validator.accounts.v2.Auth/Signup":                      true,
-		"/ethereum.validator.accounts.v2.Auth/Login":                       true,
-		"/ethereum.validator.accounts.v2.Auth/Logout":                      true,
-		"/ethereum.validator.accounts.v2.Auth/HasUsedWeb":                  true,
-		"/ethereum.validator.accounts.v2.Wallet/HasWallet":                 true,
-		"/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus":           true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation": true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance":   true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances":      true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
-		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
-		"/ethereum.validator.accounts.v2.Beacon/StreamValidatorLogs":       true,
+		"/ethereum.eth.v1alpha1.Auth/Signup":                      true,
+		"/ethereum.eth.v1alpha1.Auth/Login":                       true,
+		"/ethereum.eth.v1alpha1.Auth/Logout":                      true,
+		"/ethereum.eth.v1alpha1.Auth/HasUsedWeb":                  true,
+		"/ethereum.eth.v1alpha1.Wallet/HasWallet":                 true,
+		"/ethereum.eth.v1alpha1.Beacon/GetBeaconStatus":           true,
+		"/ethereum.eth.v1alpha1.Beacon/GetValidatorParticipation": true,
+		"/ethereum.eth.v1alpha1.Beacon/GetValidatorPerformance":   true,
+		"/ethereum.eth.v1alpha1.Beacon/GetValidatorBalances":      true,
+		"/ethereum.eth.v1alpha1.Beacon/GetValidators":             true,
+		"/ethereum.eth.v1alpha1.Beacon/GetValidatorQueue":         true,
+		"/ethereum.eth.v1alpha1.Beacon/GetPeers":                  true,
+		"/ethereum.eth.v1alpha1.Beacon/StreamValidatorLogs":       true,
 	}
 	authLock sync.RWMutex
 )
