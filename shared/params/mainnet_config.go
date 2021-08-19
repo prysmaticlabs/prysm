@@ -121,7 +121,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// While eth1 mainnet block times are closer to 13s, we must conform with other clients in
 	// order to vote on the correct eth1 blocks.
 	//
-	// Additional context: https://github.com/ethereum/eth2.0-specs/issues/2132
+	// Additional context: https://github.com/ethereum/consensus-specs/issues/2132
 	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/issues/7856
 	// Future optimization: https://github.com/prysmaticlabs/prysm/issues/7739
 	SecondsPerETH1Block: 14,

@@ -1,5 +1,5 @@
 syntax = "proto3";
-package ethereum.eth.v1alpha1;
+package ethereum.validator.accounts.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
@@ -7,12 +7,12 @@ import "proto/prysm/v1alpha1/beacon_block.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
-option csharp_namespace = "Ethereum.Eth.V1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option csharp_namespace = "Ethereum.Validator.Accounts.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client;validatorpb";
 option java_multiple_files = true;
 option java_outer_classname = "KeymanagerProto";
-option java_package = "org.ethereum.eth.v1alpha1";
-option php_namespace = "Ethereum\\Eth\\v1alpha1";
+option java_package = "org.ethereum.validator.accounts.v2";
+option php_namespace = "Ethereum\\Validator\\Accounts\\V2";
 
 // RemoteSigner service API.
 //
@@ -68,7 +68,7 @@ message SignRequest {
         uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 
         // Altair objects.
-        BeaconBlockAltair blockV2 = 107;
+        ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
     }
 }
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"

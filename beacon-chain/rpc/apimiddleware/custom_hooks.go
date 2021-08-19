@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 )
 
-// https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
+// https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
 	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
@@ -29,7 +29,7 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	return nil
 }
 
-// https://ethereum.github.io/eth2.0-APIs/#/Validator/getAttesterDuties expects posting a top-level array.
+// https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with an 'index' field.
 func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
 	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
@@ -47,7 +47,7 @@ func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter,
 	return nil
 }
 
-// https://ethereum.github.io/eth2.0-APIs/#/Validator/publishAggregateAndProofs expects posting a top-level array.
+// https://ethereum.github.io/beacon-apis/#/Validator/publishAggregateAndProofs expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSignedAggregateAndProofArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
 	if _, ok := endpoint.PostRequest.(*submitAggregateAndProofsRequestJson); ok {
@@ -65,7 +65,7 @@ func wrapSignedAggregateAndProofArray(endpoint gateway.Endpoint, _ http.Response
 	return nil
 }
 
-// https://ethereum.github.io/eth2.0-APIs/#/Validator/prepareBeaconCommitteeSubnet expects posting a top-level array.
+// https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconCommitteeSubnet expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapBeaconCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
 	if _, ok := endpoint.PostRequest.(*submitBeaconCommitteeSubscriptionsRequestJson); ok {

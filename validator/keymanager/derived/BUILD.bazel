@@ -13,7 +13,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
         "//shared/promptutil:go_default_library",
@@ -37,7 +37,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/testutil/assert:go_default_library",

@@ -127,35 +127,6 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, e
 	return item.SortedIndices, nil
 }
 
-// ActiveBalance returns the total active balance of a given seed stored in cache.
-func (c *CommitteeCache) ActiveBalance(seed [32]byte) (uint64, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists := c.CommitteeCache.Get(key(seed))
-
-	if exists {
-		CommitteeCacheHit.Inc()
-	} else {
-		CommitteeCacheMiss.Inc()
-		return 0, ErrNonCommitteeKey
-	}
-
-	item, ok := obj.(*Committees)
-	if !ok {
-		return 0, ErrNotCommittee
-	}
-	if item == nil || item.ActiveBalance == nil {
-		return 0, errors.New("item is nil")
-	}
-
-	// Return `ErrNonCommitteeKey` if active balance field doesnt exist in item.
-	if !item.ActiveBalance.Exist {
-		return 0, ErrNonCommitteeKey
-	}
-
-	return item.ActiveBalance.Total, nil
-}
-
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 	c.lock.RLock()
@@ -192,7 +163,7 @@ func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 // Using seed as source for key to handle reorgs in the same epoch.
 // The seed is derived from state's array of randao mixes and epoch value
 // hashed together. This avoids collisions on different validator set. Spec definition:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
+// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
 func key(seed [32]byte) string {
 	return string(seed[:])
 }

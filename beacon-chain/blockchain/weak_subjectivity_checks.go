@@ -11,7 +11,7 @@ import (
 )
 
 // VerifyWeakSubjectivityRoot verifies the weak subjectivity root in the service struct.
-// Reference design: https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
+// Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
 func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
 	if s.cfg.WeakSubjectivityCheckpt == nil || len(s.cfg.WeakSubjectivityCheckpt.Root) == 0 || s.cfg.WeakSubjectivityCheckpt.Epoch == 0 {
