@@ -197,8 +197,10 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
+consensus_spec_version = "v1.1.0-beta.1"
+
 http_archive(
-    name = "eth2_spec_tests_general",
+    name = "consensus_spec_tests_general",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -209,12 +211,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "deacc076365c727d653ac064894ecf0d1b0a675d86704dc8de271259f6a7314b",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/general.tar.gz",
+    sha256 = "e9b4cc60a3e676c6b4a9348424e44cff1ebada603ffb31b0df600dbd70e7fbf6",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal",
+    name = "consensus_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -225,12 +227,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
+    sha256 = "cf82dc729ffe7b924f852e57d1973e1a6377c5b52acc903c953277fa9b4e6de8",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet",
+    name = "consensus_spec_tests_mainnet",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -241,8 +243,24 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a7b3d0ffc02a567250f424d69b2474fdc9477cd56eada60af7474560b46a8527",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
+    sha256 = "6c6792375b81858037014e282d28a64b0cf12e12daf16054265c85403b8b329f",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "consensus_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "6a039696cefe9c1a35f677d118880afa71bbd487f75110a943618872ccdde170",
+    strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
+    url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
 
 http_archive(

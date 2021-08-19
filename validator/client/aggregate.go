@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -60,7 +60,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
 	// to broadcast the best aggregate to the global aggregate channel.
-	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
+	// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
 	res, err := v.validatorClient.SubmitAggregateSelectionProof(ctx, &ethpb.AggregateSelectionRequest{
