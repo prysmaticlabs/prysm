@@ -1,12 +1,10 @@
 package v1
 
 import (
-	"fmt"
-
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // InnerStateUnsafe returns the pointer value of the underlying
@@ -78,7 +76,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.StateRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -104,7 +102,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.StateRoots, idx)
+	return bytesutil.SafeCopyBytesAtIndex(b.state.StateRoots, idx)
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.
@@ -123,51 +121,4 @@ func ProtobufBeaconState(s interface{}) (*ethpb.BeaconState, error) {
 		return nil, errors.New("input is not type ethpb.BeaconState")
 	}
 	return pbState, nil
-}
-
-func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
-	if input == nil {
-		return nil
-	}
-
-	dst := make([][]byte, len(input))
-	for i, r := range input {
-		tmp := make([]byte, len(r))
-		copy(tmp, r)
-		dst[i] = tmp
-	}
-	return dst
-}
-
-func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
-	if input == nil {
-		return nil, nil
-	}
-
-	if uint64(len(input)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, input[idx])
-	return root, nil
-}
-
-func (b *BeaconState) safeCopyPendingAttestationSlice(input []*ethpb.PendingAttestation) []*ethpb.PendingAttestation {
-	if input == nil {
-		return nil
-	}
-
-	res := make([]*ethpb.PendingAttestation, len(input))
-	for i := 0; i < len(res); i++ {
-		res[i] = copyutil.CopyPendingAttestation(input[i])
-	}
-	return res
-}
-
-func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if input == nil {
-		return nil
-	}
-
-	return copyutil.CopyCheckpoint(input)
 }

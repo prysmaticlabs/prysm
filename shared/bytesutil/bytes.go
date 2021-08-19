@@ -4,6 +4,7 @@ package bytesutil
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/bits"
 	"regexp"
 
@@ -166,6 +167,20 @@ func ToLowInt64(x []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(x))
 }
 
+// SafeCopyBytesAtIndex takes a copy of an item in a slice of byte slices. Returns error if index out of range.
+func SafeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	if uint64(len(input)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	item := make([]byte, 32)
+	copy(item, input[idx])
+	return item, nil
+}
+
 // SafeCopyBytes will copy and return a non-nil byte array, otherwise it returns nil.
 func SafeCopyBytes(cp []byte) []byte {
 	if cp != nil {
@@ -176,8 +191,8 @@ func SafeCopyBytes(cp []byte) []byte {
 	return nil
 }
 
-// Copy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
-func Copy2dBytes(ary [][]byte) [][]byte {
+// SafeCopy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	if ary != nil {
 		copied := make([][]byte, len(ary))
 		for i, a := range ary {
