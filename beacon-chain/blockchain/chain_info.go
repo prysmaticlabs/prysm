@@ -24,6 +24,8 @@ type ChainInfoFetcher interface {
 	GenesisFetcher
 	CanonicalFetcher
 	ForkFetcher
+	TimeFetcher
+	HeadDomainFetcher
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
@@ -48,8 +50,12 @@ type HeadFetcher interface {
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
+	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool)
+	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
+	HeadSyncCommitteeFetcher
+	HeadDomainFetcher
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
