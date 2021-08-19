@@ -24,7 +24,7 @@ var sha256Pool = sync.Pool{New: func() interface{} {
 }}
 
 // Hash defines a function that returns the sha256 checksum of the data passed in.
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
+// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
 func Hash(data []byte) [32]byte {
 	h, ok := sha256Pool.Get().(hash.Hash)
 	if !ok {

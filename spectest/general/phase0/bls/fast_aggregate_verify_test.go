@@ -44,7 +44,7 @@ func testFastAggregateVerify(t *testing.T) {
 			}
 
 			msg := test.Input.Message
-			// TODO(#7632): Remove when https://github.com/ethereum/eth2.0-spec-tests/issues/22 is resolved.
+			// TODO(#7632): Remove when https://github.com/ethereum/consensus-spec-tests/issues/22 is resolved.
 			if msg == "" {
 				msg = test.Input.Messages
 			}

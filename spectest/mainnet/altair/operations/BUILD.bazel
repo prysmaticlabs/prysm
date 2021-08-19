@@ -13,7 +13,7 @@ go_test(
         "voluntary_exit_test.go",
     ],
     data = glob(["*.yaml"]) + [
-        "@eth2_spec_tests_mainnet//:test_data",
+        "@consensus_spec_tests_mainnet//:test_data",
     ],
     shard_count = 4,
     tags = ["spectest"],
