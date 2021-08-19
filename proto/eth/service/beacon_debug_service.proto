@@ -50,15 +50,15 @@ service BeaconDebug {
     };
   }
 
-  // GetBeaconState returns full BeaconState object for given stateId.
-  rpc GetBeaconStateAltair(v2.StateRequest) returns (v2.BeaconStateResponse) {
+  // GetBeaconStateV2 returns full BeaconState object for given stateId.
+  rpc GetBeaconStateV2(v2.StateRequestV2) returns (v2.BeaconStateResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/debug/beacon/states/{state_id}"
     };
   }
 
-  // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSSZAltair(v2.StateRequest) returns (v2.BeaconStateSSZResponse) {
+  // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full BeaconState object for given stateId.
+  rpc GetBeaconStateSSZV2(v2.StateRequestV2) returns (v2.BeaconStateSSZResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/debug/beacon/states/{state_id}/ssz"
     };

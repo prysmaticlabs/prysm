@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // ProcessAttesterSlashings is one of the operations performed
@@ -59,7 +60,11 @@ func ProcessAttesterSlashings(
 			}
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
 				cfg := params.BeaconConfig()
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
+				slashingQuotient := cfg.MinSlashingPenaltyQuotient
+				if beaconState.Version() == version.Altair {
+					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+				}
+				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)

@@ -400,17 +400,18 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &eth.SignedVoluntaryExit{}
-	val, err := v1.NewValidator(&ethpb.Validator{})
-	_ = err
+	rawVal := &ethpb.Validator{}
 	fork := &ethpb.Fork{}
 	var slot types.Slot
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)
-		fuzzer.Fuzz(val)
+		fuzzer.Fuzz(rawVal)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		err := VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
+		val, err := v1.NewValidator(&ethpb.Validator{})
+		_ = err
+		err = VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 		_ = err
 	}
 }
