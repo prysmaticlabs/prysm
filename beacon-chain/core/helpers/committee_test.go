@@ -396,13 +396,6 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	indices, err = committeeCache.Committee(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
-
-	// Total active balance should be `MinGenesisActiveValidatorCount` given each validator has effective balance of 1.
-	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-	balance, err := committeeCache.ActiveBalance(seed)
-	require.NoError(t, err)
-	require.Equal(t, validatorCount, balance)
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
