@@ -386,7 +386,7 @@ func UpdateProposerIndicesInCache(state state.ReadOnlyBeaconState) error {
 	})
 }
 
-// ClearCache clears the beacon committee cache and sync committee cache.
+// ClearCache clears the committee cache
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
