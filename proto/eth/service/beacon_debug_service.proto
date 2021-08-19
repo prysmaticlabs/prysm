@@ -34,7 +34,7 @@ option php_namespace = "Ethereum\\Eth\\Service";
 //
 // The beacon chain debug API is a set of endpoints to debug chain and shouldn't be exposed publicly.
 //
-// This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
+// This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/debug).
 service BeaconDebug {
   // GetBeaconState returns full BeaconState object for given stateId.
   rpc GetBeaconState(v1.StateRequest) returns (v1.BeaconStateResponse) {
