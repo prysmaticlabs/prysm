@@ -687,6 +687,80 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 	assert.DeepEqual(t, sszBlock, resp.Data)
 }
 
+func TestServer_GetBlockSSZV2(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+
+		b2 := testutil.NewBeaconBlock()
+		b2.Block.Slot = 30
+		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
+
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
+
+		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, ok)
+		require.NoError(t, err)
+		sszBlock, err := blocks[0].MarshalSSZ()
+		require.NoError(t, err)
+
+		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{BlockId: []byte("30")})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+
+		b2 := testutil.NewBeaconBlockAltair()
+		b2.Block.Slot = 30
+		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		signedBlk, err := wrapper.WrappedAltairSignedBeaconBlock(b2)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
+
+		chainBlk, err := wrapper.WrappedAltairSignedBeaconBlock(headBlock.GetAltairBlock())
+		require.NoError(t, err)
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               chainBlk,
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
+
+		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, ok)
+		require.NoError(t, err)
+		sszBlock, err := blocks[0].MarshalSSZ()
+		require.NoError(t, err)
+
+		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{BlockId: []byte("30")})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+	})
+}
+
 func TestServer_GetBlockRoot(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
