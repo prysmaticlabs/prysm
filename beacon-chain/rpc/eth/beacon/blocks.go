@@ -332,7 +332,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	data := &ethpbv2.BeaconBlockContainerAltair{
+	data := &ethpbv2.SignedBeaconBlockAltair{
 		Message:   v2Blk,
 		Signature: blk.Signature(),
 	}
