@@ -151,14 +151,15 @@ func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error
 	ctx := context.Background()
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		PageSize: 4,
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
+		PageSize:    4,
 	})
 	if err != nil {
 		return err
 	}
 	respJSON := &attestationsResponseJSON{}
 	if err := doGatewayJSONRequest(
-		"/beacon/attestations?page_size=4",
+		"/beacon/attestations?genesis=true&page_size=4",
 		beaconNodeIdx,
 		respJSON,
 	); err != nil {
