@@ -47,11 +47,8 @@ func TotalBalance(state state.ReadOnlyValidators, indices []types.ValidatorIndex
 //    """
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
-	// Check if the active balance exists in cache.
-	epoch := SlotToEpoch(s.Slot())
-
-	// Cache miss. Manually compute the active balance and fill the cache.
 	total := uint64(0)
+	epoch := SlotToEpoch(s.Slot())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			total += val.EffectiveBalance()
@@ -60,7 +57,6 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	}); err != nil {
 		return 0, err
 	}
-
 	return total, nil
 }
 
