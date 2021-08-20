@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -44,15 +45,16 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 	}, nil
 }
 
-func (bs *Server) SubmitSyncCommitteeSignature(ctx context.Context, message *eth.SyncCommitteeMessage) (*empty.Empty, error) {
-	panic("implement me")
+// SubmitSyncCommitteeSignature --
+func (bs *Server) SubmitSyncCommitteeSignature(_ context.Context, _ *eth.SyncCommitteeMessage) (*empty.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpb.SyncCommittee, error) {
 	committee, err := st.CurrentSyncCommittee()
 	if err != nil {
-		return nil, nil, status.Errorf(
-			codes.Internal, "Could not get sync committee: %v", err,
+		return nil, nil, fmt.Errorf(
+			"could not get sync committee: %v", err,
 		)
 	}
 
@@ -60,9 +62,8 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIn
 	for i, key := range committee.Pubkeys {
 		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 		if !ok {
-			return nil, nil, status.Errorf(
-				codes.Internal,
-				"Validator index not found for pubkey %#x",
+			return nil, nil, fmt.Errorf(
+				"validator index not found for pubkey %#x",
 				bytesutil.Trunc(key),
 			)
 		}
@@ -77,17 +78,16 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpb.SyncCommitt
 	for i := uint64(0); i < subcommitteeCount; i++ {
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
 		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal, "Failed to get subcommittee pubkeys: %v", err,
+			return nil, fmt.Errorf(
+				"failed to get subcommittee pubkeys: %v", err,
 			)
 		}
 		subcommittee := &eth.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
 			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 			if !ok {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Validator index not found for pubkey %#x",
+				return nil, fmt.Errorf(
+					"validator index not found for pubkey %#x",
 					bytesutil.Trunc(key),
 				)
 			}
