@@ -158,7 +158,7 @@ func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error
 	}
 	respJSON := &attestationsResponseJSON{}
 	if err := doGatewayJSONRequest(
-		"/beacon/attestations?genesis=true",
+		"/beacon/attestations?genesis_epoch=true",
 		beaconNodeIdx,
 		respJSON,
 	); err != nil {
