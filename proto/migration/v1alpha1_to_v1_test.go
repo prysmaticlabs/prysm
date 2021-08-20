@@ -468,6 +468,12 @@ func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
 	}
+	syncCommitteeBits := bitfield.NewBitvector512()
+	syncCommitteeBits.SetBitAt(100, true)
+	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: signature,
+	}
 
 	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
 	require.NoError(t, err)
