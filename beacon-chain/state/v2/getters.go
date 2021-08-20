@@ -314,7 +314,7 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyBytesAtIndex(b.state.BlockRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -364,7 +364,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyBytesAtIndex(b.state.StateRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
@@ -769,7 +769,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return bytesutil.SafeCopyBytesAtIndex(b.state.RandaoMixes, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.

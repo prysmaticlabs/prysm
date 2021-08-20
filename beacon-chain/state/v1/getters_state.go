@@ -2,7 +2,6 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -102,7 +101,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyBytesAtIndex(b.state.StateRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.

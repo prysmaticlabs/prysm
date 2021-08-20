@@ -95,5 +95,5 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyBytesAtIndex(b.state.BlockRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }

@@ -167,8 +167,8 @@ func ToLowInt64(x []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(x))
 }
 
-// SafeCopyBytesAtIndex takes a copy of an item in a slice of byte slices. Returns error if index out of range.
-func SafeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
+// SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.
+func SafeCopyRootAtIndex(input [][]byte, idx uint64) ([]byte, error) {
 	if input == nil {
 		return nil, nil
 	}

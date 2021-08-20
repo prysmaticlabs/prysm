@@ -53,7 +53,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return bytesutil.SafeCopyBytesAtIndex(b.state.RandaoMixes, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
