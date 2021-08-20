@@ -3,8 +3,7 @@ package gateway
 import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -19,10 +18,10 @@ type MuxConfig struct {
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
 func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 	v1Alpha1Registrations := []gateway.PbHandlerRegistration{
-		ethpb.RegisterNodeHandler,
-		ethpb.RegisterBeaconChainHandler,
-		ethpb.RegisterBeaconNodeValidatorHandler,
-		pbrpc.RegisterHealthHandler,
+		ethpbalpha.RegisterNodeHandler,
+		ethpbalpha.RegisterBeaconChainHandler,
+		ethpbalpha.RegisterBeaconNodeValidatorHandler,
+		ethpbalpha.RegisterHealthHandler,
 	}
 	v1Registrations := []gateway.PbHandlerRegistration{
 		ethpbservice.RegisterBeaconNodeHandler,
@@ -31,7 +30,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 		ethpbservice.RegisterEventsHandler,
 	}
 	if enableDebugRPCEndpoints {
-		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
+		v1Alpha1Registrations = append(v1Alpha1Registrations, ethpbalpha.RegisterDebugHandler)
 		v1Registrations = append(v1Registrations, ethpbservice.RegisterBeaconDebugHandler)
 
 	}
@@ -70,7 +69,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 	}
 	v1PbHandler := gateway.PbMux{
 		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
+		Patterns:      []string{"/eth/v1/", "/eth/v2/"},
 		Mux:           v1Mux,
 	}
 
