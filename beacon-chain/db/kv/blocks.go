@@ -262,28 +262,34 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
+	blockRoots := make([][]byte, len(blocks))
+	encodedBlocks := make([][]byte, len(blocks))
+	indicesForBlocks := make([]map[string][]byte, len(blocks))
+	for i, blk := range blocks {
+		blockRoot, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		enc, err := marshalBlock(ctx, blk)
+		if err != nil {
+			return err
+		}
+		blockRoots[i] = blockRoot[:]
+		encodedBlocks[i] = enc
+		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
+		indicesForBlocks[i] = indicesByBucket
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for _, blk := range blocks {
-			blockRoot, err := blk.Block().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-
-			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
+		for i, blk := range blocks {
+			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
 				continue
 			}
-			enc, err := marshalBlock(ctx, blk)
-			if err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-			if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
+			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			s.blockCache.Set(string(blockRoot[:]), blk, int64(len(enc)))
-
-			if err := bkt.Put(blockRoot[:], enc); err != nil {
+			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
+			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
 				return err
 			}
 		}
