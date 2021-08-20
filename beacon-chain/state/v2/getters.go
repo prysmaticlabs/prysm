@@ -581,7 +581,12 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+	numOfVals := len(b.state.Validators)
+
 	idx, ok := b.valMapHandler.Get(key)
+	if ok && numOfVals <= int(idx) {
+		return types.ValidatorIndex(0), false
+	}
 	return idx, ok
 }
 

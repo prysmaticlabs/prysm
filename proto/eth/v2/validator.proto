@@ -16,7 +16,7 @@ syntax = "proto3";
 package ethereum.eth.v2;
 
 import "proto/eth/ext/options.proto";
-import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/eth/v2/beacon_block.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
@@ -48,7 +48,7 @@ message SyncCommitteeDuty {
   repeated uint64 sync_committee_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 }
 
-message ProduceBlockRequest {
+message ProduceBlockRequestV2 {
   // The slot to request a block for.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -60,8 +60,8 @@ message ProduceBlockRequest {
   optional bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message ProduceBlockResponse {
-  v1alpha1.BeaconBlockAltair data = 1;
+message ProduceBlockResponseV2 {
+  BeaconBlockAltair data = 1;
 }
 
 message SubmitSyncCommitteeSubscriptionsRequest {
@@ -107,7 +107,7 @@ message SyncCommitteeContribution {
 
   // A bit is set if a signature from the validator at the corresponding
   // index in the subcommittee is present in the aggregate `signature`.
-  bytes aggregation_bits = 4 [(ethereum.eth.ext.ssz_size) = "16", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector128"];
+  bytes aggregation_bits = 4 [(ethereum.eth.ext.ssz_size) = "sync_committee_aggregate_bytes.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector128"];
 
   // Signature by the validator(s) over the block root of `slot`.
   bytes signature = 5 [(ethereum.eth.ext.ssz_size) = "96"];
