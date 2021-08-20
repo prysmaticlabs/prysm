@@ -262,6 +262,8 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
+	// Performing marshaling, hashing, and indexing outside the bolt transaction
+	// to minimize the time we hold the DB lock.
 	blockRoots := make([][]byte, len(blocks))
 	encodedBlocks := make([][]byte, len(blocks))
 	indicesForBlocks := make([]map[string][]byte, len(blocks))
