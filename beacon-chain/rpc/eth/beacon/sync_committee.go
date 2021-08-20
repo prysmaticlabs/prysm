@@ -78,6 +78,6 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 	}, nil
 }
 
-func (bs *Server) SubmitSyncCommitteeSignature(ctx context.Context, message *eth.SyncCommitteeMessage) (*empty.Empty, error) {
+func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *eth.SubmitPoolSyncCommitteeSignatures) (*empty.Empty, error) {
 	panic("implement me")
 }
