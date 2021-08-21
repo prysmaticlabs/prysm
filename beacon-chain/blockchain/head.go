@@ -143,6 +143,10 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
+
 		reorgCount.Inc()
 	}
 
@@ -358,5 +362,38 @@ func (s *Service) notifyNewHeadEvent(
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},
 	})
+	return nil
+}
+
+// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
+// attestation pool. It also filters out the attestations that is one epoch older as a
+// defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
+	}
+
+	if orphanedBlk == nil || orphanedBlk.IsNil() {
+		return errors.New("orphaned block can't be nil")
+	}
+
+	for _, a := range orphanedBlk.Block().Body().Attestations() {
+		// Is the attestation one epoch older.
+		if a.Data.Slot + params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			continue
+		}
+		if helpers.IsAggregated(a) {
+			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+				return err
+			}
+		}
+		saveOrphanedAttCount.Inc()
+	}
+
 	return nil
 }
