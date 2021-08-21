@@ -380,7 +380,7 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) e
 
 	for _, a := range orphanedBlk.Block().Body().Attestations() {
 		// Is the attestation one epoch older.
-		if a.Data.Slot + params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
 			continue
 		}
 		if helpers.IsAggregated(a) {
