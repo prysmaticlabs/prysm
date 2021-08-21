@@ -26,6 +26,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
@@ -43,6 +44,7 @@ go_library(
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/traceutil:go_default_library",
+        "//shared/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -71,6 +73,7 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 3,
     deps = [
+        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",
