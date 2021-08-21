@@ -6,9 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -40,12 +39,7 @@ func (e *invalidValidatorIdError) Error() string {
 func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "State not found: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	if len(req.ValidatorId) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Validator ID is required")
@@ -64,12 +58,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	valContainers, err := valContainersByRequestIds(state, req.Id)
@@ -90,18 +79,18 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 		filterStatus[ss] = true
 	}
-	epoch := helpers.SlotToEpoch(state.Slot())
+	epoch := corehelpers.SlotToEpoch(state.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
 		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 		}
-		valStatus, err := rpchelpers.ValidatorStatus(readOnlyVal, epoch)
+		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator status: %v", err)
 		}
-		valSubStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
+		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator sub status: %v", err)
 		}
@@ -116,12 +105,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	valContainers, err := valContainersByRequestIds(state, req.Id)
@@ -143,32 +127,27 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	epoch := helpers.SlotToEpoch(state.Slot())
+	epoch := corehelpers.SlotToEpoch(state.Slot())
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
-	activeCount, err := helpers.ActiveValidatorCount(state, epoch)
+	activeCount, err := corehelpers.ActiveValidatorCount(state, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
 
-	startSlot, err := helpers.StartSlot(epoch)
+	startSlot, err := corehelpers.StartSlot(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
-	endSlot, err := helpers.EndSlot(epoch)
+	endSlot, err := corehelpers.EndSlot(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
-	committeesPerSlot := helpers.SlotCommitteeCount(activeCount)
+	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
 	committees := make([]*ethpb.Committee, 0)
 	for slot := startSlot; slot <= endSlot; slot++ {
 		if req.Slot != nil && slot != *req.Slot {
@@ -178,7 +157,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
-			committee, err := helpers.BeaconCommitteeFromState(state, slot, index)
+			committee, err := corehelpers.BeaconCommitteeFromState(state, slot, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
@@ -196,7 +175,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
-	epoch := helpers.SlotToEpoch(state.Slot())
+	epoch := corehelpers.SlotToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()
@@ -207,7 +186,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
-			subStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
+			subStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
@@ -250,7 +229,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
-			subStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, epoch)
+			subStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
