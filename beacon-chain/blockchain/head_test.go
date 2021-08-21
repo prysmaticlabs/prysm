@@ -42,11 +42,11 @@ func TestSaveHead_Different(t *testing.T) {
 		testutil.NewBeaconBlock(),
 	)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
-	oldRoot, err  := oldBlock.Block().HashTreeRoot()
+	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
 	service.head = &head{
-		slot: 0,
-		root: oldRoot,
+		slot:  0,
+		root:  oldRoot,
 		block: oldBlock,
 	}
 
@@ -83,11 +83,11 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 		testutil.NewBeaconBlock(),
 	)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
-	oldRoot, err  := oldBlock.Block().HashTreeRoot()
+	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
 	service.head = &head{
-		slot: 0,
-		root: oldRoot,
+		slot:  0,
+		root:  oldRoot,
 		block: oldBlock,
 	}
 
