@@ -37,18 +37,17 @@ func TestSaveHead_Different(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	oldRoot := [32]byte{'A'}
+	testutil.NewBeaconBlock()
+	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+		testutil.NewBeaconBlock(),
+	)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
+	oldRoot, err  := oldBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
 	service.head = &head{
 		slot: 0,
 		root: oldRoot,
-		block: wrapper.WrappedPhase0SignedBeaconBlock(
-			&ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{
-					Slot:      0,
-					StateRoot: make([]byte, 32),
-				},
-			},
-		),
+		block: oldBlock,
 	}
 
 	newHeadSignedBlock := testutil.NewBeaconBlock()
@@ -80,18 +79,16 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	oldRoot := [32]byte{'A'}
+	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+		testutil.NewBeaconBlock(),
+	)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
+	oldRoot, err  := oldBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
 	service.head = &head{
 		slot: 0,
 		root: oldRoot,
-		block: wrapper.WrappedPhase0SignedBeaconBlock(
-			&ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{
-					Slot:      0,
-					StateRoot: make([]byte, 32),
-				},
-			},
-		),
+		block: oldBlock,
 	}
 
 	reorgChainParent := [32]byte{'B'}
