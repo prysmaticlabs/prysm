@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v2 "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	ethereum_validator_accounts_v2 "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	grpc "google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -38,14 +38,14 @@ func (m *MockRemoteSignerClient) EXPECT() *MockRemoteSignerClientMockRecorder {
 }
 
 // ListValidatingPublicKeys mocks base method
-func (m *MockRemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v2.ListPublicKeysResponse, error) {
+func (m *MockRemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*ethereum_validator_accounts_v2.ListPublicKeysResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListValidatingPublicKeys", varargs...)
-	ret0, _ := ret[0].(*v2.ListPublicKeysResponse)
+	ret0, _ := ret[0].(*ethereum_validator_accounts_v2.ListPublicKeysResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,14 +58,14 @@ func (mr *MockRemoteSignerClientMockRecorder) ListValidatingPublicKeys(arg0, arg
 }
 
 // Sign mocks base method
-func (m *MockRemoteSignerClient) Sign(arg0 context.Context, arg1 *v2.SignRequest, arg2 ...grpc.CallOption) (*v2.SignResponse, error) {
+func (m *MockRemoteSignerClient) Sign(arg0 context.Context, arg1 *ethereum_validator_accounts_v2.SignRequest, arg2 ...grpc.CallOption) (*ethereum_validator_accounts_v2.SignResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Sign", varargs...)
-	ret0, _ := ret[0].(*v2.SignResponse)
+	ret0, _ := ret[0].(*ethereum_validator_accounts_v2.SignResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

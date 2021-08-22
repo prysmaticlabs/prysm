@@ -18,7 +18,7 @@ import (
 
 var (
 	// Getting confirmation status from orchestrator after each confirmationStatusFetchingInverval
-	confirmationStatusFetchingInverval = 2 * time.Second
+	confirmationStatusFetchingInverval = 500 * time.Millisecond
 	// maxPendingBlockTryLimit is the maximum limit for pending status of a block
 	maxPendingBlockTryLimit       = 10
 	errInvalidBlock               = errors.New("invalid block found, discarded block batch")

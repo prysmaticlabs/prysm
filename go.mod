@@ -2,13 +2,6 @@ module github.com/prysmaticlabs/prysm
 
 go 1.16
 
-replace (
-	github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210311182818-b9c0d847ae7b
-	github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
-	github.com/prysmaticlabs/ethereumapis => github.com/lukso-network/vanguard-apis v0.0.1-beta
-	github.com/prysmaticlabs/prysm => github.com/lukso-network/vanguard-consensus-engine v1.3.3
-)
-
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/allegro/bigcache v1.2.1 // indirect
@@ -131,4 +124,12 @@ require (
 	k8s.io/client-go v0.18.3
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
+)
+
+replace (
+	github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210311182818-b9c0d847ae7b
+	github.com/ferranbt/fastssz => github.com/atif-konasl/fastssz v0.0.0-20210825113045-242c536f4f90
+	github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
+	github.com/prysmaticlabs/ethereumapis => github.com/lukso-network/vanguard-apis v0.0.1-alpha.0.20210828053509-18da5043454c
+	github.com/prysmaticlabs/prysm => ./
 )

@@ -6,11 +6,12 @@ package van_mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	common "github.com/ethereum/go-ethereum/common"
 	types "github.com/ethereum/go-ethereum/core/types"
 	gomock "github.com/golang/mock/gomock"
 	pandora "github.com/prysmaticlabs/prysm/validator/pandora"
-	reflect "reflect"
 )
 
 // MockPandoraService is a mock of PandoraService interface

@@ -11,13 +11,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var alreadySendEpochInfos map[types.Epoch]bool
+var (
+	alreadySendEpochInfos map[types.Epoch]bool
+	lastSendEpoch         types.Epoch
+)
 
 // StreamMinimalConsensusInfo to orchestrator client every single time an unconfirmed block is received by the beacon node.
 func (bs *Server) StreamMinimalConsensusInfo(
@@ -26,29 +29,35 @@ func (bs *Server) StreamMinimalConsensusInfo(
 ) error {
 
 	alreadySendEpochInfos = make(map[types.Epoch]bool)
-	s, err := bs.HeadFetcher.HeadState(bs.Ctx)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
-	currentEpoch := helpers.SlotToEpoch(s.Slot())
-	requestedEpoch := req.FromEpoch
-	if requestedEpoch > currentEpoch {
-		log.WithField("curEpoch", currentEpoch).
-			WithField("requestedEpoch", requestedEpoch).
-			Warn("requested epoch is future from current epoch")
-		return status.Errorf(codes.InvalidArgument, errEpoch, currentEpoch, requestedEpoch)
-	}
-
+	lastSendEpoch = req.FromEpoch - 1
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
-	if err := bs.initialEpochInfoPropagation(requestedEpoch, currentEpoch, stream, stateChannel, stateSub); err != nil {
-		log.WithError(err).Warn("Failed to send initial epoch infos to orchestrator")
-		return err
+	cp, err := bs.BeaconDB.FinalizedCheckpoint(bs.Ctx)
+	if err != nil {
+		log.Fatalf("Could not fetch finalized cp: %v", err)
+	}
+	r := bytesutil.ToBytes32(cp.Root)
+	beaconState, err := bs.StateGen.StateByRoot(bs.Ctx, r)
+	if err != nil {
+		log.Fatalf("Could not fetch beacon state by root: %v", err)
+	}
+	latestFinalizedEpoch := cp.Epoch
+
+	log.WithField("finalizedEpoch", latestFinalizedEpoch).
+		WithField("requestedEpoch", req.FromEpoch).
+		WithField("slot", beaconState.Slot()).
+		Info("Sending epoch infos from requested to latest finalized epoch")
+
+	if req.FromEpoch <= latestFinalizedEpoch {
+		if err := bs.sendPrevEpochInfoBatch(req.FromEpoch, latestFinalizedEpoch, stream); err != nil {
+			return status.Errorf(codes.Internal, "Could not retrieve archived epoch info. %v", err)
+		}
+		lastSendEpoch = latestFinalizedEpoch
 	}
 
+	var flag bool
 	for {
 		select {
 		case stateEvent := <-stateChannel:
@@ -59,8 +68,31 @@ func (bs *Server) StreamMinimalConsensusInfo(
 					continue
 				}
 
-				if err := bs.sendNextEpochInfo(blockVerifiedData.Slot, stream, blockVerifiedData.CurrentState); err != nil {
-					log.WithField("epoch", helpers.SlotToEpoch(blockVerifiedData.Slot)+1).
+				curEpoch := helpers.SlotToEpoch(blockVerifiedData.Slot)
+				nextEpoch := curEpoch + 1
+
+				log.WithField("blockSlot", blockVerifiedData.Slot).
+					WithField("stateSlot", blockVerifiedData.CurrentState.Slot()).
+					WithField("lastSendEpoch", lastSendEpoch).
+					WithField("currentEpoch", curEpoch).
+					Debug("Preparing epoch info")
+
+				// Executes for a single time
+				if !flag {
+					for epoch := lastSendEpoch + 1; epoch <= curEpoch; epoch++ {
+						if err := bs.sendEpochInfo(epoch, stream, blockVerifiedData.CurrentState); err != nil {
+							log.WithField("epoch", epoch).
+								WithError(err).
+								Warn("Failed to send epoch info from latest finalized epoch to current epoch")
+							continue
+						}
+						lastSendEpoch = epoch
+					}
+					flag = true
+				}
+
+				if err := bs.sendEpochInfo(nextEpoch, stream, blockVerifiedData.CurrentState); err != nil {
+					log.WithField("epoch", nextEpoch).
 						WithError(err).
 						Warn("Failed to send epoch info to orchestrator")
 					continue
@@ -76,132 +108,49 @@ func (bs *Server) StreamMinimalConsensusInfo(
 	}
 }
 
-// initialEpochInfoPropagation
-func (bs *Server) initialEpochInfoPropagation(
-	requestedEpoch types.Epoch,
-	currentEpoch types.Epoch,
+// sendEpochInfoToFinalizeEpoch method sends previous epoch info to orchestrator client
+func (bs *Server) sendPrevEpochInfoBatch(
+	fromEpoch types.Epoch,
+	toEpoch types.Epoch,
 	stream ethpb.BeaconChain_StreamMinimalConsensusInfoServer,
-	stateChannel chan *feed.Event,
-	stateSub event.Subscription,
 ) error {
 
-	// when initial syncing is true, it starts sending epoch info
-	if bs.SyncChecker.Syncing() {
-		log.WithField("currentEpoch", currentEpoch).Debug("Node is in syncing mode")
-		state, err := bs.HeadFetcher.HeadState(bs.Ctx)
+	for epoch := fromEpoch; epoch <= toEpoch; epoch++ {
+		startSlot, err := helpers.StartSlot(epoch)
 		if err != nil {
 			return err
 		}
-
-		epochInfo, err := bs.prepareEpochInfo(currentEpoch, state.Copy())
+		state, err := bs.StateGen.StateBySlot(bs.Ctx, startSlot)
 		if err != nil {
-			log.WithField("epoch", currentEpoch).
-				WithError(err).
-				Warn("Failed to prepare epoch info in-sync mode")
-			return status.Errorf(codes.Internal,
-				"Could not prepare epoch info in-sync mode. epoch: %v  err: %v", currentEpoch, err)
+			log.WithError(err).
+				WithField("slot", startSlot).
+				WithField("epoch", epoch).
+				Warn("Could not fetch beacon state by slot. Stopped sending previous epoch infos")
+			return err
 		}
-
-		if err := stream.Send(epochInfo); err != nil {
-			return status.Errorf(codes.Unavailable,
-				"Could not prepare epoch info in-sync mode. epoch: %v  err: %v", currentEpoch, err)
-		}
-		alreadySendEpochInfos[epochInfo.Epoch] = true
-
-		for {
-			select {
-			case stateEvent := <-stateChannel:
-				if stateEvent.Type == statefeed.BlockVerified {
-					blockVerifiedData, ok := stateEvent.Data.(*statefeed.BlockPreVerifiedData)
-					if !ok {
-						continue
-					}
-
-					if err := bs.sendNextEpochInfo(blockVerifiedData.Slot, stream, blockVerifiedData.CurrentState); err != nil {
-						log.WithField("epoch", helpers.SlotToEpoch(blockVerifiedData.Slot)+1).
-							WithError(err).
-							Warn("Failed to send initial epoch infos to orchestrator in-sync mode")
-						continue
-					}
-
-					if !bs.SyncChecker.Syncing() {
-						s, err := bs.HeadFetcher.HeadState(bs.Ctx)
-						if err != nil {
-							return status.Errorf(codes.Internal, "Could not get head state: %v", err)
-						}
-						currentEpoch := helpers.SlotToEpoch(s.Slot())
-						nextEpoch := currentEpoch + 1
-
-						log.WithField("epoch", currentEpoch).
-							WithField("nextEpoch", nextEpoch).
-							Info("Initial syncing done. sending next epoch info and exiting initial epochInfo propagation loop")
-
-						epochInfo, err := bs.prepareEpochInfo(nextEpoch, s.Copy())
-						if err != nil {
-							log.WithField("epoch", nextEpoch).
-								WithError(err).
-								Warn("Failed to prepare epoch info")
-							return err
-						}
-
-						if err := stream.Send(epochInfo); err != nil {
-							return status.Errorf(codes.Unavailable,
-								"Could not prepare epoch info in-sync mode. epoch: %v  err: %v", epochInfo.Epoch, err)
-						}
-						alreadySendEpochInfos[epochInfo.Epoch] = true
-						return nil
-					}
-				}
-			case <-stateSub.Err():
-				return status.Error(codes.Aborted, "Subscriber closed, exiting initial epochInfo propagation loop")
-			case <-bs.Ctx.Done():
-				return status.Error(codes.Canceled, "Context canceled")
-			case <-stream.Context().Done():
-				return status.Error(codes.Canceled, "Context canceled")
+		if state != nil {
+			if err := bs.sendEpochInfo(epoch, stream, state); err != nil {
+				log.WithField("epoch", epoch).
+					WithError(err).
+					Warn("Failed to send previous epoch infos. Stopped sending previous epoch infos")
+				return err
 			}
+			log.WithField("epoch", epoch).Debug("Successfully send previous epoch info")
 		}
 	}
-
-	log.WithField("currentEpoch", currentEpoch).Debug("Node is in non-syncing mode")
-	state, err := bs.HeadFetcher.HeadState(bs.Ctx)
-	if err != nil {
-		return err
-	}
-	// sending past proposer assignments info to orchestrator
-	for epoch := requestedEpoch; epoch <= currentEpoch; epoch++ {
-		epochInfo, err := bs.prepareEpochInfo(epoch, state.Copy())
-		if err != nil {
-			log.WithField("epoch", epoch).
-				WithError(err).
-				Warn("Failed to prepare epoch info in non-syncing mode")
-			return status.Errorf(codes.Internal,
-				"Could not prepare epoch info in-sync mode. epoch: %v  err: %v", epoch, err)
-		}
-
-		if err := stream.Send(epochInfo); err != nil {
-			return status.Errorf(codes.Unavailable,
-				"Could not prepare epoch info non-sync mode. epoch: %v  err: %v", epoch, err)
-		}
-
-		alreadySendEpochInfos[epochInfo.Epoch] = true
-	}
-
 	return nil
 }
 
 // sendNextEpochInfo
-func (bs *Server) sendNextEpochInfo(
-	slot types.Slot,
+func (bs *Server) sendEpochInfo(
+	epoch types.Epoch,
 	stream ethpb.BeaconChain_StreamMinimalConsensusInfoServer,
 	s iface.BeaconState,
 ) error {
-	epoch := helpers.SlotToEpoch(slot)
-	nextEpoch := epoch + 1
-
-	if !alreadySendEpochInfos[nextEpoch] {
-		epochInfo, err := bs.prepareEpochInfo(nextEpoch, s)
+	if !alreadySendEpochInfos[epoch] {
+		epochInfo, err := bs.prepareEpochInfo(epoch, s)
 		if err != nil {
-			log.WithField("epoch", nextEpoch).
+			log.WithField("epoch", epoch).
 				WithError(err).
 				Warn("Failed to prepare epoch info")
 			return err
@@ -219,23 +168,16 @@ func (bs *Server) sendNextEpochInfo(
 // prepareEpochInfo
 func (bs *Server) prepareEpochInfo(epoch types.Epoch, s iface.BeaconState) (*ethpb.MinimalConsensusInfo, error) {
 	// Advance state with empty transitions up to the requested epoch start slot.
-	epochStartSlot, err := helpers.StartSlot(epoch)
-	if err != nil {
-		return nil, err
-	}
-
-	if s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(bs.Ctx, s, epochStartSlot)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	startSlot, err := helpers.StartSlot(epoch)
 	if err != nil {
 		return nil, err
 	}
-
+	if s.Slot() < startSlot {
+		s, err = state.ProcessSlots(bs.Ctx, s, startSlot)
+		if err != nil {
+			return nil, err
+		}
+	}
 	proposerAssignmentInfo, err := helpers.ProposerAssignments(s, epoch)
 	if err != nil {
 		return nil, err
