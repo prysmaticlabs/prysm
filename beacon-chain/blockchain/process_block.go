@@ -140,8 +140,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			log.WithError(err).Warn("Could not update head")
 		}
 
-		if err := s.removeBlockAttestationsInPool(ctx, blockRoot, signed); err != nil {
-			return err
+		if featureconfig.Get().CorrectlyPruneCanonicalAtts {
+			if err := s.removeBlockAttestationsInPool(ctx, blockRoot, signed); err != nil {
+				return err
+			}
 		}
 
 		// Send notification of the processed block to the state feed.

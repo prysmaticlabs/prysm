@@ -12,8 +12,30 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestDeleteAttsInPool(t *testing.T) {
+	r := &Service{
+		cfg: &Config{AttPool: attestations.NewPool()},
+	}
+
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
+	att3 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
+	att4 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att1))
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att2))
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att3))
+	require.NoError(t, r.cfg.AttPool.SaveUnaggregatedAttestation(att4))
+
+	// Seen 1, 3 and 4 in block.
+	require.NoError(t, r.deleteAttsInPool([]*ethpb.Attestation{att1, att3, att4}))
+
+	// Only 2 should remain.
+	assert.DeepEqual(t, []*ethpb.Attestation{att2}, r.cfg.AttPool.AggregatedAttestations(), "Did not get wanted attestations")
+}
 
 func TestService_beaconBlockSubscriber(t *testing.T) {
 	pooledAttestations := []*ethpb.Attestation{
