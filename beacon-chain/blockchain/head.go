@@ -144,11 +144,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		if featureconfig.Get().CorrectlyInsertOrphanedAtts {
 			if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
 				return err
 			}
-		}
 
 		reorgCount.Inc()
 	}
@@ -372,6 +370,10 @@ func (s *Service) notifyNewHeadEvent(
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		return nil
+	}
+
 	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
 	if err != nil {
 		return err
