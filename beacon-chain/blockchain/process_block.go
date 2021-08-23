@@ -425,7 +425,7 @@ func (s *Service) removeBlockAttestationsInPool(ctx context.Context, r [32]byte,
 	if err != nil {
 		return err
 	}
-	if !canonical{
+	if !canonical {
 		return nil
 	}
 
