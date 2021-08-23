@@ -428,7 +428,7 @@ func (s *Service) removeBlockAttestationsInPool(ctx context.Context, r [32]byte,
 	if !canonical{
 		return nil
 	}
-	fmt.Println("Deleting attestations  ", b.Block().Slot(), len(b.Block().Body().Attestations()))
+
 	atts := b.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
