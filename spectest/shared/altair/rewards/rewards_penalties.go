@@ -40,7 +40,11 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testTypes := []string{"basic", "leak", "random"}
+
+	_, testsFolderPath := utils.TestFolders(t, config, "altair", "rewards")
+	testTypes, err := testutil.BazelListDirectories(testsFolderPath)
+	require.NoError(t, err)
+
 	for _, testType := range testTypes {
 		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {

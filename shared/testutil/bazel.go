@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -10,11 +11,7 @@ import (
 
 // BazelDirectoryNonEmpty returns true if directory exists and is not empty.
 func BazelDirectoryNonEmpty(filePath string) (bool, error) {
-	p, err := bazel.Runfile(filePath)
-	if err != nil {
-		return false, err
-	}
-	fs, err := ioutil.ReadDir(p)
+	fs, err := bazelReadDir(filePath)
 	if err != nil {
 		return false, err
 	}
@@ -38,13 +35,9 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 }
 
 // BazelListFiles lists all of the file names in a given directory. Excludes directories. Returns
-// error on empty directory.
+// an error when no non-directory files exist.
 func BazelListFiles(filepath string) ([]string, error) {
-	p, err := bazel.Runfile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	d, err := ioutil.ReadDir(p)
+	d, err := bazelReadDir(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +52,37 @@ func BazelListFiles(filepath string) ([]string, error) {
 	}
 
 	if len(ret) == 0 {
-		return nil, errors.New("empty directory")
+		return nil, errors.New("no files found")
 	}
 
 	return ret, nil
+}
+
+// BazelListDirectories lists all of the directories in the given directory. Excludes regular files.
+// Returns error when no directories exist.
+func BazelListDirectories(filepath string) ([]string, error) {
+	d, err := bazelReadDir(filepath)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, 0)
+	for _, f := range d {
+		if f.IsDir() {
+			ret = append(ret, f.Name())
+		}
+	}
+
+	if len(ret) == 0 {
+		return nil, errors.New("no directories found")
+	}
+
+	return ret, nil
+}
+
+func bazelReadDir(filepath string) ([]os.FileInfo, error) {
+	p, err := bazel.Runfile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadDir(p)
 }
