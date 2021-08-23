@@ -53,14 +53,28 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 
 	return s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			log.Debugf("Copying bucket %s\n", name)
+			log.Infof("Copying bucket %s\n with %d keys", name, b.Stats().KeyN)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {
 				b2, err := tx2.CreateBucketIfNotExists(name)
 				if err != nil {
 					return err
 				}
-				return b.ForEach(b2.Put)
+				return b.ForEach(createNestedBuckets(b, b2, b2.Put))
 			})
 		})
 	})
+}
+
+func createNestedBuckets(srcBucket *bolt.Bucket, dstBucket *bolt.Bucket, fn func(k, v []byte) error) func(k, v []byte) error {
+	return func(k, v []byte) error {
+		bkt := srcBucket.Bucket(k)
+		if bkt != nil {
+			b2, err := dstBucket.CreateBucketIfNotExists(k)
+			if err != nil {
+				return err
+			}
+			return bkt.ForEach(createNestedBuckets(bkt, b2, b2.Put))
+		}
+		return fn(k, v)
+	}
 }
