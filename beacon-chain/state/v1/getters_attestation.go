@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -35,7 +36,7 @@ func (b *BeaconState) previousEpochAttestations() []*ethpb.PendingAttestation {
 		return nil
 	}
 
-	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
+	return copyutil.CopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
@@ -60,7 +61,7 @@ func (b *BeaconState) currentEpochAttestations() []*ethpb.PendingAttestation {
 		return nil
 	}
 
-	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
+	return copyutil.CopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
 func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
