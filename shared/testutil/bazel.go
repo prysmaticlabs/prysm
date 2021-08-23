@@ -36,3 +36,31 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	}
 	return fileBytes, nil
 }
+
+// BazelListFiles lists all of the file names in a given directory. Excludes directories. Returns
+// error on empty directory.
+func BazelListFiles(filepath string) ([]string, error) {
+	p, err := bazel.Runfile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	d, err := ioutil.ReadDir(p)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]string, 0, len(d))
+
+	for _, f := range d {
+		if f.IsDir() {
+			continue
+		}
+		ret = append(ret, f.Name())
+	}
+
+	if len(ret) == 0 {
+		return nil, errors.New("empty directory")
+	}
+
+	return ret, nil
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/snappy"
@@ -34,13 +35,6 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 		d.Penalties = append(d.Penalties, binary.LittleEndian.Uint64(buf[offset2+i:offset2+i+8]))
 	}
 	return nil
-}
-
-var deltaFiles = []string{
-	"source_deltas.ssz_snappy",
-	"target_deltas.ssz_snappy",
-	"head_deltas.ssz_snappy",
-	"inactivity_penalty_deltas.ssz_snappy",
 }
 
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
@@ -79,6 +73,19 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 
 	totalSpecTestRewards := make([]uint64, len(rewards))
 	totalSpecTestPenalties := make([]uint64, len(penalties))
+
+	// Fetch delta files. i.e. source_deltas.ssz_snappy, etc.
+	testfiles, err := testutil.BazelListFiles(path.Join(testFolderPath))
+	require.NoError(t, err)
+	deltaFiles := make([]string, 0, len(testfiles))
+	for _, tf := range testfiles {
+		if strings.Contains(tf, "deltas") {
+			deltaFiles = append(deltaFiles, tf)
+		}
+	}
+	if len(deltaFiles) == 0 {
+		t.Fatal("No delta files")
+	}
 
 	for _, dFile := range deltaFiles {
 		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))
