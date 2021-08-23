@@ -76,8 +76,6 @@ func RunFinalityTest(t *testing.T, config string) {
 			pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
-				//diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
-				//t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}
 		})
