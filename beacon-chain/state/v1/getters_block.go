@@ -1,6 +1,9 @@
 package v1
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+import (
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
@@ -66,7 +69,7 @@ func (b *BeaconState) blockRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.BlockRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -92,5 +95,5 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }
