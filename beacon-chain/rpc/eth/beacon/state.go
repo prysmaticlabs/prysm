@@ -3,7 +3,11 @@ package beacon
 import (
 	"bytes"
 	"context"
+	"strconv"
 
+	types "github.com/prysmaticlabs/eth2-types"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -15,6 +19,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+type stateRequest struct {
+	epoch   *types.Epoch
+	stateId []byte
+}
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
@@ -82,12 +91,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	fork := state.Fork()
@@ -128,6 +132,31 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			Finalized:         checkpoint(state.FinalizedCheckpoint()),
 		},
 	}, nil
+}
+
+func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (state.BeaconState, error) {
+	if req.epoch != nil {
+		slot, err := corehelpers.StartSlot(*req.epoch)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not calculate start slot for epoch %d: %v",
+				*req.epoch,
+				err,
+			)
+		}
+		st, err := bs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+		if err != nil {
+			return nil, helpers.PrepareStateFetchGRPCError(err)
+		}
+		return st, nil
+	}
+	var err error
+	st, err := bs.StateFetcher.State(ctx, req.stateId)
+	if err != nil {
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+	return st, nil
 }
 
 func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {
