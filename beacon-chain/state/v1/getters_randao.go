@@ -1,5 +1,9 @@
 package v1
 
+import (
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
+
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
 	if !b.hasInnerState() {
@@ -22,7 +26,7 @@ func (b *BeaconState) randaoMixes() [][]byte {
 		return nil
 	}
 
-	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
+	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -49,7 +53,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
