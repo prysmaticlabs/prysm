@@ -49,11 +49,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 			log.WithError(err).Warn("Could not update head")
 		}
 
-		if featureconfig.Get().CorrectlyPruneCanonicalAtts {
-			if err := s.removeBlockAttestationsInPool(ctx, blockRoot, block); err != nil {
+			if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
 				return err
 			}
-		}
 
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{

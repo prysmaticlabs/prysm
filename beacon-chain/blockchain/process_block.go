@@ -140,11 +140,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			log.WithError(err).Warn("Could not update head")
 		}
 
-		if featureconfig.Get().CorrectlyPruneCanonicalAtts {
-			if err := s.removeBlockAttestationsInPool(ctx, blockRoot, signed); err != nil {
+			if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 				return err
 			}
-		}
 
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -422,7 +420,11 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
-func (s *Service) removeBlockAttestationsInPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
+func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
+	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+		return nil
+	}
+
 	canonical, err := s.IsCanonical(ctx, r)
 	if err != nil {
 		return err

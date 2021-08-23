@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -1002,6 +1003,11 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 }
 
 func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		CorrectlyPruneCanonicalAtts: true,
+	})
+	defer resetCfg()
+
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1016,11 +1022,16 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 
 	atts := b.Block.Body.Attestations
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	require.NoError(t, service.removeBlockAttestationsInPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
 func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		CorrectlyPruneCanonicalAtts: true,
+	})
+	defer resetCfg()
+
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1033,6 +1044,6 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 
 	atts := b.Block.Body.Attestations
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	require.NoError(t, service.removeBlockAttestationsInPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
