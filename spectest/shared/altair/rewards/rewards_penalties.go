@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -36,24 +37,16 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 	return nil
 }
 
-var deltaFiles = []string{
-	"source_deltas.ssz_snappy",
-	"target_deltas.ssz_snappy",
-	"head_deltas.ssz_snappy",
-	"inactivity_penalty_deltas.ssz_snappy",
-	"inclusion_delay_deltas.ssz_snappy",
-}
-
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	_, testsFolderPath := utils.TestFolders(t, config, "phase0", "rewards")
+	_, testsFolderPath := utils.TestFolders(t, config, "altair", "rewards")
 	testTypes, err := testutil.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
 
 	for _, testType := range testTypes {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {
 			helpers.ClearCache()
 			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {
@@ -70,29 +63,33 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
-	preBeaconStateBase := &ethpb.BeaconState{}
+	preBeaconStateBase := &ethpb.BeaconStateAltair{}
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-	preBeaconState, err := v1.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
-	vp, bp, err := precompute.New(ctx, preBeaconState)
+	vp, bp, err := altair.InitializeEpochValidators(ctx, preBeaconState)
 	require.NoError(t, err)
-	vp, bp, err = precompute.ProcessAttestations(ctx, preBeaconState, vp, bp)
+	vp, bp, err = altair.ProcessEpochParticipation(ctx, preBeaconState, bp, vp)
 	require.NoError(t, err)
-
-	rewards, penalties, err := precompute.AttestationsDelta(preBeaconState, bp, vp)
+	rewards, penalties, err := altair.AttestationsDelta(preBeaconState, bp, vp)
 	require.NoError(t, err)
-	pRewards, err := precompute.ProposersDelta(preBeaconState, bp, vp)
-	require.NoError(t, err)
-	if len(rewards) != len(penalties) && len(rewards) != len(pRewards) {
-		t.Fatal("Incorrect lengths")
-	}
-	for i, reward := range rewards {
-		rewards[i] = reward + pRewards[i]
-	}
 
 	totalSpecTestRewards := make([]uint64, len(rewards))
 	totalSpecTestPenalties := make([]uint64, len(penalties))
+
+	// Fetch delta files. i.e. source_deltas.ssz_snappy, etc.
+	testfiles, err := testutil.BazelListFiles(path.Join(testFolderPath))
+	require.NoError(t, err)
+	deltaFiles := make([]string, 0, len(testfiles))
+	for _, tf := range testfiles {
+		if strings.Contains(tf, "deltas") {
+			deltaFiles = append(deltaFiles, tf)
+		}
+	}
+	if len(deltaFiles) == 0 {
+		t.Fatal("No delta files")
+	}
 
 	for _, dFile := range deltaFiles {
 		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))
