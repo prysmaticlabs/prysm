@@ -16,12 +16,12 @@ type SyncCommitteeHeadStateCache struct {
 }
 
 // NewSyncCommitteeHeadState initializes a LRU cache for `SyncCommitteeHeadState` with size of 1.
-func NewSyncCommitteeHeadState() *SyncCommitteeHeadStateCache {
+func NewSyncCommitteeHeadState() (*SyncCommitteeHeadStateCache, error) {
 	c, err := lru.New(1) // only need size of 1 to avoid redundant state copies, hashing, and slot processing.
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &SyncCommitteeHeadStateCache{cache: c}
+	return &SyncCommitteeHeadStateCache{cache: c}, nil
 }
 
 // Put `slot` as key and `state` as value onto the cache.

@@ -47,7 +47,8 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewSyncCommitteeHeadState()
+			c, err := NewSyncCommitteeHeadState()
+			require.NoError(t, err)
 			if tt.put != nil {
 				c.Put(tt.put.slot, tt.put.state)
 			}
