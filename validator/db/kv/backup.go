@@ -53,7 +53,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 
 	return s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			log.Infof("Copying bucket %s\n with %d keys", name, b.Stats().KeyN)
+			log.Debugf("Copying bucket %s\n with %d keys", name, b.Stats().KeyN)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {
 				b2, err := tx2.CreateBucketIfNotExists(name)
 				if err != nil {
