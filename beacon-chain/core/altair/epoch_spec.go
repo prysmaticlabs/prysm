@@ -23,18 +23,18 @@ import (
 func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	nextEpoch := helpers.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
-		currentSyncCommittee, err := beaconState.NextSyncCommittee()
+		nextSyncCommittee, err := beaconState.NextSyncCommittee()
 		if err != nil {
 			return nil, err
 		}
-		if err := beaconState.SetCurrentSyncCommittee(currentSyncCommittee); err != nil {
+		if err := beaconState.SetCurrentSyncCommittee(nextSyncCommittee); err != nil {
 			return nil, err
 		}
-		nextCommittee, err := NextSyncCommittee(ctx, beaconState)
+		nextSyncCommittee, err = NextSyncCommittee(ctx, beaconState)
 		if err != nil {
 			return nil, err
 		}
-		if err := beaconState.SetNextSyncCommittee(nextCommittee); err != nil {
+		if err := beaconState.SetNextSyncCommittee(nextSyncCommittee); err != nil {
 			return nil, err
 		}
 		if err := helpers.UpdateSyncCommitteeCache(beaconState); err != nil {

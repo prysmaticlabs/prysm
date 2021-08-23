@@ -5,7 +5,7 @@ go_test(
     size = "small",
     srcs = ["ssz_static_test.go"],
     data = glob(["*.yaml"]) + [
-        "@eth2_spec_tests_mainnet//:test_data",
+        "@consensus_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],
     deps = ["//spectest/shared/altair/ssz_static:go_default_library"],

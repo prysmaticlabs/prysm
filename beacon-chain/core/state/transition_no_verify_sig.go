@@ -332,7 +332,7 @@ func ProcessBlockForStateRoot(
 	return state, nil
 }
 
-// This calls altair specific block operations.
+// This calls altair block operations.
 func altairOperations(
 	ctx context.Context,
 	state state.BeaconState,
@@ -352,7 +352,6 @@ func altairOperations(
 	return altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
 }
 
-// This calls phase 0 specific block operations.
 func phase0Operations(
 	ctx context.Context,
 	state state.BeaconStateAltair,
