@@ -144,9 +144,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-			if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
-				return err
-			}
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
 
 		reorgCount.Inc()
 	}
