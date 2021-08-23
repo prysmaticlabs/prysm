@@ -15,6 +15,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -143,8 +144,10 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
-			return err
+		if featureconfig.Get().CorrectlyInsertOrphanedAtts {
+			if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+				return err
+			}
 		}
 
 		reorgCount.Inc()
