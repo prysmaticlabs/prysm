@@ -27,7 +27,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 
 	cache := NewBalanceCache()
 	_, err = cache.Get(st)
-	require.ErrorContains(t, ErrNonExistingBalanceKey.Error(), err)
+	require.ErrorContains(t, ErrNotFound.Error(), err)
 
 	b := uint64(100)
 	require.NoError(t, cache.AddBalance(st, b))
@@ -37,7 +37,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 
 	require.NoError(t, st.SetSlot(1000))
 	_, err = cache.Get(st)
-	require.ErrorContains(t, ErrNonExistingBalanceKey.Error(), err)
+	require.ErrorContains(t, ErrNotFound.Error(), err)
 
 	b = uint64(200)
 	require.NoError(t, cache.AddBalance(st, b))
@@ -47,7 +47,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 
 	require.NoError(t, st.SetSlot(1000+params.BeaconConfig().SlotsPerHistoricalRoot))
 	_, err = cache.Get(st)
-	require.ErrorContains(t, ErrNonExistingBalanceKey.Error(), err)
+	require.ErrorContains(t, ErrNotFound.Error(), err)
 
 	b = uint64(300)
 	require.NoError(t, cache.AddBalance(st, b))
@@ -70,6 +70,6 @@ func TestBalanceCache_BalanceKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(types.Slot(math.MaxUint64)))
 
-	_, err = balanceKey(st)
+	_, err = balanceCacheKey(st)
 	require.NoError(t, err)
 }
