@@ -28,8 +28,6 @@ var (
 		Name: "balance_cache_hit",
 		Help: "The number of Get requests that are present in the cache.",
 	})
-
-
 )
 
 // BalanceCache is a struct with 1 LRU cache for looking up balance by epoch.
