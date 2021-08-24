@@ -602,11 +602,11 @@ func TestCanUpgradeToAltair(t *testing.T) {
 		},
 		{
 			name: "altair epoch",
-			slot: types.Slot(params.BeaconConfig().AltairForkEpoch)*params.BeaconConfig().SlotsPerEpoch,
+			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},
-		}
-		for _, tt := range tests {
+	}
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := core.CanUpgradeToAltair(tt.slot); got != tt.want {
 				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)

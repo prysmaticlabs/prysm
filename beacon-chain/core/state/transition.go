@@ -280,7 +280,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
 func CanUpgradeToAltair(slot types.Slot) bool {
-	epochStart :=  helpers.IsEpochStart(slot)
+	epochStart := helpers.IsEpochStart(slot)
 	altairEpoch := helpers.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
