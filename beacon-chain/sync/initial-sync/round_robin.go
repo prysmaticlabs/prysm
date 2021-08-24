@@ -304,8 +304,15 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBl
 	if err != nil {
 		return false
 	}
+	// If block is before our finalized checkpoint
+	// we do not process it.
+	if blk.Block().Slot() <= finalizedSlot {
+		return true
+	}
 	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
-	if blk.Block().Slot() <= finalizedSlot || blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
+	// If block exists in our db and is before or equal to our current head
+	// we ignore it.
+	if blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
 		return true
 	}
 	return false
