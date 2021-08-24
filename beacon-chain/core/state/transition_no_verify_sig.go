@@ -278,11 +278,6 @@ func ProcessOperationsNoVerifyAttsSigs(
 		return nil, errors.New("block does not have correct version")
 	}
 
-	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block().Body().VoluntaryExits())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process validator exits")
-	}
-
 	return state, nil
 }
 
@@ -339,19 +334,23 @@ func altairOperations(
 	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process block proposer slashings")
+		return nil, errors.Wrap(err, "could not process altair proposer slashing")
 	}
 	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attester slashings")
+		return nil, errors.Wrap(err, "could not process altair attester slashing")
 	}
 	state, err = altair.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attestations")
+		return nil, errors.Wrap(err, "could not process altair attestation")
 	}
-	return altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
+	if _, err := altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits()); err != nil {
+		return nil, errors.Wrap(err, "could not process altair deposit")
+	}
+	return b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block().Body().VoluntaryExits())
 }
 
+// This calls phase 0 block operations.
 func phase0Operations(
 	ctx context.Context,
 	state state.BeaconStateAltair,
@@ -368,5 +367,8 @@ func phase0Operations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	return b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
+	if _, err := b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits()); err != nil {
+		return nil, errors.Wrap(err, "could not process deposits")
+	}
+	return b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block().Body().VoluntaryExits())
 }
