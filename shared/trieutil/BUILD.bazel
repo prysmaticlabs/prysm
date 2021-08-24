@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "helpers.go",
         "sparse_merkle.go",
         "zerohashes.go",
     ],
@@ -14,17 +13,13 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
-        "//shared/params:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "helpers_test.go",
-        "sparse_merkle_test.go",
-    ],
+    srcs = ["sparse_merkle_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//contracts/deposit-contract:go_default_library",

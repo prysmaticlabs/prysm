@@ -7,6 +7,7 @@ go_library(
         "block.go",
         "deposit.go",
         "epoch_precompute.go",
+        "epoch_spec.go",
         "reward.go",
         "sync_committee.go",
         "upgrade.go",
@@ -46,6 +47,7 @@ go_test(
         "deposit_fuzz_test.go",
         "deposit_test.go",
         "epoch_precompute_test.go",
+        "epoch_spec_test.go",
         "reward_test.go",
         "sync_committee_test.go",
         "upgrade_test.go",
@@ -72,5 +74,6 @@ go_test(
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
