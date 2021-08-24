@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 func init() {
@@ -506,6 +507,40 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 	_, err = core.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
+}
+
+func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
+	conf := params.BeaconConfig()
+	conf.AltairForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+	defer params.UseMainnetConfig()
+
+	st, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := core.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Altair, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
