@@ -521,7 +521,7 @@ func scoreByWeight(weight, threshold float64) float64 {
 
 // maxScore attainable by a peer.
 func maxScore() float64 {
-	totalWeight := beaconBlockWeight + aggregateWeight + +syncContributionWeight +
+	totalWeight := beaconBlockWeight + aggregateWeight + syncContributionWeight +
 		attestationTotalWeight + syncCommitteesTotalWeight + attesterSlashingWeight +
 		proposerSlashingWeight + voluntaryExitWeight
 	return (maxInMeshScore + maxFirstDeliveryScore) * totalWeight
