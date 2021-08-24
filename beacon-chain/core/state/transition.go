@@ -258,8 +258,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		// Transition to Altair state.
-		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
+		if CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				return nil, err
@@ -275,6 +274,15 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	return state, nil
+}
+
+// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
+func CanUpgradeToAltair(slot types.Slot) bool {
+	epochStart :=  helpers.IsEpochStart(slot)
+	altairEpoch := helpers.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	return epochStart && altairEpoch
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
