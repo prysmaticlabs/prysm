@@ -23,7 +23,7 @@ go_library(
             "sync_committee_disabled.go",
         ],
         "//conditions:default": [
-            "active_balance.go"
+            "active_balance.go",
             "committee.go",
             "proposer_indices.go",
             "sync_committee.go",
