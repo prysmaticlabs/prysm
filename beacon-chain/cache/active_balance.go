@@ -1,3 +1,5 @@
+// +build !libfuzzer
+
 package cache
 
 import (
