@@ -85,6 +85,8 @@ func ProcessInactivityScores(
 
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
+	prevEpoch := helpers.PrevEpoch(state)
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	for i, v := range vals {
 		if !precompute.EligibleForRewards(v) {
 			continue
@@ -104,7 +106,7 @@ func ProcessInactivityScores(
 			v.InactivityScore += bias
 		}
 
-		if !helpers.IsInInactivityLeak(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) {
+		if !helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			score := recoveryRate
 			// Prevents underflow below 0.
 			if score > v.InactivityScore {
