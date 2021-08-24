@@ -134,6 +134,11 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
+	correctlyInsertOrphanedAtts = &cli.BoolFlag{
+		Name: "correctly-insert-orphaned-atts",
+		Usage: "This fixes a bug where orphaned attestations don't get reinserted back to mem pool. This improves validator profitability and overall network health," +
+			"see issue #9441 for further detail",
+	}
 	correctlyPruneCanonicalAtts = &cli.BoolFlag{
 		Name: "correctly-prune-canonical-atts",
 		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
@@ -146,6 +151,7 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 }
 
@@ -200,6 +206,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
+	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 }...)
 
@@ -208,5 +215,6 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
+	"--correctly-insert-orphaned-atts",
 	"--correctly-prune-canonical-atts",
 }
