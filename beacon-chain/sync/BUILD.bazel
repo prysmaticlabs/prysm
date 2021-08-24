@@ -73,6 +73,7 @@ go_library(
         "//shared/abool:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/messagehandler:go_default_library",
         "//shared/mputil:go_default_library",
         "//shared/p2putils:go_default_library",

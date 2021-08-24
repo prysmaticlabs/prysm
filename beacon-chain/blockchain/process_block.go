@@ -140,6 +140,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			log.WithError(err).Warn("Could not update head")
 		}
 
+		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+			return err
+		}
+
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -410,6 +414,36 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
+	}
+	return nil
+}
+
+// This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
+// meaning the block `b` is part of the canonical chain.
+func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
+	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+		return nil
+	}
+
+	canonical, err := s.IsCanonical(ctx, r)
+	if err != nil {
+		return err
+	}
+	if !canonical {
+		return nil
+	}
+
+	atts := b.Block().Body().Attestations()
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
