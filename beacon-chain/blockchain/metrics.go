@@ -100,6 +100,10 @@ var (
 		Name: "beacon_reorg_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
+	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "saved_orphaned_att_total",
+		Help: "Count the number of times an orphaned attestation is saved",
+	})
 	attestationInclusionDelay = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "attestation_inclusion_delay_slots",

@@ -75,6 +75,7 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	// Bug fixes related flags.
+	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
 }
 
@@ -198,6 +199,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
 		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableOptimizedBalanceUpdate = true
+	}
+	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
+		log.WithField(correctlyInsertOrphanedAtts.Name, correctlyInsertOrphanedAtts.Usage).Warn(enabledFeatureFlag)
+		cfg.CorrectlyInsertOrphanedAtts = true
 	}
 	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
 		log.WithField(correctlyPruneCanonicalAtts.Name, correctlyPruneCanonicalAtts.Usage).Warn(enabledFeatureFlag)
