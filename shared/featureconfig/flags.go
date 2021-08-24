@@ -180,7 +180,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	kafkaBootstrapServersFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,

@@ -36,7 +36,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
-	ToledoTestnet  bool // ToledoTestnet defines the flag through which we can enable the node to run on the Toledo testnet.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
@@ -120,12 +119,7 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context, cfg *Flags) {
-	if ctx.Bool(ToledoTestnet.Name) {
-		log.Warn("Running on Toledo Testnet")
-		params.UseToledoConfig()
-		params.UseToledoNetworkConfig()
-		cfg.ToledoTestnet = true
-	} else if ctx.Bool(PyrmontTestnet.Name) {
+	if ctx.Bool(PyrmontTestnet.Name) {
 		log.Warn("Running on Pyrmont Testnet")
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
