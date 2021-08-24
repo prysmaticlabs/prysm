@@ -39,7 +39,6 @@ var (
 // from our metrics fetching for performance reasons. For a detailed
 // summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
 var blockedBuckets = [][]byte{
-	deprecatedAttestationHistoryBucket,
 	lowestSignedSourceBucket,
 	lowestSignedTargetBucket,
 	lowestSignedProposalsBucket,
@@ -140,7 +139,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			deprecatedAttestationHistoryBucket,
 			historicProposalsBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,

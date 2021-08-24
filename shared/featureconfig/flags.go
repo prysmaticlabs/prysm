@@ -7,11 +7,6 @@ import (
 )
 
 var (
-	// ToledoTestnet flag for the multiclient Ethereum consensus testnet.
-	ToledoTestnet = &cli.BoolFlag{
-		Name:  "toledo",
-		Usage: "This defines the flag through which we can run on the Toledo Multiclient Testnet",
-	}
 	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
 	PyrmontTestnet = &cli.BoolFlag{
 		Name:  "pyrmont",
@@ -61,10 +56,6 @@ var (
 	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-opt-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
-	}
-	disableAccountsV2 = &cli.BoolFlag{
-		Name:  "disable-accounts-v2",
-		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
@@ -116,7 +107,7 @@ var (
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-pruning",
-		Usage: "Enables the pruning of the validator client's slashing protectin database",
+		Usage: "Enables the pruning of the validator client's slashing protection database",
 	}
 	disableOptimizedBalanceUpdate = &cli.BoolFlag{
 		Name:  "disable-optimized-balance-update",
@@ -160,11 +151,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
-	disableAccountsV2,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
@@ -174,7 +163,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
