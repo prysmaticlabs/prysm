@@ -2,18 +2,19 @@ package blockchain
 
 import (
 	"context"
-	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// Initialize the state cache for sync committees.
+var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
 
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
@@ -127,7 +128,10 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 	var err error
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
-	cachedState := syncCommitteeHeadStateCache.get(slot)
+	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
+	if err != nil {
+		return nil, err
+	}
 	if cachedState != nil && !cachedState.IsNil() {
 		syncHeadStateHit.Inc()
 		headState = cachedState
@@ -143,46 +147,8 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 			}
 		}
 		syncHeadStateMiss.Inc()
-		syncCommitteeHeadStateCache.add(slot, headState)
+		syncCommitteeHeadStateCache.Put(slot, headState)
 	}
 
 	return headState, nil
-}
-
-var syncCommitteeHeadStateCache = newSyncCommitteeHeadState()
-
-// syncCommitteeHeadState to caches latest head state requested by the sync committee participant.
-type syncCommitteeHeadState struct {
-	cache *lru.Cache
-	lock  sync.RWMutex
-}
-
-// newSyncCommitteeHeadState initializes the lru cache for `syncCommitteeHeadState` with size of 1.
-func newSyncCommitteeHeadState() *syncCommitteeHeadState {
-	c, err := lru.New(1) // only need size of 1 to avoid redundant state copy, HTR, and process slots.
-	if err != nil {
-		panic(err)
-	}
-	return &syncCommitteeHeadState{cache: c}
-}
-
-// add `slot` as key and `state` as value onto the lru cache.
-func (c *syncCommitteeHeadState) add(slot types.Slot, state state.BeaconState) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.cache.Add(slot, state)
-}
-
-// get `state` using `slot` as key. Return nil if nothing is found.
-func (c *syncCommitteeHeadState) get(slot types.Slot) state.BeaconState {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	val, exists := c.cache.Get(slot)
-	if !exists {
-		return nil
-	}
-	if val == nil {
-		return nil
-	}
-	return val.(*stateAltair.BeaconState)
 }

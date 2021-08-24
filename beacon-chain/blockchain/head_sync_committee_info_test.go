@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -97,12 +98,17 @@ func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 }
 
 func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
-	c := newSyncCommitteeHeadState()
+	c := syncCommitteeHeadStateCache
+	t.Cleanup(func() {
+		syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
+	})
 	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))
-	cachedState := c.get(101)
+	cachedState, err := c.Get(101)
+	require.NoError(t, err)
 	require.Equal(t, nil, cachedState)
-	c.add(101, beaconState)
-	cachedState = c.get(101)
+	c.Put(101, beaconState)
+	cachedState, err = c.Get(101)
+	require.NoError(t, err)
 	require.DeepEqual(t, beaconState, cachedState)
 }
