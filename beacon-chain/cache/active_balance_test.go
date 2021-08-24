@@ -32,6 +32,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 	b := uint64(100)
 	require.NoError(t, cache.AddBalance(st, b))
 	cachedB, err := cache.Get(st)
+	require.NoError(t, err)
 	require.Equal(t, b, cachedB)
 
 	require.NoError(t, st.SetSlot(1000))
@@ -41,6 +42,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 	b = uint64(200)
 	require.NoError(t, cache.AddBalance(st, b))
 	cachedB, err = cache.Get(st)
+	require.NoError(t, err)
 	require.Equal(t, b, cachedB)
 
 	require.NoError(t, st.SetSlot(1000+params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -50,6 +52,7 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 	b = uint64(300)
 	require.NoError(t, cache.AddBalance(st, b))
 	cachedB, err = cache.Get(st)
+	require.NoError(t, err)
 	require.Equal(t, b, cachedB)
 }
 
