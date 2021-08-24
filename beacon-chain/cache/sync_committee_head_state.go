@@ -39,5 +39,9 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	if !exists || val == nil {
 		return nil, ErrNotFound
 	}
-	return val.(*stateAltair.BeaconState), nil
+	st, ok := val.(*stateAltair.BeaconState)
+	if !ok || st.IsNil() {
+		return nil, ErrNotFound
+	}
+	return st, nil
 }

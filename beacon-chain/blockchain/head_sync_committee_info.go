@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -129,13 +130,12 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
 	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
-	if err != nil {
-		return nil, err
-	}
-	if cachedState != nil && !cachedState.IsNil() {
+	switch {
+	case err == nil:
 		syncHeadStateHit.Inc()
 		headState = cachedState
-	} else {
+		return headState, nil
+	case errors.Is(err, cache.ErrNotFound):
 		headState, err = s.HeadState(ctx)
 		if err != nil {
 			return nil, err
@@ -148,7 +148,10 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		}
 		syncHeadStateMiss.Inc()
 		syncCommitteeHeadStateCache.Put(slot, headState)
+		return headState, nil
+	default:
+		// In the event, we encounter another error
+		// we return it.
+		return nil, err
 	}
-
-	return headState, nil
 }
