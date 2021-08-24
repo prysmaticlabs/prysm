@@ -134,6 +134,11 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
+	correctlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name: "correctly-prune-canonical-atts",
+		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
+			"see issue #9443 for further detail",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -141,6 +146,7 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	correctlyPruneCanonicalAtts,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -194,6 +200,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
+	correctlyPruneCanonicalAtts,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -201,4 +208,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
+	"--correctly-prune-canonical-atts",
 }
