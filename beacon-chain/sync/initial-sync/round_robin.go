@@ -305,7 +305,7 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBl
 		return false
 	}
 	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
-	if blk.Block().Slot() <= finalizedSlot || blockExistsInDB && s.cfg.Chain.HeadSlot() > blk.Block().Slot() {
+	if blk.Block().Slot() <= finalizedSlot || blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
 		return true
 	}
 	return false
