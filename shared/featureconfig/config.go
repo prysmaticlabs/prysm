@@ -75,6 +75,9 @@ type Flags struct {
 
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
+
+	// Bug fixes related flags.
+	CorrectlyPruneCanonicalAtts bool
 }
 
 var featureConfig *Flags
@@ -203,6 +206,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
+	}
+	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
+		logEnabled(correctlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = true
 	}
 	Init(cfg)
 }
