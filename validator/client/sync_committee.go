@@ -107,6 +107,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
 	if err != nil {
 		log.Errorf("Could not get selection proofs: %v", err)
+		return
 	}
 
 	v.waitToSlotTwoThirds(ctx, slot)
