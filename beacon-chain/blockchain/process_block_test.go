@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -1000,4 +1001,50 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
 	}
+}
+
+func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		CorrectlyPruneCanonicalAtts: true,
+	})
+	defer resetCfg()
+
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, r))
+
+	atts := b.Block.Body.Attestations
+	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
+	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
+}
+
+func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		CorrectlyPruneCanonicalAtts: true,
+	})
+	defer resetCfg()
+
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	atts := b.Block.Body.Attestations
+	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
+	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }

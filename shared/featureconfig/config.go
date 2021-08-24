@@ -73,6 +73,9 @@ type Flags struct {
 
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
+
+	// Bug fixes related flags.
+	CorrectlyPruneCanonicalAtts bool
 }
 
 var featureConfig *Flags
@@ -195,6 +198,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
 		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableOptimizedBalanceUpdate = true
+	}
+	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
+		log.WithField(correctlyPruneCanonicalAtts.Name, correctlyPruneCanonicalAtts.Usage).Warn(enabledFeatureFlag)
+		cfg.CorrectlyPruneCanonicalAtts = true
 	}
 	Init(cfg)
 }
