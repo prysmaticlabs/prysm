@@ -88,7 +88,7 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.cfg.Chain.HeadSlot(),
-		"headSlot":   helpers.SlotsSince(genesis),
+		"currentSlot":   helpers.SlotsSince(genesis),
 	}).Info("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
@@ -115,7 +115,7 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 	}
 	log.WithFields(logrus.Fields{
 		"syncedSlot": s.cfg.Chain.HeadSlot(),
-		"headSlot":   helpers.SlotsSince(genesis),
+		"currentSlot":   helpers.SlotsSince(genesis),
 	}).Info("Synced to head of chain")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
