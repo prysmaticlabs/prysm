@@ -10,25 +10,39 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessEpoch_CanProcess(t *testing.T) {
-	epoch := types.Epoch(1)
-	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	base := &ethpb.BeaconStateAltair{
-		Slot:                       params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)) + 1,
-		BlockRoots:                 make([][]byte, 128),
-		Slashings:                  slashing,
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
-	s, err := stateAltair.InitializeFromProto(base)
-	require.NoError(t, err)
-	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
-	newState, err := altair.ProcessEpoch(context.Background(), s)
+
+	st, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
+	newState, err := altair.ProcessEpoch(context.Background(), st)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
+
+	b := st.Balances()
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(b)))
+	require.Equal(t, uint64(31999841265), b[0])
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
