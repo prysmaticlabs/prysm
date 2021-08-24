@@ -94,7 +94,7 @@ func balanceKey(st state.BeaconState) (string, error) {
 	prevSlot := epochStartSlot - 1
 	r, err := st.BlockRootAtIndex(uint64(prevSlot % params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
-		// impossible condition because index is always fixed
+		// impossible condition because index is always constrained within state
 		return "", err
 	}
 
