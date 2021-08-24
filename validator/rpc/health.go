@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
