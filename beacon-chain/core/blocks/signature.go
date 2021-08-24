@@ -9,9 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -21,7 +22,7 @@ func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	signingData := &statepb.SigningData{
+	signingData := &ethpb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}
@@ -90,6 +91,27 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.Sig
 	}
 	proposerPubKey := proposer.PublicKey
 	return helpers.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
+}
+
+// VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
+// from the above method by not using fork data from the state and instead retrieving it
+// via the respective epoch.
+func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState, blk block.SignedBeaconBlock) error {
+	currentEpoch := helpers.SlotToEpoch(blk.Block().Slot())
+	fork, err := p2putils.Fork(currentEpoch)
+	if err != nil {
+		return err
+	}
+	domain, err := helpers.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	proposer, err := beaconState.ValidatorAtIndex(blk.Block().ProposerIndex())
+	if err != nil {
+		return err
+	}
+	proposerPubKey := proposer.PublicKey
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.

@@ -6,6 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
@@ -60,7 +61,7 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -85,7 +86,7 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -142,7 +143,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.

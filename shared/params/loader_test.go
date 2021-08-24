@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadConfigFileMainnet(t *testing.T) {
-	// See https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/master/tests/minimal/config/phase0.yaml
+	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
 	assertVals := func(name string, fields []string, c1, c2 *BeaconChainConfig) {
 		//  Misc params.
 		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
@@ -125,14 +125,14 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
-		mainnetConfigFile := deprecatedConfigFilePath(t, "mainnet")
+		mainnetConfigFile := presetsFilePath(t, "mainnet")
 		LoadChainConfigFile(mainnetConfigFile)
 		fields := fieldsFromYaml(t, mainnetConfigFile)
 		assertVals("mainnet", fields, MainnetConfig(), BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		minimalConfigFile := deprecatedConfigFilePath(t, "minimal")
+		minimalConfigFile := presetsFilePath(t, "minimal")
 		LoadChainConfigFile(minimalConfigFile)
 		fields := fieldsFromYaml(t, minimalConfigFile)
 		assertVals("minimal", fields, MinimalSpecConfig(), BeaconConfig())
@@ -231,7 +231,7 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 // configFilePath sets the proper config and returns the relevant
 // config file path from eth2-spec-tests directory.
 func configFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/eth2_spec")
+	filepath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
 	configFilePath := path.Join(filepath, "configs", config+".yaml")
 	return configFilePath
@@ -240,20 +240,9 @@ func configFilePath(t *testing.T, config string) string {
 // presetsFilePath sets the proper preset and returns the relevant
 // preset file path from eth2-spec-tests directory.
 func presetsFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/eth2_spec")
+	filepath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
 	configFilePath := path.Join(filepath, "presets", config, "phase0.yaml")
-	return configFilePath
-}
-
-// Deprecated: This sets the proper config and returns the relevant
-// config file path from eth2-spec-tests directory. From altair onwards
-// we use the other methods to retrieve the spec config.
-func deprecatedConfigFilePath(t *testing.T, config string) string {
-	configFolderPath := path.Join("tests", config)
-	filepath, err := bazel.Runfile(configFolderPath)
-	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "config", "phase0.yaml")
 	return configFilePath
 }
 

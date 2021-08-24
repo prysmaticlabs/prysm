@@ -33,7 +33,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
         description: "{{ index . "description" }}";
     };
     external_docs: {
-        url: "https://github.com/ethereum/eth2.0-specs";
+        url: "https://github.com/ethereum/consensus-specs";
         description: "Ethereum Consensus Specification on Github";
     };
     host: "api.prylabs.net",

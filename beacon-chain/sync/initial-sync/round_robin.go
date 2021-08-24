@@ -87,8 +87,8 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	}
 
 	log.WithFields(logrus.Fields{
-		"syncedSlot": s.cfg.Chain.HeadSlot(),
-		"headSlot":   helpers.SlotsSince(genesis),
+		"syncedSlot":  s.cfg.Chain.HeadSlot(),
+		"currentSlot": helpers.SlotsSince(genesis),
 	}).Info("Synced to finalized epoch - now syncing blocks up to current head")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
@@ -114,8 +114,8 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 		s.processFetchedDataRegSync(ctx, genesis, s.cfg.Chain.HeadSlot(), data)
 	}
 	log.WithFields(logrus.Fields{
-		"syncedSlot": s.cfg.Chain.HeadSlot(),
-		"headSlot":   helpers.SlotsSince(genesis),
+		"syncedSlot":  s.cfg.Chain.HeadSlot(),
+		"currentSlot": helpers.SlotsSince(genesis),
 	}).Info("Synced to head of chain")
 	if err := queue.stop(); err != nil {
 		log.WithError(err).Debug("Error stopping queue")
@@ -304,7 +304,15 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBl
 	if err != nil {
 		return false
 	}
-	if blk.Block().Slot() <= finalizedSlot || (s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)) {
+	// If block is before our finalized checkpoint
+	// we do not process it.
+	if blk.Block().Slot() <= finalizedSlot {
+		return true
+	}
+	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
+	// If block exists in our db and is before or equal to our current head
+	// we ignore it.
+	if blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
 		return true
 	}
 	return false

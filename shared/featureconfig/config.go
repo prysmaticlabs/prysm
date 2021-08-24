@@ -76,6 +76,10 @@ type Flags struct {
 	EnableSlasher bool // Enable slasher in the beacon node runtime.
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
+
+	// Bug fixes related flags.
+	CorrectlyInsertOrphanedAtts bool
+	CorrectlyPruneCanonicalAtts bool
 }
 
 var featureConfig *Flags
@@ -208,6 +212,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
+	}
+	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
+		logEnabled(correctlyInsertOrphanedAtts)
+		cfg.CorrectlyInsertOrphanedAtts = true
+	}
+	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
+		logEnabled(correctlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = true
 	}
 	Init(cfg)
 }

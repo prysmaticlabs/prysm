@@ -38,5 +38,9 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Fil
 	testFolders, err := ioutil.ReadDir(filepath)
 	require.NoError(t, err)
 
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found at %s", testsFolderPath)
+	}
+
 	return testFolders, testsFolderPath
 }

@@ -3,7 +3,7 @@ package debug
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"go.opencensus.io/trace"
@@ -19,12 +19,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	protoState, err := state.ToProto()
@@ -44,12 +39,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	sszState, err := state.MarshalSSZ()
@@ -60,11 +50,11 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 	return &ethpbv1.BeaconStateSSZResponse{Data: sszState}, nil
 }
 
-func (ds *Server) GetBeaconStateAltair(ctx context.Context, request *ethpbv2.StateRequest) (*ethpbv2.BeaconStateResponse, error) {
+func (ds *Server) GetBeaconStateV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
 	panic("implement me")
 }
 
-func (ds *Server) GetBeaconStateSSZAltair(ctx context.Context, request *ethpbv2.StateRequest) (*ethpbv2.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
 	panic("implement me")
 }
 

@@ -38,7 +38,7 @@ func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
 			beaconNodeIdx,
 			conn,
 			withComparePeers,
-			withCompareAttestationPool,
+			withCompareListAttestations,
 			withCompareValidators,
 			withCompareChainHead,
 		); err != nil {
@@ -126,7 +126,7 @@ func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	return nil
 }
 
-func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error {
+func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type checkpointJSON struct {
 		Epoch string `json:"epoch"`
 		Root  string `json:"root"`
@@ -143,22 +143,22 @@ func withCompareAttestationPool(beaconNodeIdx int, conn *grpc.ClientConn) error 
 		Data            *attestationDataJSON `json:"data"`
 		Signature       string               `json:"signature"`
 	}
-	type attestationPoolResponseJSON struct {
+	type attestationsResponseJSON struct {
 		Attestations  []*attestationJSON `json:"attestations"`
 		NextPageToken string             `json:"nextPageToken"`
 		TotalSize     int32              `json:"totalSize"`
 	}
 	ctx := context.Background()
 	beaconClient := ethpb.NewBeaconChainClient(conn)
-	resp, err := beaconClient.AttestationPool(ctx, &ethpb.AttestationPoolRequest{
-		PageSize: 4,
+	resp, err := beaconClient.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
 	if err != nil {
 		return err
 	}
-	respJSON := &attestationPoolResponseJSON{}
+	respJSON := &attestationsResponseJSON{}
 	if err := doGatewayJSONRequest(
-		"/beacon/attestations/pool?page_size=4",
+		"/beacon/attestations?genesis_epoch=true",
 		beaconNodeIdx,
 		respJSON,
 	); err != nil {
