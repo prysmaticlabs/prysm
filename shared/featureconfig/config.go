@@ -78,6 +78,7 @@ type Flags struct {
 
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
+	CorrectlyPruneCanonicalAtts bool
 }
 
 var featureConfig *Flags
@@ -210,6 +211,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
 		logEnabled(correctlyInsertOrphanedAtts)
 		cfg.CorrectlyInsertOrphanedAtts = true
+	}
+	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
+		logEnabled(correctlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = true
 	}
 	Init(cfg)
 }

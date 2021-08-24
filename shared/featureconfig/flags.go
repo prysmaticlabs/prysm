@@ -139,6 +139,11 @@ var (
 		Usage: "This fixes a bug where orphaned attestations don't get reinserted back to mem pool. This improves validator profitability and overall network health," +
 			"see issue #9441 for further detail",
 	}
+	correctlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name: "correctly-prune-canonical-atts",
+		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
+			"see issue #9443 for further detail",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -147,6 +152,7 @@ var devModeFlags = []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	correctlyInsertOrphanedAtts,
+	correctlyPruneCanonicalAtts,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -201,6 +207,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	correctlyInsertOrphanedAtts,
+	correctlyPruneCanonicalAtts,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -209,4 +216,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--use-check-point-cache",
 	"--correctly-insert-orphaned-atts",
+	"--correctly-prune-canonical-atts",
 }
