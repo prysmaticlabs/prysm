@@ -261,6 +261,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		if CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
+				traceutil.AnnotateError(span, err)
 				return nil, err
 			}
 		}
