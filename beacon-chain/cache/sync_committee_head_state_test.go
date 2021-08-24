@@ -6,10 +6,19 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSyncCommitteeHeadState(t *testing.T) {
+	beaconState, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
 	type put struct {
 		slot  types.Slot
 		state state.BeaconState
@@ -31,7 +40,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			key:  types.Slot(2),
 			put: &put{
 				slot:  types.Slot(1),
-				state: &v2.BeaconState{},
+				state: beaconState,
 			},
 			wantErr: true,
 		},
@@ -40,9 +49,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			key:  types.Slot(1),
 			put: &put{
 				slot:  types.Slot(1),
-				state: &v2.BeaconState{},
+				state: beaconState,
 			},
-			want: &v2.BeaconState{},
+			want: beaconState,
 		},
 	}
 	for _, tt := range tests {
