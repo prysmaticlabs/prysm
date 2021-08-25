@@ -288,7 +288,7 @@ func (b *BeaconState) blockRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.BlockRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -314,7 +314,7 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -338,7 +338,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.StateRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -364,7 +364,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.StateRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
@@ -388,7 +388,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
 }
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
@@ -742,7 +742,7 @@ func (b *BeaconState) randaoMixes() [][]byte {
 		return nil
 	}
 
-	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
+	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -769,7 +769,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -882,7 +882,7 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -907,7 +907,7 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -964,7 +964,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+	return copyutil.CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
@@ -1115,41 +1115,6 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	return b.inactivityScores(), nil
 }
 
-func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
-	if input == nil {
-		return nil
-	}
-
-	dst := make([][]byte, len(input))
-	for i, r := range input {
-		tmp := make([]byte, len(r))
-		copy(tmp, r)
-		dst[i] = tmp
-	}
-	return dst
-}
-
-func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
-	if input == nil {
-		return nil, nil
-	}
-
-	if uint64(len(input)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, input[idx])
-	return root, nil
-}
-
-func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if input == nil {
-		return nil
-	}
-
-	return copyutil.CopyCheckpoint(input)
-}
-
 // MarshalSSZ marshals the underlying beacon state to bytes.
 func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
@@ -1181,7 +1146,7 @@ func CopySyncCommittee(data *ethpb.SyncCommittee) *ethpb.SyncCommittee {
 		return nil
 	}
 	return &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.Copy2dBytes(data.Pubkeys),
+		Pubkeys:         bytesutil.SafeCopy2dBytes(data.Pubkeys),
 		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
 	}
 }

@@ -278,6 +278,36 @@ func TestCopySyncAggregate(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
 }
 
+func TestCopyPendingAttestationSlice(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []*ethpb.PendingAttestation
+	}{
+		{
+			name:  "nil",
+			input: nil,
+		},
+		{
+			name:  "empty",
+			input: []*ethpb.PendingAttestation{},
+		},
+		{
+			name: "correct copy",
+			input: []*ethpb.PendingAttestation{
+				genPendingAttestation(),
+				genPendingAttestation(),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CopyPendingAttestationSlice(tt.input); !reflect.DeepEqual(got, tt.input) {
+				t.Errorf("CopyPendingAttestationSlice() = %v, want %v", got, tt.input)
+			}
+		})
+	}
+}
+
 func bytes() []byte {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)

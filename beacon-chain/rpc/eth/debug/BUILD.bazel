@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/rpc/eth/helpers:go_default_library",
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",

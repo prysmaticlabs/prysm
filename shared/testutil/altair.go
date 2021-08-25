@@ -206,7 +206,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	st.NextSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
+		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
