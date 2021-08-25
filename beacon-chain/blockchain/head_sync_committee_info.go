@@ -122,6 +122,9 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		if err != nil {
 			return nil, err
 		}
+		if headState == nil || headState.IsNil() {
+			return nil, errors.New("nil state")
+		}
 		if slot > headState.Slot() {
 			headState, err = core.ProcessSlots(ctx, headState, slot)
 			if err != nil {

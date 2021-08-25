@@ -82,10 +82,12 @@ go_test(
     size = "medium",
     srcs = [
         "blockchain_test.go",
+        "head_sync_committee_info_test.go",
         "chain_info_test.go",
         "checktags_test.go",
         "head_test.go",
         "info_test.go",
+        "log_test.go",
         "init_test.go",
         "metrics_test.go",
         "process_attestation_test.go",
