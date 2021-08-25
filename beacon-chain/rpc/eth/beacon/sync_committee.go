@@ -5,21 +5,28 @@ import (
 	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // ListSyncCommittees retrieves the sync committees for the given epoch.
 // If the epoch is not passed in, then the sync committees for the epoch of the state will be obtained.
-func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncCommitteesRequest) (*eth.StateSyncCommitteesResponse, error) {
+func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSyncCommitteesRequest) (*ethpbv2.StateSyncCommitteesResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.ListSyncCommittees")
+	defer span.End()
+
 	var st state.BeaconState
 	if req.Epoch != nil {
 		slot, err := corehelpers.StartSlot(*req.Epoch)
@@ -53,13 +60,13 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 	}
 
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
-	subcommittees := make([]*eth.SyncSubcommitteeValidators, subcommitteeCount)
+	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get subcommittee pubkeys: %v", err)
 		}
-		subcommittee := &eth.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
+		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
 			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 			if !ok {
@@ -70,14 +77,76 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *eth.StateSyncComm
 		subcommittees[i] = subcommittee
 	}
 
-	return &eth.StateSyncCommitteesResponse{
-		Data: &eth.SyncCommitteeValidators{
+	return &ethpbv2.StateSyncCommitteesResponse{
+		Data: &ethpbv2.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
 	}, nil
 }
 
-func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *eth.SubmitPoolSyncCommitteeSignatures) (*empty.Empty, error) {
-	panic("implement me")
+// SubmitPoolSyncCommitteeSignatures submits sync committee signature objects to the node.
+func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *ethpbv2.SubmitPoolSyncCommitteeSignatures) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitPoolSyncCommitteeSignatures")
+	defer span.End()
+
+	var validMessages []*ethpbalpha.SyncCommitteeMessage
+	var msgFailures []*helpers.SingleIndexedVerificationFailure
+	for i, msg := range req.Data {
+		if err := validateSyncCommitteeMessage(msg); err != nil {
+			msgFailures = append(msgFailures, &helpers.SingleIndexedVerificationFailure{
+				Index:   i,
+				Message: err.Error(),
+			})
+			continue
+		}
+
+		v1alpha1Msg := &ethpbalpha.SyncCommitteeMessage{
+			Slot:           msg.Slot,
+			BlockRoot:      msg.BeaconBlockRoot,
+			ValidatorIndex: msg.ValidatorIndex,
+			Signature:      msg.Signature,
+		}
+		validMessages = append(validMessages, v1alpha1Msg)
+	}
+
+	for _, msg := range validMessages {
+		_, err := bs.V1Alpha1ValidatorServer.SubmitSyncMessage(ctx, msg)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not submit message: %v", err)
+		}
+	}
+
+	if len(msgFailures) > 0 {
+		failuresContainer := &helpers.IndexedVerificationFailure{Failures: msgFailures}
+		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"One or more messages failed validation. Could not prepare detailed failure information: %v",
+				err,
+			)
+		}
+		return nil, status.Errorf(codes.InvalidArgument, "One or more messages failed validation")
+	}
+
+	return &empty.Empty{}, nil
+}
+
+func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
+	valid, err := bytesutil.IsHexOfLen(msg.BeaconBlockRoot, 64)
+	if err != nil {
+		return errors.Wrapf(err, "could not verify block root validity")
+	}
+	if !valid {
+		return errors.New("invalid block root format")
+	}
+	valid, err = bytesutil.IsHexOfLen(msg.Signature, 192)
+	if err != nil {
+		return errors.Wrapf(err, "could not verify signature validity")
+	}
+	if !valid {
+		return errors.New("invalid signature format")
+	}
+	return nil
 }
