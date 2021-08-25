@@ -31,7 +31,7 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 	// Make sure that the provided state is non nil
 	// and is of the correct type.
 	if st == nil || st.IsNil() {
-		return ErrNilState
+		return ErrNilValueProvided
 	}
 	_, ok := st.(*stateAltair.BeaconState)
 	if !ok {

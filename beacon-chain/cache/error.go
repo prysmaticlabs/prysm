@@ -3,8 +3,8 @@ package cache
 import "errors"
 
 var (
-	// ErrNilState for when cache entries are nil.
-	ErrNilState = errors.New("nil state provided")
+	// ErrNilValueProvided for when we try to put a nil value in a cache.
+	ErrNilValueProvided = errors.New("nil value provided on Put()")
 	// ErrIncorrectType for when the state is of the incorrect type.
 	ErrIncorrectType = errors.New("incorrect state type provided")
 	// ErrNotFound for cache fetches that return a nil value.
