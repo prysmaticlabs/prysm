@@ -310,14 +310,6 @@ rules_foreign_cc_dependencies([
 ])
 
 http_archive(
-    name = "librdkafka",
-    build_file_content = all_content,
-    sha256 = "3b99a36c082a67ef6295eabd4fb3e32ab0bff7c6b0d397d6352697335f4e57eb",
-    strip_prefix = "librdkafka-1.4.2",
-    urls = ["https://github.com/edenhill/librdkafka/archive/v1.4.2.tar.gz"],
-)
-
-http_archive(
     name = "sigp_beacon_fuzz_corpora",
     build_file = "//third_party:beacon-fuzz/corpora.BUILD",
     sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
