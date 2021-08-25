@@ -419,9 +419,9 @@ func TestIsHexOfLen(t *testing.T) {
 		isHex, err := bytesutil.IsHexOfLen(tt.b, tt.l)
 		require.NoError(t, err)
 		assert.Equal(t, tt.result, isHex)
-		}
-		}
-		
+	}
+}
+
 func TestSafeCopyRootAtIndex(t *testing.T) {
 	tests := []struct {
 		name    string
