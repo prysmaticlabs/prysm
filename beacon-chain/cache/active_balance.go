@@ -50,7 +50,7 @@ func NewEffectiveBalanceCache() *BalanceCache {
 }
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
-func (c *BalanceCache) AddTotalEffectiveBalance(st state.BeaconState, balance uint64) error {
+func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance uint64) error {
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (c *BalanceCache) AddTotalEffectiveBalance(st state.BeaconState, balance ui
 }
 
 // Get returns the current epoch's effective balance for state `st` in cache.
-func (c *BalanceCache) Get(st state.BeaconState) (uint64, error) {
+func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return 0, err
@@ -84,7 +84,7 @@ func (c *BalanceCache) Get(st state.BeaconState) (uint64, error) {
 
 // Given input state `st`, balance key is constructed as:
 // (block_root in `st` at epoch_start_slot - 1) + current_epoch
-func balanceCacheKey(st state.BeaconState) (string, error) {
+func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := st.Slot().DivSlot(slotsPerEpoch)
 	epochStartSlot, err := slotsPerEpoch.SafeMul(uint64(currentEpoch))
