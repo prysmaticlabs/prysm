@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethTypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -51,6 +52,9 @@ func NewEffectiveBalanceCache() *BalanceCache {
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
 func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance uint64) error {
+	if !featureconfig.Get().EnableActiveBalanceCache {
+		return nil
+	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -65,6 +69,9 @@ func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, ba
 
 // Get returns the current epoch's effective balance for state `st` in cache.
 func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
+	if !featureconfig.Get().EnableActiveBalanceCache {
+		return 0, ErrNotFound
+	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return 0, err
