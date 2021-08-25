@@ -35,34 +35,22 @@ type HeadDomainFetcher interface {
 
 // HeadSyncCommitteeDomain returns the head sync committee domain using current head state advanced up to `slot`.
 func (s *Service) HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommittee)
 }
 
 // HeadSyncSelectionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
 func (s *Service) HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommitteeSelectionProof)
 }
 
 // HeadSyncContributionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
 func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainContributionAndProof)
 }
 
 // HeadCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
 func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -73,9 +61,6 @@ func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index typ
 // HeadNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
 func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -86,9 +71,6 @@ func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.
 // HeadSyncCommitteePubKeys returns the head sync committee public keys with respect to `slot` and subcommittee index `committeeIndex`.
 // Head state advanced up to `slot` is used for calculation.
 func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -147,8 +129,8 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 			}
 		}
 		syncHeadStateMiss.Inc()
-		syncCommitteeHeadStateCache.Put(slot, headState)
-		return headState, nil
+		err = syncCommitteeHeadStateCache.Put(slot, headState)
+		return headState, err
 	default:
 		// In the event, we encounter another error
 		// we return it.

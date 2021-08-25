@@ -25,10 +25,20 @@ func NewSyncCommitteeHeadState() *SyncCommitteeHeadStateCache {
 }
 
 // Put `slot` as key and `state` as value onto the cache.
-func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState) {
+func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	// Make sure that the provided state is non nil
+	// and is of the correct type.
+	if st == nil || st.IsNil() {
+		return ErrNilState
+	}
+	_, ok := st.(*stateAltair.BeaconState)
+	if !ok {
+		return ErrIncorrectType
+	}
 	c.cache.Add(slot, st)
+	return nil
 }
 
 // Get `state` using `slot` as key. Return nil if nothing is found.
@@ -36,12 +46,12 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	val, exists := c.cache.Get(slot)
-	if !exists || val == nil {
+	if !exists {
 		return nil, ErrNotFound
 	}
 	st, ok := val.(*stateAltair.BeaconState)
-	if !ok || st.IsNil() {
-		return nil, ErrNotFound
+	if !ok {
+		return nil, ErrIncorrectType
 	}
 	return st, nil
 }
