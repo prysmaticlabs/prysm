@@ -164,7 +164,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.GetResponse = &aggregateAttestationResponseJson{}
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}}
 	case "/eth/v1/validator/beacon_committee_subscriptions":
-		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
+		endpoint.PostRequest = &submitBeaconCommitteeSubscriptionsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapBeaconCommitteeSubscriptionsArray},
 		}
