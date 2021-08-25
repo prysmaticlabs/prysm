@@ -267,8 +267,9 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
-		HeadFetcher:        s.cfg.HeadFetcher,
-		VoluntaryExitsPool: s.cfg.ExitPool,
+		HeadFetcher:             s.cfg.HeadFetcher,
+		VoluntaryExitsPool:      s.cfg.ExitPool,
+		V1Alpha1ValidatorServer: validatorServer,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)

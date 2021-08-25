@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/bits"
 	"regexp"
+	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
 )
@@ -354,4 +355,12 @@ func IsHex(b []byte) (bool, error) {
 		return false, nil
 	}
 	return regexp.Match("^(0x)[0-9a-fA-F]+$", b)
+}
+
+// IsHexOfLen checks whether the byte array is a hex number prefixed with '0x' and containing the required number of digits.
+func IsHexOfLen(b []byte, length uint64) (bool, error) {
+	if b == nil {
+		return false, nil
+	}
+	return regexp.Match("^(0x)[0-9a-fA-F]{"+strconv.FormatUint(length, 10)+"}$", b)
 }
