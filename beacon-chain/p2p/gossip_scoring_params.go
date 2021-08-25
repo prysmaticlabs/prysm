@@ -368,7 +368,7 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(subnetWeight)/dampeningFactor)
 	if err != nil {
-		log.Warnf("skipping initializing topic scoring: %v", err)
+		log.WithError(err).Warn("Skipping initializing topic scoring")
 		return nil, nil
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
