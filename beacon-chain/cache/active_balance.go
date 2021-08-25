@@ -21,13 +21,13 @@ var (
 
 	// BalanceCacheMiss tracks the number of balance requests that aren't present in the cache.
 	balanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "balance_cache_miss",
-		Help: "The number of Get requests that aren't present in the cache.",
+		Name: "total_effective_balance_cache_miss",
+		Help: "The number of get requests that aren't present in the cache.",
 	})
 	// BalanceCacheHit tracks the number of balance requests that are in the cache.
 	balanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "balance_cache_hit",
-		Help: "The number of Get requests that are present in the cache.",
+		Name: "total_effective_balance_cache_hit",
+		Help: "The number of get requests that are present in the cache.",
 	})
 )
 
@@ -37,8 +37,8 @@ type BalanceCache struct {
 	lock  sync.RWMutex
 }
 
-// NewBalanceCache creates a new balance cache for storing/accessing total balance by epoch.
-func NewBalanceCache() *BalanceCache {
+// NewEffectiveBalanceCache creates a new effective balance cache for storing/accessing total balance by epoch.
+func NewEffectiveBalanceCache() *BalanceCache {
 	c, err := lru.New(int(maxBalanceCacheSize))
 	// An error is only returned if the size of the cache is <= 0.
 	if err != nil {
@@ -49,8 +49,8 @@ func NewBalanceCache() *BalanceCache {
 	}
 }
 
-// AddBalance adds a new balance entry for current balance for state `st` into the cache.
-func (c *BalanceCache) AddBalance(st state.BeaconState, balance uint64) error {
+// AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
+func (c *BalanceCache) AddTotalEffectiveBalance(st state.BeaconState, balance uint64) error {
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (c *BalanceCache) AddBalance(st state.BeaconState, balance uint64) error {
 	return nil
 }
 
-// Get returns the current epoch's balance for state `st` in cache.
+// Get returns the current epoch's effective balance for state `st` in cache.
 func (c *BalanceCache) Get(st state.BeaconState) (uint64, error) {
 	key, err := balanceCacheKey(st)
 	if err != nil {
