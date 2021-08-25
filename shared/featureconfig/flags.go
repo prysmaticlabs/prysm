@@ -145,7 +145,7 @@ var (
 			"see issue #9443 for further detail",
 	}
 	enableActiveBalanceCache = &cli.BoolFlag{
-		Name: "enable-active-balance-cache",
+		Name:  "enable-active-balance-cache",
 		Usage: "This enables active balance cache cache to improve node performance during block processing",
 	}
 )

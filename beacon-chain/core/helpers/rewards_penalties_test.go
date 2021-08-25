@@ -62,7 +62,7 @@ func TestTotalActiveBalance(t *testing.T) {
 	}
 	for _, test := range tests {
 		validators := make([]*ethpb.Validator, 0)
-		for i:=0; i<test.vCount; i++ {
+		for i := 0; i < test.vCount; i++ {
 			validators = append(validators, &ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 1})
 		}
 		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
@@ -80,7 +80,7 @@ func TestTotalActiveBalance_WithCache(t *testing.T) {
 	defer resetCfg()
 
 	tests := []struct {
-		vCount int
+		vCount    int
 		wantCount int
 	}{
 		{vCount: 1, wantCount: 1},
@@ -89,7 +89,7 @@ func TestTotalActiveBalance_WithCache(t *testing.T) {
 	}
 	for _, test := range tests {
 		validators := make([]*ethpb.Validator, 0)
-		for i:=0; i<test.vCount; i++ {
+		for i := 0; i < test.vCount; i++ {
 			validators = append(validators, &ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 1})
 		}
 		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
