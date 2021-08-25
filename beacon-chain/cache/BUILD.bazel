@@ -18,6 +18,7 @@ go_library(
         "sync_subnet_ids.go",
     ] + select({
         "//fuzz:fuzzing_enabled": [
+            "active_balance_disabled.go",
             "committee_disabled.go",
             "proposer_indices_disabled.go",
             "sync_committee_disabled.go",
