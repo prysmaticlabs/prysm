@@ -25,7 +25,7 @@ func (s *State) ReplayBlocks(
 	defer span.End()
 
 	var err error
-	log.Debugf("Replaying state from %d till %d", state.Slot(), targetSlot)
+	log.Debugf("Replaying state from slot %d till slot %d", state.Slot(), targetSlot)
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
