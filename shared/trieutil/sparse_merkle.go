@@ -202,13 +202,13 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
 	dstBranches := make([][][]byte, len(m.branches))
 	for i1, srcB1 := range m.branches {
-		dstBranches[i1] = bytesutil.Copy2dBytes(srcB1)
+		dstBranches[i1] = bytesutil.SafeCopy2dBytes(srcB1)
 	}
 
 	return &SparseMerkleTrie{
 		depth:         m.depth,
 		branches:      dstBranches,
-		originalItems: bytesutil.Copy2dBytes(m.originalItems),
+		originalItems: bytesutil.SafeCopy2dBytes(m.originalItems),
 	}
 }
 

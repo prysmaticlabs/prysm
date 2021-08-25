@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -11,6 +12,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -77,12 +79,66 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		subcommittees[i] = subcommittee
 	}
 
-	return &ethpbv2.StateSyncCommitteesResponse{
-		Data: &ethpbv2.SyncCommitteeValidators{
+	return &eth.StateSyncCommitteesResponse{
+		Data: &eth.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
 	}, nil
+}
+
+// SubmitSyncCommitteeSignature --
+func (bs *Server) SubmitSyncCommitteeSignature(_ context.Context, _ *eth.SyncCommitteeMessage) (*empty.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
+func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+	committee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"could not get sync committee: %v", err,
+		)
+	}
+
+	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
+	for i, key := range committee.Pubkeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"validator index not found for pubkey %#x",
+				bytesutil.Trunc(key),
+			)
+		}
+		committeeIndices[i] = index
+	}
+	return committeeIndices, committee, nil
+}
+
+func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]*eth.SyncSubcommitteeValidators, error) {
+	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
+	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
+	for i := uint64(0); i < subcommitteeCount; i++ {
+		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to get subcommittee pubkeys: %v", err,
+			)
+		}
+		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
+		for j, key := range pubkeys {
+			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+			if !ok {
+				return nil, fmt.Errorf(
+					"validator index not found for pubkey %#x",
+					bytesutil.Trunc(key),
+				)
+			}
+			subcommittee.Validators[j] = index
+		}
+		subcommittees[i] = subcommittee
+	}
+
+	return subcommittees, nil
 }
 
 // SubmitPoolSyncCommitteeSignatures submits sync committee signature objects to the node.

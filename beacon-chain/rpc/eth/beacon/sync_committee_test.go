@@ -23,6 +23,89 @@ import (
 	"google.golang.org/grpc"
 )
 
+func Test_currentCommitteeIndicesFromState(t *testing.T) {
+	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	vals := st.Validators()
+	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
+	for i := 0; i < len(wantedCommittee); i++ {
+		wantedIndices[i] = types.ValidatorIndex(i)
+		wantedCommittee[i] = vals[i].PublicKey
+	}
+	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
+		Pubkeys:         wantedCommittee,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}))
+
+	t.Run("OK", func(t *testing.T) {
+		indices, committee, err := currentCommitteeIndicesFromState(st)
+		require.NoError(t, err)
+		require.DeepEqual(t, wantedIndices, indices)
+		require.DeepEqual(t, wantedCommittee, committee.Pubkeys)
+	})
+	t.Run("validator in committee not found in state", func(t *testing.T) {
+		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
+			Pubkeys:         wantedCommittee,
+			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		}))
+		_, _, err := currentCommitteeIndicesFromState(st)
+		require.ErrorContains(t, "index not found for pubkey", err)
+	})
+}
+
+func Test_extractSyncSubcommittees(t *testing.T) {
+	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	vals := st.Validators()
+	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	for i := 0; i < len(syncCommittee); i++ {
+		syncCommittee[i] = vals[i].PublicKey
+	}
+	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
+		Pubkeys:         syncCommittee,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}))
+
+	commSize := params.BeaconConfig().SyncCommitteeSize
+	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	wantedSubcommitteeValidators := make([][]types.ValidatorIndex, 0)
+
+	for i := uint64(0); i < commSize; i += subCommSize {
+		sub := make([]types.ValidatorIndex, 0)
+		start := i
+		end := i + subCommSize
+		if end > commSize {
+			end = commSize
+		}
+		for j := start; j < end; j++ {
+			sub = append(sub, types.ValidatorIndex(j))
+		}
+		wantedSubcommitteeValidators = append(wantedSubcommitteeValidators, sub)
+	}
+
+	t.Run("OK", func(t *testing.T) {
+		committee, err := st.CurrentSyncCommittee()
+		require.NoError(t, err)
+		subcommittee, err := extractSyncSubcommittees(st, committee)
+		require.NoError(t, err)
+		for i, got := range subcommittee {
+			want := wantedSubcommitteeValidators[i]
+			require.DeepEqual(t, want, got.Validators)
+		}
+	})
+	t.Run("validator in subcommittee not found in state", func(t *testing.T) {
+		syncCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
+			Pubkeys:         syncCommittee,
+			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		}))
+		committee, err := st.CurrentSyncCommittee()
+		require.NoError(t, err)
+		_, err = extractSyncSubcommittees(st, committee)
+		require.ErrorContains(t, "index not found for pubkey", err)
+	})
+}
+
 func TestListSyncCommittees(t *testing.T) {
 	ctx := context.Background()
 	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)

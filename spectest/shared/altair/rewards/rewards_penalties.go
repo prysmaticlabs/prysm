@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/snappy"
@@ -36,17 +37,14 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 	return nil
 }
 
-var deltaFiles = []string{
-	"source_deltas.ssz_snappy",
-	"target_deltas.ssz_snappy",
-	"head_deltas.ssz_snappy",
-	"inactivity_penalty_deltas.ssz_snappy",
-}
-
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testTypes := []string{"basic", "leak", "random"}
+
+	_, testsFolderPath := utils.TestFolders(t, config, "altair", "rewards")
+	testTypes, err := testutil.BazelListDirectories(testsFolderPath)
+	require.NoError(t, err)
+
 	for _, testType := range testTypes {
 		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {
@@ -79,6 +77,19 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 
 	totalSpecTestRewards := make([]uint64, len(rewards))
 	totalSpecTestPenalties := make([]uint64, len(penalties))
+
+	// Fetch delta files. i.e. source_deltas.ssz_snappy, etc.
+	testfiles, err := testutil.BazelListFiles(path.Join(testFolderPath))
+	require.NoError(t, err)
+	deltaFiles := make([]string, 0, len(testfiles))
+	for _, tf := range testfiles {
+		if strings.Contains(tf, "deltas") {
+			deltaFiles = append(deltaFiles, tf)
+		}
+	}
+	if len(deltaFiles) == 0 {
+		t.Fatal("No delta files")
+	}
 
 	for _, dFile := range deltaFiles {
 		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))

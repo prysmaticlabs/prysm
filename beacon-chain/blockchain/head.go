@@ -15,6 +15,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -142,6 +143,10 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				Epoch:        helpers.SlotToEpoch(newHeadSlot),
 			},
 		})
+
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
 
 		reorgCount.Inc()
 	}
@@ -358,5 +363,42 @@ func (s *Service) notifyNewHeadEvent(
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},
 	})
+	return nil
+}
+
+// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
+// attestation pool. It also filters out the attestations that is one epoch older as a
+// defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		return nil
+	}
+
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
+	}
+
+	if orphanedBlk == nil || orphanedBlk.IsNil() {
+		return errors.New("orphaned block can't be nil")
+	}
+
+	for _, a := range orphanedBlk.Block().Body().Attestations() {
+		// Is the attestation one epoch older.
+		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			continue
+		}
+		if helpers.IsAggregated(a) {
+			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+				return err
+			}
+		}
+		saveOrphanedAttCount.Inc()
+	}
+
 	return nil
 }
