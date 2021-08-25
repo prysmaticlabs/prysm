@@ -361,7 +361,7 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(rate))
 	if err != nil {
-		log.Warnf("skipping initializing topic scoring: %v", err)
+		log.WithError(err).Warn("Skipping initializing topic scoring")
 		return nil, nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
