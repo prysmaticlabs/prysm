@@ -3,12 +3,16 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -27,22 +31,63 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 
 	var st state.BeaconState
 	if req.Epoch != nil {
+		slot, err := corehelpers.StartSlot(*req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not calculate start slot for epoch %d: %v", *req.Epoch, err)
+		}
+		st, err = bs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+		if err != nil {
+			return nil, helpers.PrepareStateFetchGRPCError(err)
+		}
+	} else {
+		var err error
+		st, err = bs.StateFetcher.State(ctx, req.StateId)
+		if err != nil {
+			return nil, helpers.PrepareStateFetchGRPCError(err)
+		}
 	}
 
-	return &eth.StateSyncCommitteesResponse{
-		Data: &eth.SyncCommitteeValidators{
+	committee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
+	}
+
+	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
+	for i, key := range committee.Pubkeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "Validator index not found for pubkey %#x", bytesutil.Trunc(key))
+		}
+		committeeIndices[i] = index
+	}
+
+	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
+	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
+	for i := uint64(0); i < subcommitteeCount; i++ {
+		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Failed to get subcommittee pubkeys: %v", err)
+		}
+		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
+		for j, key := range pubkeys {
+			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+			if !ok {
+				return nil, status.Errorf(codes.Internal, "Validator index not found for pubkey %#x", bytesutil.Trunc(key))
+			}
+			subcommittee.Validators[j] = index
+		}
+		subcommittees[i] = subcommittee
+	}
+
+	return &ethpbv2.StateSyncCommitteesResponse{
+		Data: &ethpbv2.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
 	}, nil
 }
 
-// SubmitSyncCommitteeSignature --
-func (bs *Server) SubmitSyncCommitteeSignature(_ context.Context, _ *eth.SyncCommitteeMessage) (*empty.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpb.SyncCommittee, error) {
+func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
 	committee, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
@@ -64,7 +109,7 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIn
 	return committeeIndices, committee, nil
 }
 
-func extractSyncSubcommittees(st state.BeaconState, committee *ethpb.SyncCommittee) ([]*eth.SyncSubcommitteeValidators, error) {
+func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]*eth.SyncSubcommitteeValidators, error) {
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
@@ -87,13 +132,7 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpb.SyncCommitt
 		}
 		subcommittees[i] = subcommittee
 	}
-
-	return &ethpbv2.StateSyncCommitteesResponse{
-		Data: &ethpbv2.SyncCommitteeValidators{
-			Validators:          committeeIndices,
-			ValidatorAggregates: subcommittees,
-		},
-	}, nil
+	return subcommittees, nil
 }
 
 // SubmitPoolSyncCommitteeSignatures submits sync committee signature objects to the node.
