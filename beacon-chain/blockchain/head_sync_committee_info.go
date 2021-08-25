@@ -98,7 +98,7 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 	currEpoch := helpers.SlotToEpoch(headState.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
-	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
+	if currEpoch == nextSlotEpoch || helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
