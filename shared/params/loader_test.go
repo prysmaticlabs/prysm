@@ -100,28 +100,7 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 		assert.Equal(t, c1.DomainSelectionProof, c2.DomainSelectionProof, "%s: DomainSelectionProof", name)
 		assert.Equal(t, c1.DomainAggregateAndProof, c2.DomainAggregateAndProof, "%s: DomainAggregateAndProof", name)
 
-		// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
-		ft1 := reflect.TypeOf(*c1)
-		for _, field := range fields {
-			var found bool
-			for i := 0; i < ft1.NumField(); i++ {
-				v, ok := ft1.Field(i).Tag.Lookup("yaml")
-				if ok && v == field {
-					found = true
-					v1 := reflect.ValueOf(*c1).Field(i).Interface()
-					v2 := reflect.ValueOf(*c2).Field(i).Interface()
-					if reflect.ValueOf(v1).Kind() == reflect.Slice {
-						assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
-					} else {
-						assert.Equal(t, v1, v2, "%s: %s", name, field)
-					}
-					break
-				}
-			}
-			if !found {
-				t.Errorf("No struct tag found `yaml:%s`", field)
-			}
-		}
+		assertYamlFieldsMatch(t, name, fields, c1, c2)
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
@@ -262,4 +241,29 @@ func fieldsFromYaml(t *testing.T, fp string) []string {
 	}
 
 	return keys
+}
+
+func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *BeaconChainConfig) {
+	// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
+	ft1 := reflect.TypeOf(*c1)
+	for _, field := range fields {
+		var found bool
+		for i := 0; i < ft1.NumField(); i++ {
+			v, ok := ft1.Field(i).Tag.Lookup("yaml")
+			if ok && v == field {
+				found = true
+				v1 := reflect.ValueOf(*c1).Field(i).Interface()
+				v2 := reflect.ValueOf(*c2).Field(i).Interface()
+				if reflect.ValueOf(v1).Kind() == reflect.Slice {
+					assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
+				} else {
+					assert.Equal(t, v1, v2, "%s: %s", name, field)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("No struct tag found `yaml:%s`", field)
+		}
+	}
 }
