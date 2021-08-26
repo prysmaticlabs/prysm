@@ -13,6 +13,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -244,18 +245,10 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockAltair")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
 	}
-	phase0Blk, err := blk.PbPhase0Block()
-	// Assume we have an Altair block when Phase 0 block is unsupported.
-	// In such case we continue with the rest of the function.
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
-		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
-	}
-
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -289,18 +282,10 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZV2")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
 	}
-	phase0Blk, err := blk.PbPhase0Block()
-	// Assume we have an Altair block when Phase 0 block is unsupported.
-	// In such case we continue with the rest of the function.
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
-		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
-	}
-
 	if phase0Blk != nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -439,6 +424,25 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	return &ethpbv1.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
 	}, nil
+}
+
+func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
+	signedBlock block.SignedBeaconBlock,
+	phase0Block *ethpbalpha.SignedBeaconBlock,
+	err error,
+) {
+	blk, err := bs.blockFromBlockID(ctx, blockId)
+	err = handleGetBlock(blk, err)
+	if err != nil {
+		return nil, nil, err
+	}
+	phase0Blk, err := blk.PbPhase0Block()
+	// Assume we have an Altair block when Phase 0 block is unsupported.
+	// In such case we continue with the rest of the function.
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+		return nil, nil, errors.New("Could not check for phase 0 block")
+	}
+	return blk, phase0Blk, nil
 }
 
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.SignedBeaconBlock, error) {
