@@ -133,6 +133,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
+
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.WithError(err).Debug("Could not handle p2p pubsub")
