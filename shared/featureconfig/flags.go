@@ -135,6 +135,10 @@ var (
 		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
+	enableActiveBalanceCache = &cli.BoolFlag{
+		Name:  "enable-active-balance-cache",
+		Usage: "This enables active balance cache cache to improve node performance during block processing",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -144,6 +148,7 @@ var devModeFlags = []cli.Flag{
 	forceOptMaxCoverAggregationStategy,
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
+	enableActiveBalanceCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -195,6 +200,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableHistoricalSpaceRepresentation,
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
+	enableActiveBalanceCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -204,4 +210,5 @@ var E2EBeaconChainFlags = []string{
 	"--use-check-point-cache",
 	"--correctly-insert-orphaned-atts",
 	"--correctly-prune-canonical-atts",
+	"--enable-active-balance-cache",
 }

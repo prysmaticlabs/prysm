@@ -61,6 +61,7 @@ type Flags struct {
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
+	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
@@ -209,6 +210,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
 		logEnabled(correctlyPruneCanonicalAtts)
 		cfg.CorrectlyPruneCanonicalAtts = true
+	}
+	if ctx.Bool(enableActiveBalanceCache.Name) {
+		logEnabled(enableActiveBalanceCache)
+		cfg.EnableActiveBalanceCache = true
 	}
 	Init(cfg)
 }
