@@ -204,7 +204,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		duty.Pubkey = valPubkey
 		for j, pubkey := range committee.Pubkeys {
 			if bytes.Equal(valPubkey, pubkey) {
-				duty.ValidatorSyncCommitteeIndices = append(duty.ValidatorSyncCommitteeIndices, types.ValidatorIndex(j))
+				duty.ValidatorSyncCommitteeIndices = append(duty.ValidatorSyncCommitteeIndices, uint64(j))
 			}
 		}
 		duties[i] = duty
