@@ -27,10 +27,6 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 	}
 	raw := &ethpb.BeaconState{
 		BlockRoots: blockRoots,
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: params.BeaconConfig().ZeroHash[:],
-			BlockHash:   params.BeaconConfig().ZeroHash[:],
-		},
 	}
 	st, err := state.InitializeFromProto(raw)
 	require.NoError(t, err)
@@ -75,10 +71,6 @@ func TestBalanceCache_BalanceKey(t *testing.T) {
 	}
 	raw := &ethpb.BeaconState{
 		BlockRoots: blockRoots,
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: params.BeaconConfig().ZeroHash[:],
-			BlockHash:   params.BeaconConfig().ZeroHash[:],
-		},
 	}
 	st, err := state.InitializeFromProto(raw)
 	require.NoError(t, err)
