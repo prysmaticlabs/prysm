@@ -90,7 +90,7 @@ func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
 }
 
 // Given input state `st`, balance key is constructed as:
-// (block_root in `st` at epoch_start_slot - 1) + current_epoch + validator_count
+// (block_root in `st` at epoch_start_slot - 1) + current_epoch + validator_count + eth1_data_block_hash
 func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := st.Slot().DivSlot(slotsPerEpoch)
@@ -119,5 +119,9 @@ func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	binary.LittleEndian.PutUint64(b, uint64(st.NumValidators()))
 	key = append(key, b...)
 
-	return string(key), nil
+	// Mix in eth1 data block hash
+	h := st.Eth1Data().BlockHash
+	key = append(key, h...)
+
+	return string(h), nil
 }
