@@ -14,7 +14,6 @@ go_library(
         "testnet_e2e_config.go",
         "testnet_prater_config.go",
         "testnet_pyrmont_config.go",
-        "testnet_toledo_config.go",
         "testutils.go",
         "values.go",
     ],
