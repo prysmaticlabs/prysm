@@ -55,6 +55,14 @@ func (s *Service) validateSyncCommitteeMessage(
 		return pubsub.ValidationReject
 	}
 
+	// Validate sync message times before proceeding.
+	if result := withValidationPipeline(
+		ctx,
+		s.ifInvalidSyncMsgTime(m, pubsub.ValidationIgnore),
+	); result != pubsub.ValidationAccept {
+		return result
+	}
+
 	pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -70,7 +78,6 @@ func (s *Service) validateSyncCommitteeMessage(
 	if result := withValidationPipeline(
 		ctx,
 		s.ifEmptyCommittee(committeeIndices, pubsub.ValidationIgnore),
-		s.ifInvalidSyncMsgTime(m, pubsub.ValidationIgnore),
 		s.ifIncorrectCommittee(committeeIndices, *msg.Topic, pubsub.ValidationReject),
 		s.ifHasSeenSyncMsg(m, committeeIndices, pubsub.ValidationIgnore),
 		s.ifInvalidSignature(m, pubKey, pubsub.ValidationIgnore),
