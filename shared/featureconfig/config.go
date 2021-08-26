@@ -64,9 +64,7 @@ type Flags struct {
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
-	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
-
-	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	AttestTimely                   bool   // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
@@ -152,10 +150,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 
 	cfg.EnableSSZCache = true
 
-	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		logEnabled(kafkaBootstrapServersFlag)
-		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
-	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
