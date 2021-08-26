@@ -22,7 +22,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
@@ -46,7 +46,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
