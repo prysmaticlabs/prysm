@@ -460,11 +460,11 @@ type testFeed struct {
 	b string
 }
 
-func (_ testFeed) method1() {
+func (testFeed) method1() {
 
 }
 
-func (_ testFeed) method2() {
+func (testFeed) method2() {
 
 }
 
@@ -479,7 +479,7 @@ type testFeed2 struct {
 	c []byte
 }
 
-func (_ testFeed2) method1() {
+func (testFeed2) method1() {
 
 }
 
@@ -489,15 +489,15 @@ type testFeed3 struct {
 	c, d []byte
 }
 
-func (_ testFeed3) method1() {
+func (testFeed3) method1() {
 
 }
 
-func (_ testFeed3) method2() {
+func (testFeed3) method2() {
 
 }
 
-func (_ testFeed3) method3() {
+func (testFeed3) method3() {
 
 }
 
