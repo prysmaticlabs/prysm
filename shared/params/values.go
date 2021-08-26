@@ -5,7 +5,6 @@ const (
 	Minimal
 	EndToEnd
 	Pyrmont
-	Toledo
 	Prater
 )
 
@@ -15,7 +14,6 @@ var ConfigNames = map[ConfigName]string{
 	Minimal:  "minimal",
 	EndToEnd: "end-to-end",
 	Pyrmont:  "pyrmont",
-	Toledo:   "toledo",
 	Prater:   "prater",
 }
 

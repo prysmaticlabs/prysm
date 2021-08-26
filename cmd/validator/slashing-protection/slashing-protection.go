@@ -45,7 +45,6 @@ var Commands = &cli.Command{
 				flags.SlashingProtectionJSONFileFlag,
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
-				featureconfig.ToledoTestnet,
 				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
