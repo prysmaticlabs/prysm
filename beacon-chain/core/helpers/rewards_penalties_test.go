@@ -84,8 +84,8 @@ func TestTotalActiveBalance_WithCache(t *testing.T) {
 		wantCount int
 	}{
 		{vCount: 1, wantCount: 1},
-		{vCount: 10, wantCount: 1},
-		{vCount: 10000, wantCount: 1},
+		{vCount: 10, wantCount: 10},
+		{vCount: 10000, wantCount: 10000},
 	}
 	for _, test := range tests {
 		validators := make([]*ethpb.Validator, 0)
