@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -42,6 +43,7 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
+const seenSyncMsgSize = 1000
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -63,6 +65,7 @@ type Config struct {
 	AttPool           attestations.Pool
 	ExitPool          voluntaryexits.PoolManager
 	SlashingPool      slashings.PoolManager
+	SyncCommsPool     synccommittee.Pool
 	Chain             blockchainService
 	InitialSync       Checker
 	StateNotifier     statefeed.Notifier
@@ -109,6 +112,8 @@ type Service struct {
 	seenProposerSlashingCache        *lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
+	seenSyncMessageLock              sync.RWMutex
+	seenSyncMessageCache             *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
@@ -205,6 +210,10 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	syncMsgCache, err := lru.New(seenSyncMsgSize)
+	if err != nil {
+		return err
+	}
 	exitCache, err := lru.New(seenExitSize)
 	if err != nil {
 		return err
@@ -220,6 +229,7 @@ func (s *Service) initCaches() error {
 	s.seenBlockCache = blkCache
 	s.seenAggregatedAttestationCache = aggregatedAttCache
 	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
+	s.seenSyncMessageCache = syncMsgCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
