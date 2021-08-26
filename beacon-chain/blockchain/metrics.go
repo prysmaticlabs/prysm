@@ -116,11 +116,11 @@ var (
 	)
 	syncHeadStateMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sync_head_state_miss",
-		Help: "The number of sync head state requests that are present in the cache.",
+		Help: "The number of sync head state requests that are not present in the cache.",
 	})
 	syncHeadStateHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sync_head_state_hit",
-		Help: "The number of sync head state requests that are not present in the cache.",
+		Help: "The number of sync head state requests that are present in the cache.",
 	})
 )
 

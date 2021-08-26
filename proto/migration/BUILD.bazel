@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v1:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
