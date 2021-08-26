@@ -121,7 +121,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 			AttPool:     attestations.NewPool(),
 			Chain:       &mock.ChainService{},
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAggregatedAttestationCache: c,
 	}
 	err = r.initCaches()
@@ -277,7 +277,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAggregatedAttestationCache: c,
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
