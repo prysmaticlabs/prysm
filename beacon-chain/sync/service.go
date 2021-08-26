@@ -40,7 +40,8 @@ var _ shared.Service = (*Service)(nil)
 
 const rangeLimit = 1024
 const seenBlockSize = 1000
-const seenAttSize = 10000
+const seenUnaggregatedAttSize = 20000
+const seenAggregatedAttSize = 1024
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -98,8 +99,10 @@ type Service struct {
 	rateLimiter               *limiter
 	seenBlockLock             sync.RWMutex
 	seenBlockCache            *lru.Cache
-	seenAttestationLock       sync.RWMutex
-	seenAttestationCache      *lru.Cache
+	seenAggregatedAttestationLock       sync.RWMutex
+	seenAggregatedAttestationCache      *lru.Cache
+	seenUnAggregatedAttestationLock       sync.RWMutex
+	seenUnAggregatedAttestationCache      *lru.Cache
 	seenExitLock              sync.RWMutex
 	seenExitCache             *lru.Cache
 	seenProposerSlashingLock  sync.RWMutex
@@ -194,7 +197,11 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	attCache, err := lru.New(seenAttSize)
+	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
+	if err != nil {
+		return err
+	}
+	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
 	if err != nil {
 		return err
 	}
@@ -211,7 +218,8 @@ func (s *Service) initCaches() error {
 		return err
 	}
 	s.seenBlockCache = blkCache
-	s.seenAttestationCache = attCache
+	s.seenAggregatedAttestationCache = aggregatedAttCache
+	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
