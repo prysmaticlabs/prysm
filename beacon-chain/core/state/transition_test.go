@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 func init() {
@@ -508,6 +509,77 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
 
+func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
+	core.SkipSlotCache.Disable()
+	conf := params.BeaconConfig()
+	conf.AltairForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+	defer params.UseMainnetConfig()
+
+	st, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := core.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Altair, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
+func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
+	core.SkipSlotCache.Disable()
+	conf := params.BeaconConfig()
+	conf.AltairForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+	defer params.UseMainnetConfig()
+
+	st, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
+	st, err := core.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Altair, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	ctx := context.Background()
 	s, _ := testutil.DeterministicGenesisState(t, 1)
@@ -515,4 +587,38 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	s, err := core.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
+}
+
+func TestCanUpgradeToAltair(t *testing.T) {
+	bc := params.BeaconConfig()
+	bc.AltairForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot types.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not altair epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "altair epoch",
+			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := core.CanUpgradeToAltair(tt.slot); got != tt.want {
+				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
