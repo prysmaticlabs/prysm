@@ -159,7 +159,7 @@ func TestFeedSubscribeSameChannel(t *testing.T) {
 	done.Wait()
 }
 
-func TestFeedSubscribeBlockedPost(t *testing.T) {
+func TestFeedSubscribeBlockedPost(_ *testing.T) {
 	var (
 		feed   Feed
 		nsends = 2000
@@ -192,7 +192,7 @@ func TestFeedSubscribeBlockedPost(t *testing.T) {
 	}
 }
 
-func TestFeedUnsubscribeBlockedPost(t *testing.T) {
+func TestFeedUnsubscribeBlockedPost(_ *testing.T) {
 	var (
 		feed   Feed
 		nsends = 200
@@ -229,7 +229,7 @@ func TestFeedUnsubscribeBlockedPost(t *testing.T) {
 
 // Checks that unsubscribing a channel during Send works even if that
 // channel has already been sent on.
-func TestFeedUnsubscribeSentChan(t *testing.T) {
+func TestFeedUnsubscribeSentChan(_ *testing.T) {
 	var (
 		feed Feed
 		ch1  = make(chan int)
@@ -460,11 +460,11 @@ type testFeed struct {
 	b string
 }
 
-func (r testFeed) method1() {
+func (_ testFeed) method1() {
 
 }
 
-func (r testFeed) method2() {
+func (_ testFeed) method2() {
 
 }
 
@@ -479,7 +479,7 @@ type testFeed2 struct {
 	c []byte
 }
 
-func (r testFeed2) method1() {
+func (_ testFeed2) method1() {
 
 }
 
@@ -489,15 +489,15 @@ type testFeed3 struct {
 	c, d []byte
 }
 
-func (r testFeed3) method1() {
+func (_ testFeed3) method1() {
 
 }
 
-func (r testFeed3) method2() {
+func (_ testFeed3) method2() {
 
 }
 
-func (r testFeed3) method3() {
+func (_ testFeed3) method3() {
 
 }
 
