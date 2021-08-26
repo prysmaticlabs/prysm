@@ -143,7 +143,7 @@ func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))
 	cachedState, err := c.Get(101)
-	require.NoError(t, err)
+	require.ErrorContains(t, cache.ErrNotFound.Error(), err)
 	require.Equal(t, nil, cachedState)
 	require.NoError(t, c.Put(101, beaconState))
 	cachedState, err = c.Get(101)
