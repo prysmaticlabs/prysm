@@ -200,6 +200,12 @@ func (s *Service) Start() {
 		PeerManager:      s.cfg.PeerManager,
 		Broadcaster:      s.cfg.Broadcaster,
 		V1Alpha1Server:   validatorServer,
+		StateFetcher: &statefetcher.StateProvider{
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
+		},
 	}
 
 	nodeServer := &nodev1alpha1.Server{

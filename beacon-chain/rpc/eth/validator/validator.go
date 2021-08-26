@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
@@ -16,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -68,7 +68,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	for i, index := range req.Index {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index: %v", err)
 		} else if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 		}
@@ -166,8 +166,53 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}, nil
 }
 
-func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, request *eth.SyncCommitteeDutiesRequest) (*eth.SyncCommitteeDutiesResponse, error) {
-	panic("implement me")
+// GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
+func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	slot, err := helpers.StartSlot(req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
+	}
+	st, err := vs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
+	}
+	committee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
+	}
+
+	duties := make([]*ethpbv2.SyncCommitteeDuty, len(req.Index))
+	for i, index := range req.Index {
+		duty := &ethpbv2.SyncCommitteeDuty{
+			ValidatorIndex: index,
+		}
+		val, err := st.ValidatorAtIndexReadOnly(index)
+		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index: %v", err)
+		} else if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
+		}
+		valPubkey48 := val.PublicKey()
+		valPubkey := valPubkey48[:]
+		duty.Pubkey = valPubkey
+		for j, pubkey := range committee.Pubkeys {
+			if bytes.Equal(valPubkey, pubkey) {
+				duty.ValidatorSyncCommitteeIndices = append(duty.ValidatorSyncCommitteeIndices, types.ValidatorIndex(j))
+			}
+		}
+		duties[i] = duty
+	}
+
+	return &ethpbv2.SyncCommitteeDutiesResponse{
+		Data: duties,
+	}, nil
 }
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
@@ -193,7 +238,7 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
 }
 
-func (vs *Server) ProduceBlockAltair(ctx context.Context, request *eth.ProduceBlockRequestV2) (*eth.ProduceBlockResponseV2, error) {
+func (vs *Server) ProduceBlockAltair(ctx context.Context, request *ethpbv2.ProduceBlockRequestV2) (*ethpbv2.ProduceBlockResponseV2, error) {
 	panic("implement me")
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 )
 
@@ -17,5 +18,6 @@ type Server struct {
 	AttestationsPool attestations.Pool
 	PeerManager      p2p.PeerManager
 	Broadcaster      p2p.Broadcaster
+	StateFetcher     statefetcher.Fetcher
 	V1Alpha1Server   *v1alpha1validator.Server
 }
