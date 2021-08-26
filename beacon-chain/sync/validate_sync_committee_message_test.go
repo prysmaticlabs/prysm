@@ -34,8 +34,8 @@ import (
 )
 
 func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
-	db := testingDB.SetupDB(t)
-	headRoot, keys := fillUpBlocksAndState(context.Background(), t, db)
+	beaconDB := testingDB.SetupDB(t)
+	headRoot, keys := fillUpBlocksAndState(context.Background(), t, beaconDB)
 	defaultTopic := p2p.SyncCommitteeSubnetTopicFormat
 	fakeDigest := []byte{0xAB, 0x00, 0xCC, 0x9E}
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
@@ -67,9 +67,9 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
+				s.cfg.StateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
-				s.cfg.DB = db
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				return s, topic
 			},
@@ -95,9 +95,9 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
+				s.cfg.StateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
-				s.cfg.DB = db
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				return s, topic
 			},
@@ -123,8 +123,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				return s, topic
 			},
@@ -150,8 +150,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 
 				s.setSeenSyncMessageIndexSlot(1, 1, 0)
@@ -179,8 +179,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
@@ -213,11 +213,11 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				msg.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				s.cfg.Chain = &mockChain.ChainService{
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
@@ -261,11 +261,11 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				msg.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
@@ -304,11 +304,11 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				msg.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 
 				numOfVals := hState.NumValidators()
@@ -359,11 +359,11 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(db)
-				s.cfg.DB = db
+				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.DB = beaconDB
 				assert.NoError(t, s.initCaches())
 				msg.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 
