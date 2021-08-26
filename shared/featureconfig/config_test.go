@@ -27,19 +27,16 @@ func TestInitWithReset(t *testing.T) {
 	Init(&Flags{
 		PyrmontTestnet: true,
 	})
-	assert.Equal(t, false, Get().ToledoTestnet)
 	assert.Equal(t, true, Get().PyrmontTestnet)
 
 	// Overwrite previously set value (value that didn't come by default).
 	resetCfg := InitWithReset(&Flags{
 		PyrmontTestnet: false,
 	})
-	assert.Equal(t, false, Get().ToledoTestnet)
 	assert.Equal(t, false, Get().PyrmontTestnet)
 
 	// Reset must get to previously set configuration (not to default config values).
 	resetCfg()
-	assert.Equal(t, false, Get().ToledoTestnet)
 	assert.Equal(t, true, Get().PyrmontTestnet)
 }
 
