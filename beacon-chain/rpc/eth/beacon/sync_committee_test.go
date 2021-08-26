@@ -202,3 +202,38 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 		)
 	})
 }
+
+func TestValidateSyncCommitteeMessage(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		msg := &ethpbv2.SyncCommitteeMessage{
+			Slot:            0,
+			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			ValidatorIndex:  0,
+			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+		}
+		err := validateSyncCommitteeMessage(msg)
+		assert.NoError(t, err)
+	})
+	t.Run("invalid block root", func(t *testing.T) {
+		msg := &ethpbv2.SyncCommitteeMessage{
+			Slot:            0,
+			BeaconBlockRoot: []byte("invalid"),
+			ValidatorIndex:  0,
+			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+		}
+		err := validateSyncCommitteeMessage(msg)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "invalid block root format", err)
+	})
+	t.Run("invalid block root", func(t *testing.T) {
+		msg := &ethpbv2.SyncCommitteeMessage{
+			Slot:            0,
+			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			ValidatorIndex:  0,
+			Signature:       []byte("invalid"),
+		}
+		err := validateSyncCommitteeMessage(msg)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "invalid signature format", err)
+	})
+}
