@@ -205,19 +205,19 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
 func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
-	s.seenAttestationLock.RLock()
-	defer s.seenAttestationLock.RUnlock()
+	s.seenAggregatedAttestationLock.RLock()
+	defer s.seenAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	_, seen := s.seenAttestationCache.Get(string(b))
+	_, seen := s.seenAggregatedAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
 func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
-	s.seenAttestationLock.Lock()
-	defer s.seenAttestationLock.Unlock()
+	s.seenAggregatedAttestationLock.Lock()
+	defer s.seenAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	s.seenAttestationCache.Add(string(b), true)
+	s.seenAggregatedAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
