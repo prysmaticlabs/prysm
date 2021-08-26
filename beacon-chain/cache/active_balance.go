@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethTypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -50,7 +51,10 @@ func NewEffectiveBalanceCache() *BalanceCache {
 }
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
-func (c *BalanceCache) AddTotalEffectiveBalance(st state.BeaconState, balance uint64) error {
+func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance uint64) error {
+	if !featureconfig.Get().EnableActiveBalanceCache {
+		return nil
+	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -64,7 +68,10 @@ func (c *BalanceCache) AddTotalEffectiveBalance(st state.BeaconState, balance ui
 }
 
 // Get returns the current epoch's effective balance for state `st` in cache.
-func (c *BalanceCache) Get(st state.BeaconState) (uint64, error) {
+func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
+	if !featureconfig.Get().EnableActiveBalanceCache {
+		return 0, ErrNotFound
+	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return 0, err
@@ -83,8 +90,8 @@ func (c *BalanceCache) Get(st state.BeaconState) (uint64, error) {
 }
 
 // Given input state `st`, balance key is constructed as:
-// (block_root in `st` at epoch_start_slot - 1) + current_epoch
-func balanceCacheKey(st state.BeaconState) (string, error) {
+// (block_root in `st` at epoch_start_slot - 1) + current_epoch + validator_count
+func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := st.Slot().DivSlot(slotsPerEpoch)
 	epochStartSlot, err := slotsPerEpoch.SafeMul(uint64(currentEpoch))
@@ -102,7 +109,15 @@ func balanceCacheKey(st state.BeaconState) (string, error) {
 		return "", err
 	}
 
+	// Mix in current epoch
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(currentEpoch))
-	return string(append(r, b...)), nil
+	key := append(r, b...)
+
+	// Mix in validator count
+	b = make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(st.NumValidators()))
+	key = append(key, b...)
+
+	return string(key), nil
 }
