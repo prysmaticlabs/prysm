@@ -41,11 +41,20 @@ message BlockSSZResponseV2 {
 }
 
 message BeaconBlockContainerV2 {
-  v1.BeaconBlock phase0Block = 1;
-  BeaconBlockAltair altairBlock = 2;
+  oneof block {
+    v1.BeaconBlock phase0Block = 1;
+    BeaconBlockAltair altairBlock = 2;
+  }
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message SignedBeaconBlockAltair {
+  BeaconBlockAltair message = 1;
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
