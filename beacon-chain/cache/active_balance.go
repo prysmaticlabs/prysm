@@ -123,5 +123,5 @@ func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	h := st.Eth1Data().BlockHash
 	key = append(key, h...)
 
-	return string(h), nil
+	return string(key), nil
 }
