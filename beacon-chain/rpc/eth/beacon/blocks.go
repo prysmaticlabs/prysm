@@ -251,6 +251,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	phase0Blk, err := blk.PbPhase0Block()
 	// Assume we have an Altair block when Phase 0 block is unsupported.
+	// In such case we continue with the rest of the function.
 	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
 	}
@@ -295,6 +296,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	phase0Blk, err := blk.PbPhase0Block()
 	// Assume we have an Altair block when Phase 0 block is unsupported.
+	// In such case we continue with the rest of the function.
 	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not check for phase 0 block")
 	}
