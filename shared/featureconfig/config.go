@@ -36,7 +36,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
-	ToledoTestnet  bool // ToledoTestnet defines the flag through which we can enable the node to run on the Toledo testnet.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
@@ -62,11 +61,10 @@ type Flags struct {
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
+	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
-	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
-
-	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	AttestTimely                   bool   // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
@@ -75,6 +73,10 @@ type Flags struct {
 
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
+
+	// Bug fixes related flags.
+	CorrectlyInsertOrphanedAtts bool
+	CorrectlyPruneCanonicalAtts bool
 }
 
 var featureConfig *Flags
@@ -116,12 +118,7 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context, cfg *Flags) {
-	if ctx.Bool(ToledoTestnet.Name) {
-		log.Warn("Running on Toledo Testnet")
-		params.UseToledoConfig()
-		params.UseToledoNetworkConfig()
-		cfg.ToledoTestnet = true
-	} else if ctx.Bool(PyrmontTestnet.Name) {
+	if ctx.Bool(PyrmontTestnet.Name) {
 		log.Warn("Running on Pyrmont Testnet")
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
@@ -153,10 +150,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 
 	cfg.EnableSSZCache = true
 
-	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		logEnabled(kafkaBootstrapServersFlag)
-		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
-	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
@@ -203,6 +196,18 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
+	}
+	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
+		logEnabled(correctlyInsertOrphanedAtts)
+		cfg.CorrectlyInsertOrphanedAtts = true
+	}
+	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
+		logEnabled(correctlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = true
+	}
+	if ctx.Bool(enableActiveBalanceCache.Name) {
+		logEnabled(enableActiveBalanceCache)
+		cfg.EnableActiveBalanceCache = true
 	}
 	Init(cfg)
 }
