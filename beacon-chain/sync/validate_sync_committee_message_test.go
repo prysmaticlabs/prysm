@@ -430,6 +430,145 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 	}
 }
 
+func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want pubsub.ValidationResult
+	}{
+		{},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := ignoreEmptyCommittee(nil)
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func TestService_rejectIncorrectCommittee(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want pubsub.ValidationResult
+	}{
+		{},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{
+				cfg: tt.cfg,
+			}
+			f := s.rejectIncorrectCommittee(nil, "")
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func TestService_ignoreIfSyncing(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want pubsub.ValidationResult
+	}{
+		{},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{
+				cfg: tt.cfg,
+			}
+			f := s.ignoreIfSyncing()
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func TestService_ignoreInvalidSyncMsgTime(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want pubsub.ValidationResult
+	}{
+		{},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{
+				cfg: tt.cfg,
+			}
+			f := s.ignoreInvalidSyncMsgTime(nil)
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func Test_rejectNilTopic(t *testing.T) {
+	sampleStr := "foo"
+	tests := []struct {
+		name string
+		msg  *pubsub.Message
+		want pubsub.ValidationResult
+	}{
+		{
+			name: "nil",
+			msg: &pubsub.Message{
+				Message: &pubsub_pb.Message{Topic: nil},
+			},
+			want: pubsub.ValidationReject,
+		},
+		{
+			name: "non-nil",
+			msg: &pubsub.Message{
+				Message: &pubsub_pb.Message{Topic: &sampleStr},
+			},
+			want: pubsub.ValidationAccept,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := rejectNilTopic(tt.msg)
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func Test_ignoreEmptyCommittee(t *testing.T) {
+	tests := []struct {
+		name      string
+		committee []types.CommitteeIndex
+		want      pubsub.ValidationResult
+	}{
+		{
+			name:      "nil",
+			committee: nil,
+			want:      pubsub.ValidationIgnore,
+		},
+		{
+			name:      "empty",
+			committee: []types.CommitteeIndex{},
+			want:      pubsub.ValidationIgnore,
+		},
+		{
+			name:      "non-empty",
+			committee: []types.CommitteeIndex{1},
+			want:      pubsub.ValidationAccept,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := ignoreEmptyCommittee(tt.committee)
+			result := f(context.Background())
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
 func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Database) ([32]byte, []bls.SecretKey) {
 	gs, keys := testutil.DeterministicGenesisStateAltair(t, 64)
 	sCom, err := altair.NextSyncCommittee(ctx, gs)
