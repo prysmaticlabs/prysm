@@ -57,7 +57,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	if result := withValidationPipeline(
 		ctx,
 		s.ignoreIfSyncing(),
-		s.rejectNilTopic(msg),
+		rejectNilTopic(msg),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
@@ -87,7 +87,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	// Validate the message's data according to the p2p specification.
 	if result := withValidationPipeline(
 		ctx,
-		s.ignoreEmptyCommittee(committeeIndices),
+		ignoreEmptyCommittee(committeeIndices),
 		s.rejectIncorrectCommittee(committeeIndices, *msg.Topic),
 		s.ignoreHasSeenSyncMsg(m, committeeIndices),
 		s.rejectInvalidSignature(m),
@@ -156,27 +156,9 @@ func (s *Service) ignoreIfSyncing() validationFn {
 	}
 }
 
-func (s *Service) rejectNilTopic(msg *pubsub.Message) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		if msg.Topic == nil {
-			return pubsub.ValidationReject
-		}
-		return pubsub.ValidationAccept
-	}
-}
-
-func (s *Service) ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		if len(indices) == 0 {
-			return pubsub.ValidationIgnore
-		}
-		return pubsub.ValidationAccept
-	}
-}
-
 func (s *Service) ignoreInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
-		ctx, span := trace.StartSpan(ctx, "sync.ifInvalidSyncMsgTime")
+		_, span := trace.StartSpan(ctx, "sync.ifInvalidSyncMsgTime")
 		defer span.End()
 		// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 		if err := altair.ValidateSyncMessageTime(
@@ -198,7 +180,7 @@ func (s *Service) rejectIncorrectCommittee(
 	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
-		ctx, span := trace.StartSpan(ctx, "sync.ifIncorrectCommittee")
+		_, span := trace.StartSpan(ctx, "sync.ifIncorrectCommittee")
 		defer span.End()
 		isValid := false
 		digest, err := s.forkDigest()
@@ -290,6 +272,24 @@ func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validati
 		verified := blsSig.Verify(pKey, sigRoot[:])
 		if !verified {
 			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func rejectNilTopic(msg *pubsub.Message) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		if msg.Topic == nil {
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		if len(indices) == 0 {
+			return pubsub.ValidationIgnore
 		}
 		return pubsub.ValidationAccept
 	}
