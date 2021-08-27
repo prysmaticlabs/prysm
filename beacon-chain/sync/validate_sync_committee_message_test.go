@@ -292,7 +292,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 					BlockRoot:      params.BeaconConfig().ZeroHash[:],
 					Signature:      emptySig[:],
 				}},
-			want: pubsub.ValidationReject,
+			want: pubsub.ValidationIgnore,
 		},
 		{
 			name: "Invalid Sync Committee Signature",
