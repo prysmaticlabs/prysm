@@ -175,7 +175,12 @@ func (s *Service) ignoreInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage) valida
 
 // The `subnet_id` is valid for the given validator. This implies the validator is part of the broader
 // current sync committee along with the correct subcommittee.
-// Check for validity of validator index.
+// We are trying to validate that whatever committee indices that were retrieved from our state for this
+// particular validator are indeed valid for this particular topic. Ex: the topic name can be
+// /eth2/b5303f2a/sync_committee_2/ssz_snappy
+// This would mean that only messages meant for subnet 2 are valid. If a validator creates this sync
+// message and broadcasts it into subnet 2, we need to make sure that whatever committee index and
+// resultant subnet that the validator has is valid for this particular topic.
 func (s *Service) rejectIncorrectCommittee(
 	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
