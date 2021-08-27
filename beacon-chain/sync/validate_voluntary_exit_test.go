@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -20,6 +19,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -73,8 +73,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
+	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -87,7 +86,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, exit)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{
@@ -108,8 +107,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	exit, s := setupValidExit(t)
 	// Set state slot to 1 to cause exit object fail to verify.
 	require.NoError(t, s.SetSlot(1))
-	c, err := lru.New(10)
-	require.NoError(t, err)
+	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -122,7 +120,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, exit)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{

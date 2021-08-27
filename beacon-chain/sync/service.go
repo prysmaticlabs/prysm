@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
@@ -30,6 +29,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -98,18 +98,18 @@ type Service struct {
 	validateBlockLock                sync.RWMutex
 	rateLimiter                      *limiter
 	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   *lru.Cache
+	seenBlockCache                   lru.Cache
 	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   *lru.Cache
+	seenAggregatedAttestationCache   lru.Cache
 	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache *lru.Cache
+	seenUnAggregatedAttestationCache lru.Cache
 	seenExitLock                     sync.RWMutex
-	seenExitCache                    *lru.Cache
+	seenExitCache                    lru.Cache
 	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        *lru.Cache
+	seenProposerSlashingCache        lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
-	badBlockCache                    *lru.Cache
+	badBlockCache                    lru.Cache
 	badBlockLock                     sync.RWMutex
 }
 
@@ -137,9 +137,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	if err := s.initCaches(); err != nil {
-		panic(err)
-	}
+	s.initCaches()
 
 	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
@@ -192,40 +190,14 @@ func (s *Service) Status() error {
 
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
-func (s *Service) initCaches() error {
-	blkCache, err := lru.New(seenBlockSize)
-	if err != nil {
-		return err
-	}
-	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	exitCache, err := lru.New(seenExitSize)
-	if err != nil {
-		return err
-	}
-	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
-	if err != nil {
-		return err
-	}
-	badBlockCache, err := lru.New(badBlockSize)
-	if err != nil {
-		return err
-	}
-	s.seenBlockCache = blkCache
-	s.seenAggregatedAttestationCache = aggregatedAttCache
-	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
-	s.seenExitCache = exitCache
+func (s *Service) initCaches() {
+	s.seenBlockCache = lru.New(seenBlockSize)
+	s.seenAggregatedAttestationCache = lru.New(seenAggregatedAttSize)
+	s.seenUnAggregatedAttestationCache = lru.New(seenUnaggregatedAttSize)
+	s.seenExitCache = lru.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
-	s.seenProposerSlashingCache = proposerSlashingCache
-	s.badBlockCache = badBlockCache
-
-	return nil
+	s.seenProposerSlashingCache = lru.New(seenProposerSlashingSize)
+	s.badBlockCache = lru.New(badBlockSize)
 }
 
 func (s *Service) registerHandlers() {

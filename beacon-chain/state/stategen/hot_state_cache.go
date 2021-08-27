@@ -3,10 +3,10 @@ package stategen
 import (
 	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -25,18 +25,14 @@ var (
 
 // hotStateCache is used to store the processed beacon state after finalized check point..
 type hotStateCache struct {
-	cache *lru.Cache
+	cache lru.Cache
 	lock  sync.RWMutex
 }
 
 // newHotStateCache initializes the map and underlying cache.
 func newHotStateCache() *hotStateCache {
-	cache, err := lru.New(hotStateCacheSize)
-	if err != nil {
-		panic(err)
-	}
 	return &hotStateCache{
-		cache: cache,
+		cache: lru.New(hotStateCacheSize),
 	}
 }
 

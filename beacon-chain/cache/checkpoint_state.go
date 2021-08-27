@@ -3,12 +3,12 @@ package cache
 import (
 	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -30,18 +30,14 @@ var (
 
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
 type CheckpointStateCache struct {
-	cache *lru.Cache
+	cache lru.Cache
 	lock  sync.RWMutex
 }
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
 func NewCheckpointStateCache() *CheckpointStateCache {
-	cache, err := lru.New(maxCheckpointStateSize)
-	if err != nil {
-		panic(err)
-	}
 	return &CheckpointStateCache{
-		cache: cache,
+		cache: lru.New(maxCheckpointStateSize),
 	}
 }
 

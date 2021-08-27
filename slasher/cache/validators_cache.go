@@ -1,10 +1,10 @@
 package cache
 
 import (
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 
 // PublicKeyCache is used to store the public keys needed for signature verification.
 type PublicKeyCache struct {
-	cache *lru.Cache
+	cache lru.Cache
 }
 
 // NewPublicKeyCache initializes the cache.
@@ -31,11 +31,7 @@ func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface
 	if size != 0 {
 		validatorsCacheSize = size
 	}
-	cache, err := lru.NewWithEvict(validatorsCacheSize, onEvicted)
-	if err != nil {
-		return nil, err
-	}
-	return &PublicKeyCache{cache: cache}, nil
+	return &PublicKeyCache{cache: lru.NewWithEvict(validatorsCacheSize, onEvicted)}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.

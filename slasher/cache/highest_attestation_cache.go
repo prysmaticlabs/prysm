@@ -1,8 +1,8 @@
 package cache
 
 import (
-	lru "github.com/hashicorp/golang-lru"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -12,7 +12,7 @@ var (
 
 // HighestAttestationCache is used to store per validator id highest attestation in cache.
 type HighestAttestationCache struct {
-	cache *lru.Cache
+	cache lru.Cache
 }
 
 // NewHighestAttestationCache initializes the cache.
@@ -20,11 +20,7 @@ func NewHighestAttestationCache(size int, onEvicted func(key interface{}, value 
 	if size != 0 {
 		highestAttCacheSize = size
 	}
-	cache, err := lru.NewWithEvict(highestAttCacheSize, onEvicted)
-	if err != nil {
-		return nil, err
-	}
-	return &HighestAttestationCache{cache: cache}, nil
+	return &HighestAttestationCache{cache: lru.NewWithEvict(highestAttCacheSize, onEvicted)}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
