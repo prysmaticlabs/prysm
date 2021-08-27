@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -22,13 +21,28 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var (
-	errWrongMessage = errors.New("wrong pubsub message")
-	errNilMessage   = errors.New("nil pubsub message")
-)
+// Sync committee subnets are used to propagate unaggregated sync committee messages to subsections of the network.
+//
+//  sync_committee_{subnet_id}
 
-type validationFn func(ctx context.Context) pubsub.ValidationResult
+// The sync_committee_{subnet_id} topics are used to propagate unaggregated sync committee messages
+// to the subnet subnet_id to be aggregated before being gossiped to the
+// global sync_committee_contribution_and_proof topic.
 
+// The following validations MUST pass before forwarding the sync_committee_message on the network:
+
+// [IGNORE] The message's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance),
+// i.e. sync_committee_message.slot == current_slot.
+// [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in
+// compute_subnets_for_sync_committee(state, sync_committee_message.validator_index).
+// Note this validation implies the validator is part of the broader current sync
+// committee along with the correct subcommittee.
+// [IGNORE] There has been no other valid sync committee message for the declared slot for the
+// validator referenced by sync_committee_message.validator_index (this requires maintaining
+// a cache of size SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT for each subnet that can be
+// flushed after each slot). Note this validation is per topic so that for a given slot, multiple
+// messages could be forwarded with the same validator_index as long as the subnet_ids are distinct.
+// [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
 func (s *Service) validateSyncCommitteeMessage(
 	ctx context.Context, pid peer.ID, msg *pubsub.Message,
 ) pubsub.ValidationResult {
@@ -39,15 +53,16 @@ func (s *Service) validateSyncCommitteeMessage(
 		return pubsub.ValidationAccept
 	}
 
-	// Basic validations for the topic.
+	// Basic validations before proceeding.
 	if result := withValidationPipeline(
 		ctx,
-		s.ifSyncing(pubsub.ValidationIgnore),
-		s.ifNilTopic(msg, pubsub.ValidationReject),
+		s.ignoreIfSyncing(),
+		s.rejectNilTopic(msg),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
 
+	// Read the data from the pubsub message, and reject if there is an error.
 	m, err := s.readSyncCommitteeMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
@@ -58,16 +73,11 @@ func (s *Service) validateSyncCommitteeMessage(
 	// Validate sync message times before proceeding.
 	if result := withValidationPipeline(
 		ctx,
-		s.ifInvalidSyncMsgTime(m, pubsub.ValidationIgnore),
+		s.ignoreInvalidSyncMsgTime(m),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
 
-	pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
 	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -77,10 +87,22 @@ func (s *Service) validateSyncCommitteeMessage(
 	// Validate the message's data according to the p2p specification.
 	if result := withValidationPipeline(
 		ctx,
-		s.ifEmptyCommittee(committeeIndices, pubsub.ValidationIgnore),
-		s.ifIncorrectCommittee(committeeIndices, *msg.Topic, pubsub.ValidationReject),
-		s.ifHasSeenSyncMsg(m, committeeIndices, pubsub.ValidationIgnore),
-		s.ifInvalidSignature(m, pubKey, pubsub.ValidationIgnore),
+		s.ignoreEmptyCommittee(committeeIndices),
+		s.rejectIncorrectCommittee(committeeIndices, *msg.Topic),
+		s.ignoreHasSeenSyncMsg(m, committeeIndices),
+	); result != pubsub.ValidationAccept {
+		return result
+	}
+
+	pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+
+	if result := withValidationPipeline(
+		ctx,
+		s.rejectInvalidSignature(m, pubKey),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
@@ -91,6 +113,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	return pubsub.ValidationAccept
 }
 
+// Parse a sync committee message from a pubsub message.
 func (s *Service) readSyncCommitteeMessage(msg *pubsub.Message) (*ethpb.SyncCommitteeMessage, error) {
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
@@ -106,6 +129,7 @@ func (s *Service) readSyncCommitteeMessage(msg *pubsub.Message) (*ethpb.SyncComm
 	return m, nil
 }
 
+// Mark all a slot and validator index as seen for every index in a committee and subnet.
 func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []types.CommitteeIndex, m *ethpb.SyncCommitteeMessage) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	for _, idx := range committeeIndices {
@@ -135,51 +159,45 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 	s.seenSyncMessageCache.Add(string(b), true)
 }
 
-func (s *Service) ifSyncing(onErr pubsub.ValidationResult) validationFn {
+func (s *Service) ignoreIfSyncing() validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		if s.cfg.InitialSync.Syncing() {
-			return onErr
+			return pubsub.ValidationIgnore
 		}
 		return pubsub.ValidationAccept
 	}
 }
 
-func (s *Service) ifNilTopic(msg *pubsub.Message, onErr pubsub.ValidationResult) validationFn {
+func (s *Service) rejectNilTopic(msg *pubsub.Message) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		if msg.Topic == nil {
-			return onErr
+			return pubsub.ValidationReject
 		}
 		return pubsub.ValidationAccept
 	}
 }
 
-func (s *Service) ifEmptyCommittee(indices []types.CommitteeIndex, onErr pubsub.ValidationResult) validationFn {
+func (s *Service) ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		if len(indices) == 0 {
-			return onErr
+			return pubsub.ValidationIgnore
 		}
 		return pubsub.ValidationAccept
 	}
 }
 
-func (s *Service) ifInvalidDecodedPubsub(onErr pubsub.ValidationResult) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		return onErr
-	}
-}
-
-// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-func (s *Service) ifInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage, onErr pubsub.ValidationResult) validationFn {
+func (s *Service) ignoreInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		ctx, span := trace.StartSpan(ctx, "sync.ifInvalidSyncMsgTime")
 		defer span.End()
+		// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 		if err := altair.ValidateSyncMessageTime(
 			m.Slot,
 			s.cfg.Chain.GenesisTime(),
 			params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 		); err != nil {
 			traceutil.AnnotateError(span, err)
-			return onErr
+			return pubsub.ValidationIgnore
 		}
 		return pubsub.ValidationAccept
 	}
@@ -188,8 +206,8 @@ func (s *Service) ifInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage, onErr pubs
 // The `subnet_id` is valid for the given validator. This implies the validator is part of the broader
 // current sync committee along with the correct subcommittee.
 // Check for validity of validator index.
-func (s *Service) ifIncorrectCommittee(
-	committeeIndices []types.CommitteeIndex, topic string, onErr pubsub.ValidationResult,
+func (s *Service) rejectIncorrectCommittee(
+	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		ctx, span := trace.StartSpan(ctx, "sync.ifIncorrectCommittee")
@@ -212,7 +230,7 @@ func (s *Service) ifIncorrectCommittee(
 			}
 		}
 		if !isValid {
-			return onErr
+			return pubsub.ValidationReject
 		}
 		return pubsub.ValidationAccept
 	}
@@ -221,8 +239,8 @@ func (s *Service) ifIncorrectCommittee(
 // There has been no other valid sync committee signature for the declared `slot`, `validator_index`,
 // and `subcommittee_index`. In the event of `validator_index` belongs to multiple subnets, as long
 // as one subnet has not been seen, we should let it in.
-func (s *Service) ifHasSeenSyncMsg(
-	m *ethpb.SyncCommitteeMessage, committeeIndices []types.CommitteeIndex, onErr pubsub.ValidationResult,
+func (s *Service) ignoreHasSeenSyncMsg(
+	m *ethpb.SyncCommitteeMessage, committeeIndices []types.CommitteeIndex,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		var isValid bool
@@ -236,19 +254,20 @@ func (s *Service) ifHasSeenSyncMsg(
 			}
 		}
 		if !isValid {
-			return onErr
+			return pubsub.ValidationIgnore
 		}
 		return pubsub.ValidationAccept
 	}
 }
 
-// The signature is valid for the message `beacon_block_root` for the validator referenced by `validator_index`.
-func (s *Service) ifInvalidSignature(
-	m *ethpb.SyncCommitteeMessage, pubKey [48]byte, onErr pubsub.ValidationResult,
+func (s *Service) rejectInvalidSignature(
+	m *ethpb.SyncCommitteeMessage, pubKey [48]byte,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		ctx, span := trace.StartSpan(ctx, "sync.ifInvalidSignature")
 		defer span.End()
+
+		// Ignore the message if it is not possible to retrieve the signing root.
 		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -261,11 +280,14 @@ func (s *Service) ifInvalidSignature(
 			return pubsub.ValidationIgnore
 		}
 
+		// We reject a malformed signature from bytes according to the p2p specification.
 		blsSig, err := bls.SignatureFromBytes(m.Signature)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
+
+		// Ignore a malformed public key from bytes according to the p2p specification.
 		pKey, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -273,7 +295,7 @@ func (s *Service) ifInvalidSignature(
 		}
 		verified := blsSig.Verify(pKey, sigRoot[:])
 		if !verified {
-			return onErr
+			return pubsub.ValidationReject
 		}
 		return pubsub.ValidationAccept
 	}

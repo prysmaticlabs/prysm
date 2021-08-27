@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,7 +94,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
@@ -128,7 +129,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.host = h
 	s.host.RemoveStreamHandler(identify.IDDelta)
-
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
@@ -166,6 +166,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 			},
 		},
 	})
+
+	// Initialize Data maps.
+	types.InitializeDataMaps()
 
 	return s, nil
 }
@@ -220,6 +223,9 @@ func (s *Service) Start() {
 		}
 		s.connectWithAllPeers(addrs)
 	}
+	// Initialize metadata according to the
+	// current epoch.
+	s.RefreshENR()
 
 	// Periodic functions.
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
@@ -253,6 +259,7 @@ func (s *Service) Start() {
 	if p2pHostDNS != "" {
 		logExternalDNSAddr(s.host.ID(), p2pHostDNS, p2pTCPPort)
 	}
+	go s.forkWatcher()
 }
 
 // Stop the p2p service and terminate all peer connections.

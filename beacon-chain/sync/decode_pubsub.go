@@ -34,8 +34,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	}
-
-	base := p2p.GossipTopicMappings[topic]
+	base := p2p.GossipTopicMappings(topic, 0)
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
