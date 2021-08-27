@@ -35,7 +35,7 @@ ssz_gen_marshal(
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
     objs = [
-        "BeaconBlockContainerV2",
+        "SignedBeaconBlockAltair",
     ],
 )
 
