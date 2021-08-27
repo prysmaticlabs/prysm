@@ -40,7 +40,8 @@ var _ shared.Service = (*Service)(nil)
 
 const rangeLimit = 1024
 const seenBlockSize = 1000
-const seenAttSize = 10000
+const seenUnaggregatedAttSize = 20000
+const seenAggregatedAttSize = 1024
 const seenSyncContributionSize = 300
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
@@ -86,31 +87,33 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                       *Config
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	slotToPendingBlocks       *gcache.Cache
-	seenPendingBlocks         map[[32]byte]bool
-	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
-	pendingAttsLock           sync.RWMutex
-	pendingQueueLock          sync.RWMutex
-	chainStarted              *abool.AtomicBool
-	validateBlockLock         sync.RWMutex
-	rateLimiter               *limiter
-	seenBlockLock             sync.RWMutex
-	seenBlockCache            *lru.Cache
-	seenAttestationLock       sync.RWMutex
-	seenAttestationCache      *lru.Cache
-	seenExitLock              sync.RWMutex
-	seenExitCache             *lru.Cache
-	seenProposerSlashingLock  sync.RWMutex
-	seenProposerSlashingCache *lru.Cache
-	seenAttesterSlashingLock  sync.RWMutex
-	seenAttesterSlashingCache map[uint64]bool
+	cfg                              *Config
+	ctx                              context.Context
+	cancel                           context.CancelFunc
+	slotToPendingBlocks              *gcache.Cache
+	seenPendingBlocks                map[[32]byte]bool
+	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
+	pendingAttsLock                  sync.RWMutex
+	pendingQueueLock                 sync.RWMutex
+	chainStarted                     *abool.AtomicBool
+	validateBlockLock                sync.RWMutex
+	rateLimiter                      *limiter
+	seenBlockLock                    sync.RWMutex
+	seenBlockCache                   *lru.Cache
+	seenAggregatedAttestationLock    sync.RWMutex
+	seenAggregatedAttestationCache   *lru.Cache
+	seenUnAggregatedAttestationLock  sync.RWMutex
+	seenUnAggregatedAttestationCache *lru.Cache
+	seenExitLock                     sync.RWMutex
+	seenExitCache                    *lru.Cache
+	seenProposerSlashingLock         sync.RWMutex
+	seenProposerSlashingCache        *lru.Cache
+	seenAttesterSlashingLock         sync.RWMutex
+	seenAttesterSlashingCache        map[uint64]bool
 	seenSyncContributionLock  sync.RWMutex
 	seenSyncContributionCache *lru.Cache
-	badBlockCache             *lru.Cache
-	badBlockLock              sync.RWMutex
+	badBlockCache                    *lru.Cache
+	badBlockLock                     sync.RWMutex
 }
 
 // NewService initializes new regular sync service.
@@ -197,7 +200,11 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	attCache, err := lru.New(seenAttSize)
+	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
+	if err != nil {
+		return err
+	}
+	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
 	if err != nil {
 		return err
 	}
@@ -218,7 +225,8 @@ func (s *Service) initCaches() error {
 		return err
 	}
 	s.seenBlockCache = blkCache
-	s.seenAttestationCache = attCache
+	s.seenAggregatedAttestationCache = aggregatedAttCache
+	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
 	s.seenSyncContributionCache = syncContrCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
