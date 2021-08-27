@@ -4,15 +4,18 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
+	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// GetBeaconState returns the full beacon state for a given state id.
+// GetBeaconState returns the full beacon state for a given state ID.
 func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconState")
 	defer span.End()
@@ -32,7 +35,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 	}, nil
 }
 
-// GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given stateId.
+// GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
 func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZ")
 	defer span.End()
@@ -50,12 +53,61 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 	return &ethpbv1.BeaconStateSSZResponse{Data: sszState}, nil
 }
 
-func (ds *Server) GetBeaconStateV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
-	panic("implement me")
+// GetBeaconStateV2 returns the full beacon state for a given state ID.
+func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateV2")
+	defer span.End()
+
+	state, err := ds.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+	switch state.Version() {
+	case version.Phase0:
+		protoState, err := state.ToProto()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
+		}
+		return &ethpbv2.BeaconStateResponseV2{
+			Data: &ethpbv2.BeaconStateContainer{
+				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoState},
+			},
+		}, nil
+	case version.Altair:
+		altairState, ok := state.(*statev2.BeaconState)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
+		}
+		protoState, err := migration.BeaconStateAltairToV2(altairState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
+		}
+		return &ethpbv2.BeaconStateResponseV2{
+			Data: &ethpbv2.BeaconStateContainer{
+				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
+			},
+		}, nil
+	default:
+		return nil, status.Error(codes.Internal, "Unsupported state version")
+	}
 }
 
-func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, request *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
-	panic("implement me")
+// GetBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
+func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZV2")
+	defer span.End()
+
+	state, err := ds.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+
+	sszState, err := state.MarshalSSZ()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
+	}
+
+	return &ethpbv2.BeaconStateSSZResponseV2{Data: sszState}, nil
 }
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
