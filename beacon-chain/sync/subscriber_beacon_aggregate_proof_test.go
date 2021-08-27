@@ -15,13 +15,12 @@ import (
 )
 
 func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.T) {
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenUnAggregatedAttestationCache: c,
+		seenUnAggregatedAttestationCache: lru.New(10),
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
@@ -38,13 +37,12 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 }
 
 func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testing.T) {
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenUnAggregatedAttestationCache: c,
+		seenUnAggregatedAttestationCache: lru.New(10),
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{

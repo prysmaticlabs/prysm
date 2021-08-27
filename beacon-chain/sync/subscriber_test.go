@@ -130,7 +130,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	c := lru.New(10)
 	r := Service{
 		ctx: ctx,
 		cfg: &Config{
@@ -140,7 +139,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 			Chain:        chainService,
 			DB:           d,
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lru.New(10),
 		chainStarted:              abool.New(),
 	}
 	topic := "/eth2/%x/proposer_slashing"

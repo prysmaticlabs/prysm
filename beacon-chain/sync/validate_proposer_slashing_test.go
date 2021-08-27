@@ -113,14 +113,13 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidProposerSlashing(t)
 
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: s},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -151,14 +150,13 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: state},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)

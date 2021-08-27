@@ -73,7 +73,6 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -82,7 +81,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: c,
+		seenExitCache: lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -107,7 +106,6 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	exit, s := setupValidExit(t)
 	// Set state slot to 1 to cause exit object fail to verify.
 	require.NoError(t, s.SetSlot(1))
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -116,7 +114,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: c,
+		seenExitCache: lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)

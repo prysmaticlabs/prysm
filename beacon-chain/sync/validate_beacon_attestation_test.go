@@ -35,7 +35,6 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidAttestation: true,
 	}
 
-	c := lru.New(10)
 	s := &Service{
 		cfg: &Config{
 			InitialSync:       &mockSync.Sync{IsSyncing: false},
@@ -45,7 +44,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenUnAggregatedAttestationCache: c,
+		seenUnAggregatedAttestationCache: lru.New(10),
 	}
 	s.initCaches()
 

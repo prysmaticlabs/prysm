@@ -223,8 +223,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, s.SetGenesisTime(uint64(time.Now().Unix())))
-	c := lru.New(10)
-	require.NoError(t, err)
 	r = &Service{
 		cfg: &Config{
 			P2P: p1,
@@ -238,7 +236,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 			AttPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenUnAggregatedAttestationCache: c,
+		seenUnAggregatedAttestationCache: lru.New(10),
 	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
@@ -303,8 +301,6 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P: p1,
@@ -318,7 +314,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			AttPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lru.New(10),
 	}
 
 	sb = testutil.NewBeaconBlock()

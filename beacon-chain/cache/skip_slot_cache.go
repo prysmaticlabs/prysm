@@ -35,9 +35,8 @@ type SkipSlotCache struct {
 
 // NewSkipSlotCache initializes the map and underlying cache.
 func NewSkipSlotCache() *SkipSlotCache {
-	cache := lru.New(8)
 	return &SkipSlotCache{
-		cache:      cache,
+		cache:      lru.New(8),
 		inProgress: make(map[[32]byte]bool),
 	}
 }

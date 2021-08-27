@@ -60,8 +60,6 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ProposerIndex = proposerIdx
 	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -77,8 +75,8 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache: c,
-		badBlockCache:  c2,
+		seenBlockCache: lru.New(10),
+		badBlockCache:  lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -105,8 +103,6 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	msg.Block.ParentRoot = testutil.Random32Bytes(t)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(msg)))
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		cfg: &Config{
@@ -116,8 +112,8 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache: c,
-		badBlockCache:  c2,
+		seenBlockCache: lru.New(10),
+		badBlockCache:  lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -156,8 +152,6 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -175,8 +169,8 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -217,8 +211,6 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -236,8 +228,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -281,8 +273,6 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
@@ -299,8 +289,8 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -344,8 +334,6 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
@@ -362,8 +350,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -446,8 +434,6 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Now(),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -464,8 +450,8 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 			StateGen:      stateGen,
 		},
 		chainStarted:        abool.New(),
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -500,8 +486,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	msg.Block.ParentRoot = testutil.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		cfg: &Config{
@@ -512,8 +496,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -546,8 +530,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
 	genesisTime := time.Now()
-	c := lru.New(10)
-	c2 := lru.New(10)
 	chainService := &mock.ChainService{
 		Genesis: time.Unix(genesisTime.Unix()-1000, 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -562,8 +544,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache: c,
-		badBlockCache:  c2,
+		seenBlockCache: lru.New(10),
+		badBlockCache:  lru.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -600,8 +582,6 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -617,8 +597,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -652,8 +632,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 1,
 		}}
-	c := lru.New(10)
-	c2 := lru.New(10)
+
 	r := &Service{
 		cfg: &Config{
 			DB:            db,
@@ -663,8 +642,8 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 			AttPool:       attestations.NewPool(),
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		seenBlockCache: c,
-		badBlockCache:  c2,
+		seenBlockCache: lru.New(10),
+		badBlockCache:  lru.New(10),
 	}
 
 	b := testutil.NewBeaconBlock()
@@ -721,8 +700,6 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	msg.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -741,8 +718,8 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -787,8 +764,6 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	currBlockRoot, err := msg.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	c := lru.New(10)
-	c2 := lru.New(10)
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
@@ -804,8 +779,8 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -884,8 +859,6 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	require.NoError(t, err)
 
 	genesisTime := time.Now()
-	c := lru.New(10)
-	c2 := lru.New(10)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{
@@ -903,8 +876,8 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      c,
-		badBlockCache:       c2,
+		seenBlockCache:      lru.New(10),
+		badBlockCache:       lru.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}

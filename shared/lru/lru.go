@@ -5,6 +5,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
+// Cache is interface to be used instead of golang-lru Cache struct to limit
+// number of imports when wrapper is used.
 type Cache interface {
 	Purge()
 	Add(key, value interface{}) (evicted bool)

@@ -550,7 +550,6 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -565,7 +564,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lru.New(10),
 	}
 	r.initCaches()
 	// Set beacon block as bad.
@@ -640,7 +639,6 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -656,7 +654,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lru.New(10),
 	}
 	r.initCaches()
 
