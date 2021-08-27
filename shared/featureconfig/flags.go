@@ -31,10 +31,6 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	kafkaBootstrapServersFlag = &cli.StringFlag{
-		Name:  "kafka-url",
-		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
-	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
@@ -182,7 +178,6 @@ var E2EValidatorFlags = []string{
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
-	kafkaBootstrapServersFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	PyrmontTestnet,

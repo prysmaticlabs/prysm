@@ -138,6 +138,11 @@ func (p *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 	return nil
 }
 
+// BroadcastSyncCommitteeMessage -- fake.
+func (b *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
+	return nil
+}
+
 // InterceptPeerDial -- fake.
 func (p *FakeP2P) InterceptPeerDial(peer.ID) (allow bool) {
 	return true
