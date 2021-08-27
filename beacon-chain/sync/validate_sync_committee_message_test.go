@@ -432,15 +432,40 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 
 func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 	tests := []struct {
-		name string
-		cfg  *Config
-		want pubsub.ValidationResult
+		name      string
+		setupSvc  func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string)
+		msg       *ethpb.SyncCommitteeMessage
+		committee []types.CommitteeIndex
+		want      pubsub.ValidationResult
 	}{
-		{},
+		{
+			name: "has seen",
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
+				assert.NoError(t, s.initCaches())
+				s.setSeenSyncMessageIndexSlot(1, 0, 0)
+				return s, ""
+			},
+			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 0, Slot: 1},
+			committee: []types.CommitteeIndex{1, 2, 3},
+			want:      pubsub.ValidationIgnore,
+		},
+		{
+			name: "has not seen",
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
+				assert.NoError(t, s.initCaches())
+				s.setSeenSyncMessageIndexSlot(1, 0, 0)
+				return s, ""
+			},
+			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 1, Slot: 1},
+			committee: []types.CommitteeIndex{1, 2, 3},
+			want:      pubsub.ValidationAccept,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := ignoreEmptyCommittee(nil)
+			s := &Service{}
+			s, _ = tt.setupSvc(s, tt.msg, "")
+			f := s.ignoreHasSeenSyncMsg(tt.msg, tt.committee)
 			result := f(context.Background())
 			require.Equal(t, tt.want, result)
 		})
@@ -473,7 +498,20 @@ func TestService_ignoreIfSyncing(t *testing.T) {
 		cfg  *Config
 		want pubsub.ValidationResult
 	}{
-		{},
+		{
+			name: "syncing",
+			cfg: &Config{
+				InitialSync: &mockSync.Sync{IsSyncing: true},
+			},
+			want: pubsub.ValidationIgnore,
+		},
+		{
+			name: "not-syncing",
+			cfg: &Config{
+				InitialSync: &mockSync.Sync{IsSyncing: false},
+			},
+			want: pubsub.ValidationAccept,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -489,17 +527,22 @@ func TestService_ignoreIfSyncing(t *testing.T) {
 
 func TestService_ignoreInvalidSyncMsgTime(t *testing.T) {
 	tests := []struct {
-		name string
-		cfg  *Config
-		want pubsub.ValidationResult
+		name     string
+		setupSvc func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string)
+		want     pubsub.ValidationResult
 	}{
-		{},
+		{
+			name: "not found",
+			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
+				assert.NoError(t, s.initCaches())
+				return s, ""
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				cfg: tt.cfg,
-			}
+			s := &Service{}
+			s, _ = tt.setupSvc(s, nil, "")
 			f := s.ignoreInvalidSyncMsgTime(nil)
 			result := f(context.Background())
 			require.Equal(t, tt.want, result)
