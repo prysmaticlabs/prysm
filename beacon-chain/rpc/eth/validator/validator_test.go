@@ -18,8 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
@@ -185,7 +184,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		}
 		_, err := vs.GetAttesterDuties(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "Invalid index", err)
+		assert.ErrorContains(t, "Invalid validator index", err)
 	})
 }
 
@@ -381,7 +380,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		_, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, fmt.Sprintf("index %d out of range", req.Index), err)
+		assert.ErrorContains(t, "Invalid validator index", err)
 	})
 }
 
@@ -517,7 +516,7 @@ func TestProduceAttestationData(t *testing.T) {
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	v1Alpha1Server := &v1alpha1validator.Server{
-		P2P:              &mockp2p.MockBroadcaster{},
+		P2P:              &p2pmock.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher: &mockChain.ChainService{
@@ -885,7 +884,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		chain := &mockChain.ChainService{
 			Genesis: time.Now(), Slot: &chainSlot,
 		}
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			TimeFetcher: chain,
 			Broadcaster: broadcaster,
@@ -910,7 +909,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("nil aggregate", func(t *testing.T) {
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			Broadcaster: broadcaster,
 		}
@@ -961,7 +960,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("zero signature", func(t *testing.T) {
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			Broadcaster: broadcaster,
 		}
@@ -984,7 +983,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("zero proof", func(t *testing.T) {
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			Broadcaster: broadcaster,
 		}
@@ -1007,7 +1006,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("zero message signature", func(t *testing.T) {
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			Broadcaster: broadcaster,
 		}
@@ -1046,7 +1045,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("wrong signature length", func(t *testing.T) {
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			Broadcaster: broadcaster,
 		}
@@ -1107,7 +1106,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		chain := &mockChain.ChainService{
 			Genesis: time.Now().Add(time.Hour * 2), Slot: &chainSlot,
 		}
-		broadcaster := &p2pMock.MockBroadcaster{}
+		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
 			TimeFetcher: chain,
 			Broadcaster: broadcaster,
