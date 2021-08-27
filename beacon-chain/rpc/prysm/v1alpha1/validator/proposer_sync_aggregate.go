@@ -50,22 +50,17 @@ func (cs proposerSyncContributions) dedup() (proposerSyncContributions, error) {
 			a := cs[i]
 			for j := i + 1; j < len(cs); j++ {
 				b := cs[j]
-				aContainsB, err := a.AggregationBits.Contains(b.AggregationBits)
-				if err != nil {
+				if aContainsB, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
 					return nil, err
-				}
-				if aContainsB {
+				} else if aContainsB {
 					// a contains b, b is redundant.
 					cs[j] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
 					cs = cs[:len(cs)-1]
 					j--
-				}
-				bContainsA, err := b.AggregationBits.Contains(a.GetAggregationBits())
-				if err != nil {
+				} else if bContainsA, err := b.AggregationBits.Contains(a.GetAggregationBits()); err != nil {
 					return nil, err
-				}
-				if bContainsA {
+				} else if bContainsA {
 					// b contains a, a is redundant.
 					cs[i] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
