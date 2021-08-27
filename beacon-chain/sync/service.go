@@ -112,8 +112,8 @@ type Service struct {
 	seenProposerSlashingCache        *lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
-	seenSyncMessageLock       sync.RWMutex
-	seenSyncMessageCache      *lru.Cache
+	seenSyncMessageLock              sync.RWMutex
+	seenSyncMessageCache             *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
