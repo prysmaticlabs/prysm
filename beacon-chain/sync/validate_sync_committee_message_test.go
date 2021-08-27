@@ -411,9 +411,6 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "Bad Topic" {
-				t.Skip()
-			}
 			tt.svc, tt.args.topic = tt.setupSvc(tt.svc, tt.args.msg, tt.args.topic)
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
 			assert.NoError(t, err)

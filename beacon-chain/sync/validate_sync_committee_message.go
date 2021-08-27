@@ -90,19 +90,7 @@ func (s *Service) validateSyncCommitteeMessage(
 		s.ignoreEmptyCommittee(committeeIndices),
 		s.rejectIncorrectCommittee(committeeIndices, *msg.Topic),
 		s.ignoreHasSeenSyncMsg(m, committeeIndices),
-	); result != pubsub.ValidationAccept {
-		return result
-	}
-
-	pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
-	if result := withValidationPipeline(
-		ctx,
-		s.rejectInvalidSignature(m, pubKey),
+		s.rejectInvalidSignature(m),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
@@ -260,9 +248,7 @@ func (s *Service) ignoreHasSeenSyncMsg(
 	}
 }
 
-func (s *Service) rejectInvalidSignature(
-	m *ethpb.SyncCommitteeMessage, pubKey [48]byte,
-) validationFn {
+func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		ctx, span := trace.StartSpan(ctx, "sync.ifInvalidSignature")
 		defer span.End()
@@ -280,6 +266,13 @@ func (s *Service) rejectInvalidSignature(
 			return pubsub.ValidationIgnore
 		}
 
+		// Reject for a validator index that is not found.
+		pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+
 		// We reject a malformed signature from bytes according to the p2p specification.
 		blsSig, err := bls.SignatureFromBytes(m.Signature)
 		if err != nil {
@@ -293,6 +286,7 @@ func (s *Service) rejectInvalidSignature(
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
+
 		verified := blsSig.Verify(pKey, sigRoot[:])
 		if !verified {
 			return pubsub.ValidationReject
