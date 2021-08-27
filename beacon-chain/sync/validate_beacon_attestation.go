@@ -197,21 +197,21 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
 func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
-	s.seenAttestationLock.RLock()
-	defer s.seenAttestationLock.RUnlock()
+	s.seenUnAggregatedAttestationLock.RLock()
+	defer s.seenUnAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	_, seen := s.seenAttestationCache.Get(string(b))
+	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
 func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) {
-	s.seenAttestationLock.Lock()
-	defer s.seenAttestationLock.Unlock()
+	s.seenUnAggregatedAttestationLock.Lock()
+	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	s.seenAttestationCache.Add(string(b), true)
+	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
