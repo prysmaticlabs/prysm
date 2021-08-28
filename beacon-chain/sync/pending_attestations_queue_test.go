@@ -120,8 +120,8 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 				}},
 			AttPool: attestations.NewPool(),
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAttestationCache: c,
+		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	sb = testutil.NewBeaconBlock()
@@ -237,8 +237,8 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 				}},
 			AttPool: attestations.NewPool(),
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAttestationCache: c,
+		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
@@ -317,8 +317,8 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 				}},
 			AttPool: attestations.NewPool(),
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAttestationCache: c,
+		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		seenAggregatedAttestationCache: c,
 	}
 
 	sb = testutil.NewBeaconBlock()
