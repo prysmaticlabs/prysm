@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -106,7 +106,6 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
@@ -121,7 +120,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 			AttPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenUnAggregatedAttestationCache: c,
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
 	sb = testutil.NewBeaconBlock()
@@ -236,7 +235,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 			AttPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenUnAggregatedAttestationCache: lru.New(10),
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
@@ -314,7 +313,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			AttPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAggregatedAttestationCache: lru.New(10),
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
 	sb = testutil.NewBeaconBlock()

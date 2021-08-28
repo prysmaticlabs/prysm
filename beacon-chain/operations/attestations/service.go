@@ -7,7 +7,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,7 +20,7 @@ type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc
 	err                      error
-	forkChoiceProcessedRoots lru.Cache
+	forkChoiceProcessedRoots *lru.Cache
 	genesisTime              uint64
 }
 
@@ -32,7 +33,7 @@ type Config struct {
 // NewService instantiates a new attestation pool service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
-	cache := lru.New(forkChoiceProcessedRootsSize)
+	cache := lruwrpr.New(forkChoiceProcessedRootsSize)
 
 	if cfg.pruneInterval == 0 {
 		// Prune expired attestations from the pool every slot interval.

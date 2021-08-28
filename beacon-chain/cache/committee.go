@@ -6,10 +6,11 @@ import (
 	"errors"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -33,7 +34,7 @@ var (
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
-	CommitteeCache lru.Cache
+	CommitteeCache *lru.Cache
 	lock           sync.RWMutex
 }
 
@@ -49,7 +50,7 @@ func committeeKeyFn(obj interface{}) (string, error) {
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
 	return &CommitteeCache{
-		CommitteeCache: lru.New(int(maxCommitteesCacheSize)),
+		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
 	}
 }
 

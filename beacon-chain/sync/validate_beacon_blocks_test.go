@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -75,8 +75,8 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache: lru.New(10),
-		badBlockCache:  lru.New(10),
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -112,8 +112,8 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache: lru.New(10),
-		badBlockCache:  lru.New(10),
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -169,8 +169,8 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -228,8 +228,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -289,8 +289,8 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -350,8 +350,8 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -450,8 +450,8 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 			StateGen:      stateGen,
 		},
 		chainStarted:        abool.New(),
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -496,8 +496,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -544,8 +544,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache: lru.New(10),
-		badBlockCache:  lru.New(10),
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -597,8 +597,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -642,8 +642,8 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 			AttPool:       attestations.NewPool(),
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		seenBlockCache: lru.New(10),
-		badBlockCache:  lru.New(10),
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
 
 	b := testutil.NewBeaconBlock()
@@ -718,8 +718,8 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -779,8 +779,8 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -876,8 +876,8 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 			BlockNotifier: chainService.BlockNotifier(),
 			StateGen:      stateGen,
 		},
-		seenBlockCache:      lru.New(10),
-		badBlockCache:       lru.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}

@@ -22,7 +22,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -119,7 +119,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 			Chain:       &mock.ChainService{State: s},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: lru.New(10),
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -156,7 +156,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 			Chain:       &mock.ChainService{State: state},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: lru.New(10),
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)

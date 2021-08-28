@@ -4,17 +4,18 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 type subnetIDs struct {
-	attester          lru.Cache
+	attester          *lru.Cache
 	attesterLock      sync.RWMutex
-	aggregator        lru.Cache
+	aggregator        *lru.Cache
 	aggregatorLock    sync.RWMutex
 	persistentSubnets *cache.Cache
 	subnetsLock       sync.RWMutex
@@ -27,8 +28,8 @@ func newSubnetIDs() *subnetIDs {
 	// Given a node can calculate committee assignments of current epoch and next epoch.
 	// Max size is set to 2 epoch length.
 	cacheSize := int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxCommitteesPerSlot * 2))
-	attesterCache := lru.New(cacheSize)
-	aggregatorCache := lru.New(cacheSize)
+	attesterCache := lruwrpr.New(cacheSize)
+	aggregatorCache := lruwrpr.New(cacheSize)
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	subLength := epochDuration * time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription)
 	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)

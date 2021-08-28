@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -68,7 +68,7 @@ type validator struct {
 	genesisTime                        uint64
 	highestValidSlot                   types.Slot
 	domainDataCache                    *ristretto.Cache
-	aggregatedSlotCommitteeIDCache     lru.Cache
+	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             slotutil.Ticker
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse

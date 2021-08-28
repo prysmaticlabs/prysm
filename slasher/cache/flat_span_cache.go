@@ -1,14 +1,15 @@
 package cache
 
 import (
+	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 // EpochFlatSpansCache is used to store the spans needed on a per-epoch basis for slashing detection.
 type EpochFlatSpansCache struct {
-	cache lru.Cache
+	cache *lru.Cache
 }
 
 // NewEpochFlatSpansCache initializes the underlying cache with the given size and on evict function.
@@ -16,7 +17,7 @@ func NewEpochFlatSpansCache(size int, onEvicted func(key interface{}, value inte
 	if size != 0 {
 		epochSpansCacheSize = size
 	}
-	return &EpochFlatSpansCache{cache: lru.NewWithEvict(epochSpansCacheSize, onEvicted)}, nil
+	return &EpochFlatSpansCache{cache: lruwrpr.NewWithEvict(epochSpansCacheSize, onEvicted)}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.

@@ -19,7 +19,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -81,7 +81,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: lru.New(10),
+		seenExitCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
@@ -114,7 +114,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: lru.New(10),
+		seenExitCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)

@@ -22,7 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -139,7 +139,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 			Chain:        chainService,
 			DB:           d,
 		},
-		seenProposerSlashingCache: lru.New(10),
+		seenProposerSlashingCache: lruwrpr.New(10),
 		chainStarted:              abool.New(),
 	}
 	topic := "/eth2/%x/proposer_slashing"

@@ -6,10 +6,11 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"go.opencensus.io/trace"
 )
 
@@ -27,7 +28,7 @@ var (
 
 // SkipSlotCache is used to store the cached results of processing skip slots in state.ProcessSlots.
 type SkipSlotCache struct {
-	cache      lru.Cache
+	cache      *lru.Cache
 	lock       sync.RWMutex
 	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
 	inProgress map[[32]byte]bool
@@ -36,7 +37,7 @@ type SkipSlotCache struct {
 // NewSkipSlotCache initializes the map and underlying cache.
 func NewSkipSlotCache() *SkipSlotCache {
 	return &SkipSlotCache{
-		cache:      lru.New(8),
+		cache:      lruwrpr.New(8),
 		inProgress: make(map[[32]byte]bool),
 	}
 }

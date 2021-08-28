@@ -3,8 +3,9 @@ package logutil
 import (
 	"io"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
@@ -29,7 +30,7 @@ type Streamer interface {
 // a feed and write them to open websocket connections.
 type StreamServer struct {
 	feed  *event.Feed
-	cache lru.Cache
+	cache *lru.Cache
 }
 
 // NewStreamServer initializes a new stream server capable of
@@ -37,7 +38,7 @@ type StreamServer struct {
 func NewStreamServer() *StreamServer {
 	ss := &StreamServer{
 		feed:  new(event.Feed),
-		cache: lru.New(logCacheSize),
+		cache: lruwrpr.New(logCacheSize),
 	}
 	addLogWriter(ss)
 	return ss

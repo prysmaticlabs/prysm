@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
@@ -29,7 +30,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -98,18 +99,18 @@ type Service struct {
 	validateBlockLock                sync.RWMutex
 	rateLimiter                      *limiter
 	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   lru.Cache
+	seenBlockCache                   *lru.Cache
 	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   lru.Cache
+	seenAggregatedAttestationCache   *lru.Cache
 	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache lru.Cache
+	seenUnAggregatedAttestationCache *lru.Cache
 	seenExitLock                     sync.RWMutex
-	seenExitCache                    lru.Cache
+	seenExitCache                    *lru.Cache
 	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        lru.Cache
+	seenProposerSlashingCache        *lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
-	badBlockCache                    lru.Cache
+	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
 
@@ -191,13 +192,13 @@ func (s *Service) Status() error {
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
 func (s *Service) initCaches() {
-	s.seenBlockCache = lru.New(seenBlockSize)
-	s.seenAggregatedAttestationCache = lru.New(seenAggregatedAttSize)
-	s.seenUnAggregatedAttestationCache = lru.New(seenUnaggregatedAttSize)
-	s.seenExitCache = lru.New(seenExitSize)
+	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
+	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
+	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
-	s.seenProposerSlashingCache = lru.New(seenProposerSlashingSize)
-	s.badBlockCache = lru.New(badBlockSize)
+	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
+	s.badBlockCache = lruwrpr.New(badBlockSize)
 }
 
 func (s *Service) registerHandlers() {

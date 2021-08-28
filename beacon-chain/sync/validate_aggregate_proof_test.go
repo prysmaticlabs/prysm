@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -111,7 +111,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
-	c := lru.New(10)
+	c := lruwrpr.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -178,8 +178,6 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -192,7 +190,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 	r.initCaches()
 
@@ -261,7 +259,6 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			AttPool:     attestations.NewPool(),
@@ -272,7 +269,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 				State: beaconState},
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 	r.initCaches()
@@ -350,7 +347,6 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -366,7 +362,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 	r.initCaches()
 
@@ -440,7 +436,6 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c := lru.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -458,7 +453,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 	r.initCaches()
 
@@ -564,7 +559,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: lru.New(10),
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 	r.initCaches()
 	// Set beacon block as bad.
@@ -654,7 +649,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: lru.New(10),
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 	r.initCaches()
 
