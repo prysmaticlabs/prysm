@@ -106,7 +106,6 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P: p1,
