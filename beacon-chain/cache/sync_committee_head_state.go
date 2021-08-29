@@ -1,6 +1,7 @@
 package cache
 
 import (
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -17,10 +18,7 @@ type SyncCommitteeHeadStateCache struct {
 
 // NewSyncCommitteeHeadState initializes a LRU cache for `SyncCommitteeHeadState` with size of 1.
 func NewSyncCommitteeHeadState() *SyncCommitteeHeadStateCache {
-	c, err := lru.New(1) // only need size of 1 to avoid redundant state copies, hashing, and slot processing.
-	if err != nil {
-		panic(err)
-	}
+	c := lruwrpr.New(1) // only need size of 1 to avoid redundant state copies, hashing, and slot processing.
 	return &SyncCommitteeHeadStateCache{cache: c}
 }
 

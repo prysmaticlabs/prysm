@@ -3,7 +3,7 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 

@@ -3,7 +3,7 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/lruwrpr"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (

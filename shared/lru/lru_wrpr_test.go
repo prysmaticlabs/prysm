@@ -1,4 +1,4 @@
-package lruwrpr
+package lru
 
 import (
 	"github.com/stretchr/testify/assert"
