@@ -15,4 +15,5 @@ go_test(
         "spectest",
     ],
     deps = ["//spectest/shared/altair/sanity:go_default_library"],
+    size = "small",
 )
