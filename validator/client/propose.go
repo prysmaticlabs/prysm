@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -43,11 +44,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)
 	default:
-		v.proposeBlock(ctx, slot, pubKey)
+		v.proposeBlockPhase0(ctx, slot, pubKey)
 	}
 }
 
-func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -55,7 +56,7 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "validator.proposeBlock")
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -402,6 +403,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
 		}
+		v.blockSignature(ctx, block, domain.SignatureDomain, pubKey, &validatorpb.SignRequest_BlockV2{BlockV2: block})
 		return sig.Marshal(), domain, nil
 	case version.Phase0:
 		block, ok := b.Proto().(*ethpb.BeaconBlock)
@@ -425,6 +427,25 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	default:
 		return nil, nil, errors.New("unknown block type")
 	}
+}
+
+// Sign block with signature domain and private key
+func (v *validator) blockSignature(ctx  context.Context,
+	obj ssz.HashRoot,
+	domain []byte,
+	pubKey [48]byte,
+	blk *validatorpb.SignRequest_Block) ([]byte, error) {
+	blockRoot, err := helpers.ComputeSigningRoot(obj, domain)
+	if err != nil {
+		return nil, errors.Wrap(err, signingRootErr)
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     blockRoot[:],
+		SignatureDomain: domain,
+		Object:          blk,
+	})
+	return sig.Marshal(), err
 }
 
 // Sign voluntary exit with proposer domain and private key.
