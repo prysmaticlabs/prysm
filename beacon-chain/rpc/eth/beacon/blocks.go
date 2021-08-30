@@ -241,7 +241,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 }
 
 // GetBlockV2 retrieves block details for given block ID.
-func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
+func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.SignedBlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockAltair")
 	defer span.End()
 
@@ -254,9 +254,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
-		return &ethpbv2.BlockResponseV2{
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+		return &ethpbv2.SignedBlockResponseV2{
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Block:     &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 		}, nil
@@ -269,9 +269,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	return &ethpbv2.BlockResponseV2{
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+	return &ethpbv2.SignedBlockResponseV2{
+		Data: &ethpbv2.SignedBeaconBlockContainerV2{
+			Block:     &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),
 		},
 	}, nil
