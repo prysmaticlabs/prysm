@@ -221,3 +221,12 @@ func SyncCommitteePeriodStartEpoch(e types.Epoch) (types.Epoch, error) {
 	}
 	return types.Epoch(startEpoch), nil
 }
+
+// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
+func CanUpgradeToAltair(slot types.Slot) bool {
+	epochStart := IsEpochStart(slot)
+	altairEpoch := SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	return epochStart && altairEpoch
+}
