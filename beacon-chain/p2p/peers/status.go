@@ -39,7 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	metadata "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -235,7 +235,7 @@ func (p *Status) SetMetadata(pid peer.ID, metaData metadata.Metadata) {
 	defer p.store.Unlock()
 
 	peerData := p.store.PeerDataGetOrCreate(pid)
-	peerData.MetaData = metaData
+	peerData.MetaData = metaData.Copy()
 }
 
 // Metadata returns a copy of the metadata corresponding to the provided

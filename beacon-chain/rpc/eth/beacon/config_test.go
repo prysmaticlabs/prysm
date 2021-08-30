@@ -124,7 +124,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 89, len(resp.Data))
+	assert.Equal(t, 90, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -313,6 +313,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x08000000", v)
 		case "DOMAIN_CONTRIBUTION_AND_PROOF":
 			assert.Equal(t, "0x09000000", v)
+		case "TRANSITION_TOTAL_DIFFICULTY":
+			assert.Equal(t, "0", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
