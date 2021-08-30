@@ -453,9 +453,9 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.Copy2dBytes(altairState.BlockRoots()),
-		StateRoots:      bytesutil.Copy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.Copy2dBytes(altairState.HistoricalRoots()),
+		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -465,7 +465,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		Eth1DepositIndex:           altairState.Eth1DepositIndex(),
 		Validators:                 resultValidators,
 		Balances:                   altairState.Balances(),
-		RandaoMixes:                bytesutil.Copy2dBytes(altairState.RandaoMixes()),
+		RandaoMixes:                bytesutil.SafeCopy2dBytes(altairState.RandaoMixes()),
 		Slashings:                  altairState.Slashings(),
 		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
 		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
@@ -484,11 +484,11 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		},
 		InactivityScores: sourceInactivityScores,
 		CurrentSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.Copy2dBytes(sourceCurrSyncCommittee.Pubkeys),
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
 		},
 		NextSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.Copy2dBytes(sourceNextSyncCommittee.Pubkeys),
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
 	}
