@@ -28,6 +28,7 @@ func (s *State) ReplayBlocks(
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 	var err error
+	log.Debugf("Replaying state from slot %d till slot %d", state.Slot(), targetSlot)
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {

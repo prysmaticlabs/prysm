@@ -103,6 +103,10 @@ var (
 		Name: "beacon_reorg_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
+	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "saved_orphaned_att_total",
+		Help: "Count the number of times an orphaned attestation is saved",
+	})
 	attestationInclusionDelay = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "attestation_inclusion_delay_slots",
@@ -112,11 +116,11 @@ var (
 	)
 	syncHeadStateMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sync_head_state_miss",
-		Help: "The number of sync head state requests that are present in the cache.",
+		Help: "The number of sync head state requests that are not present in the cache.",
 	})
 	syncHeadStateHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sync_head_state_hit",
-		Help: "The number of sync head state requests that are not present in the cache.",
+		Help: "The number of sync head state requests that are present in the cache.",
 	})
 )
 

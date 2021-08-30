@@ -29,7 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
@@ -39,7 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -61,8 +61,8 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *ethpb.BeaconState
-	incomingAttestation  chan *ethpb.Attestation
+	canonicalStateChan   chan *ethpbv1alpha1.BeaconState
+	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
 	clientConnectionLock sync.Mutex
@@ -116,8 +116,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *ethpb.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:  make(chan *ethpbv1alpha1.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 }
@@ -202,6 +202,12 @@ func (s *Service) Start() {
 		PeerManager:      s.cfg.PeerManager,
 		Broadcaster:      s.cfg.Broadcaster,
 		V1Alpha1Server:   validatorServer,
+		StateFetcher: &statefetcher.StateProvider{
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
+		},
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -247,8 +253,8 @@ func (s *Service) Start() {
 		Broadcaster:                 s.cfg.Broadcaster,
 		StateGen:                    s.cfg.StateGen,
 		SyncChecker:                 s.cfg.SyncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
+		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
@@ -270,10 +276,10 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
-	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	ethpb.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
@@ -302,11 +308,10 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		ethpb.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
-
-	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

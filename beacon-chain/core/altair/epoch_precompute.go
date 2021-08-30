@@ -16,7 +16,7 @@ import (
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
 func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) ([]*precompute.Validator, *precompute.Balance, error) {
-	ctx, span := trace.StartSpan(ctx, "altair.InitializeEpochValidators")
+	_, span := trace.StartSpan(ctx, "altair.InitializeEpochValidators")
 	defer span.End()
 	pValidators := make([]*precompute.Validator, st.NumValidators())
 	bal := &precompute.Balance{}
@@ -73,6 +73,9 @@ func ProcessInactivityScores(
 	state state.BeaconState,
 	vals []*precompute.Validator,
 ) (state.BeaconState, []*precompute.Validator, error) {
+	_, span := trace.StartSpan(ctx, "altair.ProcessInactivityScores")
+	defer span.End()
+
 	cfg := params.BeaconConfig()
 	if helpers.CurrentEpoch(state) == cfg.GenesisEpoch {
 		return state, vals, nil
@@ -85,6 +88,8 @@ func ProcessInactivityScores(
 
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
+	prevEpoch := helpers.PrevEpoch(state)
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	for i, v := range vals {
 		if !precompute.EligibleForRewards(v) {
 			continue
@@ -104,7 +109,7 @@ func ProcessInactivityScores(
 			v.InactivityScore += bias
 		}
 
-		if !helpers.IsInInactivityLeak(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) {
+		if !helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			score := recoveryRate
 			// Prevents underflow below 0.
 			if score > v.InactivityScore {
@@ -130,7 +135,7 @@ func ProcessEpochParticipation(
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
 ) ([]*precompute.Validator, *precompute.Balance, error) {
-	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpochParticipation")
+	_, span := trace.StartSpan(ctx, "altair.ProcessEpochParticipation")
 	defer span.End()
 
 	cp, err := state.CurrentEpochParticipation()

@@ -56,6 +56,12 @@ const (
 var (
 	// a bool to check if we enable scoring for messages in the mesh sent for near first deliveries.
 	meshDeliveryIsScored = false
+
+	// Defines the variables representing the different time periods.
+	oneHundredEpochs   = 100 * oneEpochDuration()
+	invalidDecayPeriod = 50 * oneEpochDuration()
+	twentyEpochs       = 20 * oneEpochDuration()
+	tenEpochs          = 10 * oneEpochDuration()
 )
 
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
@@ -78,10 +84,10 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 		IPColocationFactorWhitelist: nil,
 		BehaviourPenaltyWeight:      -15.92,
 		BehaviourPenaltyThreshold:   6,
-		BehaviourPenaltyDecay:       scoreDecay(10 * oneEpochDuration()),
-		DecayInterval:               1 * oneSlotDuration(),
+		BehaviourPenaltyDecay:       scoreDecay(tenEpochs),
+		DecayInterval:               oneSlotDuration(),
 		DecayToZero:                 decayToZero,
-		RetainScore:                 100 * oneEpochDuration(),
+		RetainScore:                 oneHundredEpochs,
 	}
 	return scoreParams, thresholds
 }
@@ -92,21 +98,21 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 		return nil, err
 	}
 	switch {
-	case strings.Contains(topic, "beacon_block"):
+	case strings.Contains(topic, GossipBlockMessage):
 		return defaultBlockTopicParams(), nil
-	case strings.Contains(topic, "beacon_aggregate_and_proof"):
+	case strings.Contains(topic, GossipAggregateAndProofMessage):
 		return defaultAggregateTopicParams(activeValidators)
-	case strings.Contains(topic, "beacon_attestation"):
+	case strings.Contains(topic, GossipAttestationMessage):
 		return defaultAggregateSubnetTopicParams(activeValidators)
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
 		return defaultSyncSubnetTopicParams(activeValidators)
-	case strings.Contains(topic, "sync_committee_contribution_and_proof"):
+	case strings.Contains(topic, GossipContributionAndProofMessage):
 		return defaultSyncContributionTopicParams()
-	case strings.Contains(topic, "voluntary_exit"):
+	case strings.Contains(topic, GossipExitMessage):
 		return defaultVoluntaryExitTopicParams(), nil
-	case strings.Contains(topic, "proposer_slashing"):
+	case strings.Contains(topic, GossipProposerSlashingMessage):
 		return defaultProposerSlashingTopicParams(), nil
-	case strings.Contains(topic, "attester_slashing"):
+	case strings.Contains(topic, GossipAttesterSlashingMessage):
 		return defaultAttesterSlashingTopicParams(), nil
 	default:
 		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
@@ -168,7 +174,7 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    1,
-		FirstMessageDeliveriesDecay:     scoreDecay(20 * oneEpochDuration()),
+		FirstMessageDeliveriesDecay:     scoreDecay(twentyEpochs),
 		FirstMessageDeliveriesCap:       23,
 		MeshMessageDeliveriesWeight:     meshWeight,
 		MeshMessageDeliveriesDecay:      scoreDecay(decayEpoch * oneEpochDuration()),
@@ -179,7 +185,7 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(decayEpoch * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -140.4475,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}
 }
 
@@ -221,7 +227,7 @@ func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScorePar
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / aggregateWeight,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}, nil
 }
 
@@ -263,7 +269,7 @@ func defaultSyncContributionTopicParams() (*pubsub.TopicScoreParams, error) {
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / syncContributionWeight,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}, nil
 }
 
@@ -332,7 +338,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / topicWeight,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}, nil
 }
 
@@ -361,14 +367,14 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(rate))
 	if err != nil {
-		log.Warnf("skipping initializing topic scoring: %v", err)
+		log.WithError(err).Warn("Skipping initializing topic scoring")
 		return nil, nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(subnetWeight)/dampeningFactor)
 	if err != nil {
-		log.Warnf("skipping initializing topic scoring: %v", err)
+		log.WithError(err).Warn("Skipping initializing topic scoring")
 		return nil, nil
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
@@ -395,7 +401,7 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / topicWeight,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}, nil
 }
 
@@ -406,7 +412,7 @@ func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
 		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    36,
-		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesDecay:     scoreDecay(oneHundredEpochs),
 		FirstMessageDeliveriesCap:       1,
 		MeshMessageDeliveriesWeight:     0,
 		MeshMessageDeliveriesDecay:      0,
@@ -417,7 +423,7 @@ func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
 		MeshFailurePenaltyWeight:        0,
 		MeshFailurePenaltyDecay:         0,
 		InvalidMessageDeliveriesWeight:  -2000,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}
 }
 
@@ -428,7 +434,7 @@ func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
 		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    36,
-		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesDecay:     scoreDecay(oneHundredEpochs),
 		FirstMessageDeliveriesCap:       1,
 		MeshMessageDeliveriesWeight:     0,
 		MeshMessageDeliveriesDecay:      0,
@@ -439,7 +445,7 @@ func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
 		MeshFailurePenaltyWeight:        0,
 		MeshFailurePenaltyDecay:         0,
 		InvalidMessageDeliveriesWeight:  -2000,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}
 }
 
@@ -450,7 +456,7 @@ func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
 		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    2,
-		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesDecay:     scoreDecay(oneHundredEpochs),
 		FirstMessageDeliveriesCap:       5,
 		MeshMessageDeliveriesWeight:     0,
 		MeshMessageDeliveriesDecay:      0,
@@ -461,7 +467,7 @@ func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
 		MeshFailurePenaltyWeight:        0,
 		MeshFailurePenaltyDecay:         0,
 		InvalidMessageDeliveriesWeight:  -2000,
-		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
 	}
 }
 
@@ -521,7 +527,7 @@ func scoreByWeight(weight, threshold float64) float64 {
 
 // maxScore attainable by a peer.
 func maxScore() float64 {
-	totalWeight := beaconBlockWeight + aggregateWeight + +syncContributionWeight +
+	totalWeight := beaconBlockWeight + aggregateWeight + syncContributionWeight +
 		attestationTotalWeight + syncCommitteesTotalWeight + attesterSlashingWeight +
 		proposerSlashingWeight + voluntaryExitWeight
 	return (maxInMeshScore + maxFirstDeliveryScore) * totalWeight

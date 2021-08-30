@@ -13,7 +13,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"

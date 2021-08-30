@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	fssz "github.com/ferranbt/fastssz"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -103,16 +104,10 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		return
 	}
 
-	selectionProofs := make([][]byte, len(indexRes.Indices))
-	for i, index := range indexRes.Indices {
-		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := uint64(index) / subCommitteeSize
-		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
-		if err != nil {
-			log.Errorf("Could not sign selection data: %v", err)
-			return
-		}
-		selectionProofs[i] = selectionProof
+	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
+	if err != nil {
+		log.Errorf("Could not get selection proofs: %v", err)
+		return
 	}
 
 	v.waitToSlotTwoThirds(ctx, slot)
@@ -175,30 +170,38 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	}
 }
 
+// Signs and returns selection proofs per validator for slot and pub key.
+func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey [48]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
+	selectionProofs := make([][]byte, len(indexRes.Indices))
+	cfg := params.BeaconConfig()
+	size := cfg.SyncCommitteeSize
+	subCount := cfg.SyncCommitteeSubnetCount
+	for i, index := range indexRes.Indices {
+		subSize := size / subCount
+		subnet := uint64(index) / subSize
+		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
+		if err != nil {
+			return nil, err
+		}
+		selectionProofs[i] = selectionProof
+	}
+	return selectionProofs, nil
+}
+
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
 func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err
 	}
-
 	data := &ethpb.SyncAggregatorSelectionData{
 		Slot:              slot,
 		SubcommitteeIndex: index,
 	}
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	sig, err := v.computeAndSign(ctx, data, pubKey, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
-		SigningRoot:     root[:],
-		SignatureDomain: domain.SignatureDomain,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	return sig.Marshal(), nil
 }
 
@@ -208,19 +211,22 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 	if err != nil {
 		return nil, err
 	}
-	var sig bls.Signature
-	root, err := helpers.ComputeSigningRoot(c, d.SignatureDomain)
+	sig, err := v.computeAndSign(ctx, c, pubKey, d.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	return sig.Marshal(), nil
+}
+
+// This computes the signing root of hash tree root capable object `obj` and signs it using public key `pubKey` along with the signature domain `sigDomain`.
+func (v *validator) computeAndSign(ctx context.Context, obj fssz.HashRoot, pubKey [48]byte, sigDomain []byte) (bls.Signature, error) {
+	root, err := helpers.ComputeSigningRoot(obj, sigDomain)
+	if err != nil {
+		return nil, err
+	}
+	return v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
-		SignatureDomain: d.SignatureDomain,
+		SignatureDomain: sigDomain,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return sig.Marshal(), nil
 }
