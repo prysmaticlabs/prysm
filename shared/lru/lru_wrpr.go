@@ -2,6 +2,7 @@ package lru
 
 import (
 	"fmt"
+
 	lru "github.com/hashicorp/golang-lru"
 )
 

@@ -1,13 +1,13 @@
 package cache
 
 import (
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 // SyncCommitteeHeadStateCache for the latest head state requested by a sync committee participant.
