@@ -144,6 +144,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		},
 		InactivityScores: []uint64{0, 0, 0},
 	})
+	require.NoError(t, err)
 	validators, balance, err := InitializeEpochValidators(context.Background(), st)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), st, balance, validators)
