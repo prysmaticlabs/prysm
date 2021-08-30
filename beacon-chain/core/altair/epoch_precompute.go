@@ -129,6 +129,14 @@ func ProcessInactivityScores(
 
 // ProcessEpochParticipation processes the epoch participation in state and updates individual validator's pre computes,
 // it also tracks and updates epoch attesting balances.
+// Spec code:
+// if epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//    active_validator_indices = get_active_validator_indices(state, epoch)
+//    participating_indices = [i for i in active_validator_indices if has_flag(epoch_participation[i], flag_index)]
+//    return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
 func ProcessEpochParticipation(
 	ctx context.Context,
 	state state.BeaconState,
@@ -147,7 +155,7 @@ func ProcessEpochParticipation(
 	sourceIdx := cfg.TimelySourceFlagIndex
 	headIdx := cfg.TimelyHeadFlagIndex
 	for i, b := range cp {
-		if HasValidatorFlag(b, targetIdx) {
+		if HasValidatorFlag(b, targetIdx) && vals[i].IsActiveCurrentEpoch {
 			vals[i].IsCurrentEpochTargetAttester = true
 		}
 	}
@@ -156,13 +164,13 @@ func ProcessEpochParticipation(
 		return nil, nil, err
 	}
 	for i, b := range pp {
-		if HasValidatorFlag(b, sourceIdx) {
+		if HasValidatorFlag(b, sourceIdx) && vals[i].IsActivePrevEpoch {
 			vals[i].IsPrevEpochAttester = true
 		}
-		if HasValidatorFlag(b, targetIdx) {
+		if HasValidatorFlag(b, targetIdx) && vals[i].IsActivePrevEpoch {
 			vals[i].IsPrevEpochTargetAttester = true
 		}
-		if HasValidatorFlag(b, headIdx) {
+		if HasValidatorFlag(b, headIdx) && vals[i].IsActivePrevEpoch {
 			vals[i].IsPrevEpochHeadAttester = true
 		}
 	}
