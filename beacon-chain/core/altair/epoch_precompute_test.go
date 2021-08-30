@@ -128,9 +128,9 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
-			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 1},
-			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},                                                  // Inactive
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 2},                                    // Inactive current epoch, active previous epoch
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch}, // Active
 		},
 		CurrentEpochParticipation: []byte{
 			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex),
@@ -157,7 +157,9 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	}, validators[0])
 	require.DeepEqual(t, &precompute.Validator{
 		IsActiveCurrentEpoch:         false,
-		IsActivePrevEpoch:            false,
+		IsActivePrevEpoch:            true,
+		IsPrevEpochAttester:          true,
+		IsPrevEpochTargetAttester:    true,
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 	}, validators[1])
@@ -171,9 +173,9 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		IsPrevEpochTargetAttester:    true,
 		IsPrevEpochHeadAttester:      true,
 	}, validators[2])
-	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, balance.PrevEpochAttested)
+	require.Equal(t, balance.PrevEpochAttested, 2*params.BeaconConfig().MaxEffectiveBalance)
 	require.Equal(t, balance.CurrentEpochTargetAttested, params.BeaconConfig().MaxEffectiveBalance)
-	require.Equal(t, balance.PrevEpochTargetAttested, params.BeaconConfig().MaxEffectiveBalance)
+	require.Equal(t, balance.PrevEpochTargetAttested, 2*params.BeaconConfig().MaxEffectiveBalance)
 	require.Equal(t, balance.PrevEpochHeadAttested, params.BeaconConfig().MaxEffectiveBalance)
 }
 
