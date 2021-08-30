@@ -50,17 +50,17 @@ func (cs proposerSyncContributions) dedup() (proposerSyncContributions, error) {
 			a := cs[i]
 			for j := i + 1; j < len(cs); j++ {
 				b := cs[j]
-				if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+				if aContainsB, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
 					return nil, err
-				} else if c {
+				} else if aContainsB {
 					// a contains b, b is redundant.
 					cs[j] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
 					cs = cs[:len(cs)-1]
 					j--
-				} else if c, err := b.AggregationBits.Contains(a.GetAggregationBits()); err != nil {
+				} else if bContainsA, err := b.AggregationBits.Contains(a.GetAggregationBits()); err != nil {
 					return nil, err
-				} else if c {
+				} else if bContainsA {
 					// b contains a, a is redundant.
 					cs[i] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
@@ -82,6 +82,9 @@ func (cs proposerSyncContributions) mostProfitable() *eth.SyncCommitteeContribut
 		return nil
 	}
 	mostProfitable := cs[0]
+	if len(cs) < 2 {
+		return mostProfitable
+	}
 	for _, c := range cs[1:] {
 		if c.AggregationBits.Count() > mostProfitable.AggregationBits.Count() {
 			mostProfitable = c
