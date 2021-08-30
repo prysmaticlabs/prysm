@@ -241,7 +241,7 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
 }
 
-func (vs *Server) ProduceBlockAltair(ctx context.Context, request *ethpbv2.ProduceBlockRequestV2) (*ethpbv2.ProduceBlockResponseV2, error) {
+func (vs *Server) ProduceBlockV2(ctx context.Context, request *eth.ProduceBlockRequestV2) (*eth.ProduceBlockResponseV2, error) {
 	panic("implement me")
 }
 
