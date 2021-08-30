@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 )
 
@@ -234,15 +236,34 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			switch state.Version() {
+			case version.Phase0:
+				state, err = ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			case version.Altair:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
+			default:
+				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
+		}
+
+		if CanUpgradeToAltair(state.Slot()) {
+			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, err
+			}
 		}
 	}
 
@@ -254,6 +275,15 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	return state, nil
+}
+
+// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
+func CanUpgradeToAltair(slot types.Slot) bool {
+	epochStart := helpers.IsEpochStart(slot)
+	altairEpoch := helpers.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	return epochStart && altairEpoch
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.

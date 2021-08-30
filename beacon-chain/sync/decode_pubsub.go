@@ -22,8 +22,8 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 	if err != nil {
 		return nil, err
 	}
-	base, ok := p2p.GossipTopicMappings[topic]
-	if !ok {
+	base := p2p.GossipTopicMappings(topic, 0)
+	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
 	m := proto.Clone(base)

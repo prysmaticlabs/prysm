@@ -45,7 +45,7 @@ message SyncCommitteeDuty {
   uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 
   // The indices of the validator in the sync committee.
-  repeated uint64 sync_committee_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  repeated uint64 validator_sync_committee_indices = 3;
 }
 
 message ProduceBlockRequestV2 {
