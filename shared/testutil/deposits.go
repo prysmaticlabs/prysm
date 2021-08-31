@@ -236,7 +236,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create trie")
 	}
-	root := depositTrie.Root()
+	root := depositTrie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		BlockHash:    root[:],
 		DepositRoot:  root[:],
