@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"math/bits"
 	"regexp"
-	"strconv"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 )
+
+var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
@@ -354,11 +355,7 @@ func IsHex(b []byte) (bool, error) {
 	if b == nil {
 		return false, nil
 	}
-	r, err := regexp.Compile("^(0x)[0-9a-fA-F]+$")
-	if err != nil {
-		return false, errors.Wrapf(err, "could not parse regex")
-	}
-	return r.Match(b), nil
+	return hexRegex.Match(b), nil
 }
 
 // IsHexOfLen checks whether the byte array is a hex number prefixed with '0x' and containing the required number of digits.
@@ -366,9 +363,8 @@ func IsHexOfLen(b []byte, length uint64) (bool, error) {
 	if b == nil {
 		return false, nil
 	}
-	r, err := regexp.Compile("^(0x)[0-9a-fA-F]{" + strconv.FormatUint(length, 10) + "}$")
-	if err != nil {
-		return false, errors.Wrapf(err, "could not parse regex")
-	}
-	return r.Match(b), nil
+	matches := hexRegex.Match(b)
+	// Add 2 to account for '0x'
+	expectedLen := int(length) + 2
+	return matches && len(b) == expectedLen, nil
 }
