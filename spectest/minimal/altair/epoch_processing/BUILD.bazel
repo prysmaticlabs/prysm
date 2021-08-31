@@ -5,7 +5,6 @@ go_test(
     size = "small",
     srcs = [
         "effective_balance_updates_test.go",
-        "epoch_processing_test.go",
         "eth1_data_reset_test.go",
         "historical_roots_update_test.go",
         "inactivity_updates_test.go",
@@ -25,8 +24,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = [
-        "//shared/params:go_default_library",
-        "//spectest/shared/altair/epoch_processing:go_default_library",
-    ],
+    deps = ["//spectest/shared/altair/epoch_processing:go_default_library"],
 )
