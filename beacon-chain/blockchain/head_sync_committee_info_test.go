@@ -5,11 +5,50 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
+
+func TestService_HeadSyncCommitteeFetcher_Errors(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	c := &Service{
+		cfg: &Config{
+			StateGen: stategen.New(beaconDB),
+		},
+	}
+	c.head = &head{}
+	_, err := c.HeadCurrentSyncCommitteeIndices(context.Background(), types.ValidatorIndex(0), types.Slot(0))
+	require.ErrorContains(t, "nil state", err)
+
+	_, err = c.HeadNextSyncCommitteeIndices(context.Background(), types.ValidatorIndex(0), types.Slot(0))
+	require.ErrorContains(t, "nil state", err)
+
+	_, err = c.HeadSyncCommitteePubKeys(context.Background(), types.Slot(0), types.CommitteeIndex(0))
+	require.ErrorContains(t, "nil state", err)
+}
+
+func TestService_HeadDomainFetcher_Errors(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	c := &Service{
+		cfg: &Config{
+			StateGen: stategen.New(beaconDB),
+		},
+	}
+	c.head = &head{}
+	_, err := c.HeadSyncCommitteeDomain(context.Background(), types.Slot(0))
+	require.ErrorContains(t, "nil state", err)
+
+	_, err = c.HeadSyncSelectionProofDomain(context.Background(), types.Slot(0))
+	require.ErrorContains(t, "nil state", err)
+
+	_, err = c.HeadSyncSelectionProofDomain(context.Background(), types.Slot(0))
+	require.ErrorContains(t, "nil state", err)
+}
 
 func TestService_HeadCurrentSyncCommitteeIndices(t *testing.T) {
 	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
@@ -97,12 +136,17 @@ func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 }
 
 func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
-	c := newSyncCommitteeHeadState()
+	c := syncCommitteeHeadStateCache
+	t.Cleanup(func() {
+		syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
+	})
 	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))
-	cachedState := c.get(101)
+	cachedState, err := c.Get(101)
+	require.ErrorContains(t, cache.ErrNotFound.Error(), err)
 	require.Equal(t, nil, cachedState)
-	c.add(101, beaconState)
-	cachedState = c.get(101)
+	require.NoError(t, c.Put(101, beaconState))
+	cachedState, err = c.Get(101)
+	require.NoError(t, err)
 	require.DeepEqual(t, beaconState, cachedState)
 }

@@ -71,7 +71,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	return nil
 }
 
-// BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
+// BroadcastSyncCommitteeMessage broadcasts a sync committee message to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
 func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastSyncCommitteeMessage")

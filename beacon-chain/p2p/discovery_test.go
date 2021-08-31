@@ -348,7 +348,6 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	// Clean up caches after usage.
 	defer cache.SubnetIDs.EmptyAllCaches()
-	defer cache.SubnetIDs.EmptyAllCaches()
 
 	tests := []struct {
 		name           string
