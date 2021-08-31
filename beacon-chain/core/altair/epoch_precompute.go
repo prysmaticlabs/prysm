@@ -98,12 +98,7 @@ func ProcessInactivityScores(
 		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 			// Decrease inactivity score when validator gets target correct.
 			if v.InactivityScore > 0 {
-				score := uint64(1)
-				// Prevents underflow below 0.
-				if score > v.InactivityScore {
-					score = v.InactivityScore
-				}
-				v.InactivityScore -= score
+				v.InactivityScore -= 1
 			}
 		} else {
 			v.InactivityScore += bias
