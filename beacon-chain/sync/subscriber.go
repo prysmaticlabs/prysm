@@ -246,7 +246,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			return pubsub.ValidationIgnore
 		}
 		if currDigest != retDigest {
-			log.WithField("topic", topic).Warnf("Received message from outdated fork digest %#x", retDigest)
+			log.WithField("topic", topic).Debugf("Received message from outdated fork digest %#x", retDigest)
 			return pubsub.ValidationIgnore
 		}
 		b := v(ctx, pid, msg)
