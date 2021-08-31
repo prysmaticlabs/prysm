@@ -28,11 +28,8 @@ segmentsLoop:
 
 			routeVar := mux.Vars(req)[s[1:len(s)-1]]
 			bRouteVar := []byte(routeVar)
-			isHex, err := butil.IsHex(bRouteVar)
-			if err != nil {
-				return InternalServerErrorWithMessage(err, "could not process URL parameter")
-			}
-			if isHex {
+			if butil.IsHex(bRouteVar) {
+				var err error
 				bRouteVar, err = bytesutil.FromHexString(string(bRouteVar))
 				if err != nil {
 					return InternalServerErrorWithMessage(err, "could not process URL parameter")
@@ -64,11 +61,8 @@ func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
 					queryParams.Del(key)
 					for _, v := range vals {
 						b := []byte(v)
-						isHex, err := butil.IsHex(b)
-						if err != nil {
-							return InternalServerErrorWithMessage(err, "could not process query parameter")
-						}
-						if isHex {
+						if butil.IsHex(b) {
+							var err error
 							b, err = bytesutil.FromHexString(v)
 							if err != nil {
 								return InternalServerErrorWithMessage(err, "could not process query parameter")

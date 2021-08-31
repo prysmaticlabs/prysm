@@ -351,20 +351,20 @@ func BytesToSlotBigEndian(b []byte) types.Slot {
 }
 
 // IsHex checks whether the byte array is a hex number prefixed with '0x'.
-func IsHex(b []byte) (bool, error) {
+func IsHex(b []byte) bool {
 	if b == nil {
-		return false, nil
+		return false
 	}
-	return hexRegex.Match(b), nil
+	return hexRegex.Match(b)
 }
 
 // IsHexOfLen checks whether the byte array is a hex number prefixed with '0x' and containing the required number of digits.
-func IsHexOfLen(b []byte, length uint64) (bool, error) {
+func IsHexOfLen(b []byte, length uint64) bool {
 	if b == nil {
-		return false, nil
+		return false
 	}
 	matches := hexRegex.Match(b)
 	// Add 2 to account for '0x'
 	expectedLen := int(length) + 2
-	return matches && len(b) == expectedLen, nil
+	return matches && len(b) == expectedLen
 }

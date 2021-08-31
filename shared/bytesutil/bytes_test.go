@@ -393,8 +393,7 @@ func TestIsHex(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 	}
 	for _, tt := range tests {
-		isHex, err := bytesutil.IsHex(tt.a)
-		require.NoError(t, err)
+		isHex := bytesutil.IsHex(tt.a)
 		assert.Equal(t, tt.b, isHex)
 	}
 }
@@ -416,8 +415,7 @@ func TestIsHexOfLen(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
 	}
 	for _, tt := range tests {
-		isHex, err := bytesutil.IsHexOfLen(tt.b, tt.l)
-		require.NoError(t, err)
+		isHex := bytesutil.IsHexOfLen(tt.b, tt.l)
 		assert.Equal(t, tt.result, isHex)
 	}
 }
