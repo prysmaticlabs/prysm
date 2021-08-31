@@ -3,11 +3,11 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "state.go",
+        "error_handling.go",
         "validator_status.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = ["//beacon-chain/rpc/eth:__subpackages__"],
     deps = [
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/state:go_default_library",
