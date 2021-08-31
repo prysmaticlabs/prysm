@@ -302,6 +302,32 @@ func TestPeerChainState(t *testing.T) {
 	}
 }
 
+func TestPeerWithNilChainState(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
+
+	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	require.NoError(t, err)
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	require.NoError(t, err, "Failed to create address")
+	direction := network.DirInbound
+	p.Add(new(enr.Record), id, address, direction)
+
+	p.SetChainState(id, nil)
+
+	resChainState, err := p.ChainState(id)
+	require.Equal(t, peers.ErrNoPeerStatus, err)
+	var nothing *pb.Status
+	require.Equal(t, resChainState, nothing)
+}
+
 func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
