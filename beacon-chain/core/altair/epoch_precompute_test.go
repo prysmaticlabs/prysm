@@ -117,6 +117,68 @@ func TestProcessEpochParticipation(t *testing.T) {
 	require.Equal(t, balance.PrevEpochHeadAttested, params.BeaconConfig().MaxEffectiveBalance*1)
 }
 
+func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
+	generateParticipation := func(flags ...uint8) byte {
+		b := byte(0)
+		for _, flag := range flags {
+			b = AddValidatorFlag(b, flag)
+		}
+		return b
+	}
+	st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
+		Validators: []*ethpb.Validator{
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},                                                  // Inactive
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 2},                                    // Inactive current epoch, active previous epoch
+			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch}, // Active
+		},
+		CurrentEpochParticipation: []byte{
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex),
+		},
+		PreviousEpochParticipation: []byte{
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex),
+			generateParticipation(params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex),
+		},
+		InactivityScores: []uint64{0, 0, 0},
+	})
+	require.NoError(t, err)
+	validators, balance, err := InitializeEpochValidators(context.Background(), st)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), st, balance, validators)
+	require.NoError(t, err)
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         false,
+		IsActivePrevEpoch:            false,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+	}, validators[0])
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         false,
+		IsActivePrevEpoch:            true,
+		IsPrevEpochAttester:          true,
+		IsPrevEpochTargetAttester:    true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+	}, validators[1])
+	require.DeepEqual(t, &precompute.Validator{
+		IsActiveCurrentEpoch:         true,
+		IsActivePrevEpoch:            true,
+		IsWithdrawableCurrentEpoch:   true,
+		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		IsPrevEpochAttester:          true,
+		IsCurrentEpochTargetAttester: true,
+		IsPrevEpochTargetAttester:    true,
+		IsPrevEpochHeadAttester:      true,
+	}, validators[2])
+	require.Equal(t, balance.PrevEpochAttested, 2*params.BeaconConfig().MaxEffectiveBalance)
+	require.Equal(t, balance.CurrentEpochTargetAttested, params.BeaconConfig().MaxEffectiveBalance)
+	require.Equal(t, balance.PrevEpochTargetAttested, 2*params.BeaconConfig().MaxEffectiveBalance)
+	require.Equal(t, balance.PrevEpochHeadAttested, params.BeaconConfig().MaxEffectiveBalance)
+}
+
 func TestAttestationsDelta(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)

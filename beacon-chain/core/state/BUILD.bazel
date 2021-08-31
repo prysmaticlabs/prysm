@@ -58,6 +58,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "altair_transition_no_verify_sig_test.go",
         "benchmarks_test.go",
         "skip_slot_cache_test.go",
         "state_fuzz_test.go",
@@ -76,6 +77,7 @@ go_test(
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -84,6 +86,7 @@ go_test(
         "//shared/benchutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/copyutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
