@@ -75,6 +75,9 @@ const (
 	MaxBackOffDuration = 5000
 )
 
+// ErrNoPeerStatus is returned when there is a map entry for a given peer but there is no chain
+// status for that peer. This should happen in rare circumstances only, but is a very possible
+// scenario in a chaotic and adversarial network.
 var ErrNoPeerStatus = errors.New("no chain status for peer")
 
 // Status is the structure holding the peer status information.
