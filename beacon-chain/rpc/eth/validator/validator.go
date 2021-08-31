@@ -426,6 +426,9 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
 	defer span.End()
 
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
 	if len(req.Data) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
 	}
@@ -453,18 +456,19 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		if sub.UntilEpoch < currEpoch {
 			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch)
 		}
+		maxValidEpoch := currEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+		if sub.UntilEpoch > maxValidEpoch {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
+				i,
+				maxValidEpoch,
+			)
+		}
 	}
 
 	startEpoch := currEpoch * params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	endEpoch := currEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	// Handle overflow in the event current epoch is less than end epoch.
-	// This is an impossible condition, so it is a defensive check.
-	epochsToWatch, err := endEpoch.SafeSub(uint64(currEpoch))
-	if err != nil {
-		epochsToWatch = 0
-	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
 
 	for i, sub := range req.Data {
 		pubkey48 := validators[i].PublicKey()
@@ -472,6 +476,14 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		if expTime.After(timeutils.Now()) {
 			continue
 		}
+		// Handle overflow in the event current epoch is less than end epoch.
+		// This is an impossible condition, so it is a defensive check.
+		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(currEpoch))
+		if err != nil {
+			epochsToWatch = 0
+		}
+		totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
+
 		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
 	}
 
