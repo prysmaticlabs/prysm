@@ -143,7 +143,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	}
 	balances := []uint64{0, 50}
-	root := depositTrie.Root()
+	root := depositTrie.HashTreeRoot()
 	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
@@ -202,7 +202,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
