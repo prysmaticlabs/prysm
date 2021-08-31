@@ -28,9 +28,12 @@ func ProcessAttestationsNoVerifySignature(
 		return nil, err
 	}
 	body := b.Block().Body()
-	var err error
+	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	if err != nil {
+		return nil, err
+	}
 	for idx, attestation := range body.Attestations() {
-		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
+		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation, totalBalance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
@@ -44,6 +47,7 @@ func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconStateAltair,
 	att *ethpb.Attestation,
+	totalBalance uint64,
 ) (state.BeaconStateAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
@@ -69,7 +73,7 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	return SetParticipationAndRewardProposer(beaconState, att.Data.Target.Epoch, indices, participatedFlags)
+	return SetParticipationAndRewardProposer(beaconState, att.Data.Target.Epoch, indices, participatedFlags, totalBalance)
 }
 
 // SetParticipationAndRewardProposer retrieves and sets the epoch participation bits in state. Based on the epoch participation, it rewards
@@ -97,7 +101,7 @@ func SetParticipationAndRewardProposer(
 	beaconState state.BeaconState,
 	targetEpoch types.Epoch,
 	indices []uint64,
-	participatedFlags map[uint8]bool) (state.BeaconState, error) {
+	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, error) {
 	var epochParticipation []byte
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	var err error
@@ -113,7 +117,7 @@ func SetParticipationAndRewardProposer(
 		}
 	}
 
-	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags)
+	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags, totalBalance)
 	if err != nil {
 		return nil, err
 	}
@@ -154,16 +158,12 @@ func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 //            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
 //                proposer_reward_numerator += get_base_reward(state, index) * weight
-func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochParticipation []byte, participatedFlags map[uint8]bool) (uint64, []byte, error) {
+func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochParticipation []byte, participatedFlags map[uint8]bool, totalBalance uint64) (uint64, []byte, error) {
 	cfg := params.BeaconConfig()
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 	proposerRewardNumerator := uint64(0)
-	totalBalance, err := helpers.TotalActiveBalance(beaconState)
-	if err != nil {
-		return 0, nil, err
-	}
 	for _, index := range indices {
 		if index >= uint64(len(epochParticipation)) {
 			return 0, nil, fmt.Errorf("index %d exceeds participation length %d", index, len(epochParticipation))
@@ -281,7 +281,7 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, da
 //    is_matching_source = data.source == justified_checkpoint
 //    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
 //    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
-func MatchingStatus(beaconState state.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (matchedSrc bool, matchedTgt bool, matchedHead bool, err error) {
+func MatchingStatus(beaconState state.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (matchedSrc, matchedTgt, matchedHead bool, err error) {
 	matchedSrc = attestationutil.CheckPointIsEqual(data.Source, cp)
 
 	r, err := helpers.BlockRoot(beaconState, data.Target.Epoch)

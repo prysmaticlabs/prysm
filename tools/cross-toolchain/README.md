@@ -15,7 +15,7 @@ This toolchain suite describes cross compile configuration with a Dockerfile wit
 
 | target  | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
 |----------|-------------------|------------------|-----------------|-----------------------|
-| `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, libkafka supported locally only | :heavy_check_mark:  docker-sandbox and RBE, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support |
+| `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, supported locally only | :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:  docker-sandbox |
 | `//validator`| :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark: |
 
 The configurations above are enforced via pull request presubmit checks.
@@ -37,4 +37,3 @@ There are a few caveats to each of these strategies.
 - Local runs require clang compiler and the appropriate cross compilers installed. These runs should only be considered for a power user or user with specific build requirements. See the Dockerfile setup scripts to understand what dependencies must be installed and where.
 - Docker sandbox is *slow*. Like really slow! The purpose of the docker sandbox is to test RBE builds without deploying a full RBE system. Each build action is executed in its own container. Given the large number of small targets in this project, the overhead of creating docker containers makes this strategy the slowest of all, but requires zero additional setup.
 - Remote Build Execution is by far the fastest, if you have a RBE backend available. This is another advanced use case which will require two config flags above as well as additional flags to specify the `--remote_executor`. Some of these flags are present in the project `.bazelrc` with example values, but commented out.
-- Building with libkafka (`--define kafka_enabled=true`) is not supported with docker-sandbox or RBE at this time. Likely due to missing cmake dependencies in the builder image or lack of configuration via toolchains. 

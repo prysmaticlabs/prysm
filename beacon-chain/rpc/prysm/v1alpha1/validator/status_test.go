@@ -37,7 +37,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -80,7 +80,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -130,7 +130,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -198,7 +198,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -243,7 +243,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.ActivationExitEpoch(0)
@@ -330,7 +330,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -387,7 +387,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -445,7 +445,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -528,11 +528,11 @@ func TestActivationStatus_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 
 	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
-	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
 		Ctx:                context.Background(),
@@ -652,7 +652,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		deposit := &ethpb.Deposit{
 			Data: depData,
 		}
-		assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, int64(i), depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, int64(i), depositTrie.HashTreeRoot()))
 
 	}
 
@@ -733,10 +733,10 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	require.NoError(t, err)
 
 	dep := deposits[0]
-	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
-	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
 		Ctx:                context.Background(),
@@ -895,7 +895,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{

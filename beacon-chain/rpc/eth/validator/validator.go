@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"strconv"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -16,16 +16,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
@@ -66,13 +66,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 
 	duties := make([]*ethpbv1.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
-		val, err := s.ValidatorAtIndexReadOnly(index)
-		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
-		} else if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
+		pubkey := s.PubkeyAtIndex(index)
+		zeroPubkey := [48]byte{}
+		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
-		pubkey := val.PublicKey()
 		committee := committeeAssignments[index]
 		var valIndexInCommittee types.CommitteeIndex
 		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
@@ -166,8 +164,57 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}, nil
 }
 
-func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, request *eth.SyncCommitteeDutiesRequest) (*eth.SyncCommitteeDutiesResponse, error) {
-	panic("implement me")
+// GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
+func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	slot, err := helpers.StartSlot(req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
+	}
+	st, err := vs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
+	}
+	committee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
+	}
+
+	committeePubkeys := make(map[[48]byte][]uint64)
+	for j, pubkey := range committee.Pubkeys {
+		pubkey48 := bytesutil.ToBytes48(pubkey)
+		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
+	}
+	duties := make([]*ethpbv2.SyncCommitteeDuty, len(req.Index))
+	for i, index := range req.Index {
+		duty := &ethpbv2.SyncCommitteeDuty{
+			ValidatorIndex: index,
+		}
+		valPubkey48 := st.PubkeyAtIndex(index)
+		zeroPubkey := [48]byte{}
+		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
+		}
+		valPubkey := valPubkey48[:]
+		duty.Pubkey = valPubkey
+		indices, ok := committeePubkeys[valPubkey48]
+		if ok {
+			duty.ValidatorSyncCommitteeIndices = indices
+		} else {
+			duty.ValidatorSyncCommitteeIndices = make([]uint64, 0)
+		}
+		duties[i] = duty
+	}
+
+	return &ethpbv2.SyncCommitteeDutiesResponse{
+		Data: duties,
+	}, nil
 }
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
@@ -193,7 +240,7 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
 }
 
-func (vs *Server) ProduceBlockAltair(ctx context.Context, request *eth.ProduceBlockRequest) (*eth.ProduceBlockResponse, error) {
+func (vs *Server) ProduceBlockAltair(ctx context.Context, request *ethpbv2.ProduceBlockRequestV2) (*ethpbv2.ProduceBlockResponseV2, error) {
 	panic("implement me")
 }
 
@@ -247,7 +294,7 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 }
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
 	defer span.End()
 
@@ -277,7 +324,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 		if err := vs.Broadcaster.Broadcast(ctx, v1alpha1Agg); err != nil {
 			broadcastFailed = true
 		} else {
-			log.WithFields(logrus.Fields{
+			log.WithFields(log.Fields{
 				"slot":            agg.Message.Aggregate.Data.Slot,
 				"committeeIndex":  agg.Message.Aggregate.Data.Index,
 				"validatorIndex":  agg.Message.AggregatorIndex,

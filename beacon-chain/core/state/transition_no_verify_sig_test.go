@@ -126,3 +126,35 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, verified, "Could not verify signature set.")
 }
+
+func TestProcessBlockNoVerifyAnySigAltair_OK(t *testing.T) {
+	beaconState, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
+	require.NoError(t, err)
+	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
+	require.NoError(t, err)
+	verified, err := set.Verify()
+	require.NoError(t, err)
+	require.Equal(t, true, verified, "Could not verify signature set")
+}
+
+func TestProcessOperationsNoVerifyAttsSigs_OK(t *testing.T) {
+	beaconState, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
+	require.NoError(t, err)
+	_, err = state.ProcessOperationsNoVerifyAttsSigs(context.Background(), beaconState, wsb)
+	require.NoError(t, err)
+}
+
+func TestCalculateStateRootAltair_OK(t *testing.T) {
+	beaconState, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	r, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
+	require.NoError(t, err)
+	require.DeepNotEqual(t, params.BeaconConfig().ZeroHash, r)
+}

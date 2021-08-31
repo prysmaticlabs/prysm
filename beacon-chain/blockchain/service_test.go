@@ -62,6 +62,11 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 	return nil
 }
 
+func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
+	mb.broadcastCalled = true
+	return nil
+}
+
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {

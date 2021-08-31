@@ -413,3 +413,37 @@ func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
 		require.Equal(t, test.wanted, e)
 	}
 }
+
+func TestCanUpgradeToAltair(t *testing.T) {
+	bc := params.BeaconConfig()
+	bc.AltairForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot types.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not altair epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "altair epoch",
+			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CanUpgradeToAltair(tt.slot); got != tt.want {
+				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

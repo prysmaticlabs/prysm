@@ -153,14 +153,14 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	if err != nil {
 		return errors.Wrap(err, "unable to insert deposit into cache")
 	}
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
-		root := s.depositTrie.Root()
+		root := s.depositTrie.HashTreeRoot()
 		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
@@ -170,7 +170,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -219,7 +219,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root := s.depositTrie.Root()
+	root := s.depositTrie.HashTreeRoot()
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],

@@ -17,6 +17,19 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	}
 }
 
+// CopyPendingAttestationSlice copies the provided slice of pending attestation objects.
+func CopyPendingAttestationSlice(input []*ethpb.PendingAttestation) []*ethpb.PendingAttestation {
+	if input == nil {
+		return nil
+	}
+
+	res := make([]*ethpb.PendingAttestation, len(input))
+	for i := 0; i < len(res); i++ {
+		res[i] = CopyPendingAttestation(input[i])
+	}
+	return res
+}
+
 // CopyPendingAttestation copies the provided pending attestation object.
 func CopyPendingAttestation(att *ethpb.PendingAttestation) *ethpb.PendingAttestation {
 	if att == nil {
@@ -265,7 +278,7 @@ func CopyDeposit(deposit *ethpb.Deposit) *ethpb.Deposit {
 		return nil
 	}
 	return &ethpb.Deposit{
-		Proof: bytesutil.Copy2dBytes(deposit.Proof),
+		Proof: bytesutil.SafeCopy2dBytes(deposit.Proof),
 		Data:  CopyDepositData(deposit.Data),
 	}
 }

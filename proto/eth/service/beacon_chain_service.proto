@@ -36,7 +36,7 @@ option php_namespace = "Ethereum\\Eth\\Service";
 // The config API endpoints can be used to query the beacon chain state and information. Such as spec, current fork,
 // blocks, and the validator spec.
 //
-// This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/).
+// This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/).
 service BeaconChain {
   // Beacon state API related endpoints.
 
@@ -151,15 +151,15 @@ service BeaconChain {
     };
   }
 
-  // GetBlockAltair retrieves block details for given block id.
-  rpc GetBlockAltair(v2.BlockRequest) returns (v2.BlockResponse) {
+  // GetBlockV2 retrieves block details for given block id.
+  rpc GetBlockV2(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}"
     };
   }
 
-  // GetBlockSSZAltair returns the SSZ-serialized version of block details for given block id.
-  rpc GetBlockSSZAltair(v2.BlockRequest) returns (v2.BlockSSZResponse) {
+  // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
+  rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}/ssz"
     };

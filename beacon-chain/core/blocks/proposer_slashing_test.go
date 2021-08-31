@@ -179,6 +179,57 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
 			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
 	}
+
+	require.Equal(t, uint64(31750000000), newState.Balances()[1])
+	require.Equal(t, uint64(32000000000), newState.Balances()[2])
+}
+
+func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
+	// We test the case when data is correct and verify the validator
+	// registry has been updated.
+	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 100)
+	proposerIdx := types.ValidatorIndex(1)
+
+	header1 := &ethpb.SignedBeaconBlockHeader{
+		Header: testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+		}),
+	}
+	var err error
+	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	header2 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+		},
+	})
+	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	slashings := []*ethpb.ProposerSlashing{
+		{
+			Header_1: header1,
+			Header_2: header2,
+		},
+	}
+
+	block := testutil.NewBeaconBlock()
+	block.Block.Body.ProposerSlashings = slashings
+
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
+	require.NoError(t, err)
+
+	newStateVals := newState.Validators()
+	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
+		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
+			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
+	}
+
+	require.Equal(t, uint64(31500000000), newState.Balances()[1])
+	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 
 func TestVerifyProposerSlashing(t *testing.T) {

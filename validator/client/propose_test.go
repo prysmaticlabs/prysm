@@ -12,7 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -57,6 +57,10 @@ func (m mockSignature) Copy() bls.Signature {
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	validatorKey, err := bls.RandKey()
 	require.NoError(t, err)
+	return setupWithKey(t, validatorKey)
+}
+
+func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
