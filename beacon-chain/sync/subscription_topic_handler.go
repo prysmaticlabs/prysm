@@ -37,8 +37,8 @@ func (s *subTopicHandler) addTopic(topic string, sub *pubsub.Subscription) {
 
 func (s *subTopicHandler) topicExists(topic string) bool {
 	s.RLock()
+	defer s.RUnlock()
 	_, ok := s.subTopics[topic]
-	s.RUnlock()
 	return ok
 }
 
