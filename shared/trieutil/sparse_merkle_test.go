@@ -101,7 +101,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
-	root := m.Root()
+	root := m.HashTreeRoot()
 	if ok := VerifyMerkleBranch(root[:], items[0], 0, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
@@ -123,14 +123,14 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
-	root := m.Root()
+	root := m.HashTreeRoot()
 	require.Equal(t, true, VerifyMerkleBranch(root[:], items[0], 0, proof, depth))
 
 	// Now we update the trie.
 	m.Insert([]byte{5}, 3)
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
-	root = m.Root()
+	root = m.HashTreeRoot()
 	if ok := VerifyMerkleBranch(root[:], []byte{5}, 3, proof, depth); !ok {
 		t.Error("Second Merkle proof did not verify")
 	}
@@ -249,7 +249,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 	proof, err := m.MerkleProof(2)
 	require.NoError(b, err)
 
-	root := m.Root()
+	root := m.HashTreeRoot()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if ok := VerifyMerkleBranch(root[:], items[2], 2, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {

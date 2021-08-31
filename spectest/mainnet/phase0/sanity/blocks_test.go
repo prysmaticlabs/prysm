@@ -7,5 +7,5 @@ import (
 )
 
 func TestMainnet_Phase0_Sanity_Blocks(t *testing.T) {
-	sanity.RunBlockProcessingTest(t, "mainnet")
+	sanity.RunBlockProcessingTest(t, "mainnet", "sanity/blocks/pyspec_tests")
 }

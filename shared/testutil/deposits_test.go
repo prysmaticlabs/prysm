@@ -274,7 +274,7 @@ func TestDepositTrieFromDeposits(t *testing.T) {
 	depositTrie, _, err := DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 
-	root := depositTrie.Root()
+	root := depositTrie.HashTreeRoot()
 	if !bytes.Equal(root[:], eth1Data.DepositRoot) {
 		t.Fatal("expected deposit trie root to equal eth1data deposit root")
 	}
