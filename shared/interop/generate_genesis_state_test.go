@@ -23,7 +23,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
 	require.NoError(t, err)
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	genesisState, err := state.GenesisBeaconState(context.Background(), deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
