@@ -454,7 +454,6 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 
 	currPeriod := corehelpers.SyncCommitteePeriod(currEpoch)
 	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	for i, sub := range req.Data {
 		if sub.UntilEpoch < currEpoch {
@@ -479,7 +478,8 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		if err != nil {
 			epochsToWatch = 0
 		}
-		totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
+		epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+		totalDuration := epochDuration * time.Duration(epochsToWatch)
 
 		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
 	}
