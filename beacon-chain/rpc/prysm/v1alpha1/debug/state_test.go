@@ -53,6 +53,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	}
 	require.NoError(t, st.SetSlot(slot+1))
 	wanted, err = st.MarshalSSZ()
+	require.NoError(t, err)
 	res, err = bs.GetBeaconState(ctx, req)
 	require.NoError(t, err)
 	assert.DeepEqual(t, wanted, res.Encoded)
