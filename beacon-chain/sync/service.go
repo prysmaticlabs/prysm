@@ -92,6 +92,7 @@ type Service struct {
 	slotToPendingBlocks              *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
+	subHandler                       *subTopicHandler
 	pendingAttsLock                  sync.RWMutex
 	pendingQueueLock                 sync.RWMutex
 	chainStarted                     *abool.AtomicBool
@@ -127,6 +128,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		subHandler:           newSubTopicHandler(),
 		rateLimiter:          rLimiter,
 	}
 
@@ -171,9 +173,7 @@ func (s *Service) Stop() error {
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
-		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
-			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
-		}
+		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
 	return nil
