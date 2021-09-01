@@ -12,7 +12,7 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +25,7 @@ func TestGetState(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(state *eth.BeaconState) error {
+	fillSlot := func(state *ethpb.BeaconState) error {
 		state.Slot = headSlot
 		return nil
 	}
@@ -59,7 +59,7 @@ func TestGetState(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testutil.NewBeaconState(func(state *eth.BeaconState) error {
+		state, err := testutil.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
@@ -67,7 +67,7 @@ func TestGetState(t *testing.T) {
 		stateRoot, err := state.HashTreeRoot(ctx)
 		require.NoError(t, err)
 
-		require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Root: r[:]}))
+		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, state, r))
 
@@ -88,7 +88,7 @@ func TestGetState(t *testing.T) {
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
-				FinalizedCheckPoint: &eth.Checkpoint{
+				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Root: stateRoot[:],
 				},
 			},
@@ -108,7 +108,7 @@ func TestGetState(t *testing.T) {
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
-				CurrentJustifiedCheckPoint: &eth.Checkpoint{
+				CurrentJustifiedCheckPoint: &ethpb.Checkpoint{
 					Root: stateRoot[:],
 				},
 			},
@@ -187,7 +187,7 @@ func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(state *eth.BeaconState) error {
+	fillSlot := func(state *ethpb.BeaconState) error {
 		state.Slot = headSlot
 		return nil
 	}
@@ -218,13 +218,13 @@ func TestGetStateRoot(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testutil.NewBeaconState(func(state *eth.BeaconState) error {
+		state, err := testutil.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
 		require.NoError(t, err)
 
-		require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Root: r[:]}))
+		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, state, r))
 
@@ -248,7 +248,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		cp := &eth.Checkpoint{
+		cp := &ethpb.Checkpoint{
 			Epoch: 5,
 			Root:  root[:],
 		}
@@ -279,7 +279,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		cp := &eth.Checkpoint{
+		cp := &ethpb.Checkpoint{
 			Epoch: 5,
 			Root:  root[:],
 		}
