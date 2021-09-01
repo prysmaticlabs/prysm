@@ -22,7 +22,6 @@ import (
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -467,15 +466,12 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		}
 	}
 
-	startEpoch := currEpoch * params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	currPeriod := corehelpers.SyncCommitteePeriod(currEpoch)
+	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	for i, sub := range req.Data {
 		pubkey48 := validators[i].PublicKey()
-		_, _, _, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey48[:], startEpoch)
-		if expTime.After(timeutils.Now()) {
-			continue
-		}
 		// Handle overflow in the event current epoch is less than end epoch.
 		// This is an impossible condition, so it is a defensive check.
 		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(currEpoch))
