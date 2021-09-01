@@ -45,6 +45,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/lru:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/sliceutil:go_default_library",

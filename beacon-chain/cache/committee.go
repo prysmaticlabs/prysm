@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -78,7 +79,10 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := uint64(index) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
+	indexOffSet, err := mathutil.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
+	if err != nil {
+		return nil, err
+	}
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {

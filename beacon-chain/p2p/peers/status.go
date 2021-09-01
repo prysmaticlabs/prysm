@@ -190,8 +190,8 @@ func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 }
 
 // ChainState gets the chain state of the given remote peer.
-// This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
+// This will error if there is no known chain state for the peer.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 	return p.scorers.PeerStatusScorer().PeerStatus(pid)
 }
