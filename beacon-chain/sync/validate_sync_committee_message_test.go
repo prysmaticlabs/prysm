@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -474,18 +475,53 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 
 func TestService_rejectIncorrectCommittee(t *testing.T) {
 	tests := []struct {
-		name string
-		cfg  *Config
-		want pubsub.ValidationResult
+		name             string
+		cfg              *Config
+		setupTopic       func(s *Service) string
+		committeeIndices []types.CommitteeIndex
+		want             pubsub.ValidationResult
 	}{
-		{},
+		{
+			name: "invalid",
+			cfg: &Config{
+				Chain: &mockChain.ChainService{
+					Genesis:        time.Now(),
+					ValidatorsRoot: [32]byte{1},
+				},
+			},
+			committeeIndices: []types.CommitteeIndex{0},
+			setupTopic: func(_ *Service) string {
+				return "foobar"
+			},
+			want: pubsub.ValidationReject,
+		},
+		{
+			name: "valid",
+			cfg: &Config{
+				Chain: &mockChain.ChainService{
+					Genesis:        time.Now(),
+					ValidatorsRoot: [32]byte{1},
+				},
+			},
+			committeeIndices: []types.CommitteeIndex{0},
+			setupTopic: func(s *Service) string {
+				format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
+				digest, err := s.forkDigest()
+				require.NoError(t, err)
+				prefix := fmt.Sprintf(format, digest, 0 /* validator index 0 */)
+				topic := prefix + "foobar"
+				return topic
+			},
+			want: pubsub.ValidationAccept,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
 				cfg: tt.cfg,
 			}
-			f := s.rejectIncorrectCommittee(nil, "")
+			topic := tt.setupTopic(s)
+			f := s.rejectIncorrectCommittee(tt.committeeIndices, topic)
 			result := f(context.Background())
 			require.Equal(t, tt.want, result)
 		})
