@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
@@ -599,6 +601,10 @@ func TestProduceBlockV2(t *testing.T) {
 			Pubkeys:         wantedCommittee,
 			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 		}))
+		require.NoError(t, beaconState.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
+			Pubkeys:         wantedCommittee,
+			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		}))
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
@@ -653,14 +659,33 @@ func TestProduceBlockV2(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		aggregationBits := ethpbalpha.NewSyncCommitteeAggregationBits()
-		aggregationBits.SetBitAt(0, true)
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+		indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		//ps := helpers.PrevSlot(beaconState.Slot())
+		//pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
+		//require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(indices))
+		for i, indice := range indices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
 		contribution := &ethpbalpha.SyncCommitteeContribution{
 			Slot:              0,
 			BlockRoot:         parentRoot[:],
 			SubcommitteeIndex: 0,
 			AggregationBits:   aggregationBits,
-			Signature:         bls.NewAggregateSignature().Marshal(),
+			Signature:         aggregatedSig,
 		}
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
