@@ -380,7 +380,7 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(1), loadedState.Slot(), "Did not correctly load state")
 
-	// Latest block header's state root should not be zero. Zero means the current slot's state has been processed.
+	// Latest block header's state root should not be zero. Zero means the current slot's block has been processed.
 	require.NotEqual(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(loadedState.LatestBlockHeader().StateRoot))
 }
 
