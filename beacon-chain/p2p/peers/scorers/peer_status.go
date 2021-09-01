@@ -133,6 +133,9 @@ func (s *PeerStatusScorer) PeerStatus(pid peer.ID) (*pb.Status, error) {
 // peerStatus lock-free version of PeerStatus.
 func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
+		if peerData.ChainState == nil {
+			return nil, peerdata.ErrPeerUnknown
+		}
 		return peerData.ChainState, nil
 	}
 	return nil, peerdata.ErrPeerUnknown
