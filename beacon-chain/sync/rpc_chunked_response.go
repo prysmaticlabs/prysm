@@ -83,7 +83,6 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 	if err != nil {
 		return nil, err
 	}
-	// This may not work, double check tests.
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }
@@ -108,7 +107,6 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 	if err != nil {
 		return nil, err
 	}
-	// This may not work, double check tests.
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }
@@ -121,8 +119,8 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 		}
 		return bFunc()
 	}
-	if len(digest) != digestLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", digestLength, len(digest))
+	if len(digest) != forkDigestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, blkFunc := range types.BlockMap {
