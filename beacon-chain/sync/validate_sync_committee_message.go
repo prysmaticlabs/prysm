@@ -54,12 +54,11 @@ func (s *Service) validateSyncCommitteeMessage(
 	}
 
 	// Basic validations before proceeding.
-	if result := withValidationPipeline(
-		ctx,
-		s.ignoreIfSyncing(),
-		rejectNilTopic(msg),
-	); result != pubsub.ValidationAccept {
-		return result
+	if s.cfg.InitialSync.Syncing() {
+		return pubsub.ValidationIgnore
+	}
+	if msg.Topic == nil {
+		return pubsub.ValidationReject
 	}
 
 	// Read the data from the pubsub message, and reject if there is an error.
@@ -71,11 +70,14 @@ func (s *Service) validateSyncCommitteeMessage(
 	}
 
 	// Validate sync message times before proceeding.
-	if result := withValidationPipeline(
-		ctx,
-		s.ignoreInvalidSyncMsgTime(m),
-	); result != pubsub.ValidationAccept {
-		return result
+	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
+	if err := altair.ValidateSyncMessageTime(
+		m.Slot,
+		s.cfg.Chain.GenesisTime(),
+		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
+	); err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
 	}
 
 	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
@@ -85,7 +87,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	}
 
 	// Validate the message's data according to the p2p specification.
-	if result := withValidationPipeline(
+	if result := validationPipeline(
 		ctx,
 		ignoreEmptyCommittee(committeeIndices),
 		s.rejectIncorrectCommittee(committeeIndices, *msg.Topic),
@@ -147,32 +149,6 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 	s.seenSyncMessageCache.Add(string(b), true)
 }
 
-func (s *Service) ignoreIfSyncing() validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		if s.cfg.InitialSync.Syncing() {
-			return pubsub.ValidationIgnore
-		}
-		return pubsub.ValidationAccept
-	}
-}
-
-func (s *Service) ignoreInvalidSyncMsgTime(m *ethpb.SyncCommitteeMessage) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		_, span := trace.StartSpan(ctx, "sync.ifInvalidSyncMsgTime")
-		defer span.End()
-		// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-		if err := altair.ValidateSyncMessageTime(
-			m.Slot,
-			s.cfg.Chain.GenesisTime(),
-			params.BeaconNetworkConfig().MaximumGossipClockDisparity,
-		); err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationIgnore
-		}
-		return pubsub.ValidationAccept
-	}
-}
-
 // The `subnet_id` is valid for the given validator. This implies the validator is part of the broader
 // current sync committee along with the correct subcommittee.
 // We are trying to validate that whatever committee indices that were retrieved from our state for this
@@ -222,10 +198,9 @@ func (s *Service) ignoreHasSeenSyncMsg(
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		for _, idx := range committeeIndices {
 			subnet := uint64(idx) / subCommitteeSize
-			if s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet) {
-				isValid = false
-			} else {
+			if !s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet) {
 				isValid = true
+				break
 			}
 		}
 		if !isValid {
@@ -241,6 +216,8 @@ func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validati
 		defer span.End()
 
 		// Ignore the message if it is not possible to retrieve the signing root.
+		// For internal errors, the correct behaviour is to ignore rather than reject outright,
+		// since the failure is locally derived.
 		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -282,15 +259,6 @@ func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validati
 	}
 }
 
-func rejectNilTopic(msg *pubsub.Message) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
-		if msg.Topic == nil {
-			return pubsub.ValidationReject
-		}
-		return pubsub.ValidationAccept
-	}
-}
-
 func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		if len(indices) == 0 {
@@ -300,7 +268,7 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 	}
 }
 
-func withValidationPipeline(ctx context.Context, fns ...validationFn) pubsub.ValidationResult {
+func validationPipeline(ctx context.Context, fns ...validationFn) pubsub.ValidationResult {
 	for _, fn := range fns {
 		if result := fn(ctx); result != pubsub.ValidationAccept {
 			return result
