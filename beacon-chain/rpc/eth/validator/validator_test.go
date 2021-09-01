@@ -650,7 +650,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		aggregationBits := bitfield.NewBitvector128()
 		for i := range aggregationBits {
-			aggregationBits[i] = 0xFF
+			aggregationBits[i] = 0xAA
 		}
 		//ps := helpers.PrevSlot(beaconState.Slot())
 		//pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
