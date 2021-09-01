@@ -15,21 +15,22 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	log "github.com/sirupsen/logrus"
 )
 
-var committeeCache = cache.NewCommitteesCache()
-var proposerIndicesCache = cache.NewProposerIndicesCache()
-var syncCommitteeCache = cache.NewSyncCommittee()
+var (
+	committeeCache = cache.NewCommitteesCache()
+    proposerIndicesCache = cache.NewProposerIndicesCache()
+)
 
-// SlotCommitteeCount returns the number of crosslink committees of a slot. The
-// active validator count is provided as an argument rather than a imported implementation
+
+// SlotCommitteeCount returns the number of beacon committees of a slot. The
+// active validator count is provided as an argument rather than an imported implementation
 // from the spec definition. Having the active validator count as an argument allows for
 // cheaper computation, instead of retrieving head state, one can retrieve the validator
 // count.
-//
 //
 // Spec pseudocode definition:
 //   def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
@@ -41,16 +42,16 @@ var syncCommitteeCache = cache.NewSyncCommittee()
 //        uint64(len(get_active_validator_indices(state, epoch))) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //    ))
 func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
-	var committeePerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
+	var committeesPerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
 
-	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+	if committeesPerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 		return params.BeaconConfig().MaxCommitteesPerSlot
 	}
-	if committeePerSlot == 0 {
+	if committeesPerSlot == 0 {
 		return 1
 	}
 
-	return committeePerSlot
+	return committeesPerSlot
 }
 
 // BeaconCommitteeFromState returns the crosslink committee of a given slot and committee index. This
@@ -77,12 +78,12 @@ func BeaconCommitteeFromState(state state.ReadOnlyBeaconState, slot types.Slot, 
 		return nil, errors.Wrap(err, "could not get seed")
 	}
 
-	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
+	committee, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
-	if indices != nil {
-		return indices, nil
+	if committee != nil {
+		return committee, nil
 	}
 
 	activeIndices, err := ActiveValidatorIndices(state, epoch)
@@ -93,73 +94,49 @@ func BeaconCommitteeFromState(state state.ReadOnlyBeaconState, slot types.Slot, 
 	return BeaconCommittee(activeIndices, seed, slot, committeeIndex)
 }
 
-// BeaconCommittee returns the crosslink committee of a given slot and committee index. The
-// validator indices and seed are provided as an argument rather than a imported implementation
+// BeaconCommittee returns the beacon committee of a given slot and committee index. The
+// validator indices and seed are provided as an argument rather than an imported implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
+//
+// Spec pseudocode definition:
+//   def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
+//    """
+//    Return the beacon committee at ``slot`` for ``index``.
+//    """
+//    epoch = compute_epoch_at_slot(slot)
+//    committees_per_slot = get_committee_count_per_slot(state, epoch)
+//    return compute_committee(
+//        indices=get_active_validator_indices(state, epoch),
+//        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
+//        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
+//        count=committees_per_slot * SLOTS_PER_EPOCH,
+//    )
 func BeaconCommittee(
 	validatorIndices []types.ValidatorIndex,
 	seed [32]byte,
 	slot types.Slot,
 	committeeIndex types.CommitteeIndex,
 ) ([]types.ValidatorIndex, error) {
-	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
+	committee, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
-	if indices != nil {
-		return indices, nil
+	if committee != nil {
+		return committee, nil
 	}
 
 	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
 
-	epochOffset := uint64(committeeIndex) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot))
+	indexOffset, err := mathutil.Add64(uint64(committeeIndex), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot)))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not add calculate index offset")
+	}
 	count := committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 
-	return ComputeCommittee(validatorIndices, seed, epochOffset, count)
+	return computeCommittee(validatorIndices, seed, indexOffset, count)
 }
 
-// ComputeCommittee returns the requested shuffled committee out of the total committees using
-// validator indices and seed.
-//
-// Spec pseudocode definition:
-//  def compute_committee(indices: Sequence[ValidatorIndex],
-//                      seed: Bytes32,
-//                      index: uint64,
-//                      count: uint64) -> Sequence[ValidatorIndex]:
-//    """
-//    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
-//    """
-//    start = (len(indices) * index) // count
-//    end = (len(indices) * uint64(index + 1)) // count
-//    return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
-func ComputeCommittee(
-	indices []types.ValidatorIndex,
-	seed [32]byte,
-	index, count uint64,
-) ([]types.ValidatorIndex, error) {
-	validatorCount := uint64(len(indices))
-	start := sliceutil.SplitOffset(validatorCount, count, index)
-	end := sliceutil.SplitOffset(validatorCount, count, index+1)
-
-	if start > validatorCount || end > validatorCount {
-		return nil, errors.New("index out of range")
-	}
-
-	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
-	shuffledIndices := make([]types.ValidatorIndex, len(indices))
-	copy(shuffledIndices, indices)
-	// UnshuffleList is used here as it is an optimized implementation created
-	// for fast computation of committees.
-	// Reference implementation: https://github.com/protolambda/eth2-shuffle
-	shuffledList, err := UnshuffleList(shuffledIndices, seed)
-	if err != nil {
-		return nil, err
-	}
-
-	return shuffledList[start:end], nil
-}
-
-// CommitteeAssignmentContainer represents a committee, index, and attester slot for a given epoch.
+// CommitteeAssignmentContainer represents a committee list, committee index, and to be attested slot for a given epoch.
 type CommitteeAssignmentContainer struct {
 	Committee      []types.ValidatorIndex
 	AttesterSlot   types.Slot
@@ -392,193 +369,45 @@ func ClearCache() {
 	syncCommitteeCache = cache.NewSyncCommittee()
 }
 
-// IsCurrentPeriodSyncCommittee returns true if the input validator index belongs in the current period sync committee
-// along with the sync committee root.
-// 1.) Checks if the public key exists in the sync committee cache
-// 2.) If 1 fails, checks if the public key exists in the input current sync committee object
-func IsCurrentPeriodSyncCommittee(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
-) (bool, error) {
-	root, err := syncPeriodBoundaryRoot(st)
-	if err != nil {
-		return false, err
-	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
-		val, err := st.ValidatorAtIndex(valIdx)
-		if err != nil {
-			return false, nil
-		}
-		committee, err := st.CurrentSyncCommittee()
-		if err != nil {
-			return false, err
-		}
+// computeCommittee returns the requested shuffled committee out of the total committees using
+// validator indices and seed.
+//
+// Spec pseudocode definition:
+//  def compute_committee(indices: Sequence[ValidatorIndex],
+//                      seed: Bytes32,
+//                      index: uint64,
+//                      count: uint64) -> Sequence[ValidatorIndex]:
+//    """
+//    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
+//    """
+//    start = (len(indices) * index) // count
+//    end = (len(indices) * uint64(index + 1)) // count
+//    return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
+func computeCommittee(
+	indices []types.ValidatorIndex,
+	seed [32]byte,
+	index, count uint64,
+) ([]types.ValidatorIndex, error) {
+	validatorCount := uint64(len(indices))
+	start := sliceutil.SplitOffset(validatorCount, count, index)
+	end := sliceutil.SplitOffset(validatorCount, count, index+1)
 
-		// Fill in the cache on miss.
-		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
-			}
-		}()
-
-		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return len(indices) > 0, nil
-}
-
-// IsNextPeriodSyncCommittee returns true if the input validator index belongs in the next period sync committee
-// along with the sync period boundary root.
-// 1.) Checks if the public key exists in the sync committee cache
-// 2.) If 1 fails, checks if the public key exists in the input next sync committee object
-func IsNextPeriodSyncCommittee(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
-) (bool, error) {
-	root, err := syncPeriodBoundaryRoot(st)
-	if err != nil {
-		return false, err
-	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
-		val, err := st.ValidatorAtIndex(valIdx)
-		if err != nil {
-			return false, nil
-		}
-		committee, err := st.NextSyncCommittee()
-		if err != nil {
-			return false, err
-		}
-		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return len(indices) > 0, nil
-}
-
-// CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
-// current period sync committee for input validator.
-func CurrentPeriodSyncSubcommitteeIndices(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
-) ([]types.CommitteeIndex, error) {
-	root, err := syncPeriodBoundaryRoot(st)
-	if err != nil {
-		return nil, err
-	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
-		val, err := st.ValidatorAtIndex(valIdx)
-		if err != nil {
-			return nil, nil
-		}
-		committee, err := st.CurrentSyncCommittee()
-		if err != nil {
-			return nil, err
-		}
-
-		// Fill in the cache on miss.
-		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
-			}
-		}()
-
-		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return indices, nil
-}
-
-// NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
-func NextPeriodSyncSubcommitteeIndices(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
-) ([]types.CommitteeIndex, error) {
-	root, err := syncPeriodBoundaryRoot(st)
-	if err != nil {
-		return nil, err
-	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
-	if err == cache.ErrNonExistingSyncCommitteeKey {
-		val, err := st.ValidatorAtIndex(valIdx)
-		if err != nil {
-			return nil, nil
-		}
-		committee, err := st.NextSyncCommittee()
-		if err != nil {
-			return nil, err
-		}
-		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return indices, nil
-}
-
-// UpdateSyncCommitteeCache updates sync committee cache.
-// It uses `state`'s latest block header root as key. To avoid misuse, it disallows
-// block header with state root zeroed out.
-func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
-	nextSlot := st.Slot() + 1
-	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
-		return errors.New("not at the end of the epoch to update cache")
-	}
-	if SlotToEpoch(nextSlot)%params.BeaconConfig().EpochsPerSyncCommitteePeriod != 0 {
-		return errors.New("not at sync committee period boundary to update cache")
+	if start > validatorCount || end > validatorCount {
+		return nil, errors.New("index out of range")
 	}
 
-	header := st.LatestBlockHeader()
-	if bytes.Equal(header.StateRoot, params.BeaconConfig().ZeroHash[:]) {
-		return errors.New("zero hash state root can't be used to update cache")
-	}
-
-	prevBlockRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-
-	return syncCommitteeCache.UpdatePositionsInCommittee(prevBlockRoot, st)
-}
-
-// Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
-func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []types.CommitteeIndex {
-	var indices []types.CommitteeIndex
-	for i, k := range pubKeys {
-		if bytes.Equal(k, pubKey) {
-			indices = append(indices, types.CommitteeIndex(i))
-		}
-	}
-	return indices
-}
-
-// Retrieve the current sync period boundary root by calculating sync period start epoch
-// and calling `BlockRoot`.
-// It uses the boundary slot - 1 for block root. (Ex: SlotsPerEpoch * EpochsPerSyncCommitteePeriod - 1)
-func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([]byte, error) {
-	// Can't call `BlockRoot` until the first slot.
-	if st.Slot() == params.BeaconConfig().GenesisSlot {
-		return params.BeaconConfig().ZeroHash[:], nil
-	}
-
-	startEpoch, err := SyncCommitteePeriodStartEpoch(CurrentEpoch(st))
-	if err != nil {
-		return nil, err
-	}
-	startEpochSlot, err := StartSlot(startEpoch)
+	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
+	shuffledIndices := make([]types.ValidatorIndex, len(indices))
+	copy(shuffledIndices, indices)
+	// UnshuffleList is used here as it is an optimized implementation created
+	// for fast computation of committees.
+	// Reference implementation: https://github.com/protolambda/eth2-shuffle
+	shuffledList, err := UnshuffleList(shuffledIndices, seed)
 	if err != nil {
 		return nil, err
 	}
 
-	// Prevent underflow
-	if startEpochSlot >= 1 {
-		startEpochSlot--
-	}
-
-	return BlockRootAtSlot(st, startEpochSlot)
+	return shuffledList[start:end], nil
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
