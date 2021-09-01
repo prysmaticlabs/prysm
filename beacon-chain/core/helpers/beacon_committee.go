@@ -21,10 +21,9 @@ import (
 )
 
 var (
-	committeeCache = cache.NewCommitteesCache()
-    proposerIndicesCache = cache.NewProposerIndicesCache()
+	committeeCache       = cache.NewCommitteesCache()
+	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
-
 
 // SlotCommitteeCount returns the number of beacon committees of a slot. The
 // active validator count is provided as an argument rather than an imported implementation

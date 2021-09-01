@@ -15,7 +15,7 @@ import (
 )
 
 var (
-    syncCommitteeCache = cache.NewSyncCommittee()
+	syncCommitteeCache = cache.NewSyncCommittee()
 )
 
 // IsCurrentPeriodSyncCommittee returns true if the input validator index belongs in the current period sync committee
