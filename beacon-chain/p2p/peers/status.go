@@ -33,7 +33,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -74,11 +73,6 @@ const (
 	// MaxBackOffDuration maximum amount (in milliseconds) to wait before peer is re-dialed.
 	MaxBackOffDuration = 5000
 )
-
-// ErrNoPeerStatus is returned when there is a map entry for a given peer but there is no chain
-// status for that peer. This should happen in rare circumstances only, but is a very possible
-// scenario in a chaotic and adversarial network.
-var ErrNoPeerStatus = errors.New("no chain status for peer")
 
 // Status is the structure holding the peer status information.
 type Status struct {
@@ -199,14 +193,7 @@ func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 // This will error if the peer does not exist.
 // This will error if there is no known chain state for the peer.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
-	s, err := p.scorers.PeerStatusScorer().PeerStatus(pid)
-	if err != nil {
-		return nil, err
-	}
-	if s == nil {
-		return nil, ErrNoPeerStatus
-	}
-	return s, nil
+	return p.scorers.PeerStatusScorer().PeerStatus(pid)
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
