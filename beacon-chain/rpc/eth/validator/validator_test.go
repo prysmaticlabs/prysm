@@ -590,21 +590,10 @@ func TestProduceBlockV2(t *testing.T) {
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
-		vals := beaconState.Validators()
-		wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
-		wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
-		for i := 0; i < len(wantedCommittee); i++ {
-			wantedIndices[i] = types.ValidatorIndex(i)
-			wantedCommittee[i] = vals[i].PublicKey
-		}
-		require.NoError(t, beaconState.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
-			Pubkeys:         wantedCommittee,
-			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-		}))
-		require.NoError(t, beaconState.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
-			Pubkeys:         wantedCommittee,
-			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-		}))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
@@ -661,15 +650,16 @@ func TestProduceBlockV2(t *testing.T) {
 
 		aggregationBits := bitfield.NewBitvector128()
 		for i := range aggregationBits {
-			aggregationBits[i] = 0xAA
+			aggregationBits[i] = 0xFF
 		}
-		indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
-		require.NoError(t, err)
 		//ps := helpers.PrevSlot(beaconState.Slot())
 		//pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 		//require.NoError(t, err)
-		sigs := make([]bls.Signature, 0, len(indices))
-		for i, indice := range indices {
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
 			if aggregationBits.BitAt(uint64(i)) {
 				b := p2pType.SSZBytes(parentRoot[:])
 				sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
