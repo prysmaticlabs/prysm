@@ -451,11 +451,16 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		}
 		validators[i] = val
 	}
+
+	currPeriod := corehelpers.SyncCommitteePeriod(currEpoch)
+	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+
 	for i, sub := range req.Data {
 		if sub.UntilEpoch < currEpoch {
 			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch)
 		}
-		maxValidEpoch := currEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+		maxValidEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 		if sub.UntilEpoch > maxValidEpoch {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
@@ -466,15 +471,11 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		}
 	}
 
-	currPeriod := corehelpers.SyncCommitteePeriod(currEpoch)
-	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-
 	for i, sub := range req.Data {
 		pubkey48 := validators[i].PublicKey()
 		// Handle overflow in the event current epoch is less than end epoch.
 		// This is an impossible condition, so it is a defensive check.
-		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(currEpoch))
+		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(startEpoch))
 		if err != nil {
 			epochsToWatch = 0
 		}
