@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/d4l3k/messagediff"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
@@ -28,10 +28,10 @@ func init() {
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
-func RunBlockProcessingTest(t *testing.T, config string) {
+func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "sanity/blocks/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", folderPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()

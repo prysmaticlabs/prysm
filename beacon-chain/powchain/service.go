@@ -345,7 +345,7 @@ func (s *Service) IsConnectedToETH1() bool {
 // DepositRoot returns the Merkle root of the latest deposit trie
 // from the ETH1.0 deposit contract.
 func (s *Service) DepositRoot() [32]byte {
-	return s.depositTrie.Root()
+	return s.depositTrie.HashTreeRoot()
 }
 
 // DepositTrie returns the sparse Merkle trie used for storing

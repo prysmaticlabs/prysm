@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
@@ -86,7 +86,7 @@ func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (st
 func (m *MockStateManager) RecoverStateSummary(
 	ctx context.Context,
 	blockRoot [32]byte,
-) (*statepb.StateSummary, error) {
+) (*ethpb.StateSummary, error) {
 	panic("implement me")
 }
 
