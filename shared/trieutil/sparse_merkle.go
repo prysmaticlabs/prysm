@@ -78,10 +78,17 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 	return m.originalItems
 }
 
-// Root returns the top-most, Merkle root of the trie.
-func (m *SparseMerkleTrie) Root() [32]byte {
+// HashTreeRoot of the Merkle trie as defined in the deposit contract.
+//  Spec Definition:
+//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
+func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 	enc := [32]byte{}
-	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
+	depositCount := uint64(len(m.originalItems))
+	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], ZeroHashes[0][:]) {
+		// Accounting for empty tries
+		depositCount = 0
+	}
+	binary.LittleEndian.PutUint64(enc[:], depositCount)
 	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
@@ -148,21 +155,6 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
 	proof[len(proof)-1] = enc[:]
 	return proof, nil
-}
-
-// HashTreeRoot of the Merkle trie as defined in the deposit contract.
-//  Spec Definition:
-//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
-func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
-	var zeroBytes [32]byte
-	depositCount := uint64(len(m.originalItems))
-	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
-		// Accounting for empty tries
-		depositCount = 0
-	}
-	newNode := append(m.branches[len(m.branches)-1][0], bytesutil.Bytes8(depositCount)...)
-	newNode = append(newNode, zeroBytes[:24]...)
-	return hashutil.Hash(newNode)
 }
 
 // ToProto converts the underlying trie into its corresponding
