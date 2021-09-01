@@ -323,7 +323,7 @@ func TestPeerWithNilChainState(t *testing.T) {
 	p.SetChainState(id, nil)
 
 	resChainState, err := p.ChainState(id)
-	require.Equal(t, peerdata.ErrPeerUnknown, err)
+	require.Equal(t, peerdata.ErrNoPeerStatus, err)
 	var nothing *pb.Status
 	require.Equal(t, resChainState, nothing)
 }
