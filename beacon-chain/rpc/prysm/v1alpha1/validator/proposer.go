@@ -227,6 +227,12 @@ func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
+	if helpers.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+		return nil, status.Errorf(
+			codes.InvalidArgument, "Cannot request Altair blocks before the Altair fork epoch",
+		)
+	}
+
 	blkData, err := vs.BuildBlockData(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
@@ -235,6 +241,8 @@ func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
+	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
+	// an error in the first validity check of this endpoint.
 	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
 	if err != nil {
 		return nil, err
