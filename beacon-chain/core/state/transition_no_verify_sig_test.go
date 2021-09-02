@@ -4,10 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -159,18 +157,4 @@ func TestCalculateStateRootAltair_OK(t *testing.T) {
 	r, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, params.BeaconConfig().ZeroHash, r)
-}
-
-func createFullAltairBlockWithOperations(t *testing.T) (stateAltair.BeaconStateAltair,
-	*ethpb.SignedBeaconBlockAltair) {
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 32)
-	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	assert.NoError(t, err)
-	assert.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	tState := beaconState.Copy()
-	blk, err := testutil.GenerateFullBlockAltair(tState, privKeys,
-		&testutil.BlockGenConfig{NumAttestations: 1, NumVoluntaryExits: 0, NumDeposits: 0}, 1)
-	require.NoError(t, err)
-
-	return beaconState, blk
 }

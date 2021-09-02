@@ -13,6 +13,7 @@ import (
 	ethTypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -40,13 +41,8 @@ type BalanceCache struct {
 
 // NewEffectiveBalanceCache creates a new effective balance cache for storing/accessing total balance by epoch.
 func NewEffectiveBalanceCache() *BalanceCache {
-	c, err := lru.New(int(maxBalanceCacheSize))
-	// An error is only returned if the size of the cache is <= 0.
-	if err != nil {
-		panic(err)
-	}
 	return &BalanceCache{
-		cache: c,
+		cache: lruwrpr.New(int(maxBalanceCacheSize)),
 	}
 }
 

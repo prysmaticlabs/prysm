@@ -6,11 +6,14 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 )
 
@@ -23,7 +26,6 @@ func (s *State) ReplayBlocks(
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
-
 	var err error
 	log.Debugf("Replaying state from slot %d till slot %d", state.Slot(), targetSlot)
 	// The input block list is sorted in decreasing slots order.
@@ -147,6 +149,16 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
+	if signed.Version() == version.Altair {
+		sa, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		state, err = altair.ProcessSyncAggregate(state, sa)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return state, nil
 }
@@ -177,13 +189,30 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if transition.CanProcessEpoch(state) {
-			state, err = transition.ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			switch state.Version() {
+			case version.Phase0:
+				state, err = transition.ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			case version.Altair:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimization")
+				}
+			default:
+				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			return nil, err
+		}
+
+		if helpers.CanUpgradeToAltair(state.Slot()) {
+			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -206,7 +235,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 		return gRoot, 0, nil
 	}
 
-	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot+1)
+	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
