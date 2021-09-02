@@ -7,16 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/snappy"
-	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -60,67 +54,6 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	wg.Wait()
 }
 
-func TestMessageIDFunction_HashesCorrectly(t *testing.T) {
-	s := &Service{
-		cfg: &Config{
-			TCPPort: 0,
-			UDPPort: 0,
-		},
-		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
-	}
-	d, err := s.currentForkDigest()
-	assert.NoError(t, err)
-	tpc := fmt.Sprintf(BlockSubnetTopicFormat, d)
-	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
-	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
-	hashedData := hashutil.Hash(append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pMsg.Data...))
-	msgID := string(hashedData[:20])
-	assert.Equal(t, msgID, s.msgIDFunction(pMsg), "Got incorrect msg id")
-
-	validObj := [32]byte{'v', 'a', 'l', 'i', 'd'}
-	enc := snappy.Encode(nil, validObj[:])
-	nMsg := &pubsubpb.Message{Data: enc, Topic: &tpc}
-	hashedData = hashutil.Hash(append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], validObj[:]...))
-	msgID = string(hashedData[:20])
-	assert.Equal(t, msgID, s.msgIDFunction(nMsg), "Got incorrect msg id")
-}
-
-func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
-	s := &Service{
-		cfg: &Config{
-			TCPPort: 0,
-			UDPPort: 0,
-		},
-		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
-	}
-	d, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, s.genesisValidatorsRoot)
-	assert.NoError(t, err)
-	tpc := fmt.Sprintf(BlockSubnetTopicFormat, d)
-	topicLen := uint64(len(tpc))
-	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
-	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
-	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
-	// Create object to hash
-	combinedObj := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], topicLenBytes...)
-	combinedObj = append(combinedObj, tpc...)
-	combinedObj = append(combinedObj, pMsg.Data...)
-	hashedData := hashutil.Hash(combinedObj)
-	msgID := string(hashedData[:20])
-	assert.Equal(t, msgID, s.msgIDFunction(pMsg), "Got incorrect msg id")
-
-	validObj := [32]byte{'v', 'a', 'l', 'i', 'd'}
-	enc := snappy.Encode(nil, validObj[:])
-	nMsg := &pubsubpb.Message{Data: enc, Topic: &tpc}
-	// Create object to hash
-	combinedObj = append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], topicLenBytes...)
-	combinedObj = append(combinedObj, tpc...)
-	combinedObj = append(combinedObj, validObj[:]...)
-	hashedData = hashutil.Hash(combinedObj)
-	msgID = string(hashedData[:20])
-	assert.Equal(t, msgID, s.msgIDFunction(nMsg), "Got incorrect msg id")
-}
 
 func TestExtractGossipDigest(t *testing.T) {
 	tests := []struct {
