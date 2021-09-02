@@ -65,10 +65,6 @@ type Server struct {
 	StateGen               stategen.StateManager
 }
 
-func (vs *Server) GetBlockAltair(ctx context.Context, request *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
 func (vs *Server) ProposeBlockAltair(ctx context.Context, altair *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
