@@ -176,7 +176,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 			require.NoError(t, proposerServer.AttPool.SaveUnaggregatedAttestation(a))
 		}
 	}
-	require.Equal(t, true, found, "No unaggregated Attestations were generated")
+	require.Equal(t, true, found, "No unaggregated attestations were generated")
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	assert.NoError(t, err)
