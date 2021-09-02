@@ -160,7 +160,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		require.NoError(t, err)
 		atts = append(atts, a...)
 	}
-	// Max Attestations minus one so we can almost fill the block and then include 1 unaggregated
+	// Max attestations minus one so we can almost fill the block and then include 1 unaggregated
 	// att to maximize inclusion.
 	atts = atts[:params.BeaconConfig().MaxAttestations-1]
 	require.NoError(t, proposerServer.AttPool.SaveAggregatedAttestations(atts))
