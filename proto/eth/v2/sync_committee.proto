@@ -34,6 +34,10 @@ message SyncCommittee {
   bytes aggregate_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
+message SubmitPoolSyncCommitteeSignatures {
+  repeated SyncCommitteeMessage data = 1;
+}
+
 // Sync committee object to support light client.
 message SyncCommitteeMessage {
   // Slot to which this contribution pertains.
