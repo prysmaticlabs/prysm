@@ -230,7 +230,8 @@ func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validati
 			return pubsub.ValidationIgnore
 		}
 
-		// Reject for a validator index that is not found.
+		// Reject for a validator index that is not found, as we should not remain peered with a node
+		// that is on such a different fork than our chain.
 		pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
