@@ -63,3 +63,17 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	msgID = string(hashedData[:20])
 	assert.Equal(t, msgID, p2p.MsgID(genesisValidatorsRoot, nMsg), "Got incorrect msg id")
 }
+
+func TestMsgID_WithNilTopic(t *testing.T) {
+	msg := &pubsubpb.Message{
+		Data: make([]byte, 32),
+		Topic: nil,
+	}
+
+
+	invalid := make([]byte, 20)
+	copy(invalid, "invalid")
+
+	res := p2p.MsgID([]byte{0x01}, msg)
+	assert.Equal(t, res, string(invalid))
+}
