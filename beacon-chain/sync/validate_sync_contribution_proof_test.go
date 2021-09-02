@@ -72,7 +72,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -108,7 +108,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -143,7 +143,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -178,7 +178,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 
 				s.setSyncContributionIndexSlotSeen(1, 1, 1)
@@ -216,7 +216,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
@@ -259,7 +259,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
@@ -349,7 +349,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 				}
 
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -427,8 +427,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					PublicKey:                   bytesutil.ToBytes48(pubkey),
 					SyncSelectionProofDomain:    d,
 				}
-
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -509,7 +508,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{1},
 				}
 
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -593,7 +592,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					SyncContributionProofDomain: cd,
 					SyncCommitteeDomain:         make([]byte, 32),
 				}
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{

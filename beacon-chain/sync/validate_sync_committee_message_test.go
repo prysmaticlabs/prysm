@@ -13,10 +13,7 @@ import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -25,11 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -234,7 +228,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Slot = helpers.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 5)
 
@@ -332,7 +326,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				}
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 
@@ -391,7 +385,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Slot = helpers.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 
@@ -506,7 +500,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			committeeIndices: []types.CommitteeIndex{0},
 			setupTopic: func(s *Service) string {
 				format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				require.NoError(t, err)
 				prefix := fmt.Sprintf(format, digest, 0 /* validator index 0 */)
 				topic := prefix + "foobar"
@@ -557,31 +551,4 @@ func Test_ignoreEmptyCommittee(t *testing.T) {
 			require.Equal(t, tt.want, result)
 		})
 	}
-}
-
-func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Database) ([32]byte, []bls.SecretKey) {
-	gs, keys := testutil.DeterministicGenesisStateAltair(t, 64)
-	sCom, err := altair.NextSyncCommittee(ctx, gs)
-	assert.NoError(t, err)
-	assert.NoError(t, gs.SetCurrentSyncCommittee(sCom))
-	assert.NoError(t, beaconDB.SaveGenesisData(context.Background(), gs))
-
-	testState := gs.Copy()
-	hRoot := [32]byte{}
-	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := testutil.GenerateFullBlockAltair(testState, keys, testutil.DefaultBlockGenConfig(), i)
-		require.NoError(t, err)
-		r, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		_, testState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
-		assert.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: i, Root: r[:]}))
-		assert.NoError(t, beaconDB.SaveState(ctx, testState, r))
-		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, r))
-		hRoot = r
-	}
-	return hRoot, keys
 }
