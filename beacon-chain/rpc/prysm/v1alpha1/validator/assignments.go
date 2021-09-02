@@ -11,6 +11,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -138,10 +138,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
 
-	// Post Altair transition when the beacon state is Altair compatible, and requested epoch is
-	// post fork boundary.
-	postAltairTransition := s.Version() == version.Altair && req.Epoch >= params.BeaconConfig().AltairForkEpoch
-
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
@@ -186,40 +182,33 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 
 		// Are the validators in current or next epoch sync committee.
-		if postAltairTransition {
-			syncCommPeriod := helpers.SyncCommitteePeriod(req.Epoch)
-			csc, err := s.CurrentSyncCommittee()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
-			}
+		if helpers.AltairCompatible(s, req.Epoch) {
 			assignment.IsSyncCommittee, err = helpers.IsCurrentPeriodSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
 			}
 			if assignment.IsSyncCommittee {
-				assignValidatorToSyncSubnet(req.Epoch, syncCommPeriod, pubKey, csc, assignment.Status)
+				if err := registerSyncSubnetCurrentPeriod(s, req.Epoch, pubKey, assignment.Status); err != nil {
+					return nil, err
+				}
 			}
-
-			nextSlotEpoch := helpers.SlotToEpoch(s.Slot() + 1)
-			currentEpoch := helpers.CurrentEpoch(s)
+			nextAssignment.IsSyncCommittee = assignment.IsSyncCommittee
 
 			// Next epoch sync committee duty is assigned with next period sync committee only during
 			// sync period epoch boundary (ie. EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1). Else wise
 			// next epoch sync committee duty is the same as current epoch.
-			if helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1 {
-				nsc, err := s.NextSyncCommittee()
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
-				}
+			nextSlotToEpoch := helpers.SlotToEpoch(s.Slot() + 1)
+			currentEpoch := helpers.CurrentEpoch(s)
+			if helpers.SyncCommitteePeriod(nextSlotToEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1 {
 				nextAssignment.IsSyncCommittee, err = helpers.IsNextPeriodSyncCommittee(s, idx)
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
 				}
 				if nextAssignment.IsSyncCommittee {
-					assignValidatorToSyncSubnet(req.Epoch, syncCommPeriod+1, pubKey, nsc, nextAssignment.Status)
+					if err := registerSyncSubnetNextPeriod(s, req.Epoch, pubKey, nextAssignment.Status); err != nil {
+						return nil, err
+					}
 				}
-			} else {
-				nextAssignment.IsSyncCommittee = assignment.IsSyncCommittee
 			}
 		}
 
@@ -263,9 +252,29 @@ func (vs *Server) AssignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorS
 	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
 }
 
-// assignValidatorToSyncSubnet checks the status and pubkey of a particular validator
+func registerSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch types.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
+	committee, err := s.CurrentSyncCommittee()
+	if err != nil {
+		return err
+	}
+	syncCommPeriod := helpers.SyncCommitteePeriod(epoch)
+	registerSyncSubnet(epoch, syncCommPeriod, pubKey, committee, status)
+	return nil
+}
+
+func registerSyncSubnetNextPeriod(s beaconState.BeaconState, epoch types.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
+	committee, err := s.NextSyncCommittee()
+	if err != nil {
+		return err
+	}
+	syncCommPeriod := helpers.SyncCommitteePeriod(epoch)
+	registerSyncSubnet(epoch, syncCommPeriod+1, pubKey, committee, status)
+	return nil
+}
+
+// registerSyncSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
-func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
+func registerSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
 	syncCommittee *ethpb.SyncCommittee, status ethpb.ValidatorStatus) {
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
