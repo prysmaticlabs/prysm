@@ -130,10 +130,7 @@ func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []types.Committ
 func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) bool {
 	s.seenSyncMessageLock.RLock()
 	defer s.seenSyncMessageLock.RUnlock()
-
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
-	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
-	_, seen := s.seenSyncMessageCache.Get(string(b))
+	_, seen := s.seenSyncMessageCache.Get(seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex))
 	return seen
 }
 
@@ -141,10 +138,8 @@ func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) {
 	s.seenSyncMessageLock.Lock()
 	defer s.seenSyncMessageLock.Unlock()
-
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
-	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
-	s.seenSyncMessageCache.Add(string(b), true)
+	key := seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex)
+	s.seenSyncMessageCache.Add(key, true)
 }
 
 // The `subnet_id` is valid for the given validator. This implies the validator is part of the broader
@@ -265,6 +260,12 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 		}
 		return pubsub.ValidationAccept
 	}
+}
+
+func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) string {
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
+	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
+	return string(b)
 }
 
 func validationPipeline(ctx context.Context, fns ...validationFn) pubsub.ValidationResult {
