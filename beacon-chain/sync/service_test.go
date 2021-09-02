@@ -135,6 +135,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
@@ -213,6 +214,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
 	}
 
 	go r.registerHandlers()
