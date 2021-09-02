@@ -152,7 +152,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		StateGen:          stategen.New(db),
 	}
 
-	// Generate a bunch of random Attestations at slot. These would be considered double votes, but
+	// Generate a bunch of random attestations at slot. These would be considered double votes, but
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
