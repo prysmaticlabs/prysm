@@ -32,21 +32,10 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
-
-	raw, err := s.decodePubsubMessage(msg)
+	m, err := s.readSyncContributionMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-	m, ok := raw.(*ethpb.SignedContributionAndProof)
-	if !ok {
-		return pubsub.ValidationReject
-	}
-	if m == nil || m.Message == nil {
-		return pubsub.ValidationReject
-	}
-	if err := altair.ValidateNilSyncContribution(m); err != nil {
 		return pubsub.ValidationReject
 	}
 
@@ -168,6 +157,22 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	msg.ValidatorData = m
 
 	return pubsub.ValidationAccept
+}
+
+// Parse a sync contribution message from a pubsub message.
+func (s *Service) readSyncContributionMessage(msg *pubsub.Message) (*ethpb.SignedContributionAndProof, error) {
+	raw, err := s.decodePubsubMessage(msg)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := raw.(*ethpb.SignedContributionAndProof)
+	if !ok {
+		return nil, errWrongMessage
+	}
+	if err := altair.ValidateNilSyncContribution(m); err != nil {
+		return nil, errNilMessage
+	}
+	return m, nil
 }
 
 // Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
