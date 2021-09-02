@@ -353,6 +353,37 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	assert.Equal(t, types.Slot(2), loadedState.Slot(), "Did not correctly load state")
 }
 
+func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
+	stateRoot, err := genesis.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
+
+	b1, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: r1[:]}))
+	service.hotStateCache.put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
+
+	loadedState, err := service.loadStateBySlot(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, types.Slot(1), loadedState.Slot(), "Did not correctly load state")
+
+	// Latest block header's state root should not be zero. Zero means the current slot's block has been processed.
+	require.NotEqual(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(loadedState.LatestBlockHeader().StateRoot))
+}
+
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)

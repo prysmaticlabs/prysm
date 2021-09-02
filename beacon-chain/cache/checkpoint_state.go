@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -36,12 +37,8 @@ type CheckpointStateCache struct {
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
 func NewCheckpointStateCache() *CheckpointStateCache {
-	cache, err := lru.New(maxCheckpointStateSize)
-	if err != nil {
-		panic(err)
-	}
 	return &CheckpointStateCache{
-		cache: cache,
+		cache: lruwrpr.New(maxCheckpointStateSize),
 	}
 }
 

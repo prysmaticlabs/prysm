@@ -3,6 +3,7 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -20,11 +21,7 @@ func NewHighestAttestationCache(size int, onEvicted func(key interface{}, value 
 	if size != 0 {
 		highestAttCacheSize = size
 	}
-	cache, err := lru.NewWithEvict(highestAttCacheSize, onEvicted)
-	if err != nil {
-		return nil, err
-	}
-	return &HighestAttestationCache{cache: cache}, nil
+	return &HighestAttestationCache{cache: lruwrpr.NewWithEvict(highestAttCacheSize, onEvicted)}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
