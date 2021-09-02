@@ -1686,7 +1686,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 	validatorCount := uint64(32)
 
 	bits := make([]byte, validatorCount)
-	for i, _ := range bits {
+	for i := range bits {
 		bits[i] = 0xff
 	}
 	headState, _ := testutil.DeterministicGenesisStateAltair(t, validatorCount)
