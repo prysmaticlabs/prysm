@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -24,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -111,8 +111,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
+	c := lruwrpr.New(10)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -124,11 +123,10 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAggregatedAttestationCache: c,
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
+	_, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)]
@@ -180,8 +178,6 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -194,10 +190,9 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
@@ -264,8 +259,6 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, 96)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			AttPool:     attestations.NewPool(),
@@ -276,11 +269,10 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 				State: beaconState},
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
@@ -355,8 +347,6 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -372,10 +362,9 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
@@ -450,8 +439,6 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -469,10 +456,9 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)
@@ -565,8 +551,6 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -581,10 +565,9 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 	// Set beacon block as bad.
 	r.setBadBlock(context.Background(), root)
 	buf := new(bytes.Buffer)
@@ -657,8 +640,6 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
@@ -674,10 +655,9 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAggregatedAttestationCache: c,
+		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, signedAggregateAndProof)

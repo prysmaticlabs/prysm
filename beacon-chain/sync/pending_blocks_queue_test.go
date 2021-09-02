@@ -51,8 +51,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	b0 := testutil.NewBeaconBlock()
 	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b0)))
@@ -113,8 +112,7 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	b0 := testutil.NewBeaconBlock()
 	b0r := [32]byte{'a'}
@@ -183,8 +181,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
+
 	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{})
@@ -274,8 +272,8 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
+
 	p1.Peers().Add(new(enr.Record), p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &ethpb.Status{})
@@ -362,9 +360,8 @@ func TestService_BatchRootRequest(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	r.initCaches()
 
-	err := r.initCaches()
-	require.NoError(t, err)
 	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{FinalizedEpoch: 2})
@@ -472,8 +469,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()
@@ -545,8 +541,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
-	err := r.initCaches()
-	require.NoError(t, err)
+	r.initCaches()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	parentBlock := testutil.NewBeaconBlock()

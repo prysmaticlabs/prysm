@@ -115,7 +115,8 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 					}
 
 					// If peer hasn't sent a status request, we disconnect with them
-					if _, err := s.peers.ChainState(remotePeer); errors.Is(err, peerdata.ErrPeerUnknown) {
+					if _, err := s.peers.ChainState(remotePeer); errors.Is(err, peerdata.ErrPeerUnknown) || errors.Is(err, peerdata.ErrNoPeerStatus) {
+						statusMessageMissing.Inc()
 						disconnectFromPeer()
 						return
 					}

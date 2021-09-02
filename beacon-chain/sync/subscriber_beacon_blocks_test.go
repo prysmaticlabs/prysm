@@ -89,7 +89,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					AttPool: attestations.NewPool(),
 				},
 			}
-			assert.NoError(t, s.initCaches())
+			s.initCaches()
 			// Set up attestation pool.
 			for _, att := range pooledAttestations {
 				if helpers.IsAggregated(att) {

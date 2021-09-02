@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -22,6 +21,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -112,19 +112,17 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidProposerSlashing(t)
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	d, err := r.currentForkDigest()
@@ -154,15 +152,13 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: state},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)

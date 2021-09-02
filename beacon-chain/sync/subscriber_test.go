@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -24,6 +23,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -71,6 +71,43 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
+}
+
+func TestSubscribe_UnsubscribeTopic(t *testing.T) {
+	p2pService := p2ptest.NewTestP2P(t)
+	r := Service{
+		ctx: context.Background(),
+		cfg: &Config{
+			P2P:         p2pService,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mockChain.ChainService{
+				ValidatorsRoot: [32]byte{'A'},
+				Genesis:        time.Now(),
+			},
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	var err error
+	p2pService.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
+	topic := "/eth2/%x/voluntary_exit"
+
+	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+		return nil
+	},p2pService.Digest)
+	r.markForChainStart()
+
+	fullTopic := fmt.Sprintf(topic, p2pService.Digest) + p2pService.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, r.subHandler.topicExists(fullTopic))
+	topics := p2pService.PubSub().GetTopics()
+	assert.Equal(t, fullTopic, topics[0])
+
+	r.unSubscribeFromTopic(fullTopic)
+
+	assert.Equal(t, false, r.subHandler.topicExists(fullTopic))
+	assert.Equal(t, 0, len(p2pService.PubSub().GetTopics()))
+
 }
 
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
@@ -135,8 +172,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := Service{
 		ctx: ctx,
 		cfg: &Config{
@@ -146,7 +181,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 			Chain:        chainService,
 			DB:           d,
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 		chainStarted:              abool.New(),
 		subHandler:                newSubTopicHandler(),
 	}
@@ -155,6 +190,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
@@ -383,6 +419,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				cfg: &Config{
 					Chain: mChain,
 				},
+				subHandler:   newSubTopicHandler(),
 			}
 			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
@@ -408,6 +445,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 			P2P: p,
 		},
 		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
 	}
 	// Empty cache at the end of the test.
 	defer cache.SubnetIDs.EmptyAllCaches()

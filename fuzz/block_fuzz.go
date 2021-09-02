@@ -169,9 +169,7 @@ func BeaconFuzzBlock(b []byte) {
 		StateGen:          sgen,
 	})
 
-	if err := s.InitCaches(); err != nil {
-		panic(err)
-	}
+	s.InitCaches()
 
 	buf := new(bytes.Buffer)
 	_, err = p2p.Encoding().EncodeGossip(buf, input.Block)

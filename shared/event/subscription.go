@@ -151,7 +151,7 @@ func (s *resubscribeSub) loop() {
 }
 
 func (s *resubscribeSub) subscribe() Subscription {
-	subscribed := make(chan error)
+	subscribed := make(chan error, 1)
 	var sub Subscription
 retry:
 	for {
