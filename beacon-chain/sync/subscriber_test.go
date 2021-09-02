@@ -95,7 +95,7 @@ func TestSubscribe_UnsubscribeTopic(t *testing.T) {
 
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		return nil
-	},p2pService.Digest)
+	}, p2pService.Digest)
 	r.markForChainStart()
 
 	fullTopic := fmt.Sprintf(topic, p2pService.Digest) + p2pService.Encoding().ProtocolSuffix()
@@ -419,7 +419,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				cfg: &Config{
 					Chain: mChain,
 				},
-				subHandler:   newSubTopicHandler(),
+				subHandler: newSubTopicHandler(),
 			}
 			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)

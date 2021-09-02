@@ -200,7 +200,6 @@ go_test(
         "@com_github_d4l3k_messagediff//:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
-        "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_kevinms_leakybucket_go//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
