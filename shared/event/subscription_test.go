@@ -19,6 +19,7 @@ package event
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 
@@ -107,4 +108,20 @@ func TestResubscribeAbort(t *testing.T) {
 
 	sub.Unsubscribe()
 	require.NoError(t, <-done)
+}
+
+func TestResubscribeNonBlocking(t *testing.T) {
+	t.Parallel()
+
+	done := make(chan struct{})
+	sub := Resubscribe(0, func(ctx context.Context) (Subscription, error) {
+		done <- struct{}{}
+		return nil, nil
+	})
+
+	require.Equal(t, 4, runtime.NumGoroutine())
+	sub.Unsubscribe()
+	<-done
+	require.Equal(t, 3, runtime.NumGoroutine())
+
 }
