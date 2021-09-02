@@ -562,6 +562,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
 
 		chainBlk, err := wrapper.WrappedAltairSignedBeaconBlock(headBlock.GetAltairBlock())
+		require.NoError(t, err)
 		bs := &Server{
 			BeaconDB: beaconDB,
 			ChainInfoFetcher: &mock.ChainService{
