@@ -63,4 +63,3 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	msgID = string(hashedData[:20])
 	assert.Equal(t, msgID, p2p.MsgID(genesisValidatorsRoot, nMsg), "Got incorrect msg id")
 }
-

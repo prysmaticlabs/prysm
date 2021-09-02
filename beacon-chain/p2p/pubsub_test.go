@@ -54,7 +54,6 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	wg.Wait()
 }
 
-
 func TestExtractGossipDigest(t *testing.T) {
 	tests := []struct {
 		name    string

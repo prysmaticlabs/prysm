@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-
 // MsgID is a content addressable ID function.
 //
 // Ethereum Beacon Chain spec defines the message ID as:
@@ -95,4 +94,3 @@ func altairMsgID(pmsg *pubsub_pb.Message) string {
 	h := hashutil.Hash(combinedData)
 	return string(h[:20])
 }
-
