@@ -207,6 +207,7 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
