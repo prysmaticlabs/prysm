@@ -224,7 +224,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 // by passing in the slot and the signed randao reveal of the slot. This is used by a validator
 // after the altair fork epoch has been encountered.
 func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockAltair")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
