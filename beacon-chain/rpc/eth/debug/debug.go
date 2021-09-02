@@ -17,7 +17,7 @@ import (
 
 // GetBeaconState returns the full beacon state for a given state ID.
 func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconState")
+	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconState")
 	defer span.End()
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
@@ -37,7 +37,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
 func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateSSZResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZ")
+	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
 	defer span.End()
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
@@ -55,7 +55,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
 func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateV2")
+	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
@@ -94,7 +94,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 
 // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
 func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZV2")
+	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZV2")
 	defer span.End()
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
