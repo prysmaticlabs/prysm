@@ -688,7 +688,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					SyncCommitteeDomain:         d,
 					SyncCommitteePubkeys:        pubkeys,
 				}
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
@@ -787,7 +787,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					SyncCommitteePubkeys:        pubkeys,
 				}
 
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s
 			},
 			args: args{
