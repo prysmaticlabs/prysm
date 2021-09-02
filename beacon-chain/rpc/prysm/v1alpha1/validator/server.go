@@ -63,7 +63,6 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
-	SyncCommitteePool      synccommittee.Pool
 }
 
 func (vs *Server) GetBlockAltair(ctx context.Context, request *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
