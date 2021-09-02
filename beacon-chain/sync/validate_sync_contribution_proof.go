@@ -39,7 +39,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationReject
 	}
 
-	// The contribution's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
+	// The contribution's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance).
 	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.Chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
