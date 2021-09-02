@@ -51,6 +51,19 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
+// BlockData required to create a beacon block.
+type BlockData struct {
+	ParentRoot        []byte
+	Graffiti          [32]byte
+	ProposerIdx       types.ValidatorIndex
+	Eth1Data          *ethpb.Eth1Data
+	Deposits          []*ethpb.Deposit
+	Attestations      []*ethpb.Attestation
+	ProposerSlashings []*ethpb.ProposerSlashing
+	AttesterSlashings []*ethpb.AttesterSlashing
+	VoluntaryExits    []*ethpb.SignedVoluntaryExit
+}
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -139,6 +152,76 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	blk.StateRoot = stateRoot
 
 	return blk, nil
+}
+
+// BuildBlockData for creating a new beacon block, so that this method can be shared across forks.
+func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*BlockData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildBlockData")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	// Retrieve the parent block as the current head of the canonical chain.
+	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+	}
+
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
+	}
+
+	if featureconfig.Get().EnableNextSlotStateCache {
+		head, err = core.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
+		}
+	} else {
+		head, err = core.ProcessSlots(ctx, head, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+		}
+	}
+
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
+	}
+
+	// Pack ETH1 Deposits which have not been included in the beacon chain.
+	deposits, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 Deposits: %v", err)
+	}
+
+	// Pack aggregated Attestations which have not been included in the beacon chain.
+	atts, err := vs.packAttestations(ctx, head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Attestations to pack into block: %v", err)
+	}
+
+	graffiti := bytesutil.ToBytes32(req.Graffiti)
+
+	// Calculate new proposer index.
+	idx, err := helpers.BeaconProposerIndex(head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
+	}
+
+	return &BlockData{
+		ParentRoot:        parentRoot,
+		Graffiti:          graffiti,
+		ProposerIdx:       idx,
+		Eth1Data:          eth1Data,
+		Deposits:          deposits,
+		Attestations:      atts,
+		ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+		AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+		VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+	}, nil
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
