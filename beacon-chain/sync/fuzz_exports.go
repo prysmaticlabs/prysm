@@ -40,6 +40,6 @@ func (s *Service) FuzzBeaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	return s.beaconBlockSubscriber(ctx, msg)
 }
 
-func (s *Service) InitCaches() error {
-	return s.initCaches()
+func (s *Service) InitCaches() {
+	s.initCaches()
 }

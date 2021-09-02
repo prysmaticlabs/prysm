@@ -41,7 +41,7 @@ func UpdateGenesisEth1Data(state state.BeaconState, deposits []*ethpb.Deposit, e
 		}
 	}
 
-	depositRoot := trie.Root()
+	depositRoot := trie.HashTreeRoot()
 	eth1Data.DepositRoot = depositRoot[:]
 	err = state.SetEth1Data(eth1Data)
 	if err != nil {
