@@ -47,10 +47,10 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	// Validate the message's data according to the p2p specification.
 	if result := validationPipeline(
 		ctx,
-		s.rejectIncorrectSubcommitteeIndex(m),
-		s.rejectEmptyContribution(m),
+		rejectIncorrectSubcommitteeIndex(m),
+		rejectEmptyContribution(m),
 		s.ignoreSeenSyncContribution(m),
-		s.rejectInvalidAggregator(m),
+		rejectInvalidAggregator(m),
 		s.rejectInvalidIndexInSubCommittee(m),
 		s.rejectInvalidSelectionProof(m),
 		s.rejectInvalidContributionSignature(m),
@@ -82,7 +82,7 @@ func (s *Service) readSyncContributionMessage(msg *pubsub.Message) (*ethpb.Signe
 	return m, nil
 }
 
-func (s *Service) rejectIncorrectSubcommitteeIndex(
+func rejectIncorrectSubcommitteeIndex(
 	m *ethpb.SignedContributionAndProof,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
@@ -97,7 +97,7 @@ func (s *Service) rejectIncorrectSubcommitteeIndex(
 	}
 }
 
-func (s *Service) rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
+func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		bVector := m.Message.Contribution.AggregationBits
 		// In the event no bit is set for the
@@ -119,7 +119,7 @@ func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof
 	}
 }
 
-func (s *Service) rejectInvalidAggregator(m *ethpb.SignedContributionAndProof) validationFn {
+func rejectInvalidAggregator(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
 		// The `contribution_and_proof.selection_proof` selects the validator as an aggregator for the slot.
 		if isAggregator, err := altair.IsSyncCommitteeAggregator(m.Message.SelectionProof); err != nil || !isAggregator {
@@ -242,17 +242,6 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		}
 		return pubsub.ValidationAccept
 	}
-}
-
-// Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
-func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
-	s.seenSyncContributionLock.RLock()
-	defer s.seenSyncContributionLock.RUnlock()
-
-	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
-	_, seen := s.seenSyncContributionCache.Get(string(b))
-	return seen
 }
 
 // Set sync contributor's aggregate index, slot and subcommittee index as seen.
