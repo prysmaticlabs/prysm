@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
-	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,8 +53,8 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
-// BlockData required to create a beacon block.
-type BlockData struct {
+// blockData required to create a beacon block.
+type blockData struct {
 	ParentRoot        []byte
 	Graffiti          [32]byte
 	ProposerIdx       types.ValidatorIndex
@@ -76,7 +75,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	blkData, err := vs.BuildBlockData(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -115,7 +114,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 }
 
 // BuildBlockData for creating a new beacon block, so that this method can be shared across forks.
-func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*BlockData, error) {
+func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildBlockData")
 	defer span.End()
 
@@ -151,13 +150,13 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
 
-	// Pack ETH1 Deposits which have not been included in the beacon chain.
+	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := vs.deposits(ctx, head, eth1Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 Deposits: %v", err)
 	}
 
-	// Pack aggregated Attestations which have not been included in the beacon chain.
+	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts, err := vs.packAttestations(ctx, head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get Attestations to pack into block: %v", err)
@@ -171,7 +170,7 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	return &BlockData{
+	return &blockData{
 		ParentRoot:        parentRoot,
 		Graffiti:          graffiti,
 		ProposerIdx:       idx,
@@ -230,7 +229,7 @@ func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (
 
 	blkData, err := vs.BuildBlockData(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -332,7 +331,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	if syncSig == nil {
 		syncSigBytes = [96]byte{0xC0} // Infinity signature if itself is nil.
 	} else {
-		syncSigBytes = bytesutil2.ToBytes96(syncSig.Marshal())
+		syncSigBytes = bytesutil.ToBytes96(syncSig.Marshal())
 	}
 
 	return &ethpb.SyncAggregate{

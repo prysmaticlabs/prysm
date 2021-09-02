@@ -114,6 +114,15 @@ func ToBytes64(x []byte) [64]byte {
 	return y
 }
 
+// ToBytes96 is a convenience method for converting a byte slice to a fix
+// sized 96 byte array. This method will truncate the input if it is larger
+// than 96 bytes.
+func ToBytes96(x []byte) [96]byte {
+	var y [96]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBool is a convenience method for converting a byte to a bool.
 // This method will use the first bit of the 0 byte to generate the returned value.
 func ToBool(x byte) bool {
