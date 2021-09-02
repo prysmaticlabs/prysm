@@ -111,17 +111,16 @@ func TestResubscribeAbort(t *testing.T) {
 }
 
 func TestResubscribeNonBlocking(t *testing.T) {
-	t.Parallel()
-
 	done := make(chan struct{})
 	sub := Resubscribe(0, func(ctx context.Context) (Subscription, error) {
-		done <- struct{}{}
+		<-done
 		return nil, nil
 	})
 
-	require.Equal(t, 4, runtime.NumGoroutine())
-	sub.Unsubscribe()
-	<-done
-	require.Equal(t, 3, runtime.NumGoroutine())
-
+	resub, ok := sub.(*resubscribeSub)
+	require.Equal(t, true, ok)
+	currNum := runtime.NumGoroutine()
+	resub.unsub <- struct{}{}
+	done <- struct{}{}
+	require.Equal(t, currNum-1, runtime.NumGoroutine())
 }
