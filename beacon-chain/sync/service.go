@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -42,6 +44,7 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
+const seenSyncMsgSize = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -54,7 +57,12 @@ var (
 	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	errWrongMessage                     = errors.New("wrong pubsub message")
+	errNilMessage                       = errors.New("nil pubsub message")
 )
+
+// Common type for functional p2p validation options.
+type validationFn func(ctx context.Context) pubsub.ValidationResult
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -63,6 +71,7 @@ type Config struct {
 	AttPool           attestations.Pool
 	ExitPool          voluntaryexits.PoolManager
 	SlashingPool      slashings.PoolManager
+	SyncCommsPool     synccommittee.Pool
 	Chain             blockchainService
 	InitialSync       Checker
 	StateNotifier     statefeed.Notifier
@@ -92,6 +101,7 @@ type Service struct {
 	slotToPendingBlocks              *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
+	subHandler                       *subTopicHandler
 	pendingAttsLock                  sync.RWMutex
 	pendingQueueLock                 sync.RWMutex
 	chainStarted                     *abool.AtomicBool
@@ -109,6 +119,8 @@ type Service struct {
 	seenProposerSlashingCache        *lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
+	seenSyncMessageLock              sync.RWMutex
+	seenSyncMessageCache             *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
@@ -127,6 +139,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		subHandler:           newSubTopicHandler(),
 		rateLimiter:          rLimiter,
 	}
 
@@ -171,9 +184,7 @@ func (s *Service) Stop() error {
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
-		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
-			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
-		}
+		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
 	return nil
@@ -205,6 +216,10 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	syncMsgCache, err := lru.New(seenSyncMsgSize)
+	if err != nil {
+		return err
+	}
 	exitCache, err := lru.New(seenExitSize)
 	if err != nil {
 		return err
@@ -220,6 +235,7 @@ func (s *Service) initCaches() error {
 	s.seenBlockCache = blkCache
 	s.seenAggregatedAttestationCache = aggregatedAttCache
 	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
+	s.seenSyncMessageCache = syncMsgCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache

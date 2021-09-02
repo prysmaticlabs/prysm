@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -57,6 +56,7 @@ type Server struct {
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
+	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
@@ -71,26 +71,6 @@ func (vs *Server) GetBlockAltair(ctx context.Context, request *ethpb.BlockReques
 }
 
 func (vs *Server) ProposeBlockAltair(ctx context.Context, altair *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, empty *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) SubmitSyncMessage(ctx context.Context, message *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, request *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, request *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) SubmitSignedContributionAndProof(ctx context.Context, proof *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 

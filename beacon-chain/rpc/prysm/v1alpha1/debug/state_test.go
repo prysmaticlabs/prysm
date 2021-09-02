@@ -48,9 +48,12 @@ func TestServer_GetBeaconState(t *testing.T) {
 	assert.DeepEqual(t, wanted, res.Encoded)
 	req = &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
-			Slot: slot,
+			Slot: slot + 1,
 		},
 	}
+	require.NoError(t, st.SetSlot(slot+1))
+	wanted, err = st.MarshalSSZ()
+	require.NoError(t, err)
 	res, err = bs.GetBeaconState(ctx, req)
 	require.NoError(t, err)
 	assert.DeepEqual(t, wanted, res.Encoded)
