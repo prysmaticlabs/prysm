@@ -20,9 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -43,14 +40,10 @@ type Server struct {
 	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               slashings.PoolManager
-	CanonicalStateChan          chan *statepb.BeaconState
+	CanonicalStateChan          chan *ethpb.BeaconState
 	ChainStartChan              chan time.Time
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    stategen.StateManager
 	SyncChecker                 sync.Checker
-}
-
-func (bs *Server) ListBlocksAltair(ctx context.Context, request *ethpb.ListBlocksRequest) (*ethpb.ListBlocksResponseAltair, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
