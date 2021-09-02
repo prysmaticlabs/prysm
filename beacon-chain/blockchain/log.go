@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +44,7 @@ func logStateTransitionData(b block.BeaconBlock) {
 }
 
 func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
-	startTime, err := helpers.SlotToTime(genesisTime, block.Slot())
+	startTime, err := core.SlotToTime(genesisTime, block.Slot())
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *
 		"slot":           block.Slot(),
 		"slotInEpoch":    block.Slot() % params.BeaconConfig().SlotsPerEpoch,
 		"block":          fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
-		"epoch":          helpers.SlotToEpoch(block.Slot()),
+		"epoch":          core.SlotToEpoch(block.Slot()),
 		"finalizedEpoch": finalized.Epoch,
 		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 	}).Info("Synced new block")

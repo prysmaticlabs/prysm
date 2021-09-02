@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -80,11 +80,11 @@ func (vs *Server) syncSubcommitteeIndex(
 	ctx context.Context, index types.ValidatorIndex, slot types.Slot,
 ) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 
-	nextSlotEpoch := helpers.SlotToEpoch(slot + 1)
-	currentEpoch := helpers.SlotToEpoch(slot)
+	nextSlotEpoch := core.SlotToEpoch(slot + 1)
+	currentEpoch := core.SlotToEpoch(slot)
 
 	switch {
-	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch):
+	case core.SyncCommitteePeriod(nextSlotEpoch) == core.SyncCommitteePeriod(currentEpoch):
 		indices, err := vs.HeadFetcher.HeadCurrentSyncCommitteeIndices(ctx, index, slot)
 		if err != nil {
 			return nil, err
@@ -93,7 +93,7 @@ func (vs *Server) syncSubcommitteeIndex(
 			Indices: indices,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
-	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
+	case core.SyncCommitteePeriod(nextSlotEpoch) == core.SyncCommitteePeriod(currentEpoch)+1:
 		indices, err := vs.HeadFetcher.HeadNextSyncCommitteeIndices(ctx, index, slot)
 		if err != nil {
 			return nil, err

@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -140,7 +141,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot,
 				NewHeadState: newStateRoot,
-				Epoch:        helpers.SlotToEpoch(newHeadSlot),
+				Epoch:        core.SlotToEpoch(newHeadSlot),
 			},
 		})
 
@@ -290,7 +291,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 		return errors.New("justified state can't be nil")
 	}
 
-	epoch := helpers.CurrentEpoch(justifiedState)
+	epoch := core.CurrentEpoch(justifiedState)
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
 	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
@@ -328,15 +329,15 @@ func (s *Service) notifyNewHeadEvent(
 	currentDutyDependentRoot := s.genesisRoot[:]
 
 	var previousDutyEpoch types.Epoch
-	currentDutyEpoch := helpers.SlotToEpoch(newHeadSlot)
+	currentDutyEpoch := core.SlotToEpoch(newHeadSlot)
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
-	currentDutySlot, err := helpers.StartSlot(currentDutyEpoch)
+	currentDutySlot, err := core.StartSlot(currentDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
-	previousDutySlot, err := helpers.StartSlot(previousDutyEpoch)
+	previousDutySlot, err := core.StartSlot(previousDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
@@ -358,7 +359,7 @@ func (s *Service) notifyNewHeadEvent(
 			Slot:                      newHeadSlot,
 			Block:                     newHeadRoot,
 			State:                     newHeadStateRoot,
-			EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
+			EpochTransition:           core.IsEpochEnd(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -79,7 +80,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 		filterStatus[ss] = true
 	}
-	epoch := corehelpers.SlotToEpoch(state.Slot())
+	epoch := core.SlotToEpoch(state.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
 		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
@@ -130,7 +131,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	epoch := corehelpers.SlotToEpoch(state.Slot())
+	epoch := core.SlotToEpoch(state.Slot())
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
@@ -139,11 +140,11 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
 
-	startSlot, err := corehelpers.StartSlot(epoch)
+	startSlot, err := core.StartSlot(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
-	endSlot, err := corehelpers.EndSlot(epoch)
+	endSlot, err := core.EndSlot(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
@@ -175,7 +176,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
-	epoch := corehelpers.SlotToEpoch(state.Slot())
+	epoch := core.SlotToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()

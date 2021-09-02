@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -140,7 +141,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core2.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}

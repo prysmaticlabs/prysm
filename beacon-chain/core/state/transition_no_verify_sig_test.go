@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -33,7 +34,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := core.CurrentEpoch(beaconState)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
@@ -85,7 +86,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := core.CurrentEpoch(beaconState)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))

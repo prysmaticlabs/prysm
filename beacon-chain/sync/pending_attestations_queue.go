@@ -7,6 +7,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -108,7 +109,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
-						valCount, err := helpers.ActiveValidatorCount(preState, helpers.SlotToEpoch(att.Aggregate.Data.Slot))
+						valCount, err := helpers.ActiveValidatorCount(preState, core.SlotToEpoch(att.Aggregate.Data.Slot))
 						if err != nil {
 							log.WithError(err).Debug("Could not retrieve active validator count")
 							continue

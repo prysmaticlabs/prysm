@@ -47,6 +47,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
@@ -148,6 +149,7 @@ go_test(
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
