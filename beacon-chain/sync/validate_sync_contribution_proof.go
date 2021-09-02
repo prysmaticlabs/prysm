@@ -44,112 +44,19 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-
-	// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT`.
-	if m.Message.Contribution.SubcommitteeIndex >= params.BeaconConfig().SyncCommitteeSubnetCount {
-		return pubsub.ValidationReject
-	}
-
-	// The sync committee contribution is the first valid contribution received for the aggregator with index
-	// `contribution_and_proof.aggregator_index` for the slot `contribution.slot` and subcommittee index `contribution.subcommittee_index`.
-	if s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex)) {
-		return pubsub.ValidationIgnore
-	}
-
-	// The `contribution_and_proof.selection_proof` selects the validator as an aggregator for the slot.
-	isAggregator, err := altair.IsSyncCommitteeAggregator(m.Message.SelectionProof)
-	if err != nil {
-		return pubsub.ValidationReject
-	}
-	if !isAggregator {
-		return pubsub.ValidationReject
-	}
-
-	// The aggregator's validator index is in the declared subcommittee of the current sync committee.
-	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-	if len(committeeIndices) == 0 {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-	isValid := false
-	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	for _, i := range committeeIndices {
-		if uint64(i)/subCommitteeSize == m.Message.Contribution.SubcommitteeIndex {
-			isValid = true
-			break
-		}
-	}
-	if !isValid {
-		return pubsub.ValidationReject
-	}
-
-	// The `contribution_and_proof.selection_proof` is a valid signature of the `SyncAggregatorSelectionData`.
-	if err := s.verifySyncSelectionData(ctx, m.Message); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
-	// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
-	d, err := s.cfg.Chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-	pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
-	if err != nil {
-		return pubsub.ValidationIgnore
-	}
-	if err := helpers.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-
-	// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
-	// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
-	activePubkeys := []bls.PublicKey{}
-	syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
-	if err != nil {
-		return pubsub.ValidationIgnore
-	}
-	bVector := m.Message.Contribution.AggregationBits
-	// In the event no bit is set for the
-	// sync contribution, we reject the message.
-	if bVector.Count() == 0 {
-		return pubsub.ValidationReject
-	}
-	for i, pk := range syncPubkeys {
-		if bVector.BitAt(uint64(i)) {
-			pubK, err := bls.PublicKeyFromBytes(pk)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return pubsub.ValidationIgnore
-			}
-			activePubkeys = append(activePubkeys, pubK)
-		}
-	}
-	sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
-	}
-	d, err = s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-	rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
-	sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-	verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
-	if !verified {
-		return pubsub.ValidationReject
+	// Validate the message's data according to the p2p specification.
+	if result := validationPipeline(
+		ctx,
+		s.rejectIncorrectSubcommitteeIndex(m),
+		s.rejectEmptyContribution(m),
+		s.ignoreSeenSyncContribution(m),
+		s.rejectInvalidAggregator(m),
+		s.rejectInvalidIndexInSubCommittee(m),
+		s.rejectInvalidSelectionProof(m),
+		s.rejectInvalidContributionSignature(m),
+		s.rejectInvalidSyncAggregateSignature(m),
+	); result != pubsub.ValidationAccept {
+		return result
 	}
 
 	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
@@ -173,6 +80,168 @@ func (s *Service) readSyncContributionMessage(msg *pubsub.Message) (*ethpb.Signe
 		return nil, errNilMessage
 	}
 	return m, nil
+}
+
+func (s *Service) rejectIncorrectSubcommitteeIndex(
+	m *ethpb.SignedContributionAndProof,
+) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSubcommitteeIndex")
+		defer span.End()
+		// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT`.
+		if m.Message.Contribution.SubcommitteeIndex >= params.BeaconConfig().SyncCommitteeSubnetCount {
+			return pubsub.ValidationReject
+		}
+
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		bVector := m.Message.Contribution.AggregationBits
+		// In the event no bit is set for the
+		// sync contribution, we reject the message.
+		if bVector.Count() == 0 {
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		seen := s.hasSeenSyncMessageIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, m.Message.Contribution.SubcommitteeIndex)
+		if seen {
+			return pubsub.ValidationIgnore
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectInvalidAggregator(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		// The `contribution_and_proof.selection_proof` selects the validator as an aggregator for the slot.
+		if isAggregator, err := altair.IsSyncCommitteeAggregator(m.Message.SelectionProof); err != nil || !isAggregator {
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectInvalidIndexInSubCommittee(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		_, span := trace.StartSpan(ctx, "sync.rejectInvalidIndexInSubCommittee")
+		defer span.End()
+		// The aggregator's validator index is in the declared subcommittee of the current sync committee.
+		committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		if len(committeeIndices) == 0 {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		isValid := false
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		for _, i := range committeeIndices {
+			if uint64(i)/subCommitteeSize == m.Message.Contribution.SubcommitteeIndex {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectInvalidSelectionProof(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		_, span := trace.StartSpan(ctx, "sync.rejectInvalidSelectionProof")
+		defer span.End()
+		// The `contribution_and_proof.selection_proof` is a valid signature of the `SyncAggregatorSelectionData`.
+		if err := s.verifySyncSelectionData(ctx, m.Message); err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		_, span := trace.StartSpan(ctx, "sync.rejectInvalidContributionSignature")
+		defer span.End()
+		// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
+		d, err := s.cfg.Chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		if err := helpers.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
+}
+
+func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) pubsub.ValidationResult {
+		_, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncAggregateSignature")
+		defer span.End()
+		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
+		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
+		activePubkeys := []bls.PublicKey{}
+		syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		bVector := m.Message.Contribution.AggregationBits
+		// In the event no bit is set for the
+		// sync contribution, we reject the message.
+		if bVector.Count() == 0 {
+			return pubsub.ValidationReject
+		}
+		for i, pk := range syncPubkeys {
+			if bVector.BitAt(uint64(i)) {
+				pubK, err := bls.PublicKeyFromBytes(pk)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return pubsub.ValidationIgnore
+				}
+				activePubkeys = append(activePubkeys, pubK)
+			}
+		}
+		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
+		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationIgnore
+		}
+		verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
+		if !verified {
+			return pubsub.ValidationReject
+		}
+		return pubsub.ValidationAccept
+	}
 }
 
 // Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
