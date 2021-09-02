@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
+	synccontribution "github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -299,7 +299,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 		cs := proposerContributions.filterBySubIndex(i)
-		aggregates, err := sync_contribution.Aggregate(cs)
+		aggregates, err := synccontribution.Aggregate(cs)
 		if err != nil {
 			return nil, err
 		}
