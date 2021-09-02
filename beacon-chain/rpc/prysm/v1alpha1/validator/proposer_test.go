@@ -165,7 +165,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	atts = atts[:params.BeaconConfig().MaxAttestations-1]
 	require.NoError(t, proposerServer.AttPool.SaveAggregatedAttestations(atts))
 
-	// Generate some more random Attestations with a larger spread so that we can capture at least
+	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
 	atts, err = testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true)
 	require.NoError(t, err)
