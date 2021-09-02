@@ -159,7 +159,7 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts, err := vs.packAttestations(ctx, head)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Attestations to pack into block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 	}
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
