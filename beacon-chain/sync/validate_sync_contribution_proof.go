@@ -45,7 +45,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationIgnore
 	}
 
-	// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index` < `SYNC_COMMITTEE_SUBNET_COUNT`.
+	// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT`.
 	if m.Message.Contribution.SubcommitteeIndex >= params.BeaconConfig().SyncCommitteeSubnetCount {
 		return pubsub.ValidationReject
 	}
