@@ -127,6 +127,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		chainStarted:              abool.New(),
+		subHandler:                newSubTopicHandler(),
 	}
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
