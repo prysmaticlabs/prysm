@@ -96,6 +96,13 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	topic += s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
+	// Do not resubscribe already seen subscriptions.
+	ok := s.subHandler.topicExists(topic)
+	if ok {
+		log.Debugf("Provided topic already has an active subscription running: %s", topic)
+		return nil
+	}
+
 	if err := s.cfg.P2P.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
 		log.WithError(err).Error("Could not register validator for topic")
 		return nil
@@ -109,6 +116,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		log.WithError(err).Error("Could not subscribe topic")
 		return nil
 	}
+	s.subHandler.addTopic(sub.Topic(), sub)
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
@@ -166,6 +174,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	}
 
 	go messageLoop()
+	log.WithField("topic", topic).Info("Subscribed to topic")
 	return sub
 }
 
@@ -302,9 +311,7 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 		if !wanted && v != nil {
 			v.Cancel()
 			fullTopic := fmt.Sprintf(topicFormat, digest, k) + s.cfg.P2P.Encoding().ProtocolSuffix()
-			if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
-				log.WithError(err).Error("Could not unregister topic validator")
-			}
+			s.unSubscribeFromTopic(fullTopic)
 			delete(subscriptions, k)
 		}
 	}
@@ -348,6 +355,21 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
+	}
+}
+
+func (s *Service) unSubscribeFromTopic(topic string) {
+	log.WithField("topic", topic).Debug("Unsubscribing from topic")
+	if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(topic); err != nil {
+		log.WithError(err).Error("Could not unregister topic validator")
+	}
+	sub := s.subHandler.subForTopic(topic)
+	if sub != nil {
+		sub.Cancel()
+	}
+	s.subHandler.removeTopic(topic)
+	if err := s.cfg.P2P.LeaveTopic(topic); err != nil {
+		log.WithError(err).Error("Unable to leave topic")
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"go.opencensus.io/trace"
 )
 
@@ -35,12 +36,8 @@ type SkipSlotCache struct {
 
 // NewSkipSlotCache initializes the map and underlying cache.
 func NewSkipSlotCache() *SkipSlotCache {
-	cache, err := lru.New(8)
-	if err != nil {
-		panic(err)
-	}
 	return &SkipSlotCache{
-		cache:      cache,
+		cache:      lruwrpr.New(8),
 		inProgress: make(map[[32]byte]bool),
 	}
 }
