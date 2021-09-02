@@ -5,6 +5,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -415,8 +416,75 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	return &emptypb.Empty{}, nil
 }
 
-func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, request *ethpbv2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
-	panic("implement me")
+// SubmitSyncCommitteeSubscription subscribe to a number of sync committee subnets.
+//
+// Subscribing to sync committee subnets is an action performed by VC to enable
+// network participation in Altair networks, and only required if the VC has an active
+// validator in an active sync committee.
+func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethpbv2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+	if len(req.Data) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
+	}
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	currEpoch := helpers.SlotToEpoch(s.Slot())
+	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	for i, sub := range req.Data {
+		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator at index %d: %v", sub.ValidatorIndex, err)
+		}
+		valStatus, err := rpchelpers.ValidatorSubStatus(val, currEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator status at index %d: %v", sub.ValidatorIndex, err)
+		}
+		if valStatus != ethpbv1.ValidatorStatus_ACTIVE_ONGOING && valStatus != ethpbv1.ValidatorStatus_ACTIVE_EXITING {
+			return nil, status.Errorf(codes.InvalidArgument, "Validator at index %d is not active or exiting: %v", sub.ValidatorIndex, err)
+		}
+		validators[i] = val
+	}
+
+	currPeriod := helpers.SyncCommitteePeriod(currEpoch)
+	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
+
+	for i, sub := range req.Data {
+		if sub.UntilEpoch < currEpoch {
+			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch)
+		}
+		maxValidEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+		if sub.UntilEpoch > maxValidEpoch {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
+				i,
+				maxValidEpoch,
+			)
+		}
+	}
+
+	for i, sub := range req.Data {
+		pubkey48 := validators[i].PublicKey()
+		// Handle overflow in the event current epoch is less than end epoch.
+		// This is an impossible condition, so it is a defensive check.
+		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(startEpoch))
+		if err != nil {
+			epochsToWatch = 0
+		}
+		epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+		totalDuration := epochDuration * time.Duration(epochsToWatch)
+
+		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
+	}
+
+	return &empty.Empty{}, nil
 }
 
 func (vs *Server) ProduceSyncCommitteeContribution(
