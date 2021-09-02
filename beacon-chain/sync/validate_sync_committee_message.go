@@ -23,14 +23,12 @@ import (
 
 // Sync committee subnets are used to propagate unaggregated sync committee messages to subsections of the network.
 //
-//  sync_committee_{subnet_id}
-
 // The sync_committee_{subnet_id} topics are used to propagate unaggregated sync committee messages
 // to the subnet subnet_id to be aggregated before being gossiped to the
 // global sync_committee_contribution_and_proof topic.
-
+//
 // The following validations MUST pass before forwarding the sync_committee_message on the network:
-
+//
 // [IGNORE] The message's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance),
 // i.e. sync_committee_message.slot == current_slot.
 // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in
@@ -90,9 +88,9 @@ func (s *Service) validateSyncCommitteeMessage(
 	if result := validationPipeline(
 		ctx,
 		ignoreEmptyCommittee(committeeIndices),
-		s.rejectIncorrectCommittee(committeeIndices, *msg.Topic),
+		s.rejectIncorrectSyncCommittee(committeeIndices, *msg.Topic),
 		s.ignoreHasSeenSyncMsg(m, committeeIndices),
-		s.rejectInvalidSignature(m),
+		s.rejectInvalidSyncCommitteeSignature(m),
 	); result != pubsub.ValidationAccept {
 		return result
 	}
@@ -157,11 +155,11 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 // This would mean that only messages meant for subnet 2 are valid. If a validator creates this sync
 // message and broadcasts it into subnet 2, we need to make sure that whatever committee index and
 // resultant subnet that the validator has is valid for this particular topic.
-func (s *Service) rejectIncorrectCommittee(
+func (s *Service) rejectIncorrectSyncCommittee(
 	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
-		_, span := trace.StartSpan(ctx, "sync.ifIncorrectCommittee")
+		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
 		defer span.End()
 		isValid := false
 		digest, err := s.forkDigest()
@@ -210,9 +208,9 @@ func (s *Service) ignoreHasSeenSyncMsg(
 	}
 }
 
-func (s *Service) rejectInvalidSignature(m *ethpb.SyncCommitteeMessage) validationFn {
+func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMessage) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
-		ctx, span := trace.StartSpan(ctx, "sync.ifInvalidSignature")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncCommitteeSignature")
 		defer span.End()
 
 		// Ignore the message if it is not possible to retrieve the signing root.

@@ -473,7 +473,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 	}
 }
 
-func TestService_rejectIncorrectCommittee(t *testing.T) {
+func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 	tests := []struct {
 		name             string
 		cfg              *Config
@@ -521,7 +521,7 @@ func TestService_rejectIncorrectCommittee(t *testing.T) {
 				cfg: tt.cfg,
 			}
 			topic := tt.setupTopic(s)
-			f := s.rejectIncorrectCommittee(tt.committeeIndices, topic)
+			f := s.rejectIncorrectSyncCommittee(tt.committeeIndices, topic)
 			result := f(context.Background())
 			require.Equal(t, tt.want, result)
 		})
