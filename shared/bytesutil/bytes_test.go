@@ -393,9 +393,30 @@ func TestIsHex(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 	}
 	for _, tt := range tests {
-		isHex, err := bytesutil.IsHex(tt.a)
-		require.NoError(t, err)
+		isHex := bytesutil.IsHex(tt.a)
 		assert.Equal(t, tt.b, isHex)
+	}
+}
+
+func TestIsHexOfLen(t *testing.T) {
+	tests := []struct {
+		b      []byte
+		l      uint64
+		result bool
+	}{
+		{nil, 0, false},
+		{[]byte(""), 0, false},
+		{[]byte("0x"), 2, false},
+		{[]byte("0x0"), 2, false},
+		{[]byte("foo"), 3, false},
+		{[]byte("1234567890abcDEF"), 16, false},
+		{[]byte("XYZ4567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
+		{[]byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, true},
+		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
+	}
+	for _, tt := range tests {
+		isHex := bytesutil.IsHexOfLen(tt.b, tt.l)
+		assert.Equal(t, tt.result, isHex)
 	}
 }
 

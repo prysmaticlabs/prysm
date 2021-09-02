@@ -235,7 +235,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 		return gRoot, 0, nil
 	}
 
-	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot+1)
+	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
