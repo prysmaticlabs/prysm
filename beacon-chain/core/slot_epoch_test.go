@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
