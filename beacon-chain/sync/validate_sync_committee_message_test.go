@@ -71,7 +71,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s, topic
 			},
 			args: args{
@@ -99,7 +99,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s, topic
 			},
 			args: args{
@@ -126,7 +126,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				return s, topic
 			},
 			args: args{
@@ -153,7 +153,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 
 				s.setSeenSyncMessageIndexSlot(1, 1, 0)
 				return s, topic
@@ -182,7 +182,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
@@ -216,7 +216,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
@@ -264,7 +264,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
@@ -307,7 +307,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
@@ -362,7 +362,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.cfg.StateGen = stategen.New(beaconDB)
 				s.cfg.DB = beaconDB
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
@@ -442,7 +442,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 		{
 			name: "has seen",
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				s.setSeenSyncMessageIndexSlot(1, 0, 0)
 				return s, ""
 			},
@@ -453,7 +453,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 		{
 			name: "has not seen",
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				assert.NoError(t, s.initCaches())
+				s.initCaches()
 				s.setSeenSyncMessageIndexSlot(1, 0, 0)
 				return s, ""
 			},

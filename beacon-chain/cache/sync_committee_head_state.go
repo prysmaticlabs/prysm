@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 // SyncCommitteeHeadStateCache for the latest head state requested by a sync committee participant.
@@ -17,10 +18,7 @@ type SyncCommitteeHeadStateCache struct {
 
 // NewSyncCommitteeHeadState initializes a LRU cache for `SyncCommitteeHeadState` with size of 1.
 func NewSyncCommitteeHeadState() *SyncCommitteeHeadStateCache {
-	c, err := lru.New(1) // only need size of 1 to avoid redundant state copies, hashing, and slot processing.
-	if err != nil {
-		panic(err)
-	}
+	c := lruwrpr.New(1) // only need size of 1 to avoid redundant state copies, hashing, and slot processing.
 	return &SyncCommitteeHeadStateCache{cache: c}
 }
 
