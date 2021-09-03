@@ -19,6 +19,22 @@ import (
 
 // validateSyncContributionAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
+// Gossip Validation Conditions:
+// [IGNORE] The contribution's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance), i.e. contribution.slot == current_slot.
+// [REJECT] The subcommittee index is in the allowed range, i.e. contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT.
+// [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits).
+// [REJECT] contribution_and_proof.selection_proof selects the validator as an aggregator for the slot -- i.e.
+// is_sync_committee_aggregator(contribution_and_proof.selection_proof) returns True.
+// [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee -- i.e.
+// state.validators[contribution_and_proof.aggregator_index].pubkey in get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
+// [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with
+// index contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index
+// (this requires maintaining a cache of size SYNC_COMMITTEE_SIZE for this topic that can be flushed after each slot).
+// [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData derived from
+// the contribution by the validator with index contribution_and_proof.aggregator_index.
+// [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
+// [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from the participation
+// info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
 func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSyncContributionAndProof")
 	defer span.End()

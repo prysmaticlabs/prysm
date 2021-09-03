@@ -179,7 +179,12 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				s.initCaches()
+				s.cfg.Chain = &mockChain.ChainService{
+					ValidatorsRoot: [32]byte{'A'},
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
+				}
 				msg.Message.Contribution.BlockRoot = headRoot[:]
+				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 
 				s.setSyncContributionIndexSlotSeen(1, 1, 1)
 				return s
@@ -205,6 +210,49 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			want: pubsub.ValidationIgnore,
 		},
 		{
+			name: "Invalid Subcommittee Index",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: false},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+				s.cfg.StateGen = stategen.New(db)
+				s.cfg.DB = db
+				s.initCaches()
+				s.cfg.Chain = &mockChain.ChainService{
+					ValidatorsRoot: [32]byte{'A'},
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
+				}
+				msg.Message.Contribution.BlockRoot = headRoot[:]
+				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
+				msg.Message.Contribution.SubcommitteeIndex = 20
+
+				return s
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: defaultTopic,
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &ethpb.SyncCommitteeContribution{
+							Slot:              1,
+							SubcommitteeIndex: 1,
+							BlockRoot:         params.BeaconConfig().ZeroHash[:],
+							AggregationBits:   bitfield.NewBitvector128(),
+							Signature:         emptySig[:],
+						},
+						SelectionProof: emptySig[:],
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationReject,
+		},
+		{
 			name: "Invalid Selection Proof",
 			svc: NewService(context.Background(), &Config{
 				P2P:               mockp2p.NewTestP2P(t),
@@ -224,6 +272,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				incorrectProof := [96]byte{0xBB}
 				msg.Message.SelectionProof = incorrectProof[:]
+				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 
 				return s
 			},
@@ -286,6 +335,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						}
 					}
 				}
+				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 				return s
 			},
 			args: args{
@@ -348,6 +398,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 				}
+				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 
 				s.initCaches()
 				return s
@@ -412,6 +463,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.Signature = infiniteSig[:]
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
+							msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 							msg.Signature = infiniteSig[:]
 							break
 						}
@@ -490,6 +542,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.Signature = badSig.Marshal()
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
+							msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 							msg.Signature = infiniteSig[:]
 
 							d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
