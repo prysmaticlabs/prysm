@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -98,12 +98,12 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
 		if featureconfig.Get().EnableNextSlotStateCache {
-			headState, err = state.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
+			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 			}
 		} else {
-			headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+			headState, err = transition.ProcessSlots(ctx, headState, req.Slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 			}

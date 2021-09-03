@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -96,7 +96,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	postState, err := core.ExecuteStateTransition(ctx, preState, signed)
+	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			// with a custom deadline, therefore using the background context instead.
 			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 			defer cancel()
-			if err := core.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
 			}
 		}()
@@ -233,7 +233,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureSet
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		set, preState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
+		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -327,7 +327,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		copied := postState.Copy()
-		copied, err := core.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
 		}

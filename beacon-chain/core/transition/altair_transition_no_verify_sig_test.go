@@ -1,4 +1,4 @@
-package state_test
+package transition_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -48,7 +48,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := core.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.SyncAggregate = syncAggregate
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := core.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -101,7 +101,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	set, _, err := core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -135,7 +135,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := core.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := core.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -190,7 +190,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	_, _, err = core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
@@ -198,7 +198,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 	beaconState, block := createFullAltairBlockWithOperations(t)
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
-	set, _, err := core.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()

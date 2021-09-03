@@ -1,11 +1,11 @@
-package state_test
+package transition_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

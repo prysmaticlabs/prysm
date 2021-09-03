@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -172,7 +172,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
-	genState, err := core.EmptyGenesisState()
+	genState, err := transition.EmptyGenesisState()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not setup genesis state")
 	}

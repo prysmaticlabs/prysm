@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -278,7 +278,7 @@ func (s *Service) initializeBeaconChain(
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	genesisState, err := core.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
+	genesisState, err := transition.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize genesis state")
 	}

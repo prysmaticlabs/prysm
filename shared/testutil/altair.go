@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -279,7 +279,7 @@ func BlockSignatureAltair(
 	if err != nil {
 		return nil, err
 	}
-	s, err := core.CalculateStateRoot(context.Background(), bState, wsb)
+	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}

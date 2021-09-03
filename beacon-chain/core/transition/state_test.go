@@ -1,11 +1,11 @@
-package state_test
+package transition_test
 
 import (
 	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -36,7 +36,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	newState, err := state.GenesisBeaconState(context.Background(), deposits, genesisTime, eth1Data)
+	newState, err := transition.GenesisBeaconState(context.Background(), deposits, genesisTime, eth1Data)
 	require.NoError(t, err, "Could not execute GenesisBeaconState")
 
 	// Misc fields checks.
@@ -93,9 +93,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 func TestGenesisState_HashEquality(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
-	state1, err := state.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state1, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	state, err := state.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
 	pbState1, err := v1.ProtobufBeaconState(state1.CloneInnerState())
@@ -113,7 +113,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
+	s, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	got, want := uint64(len(s.BlockRoots())), uint64(params.BeaconConfig().SlotsPerHistoricalRoot)
 	assert.Equal(t, want, got, "Wrong number of recent block hashes")
@@ -127,6 +127,6 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 }
 
 func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
-	_, err := state.GenesisBeaconState(context.Background(), nil, 0, nil)
+	_, err := transition.GenesisBeaconState(context.Background(), nil, 0, nil)
 	assert.ErrorContains(t, "no eth1data provided for genesis state", err)
 }

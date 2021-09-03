@@ -1,4 +1,4 @@
-package state_test
+package transition_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
@@ -41,7 +41,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 		},
 	}
 	want := "expected state.slot"
-	_, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -71,7 +71,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := core.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := core.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -93,7 +93,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	beaconState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, beaconState.Slot(), "Unexpected Slot number")
@@ -180,7 +180,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	cp.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
-	_, err = core.VerifyOperationLengths(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	_, err = transition.VerifyOperationLengths(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	assert.ErrorContains(t, wanted, err)
 }
@@ -375,7 +375,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
-	newState, err := core.ProcessEpochPrecompute(context.Background(), s)
+	newState, err := transition.ProcessEpochPrecompute(context.Background(), s)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
 }
@@ -408,7 +408,7 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 		b := &ethpb.BeaconState{Slot: tt.slot}
 		s, err := v1.InitializeFromProto(b)
 		require.NoError(t, err)
-		assert.Equal(t, tt.canProcessEpoch, core.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
+		assert.Equal(t, tt.canProcessEpoch, transition.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
 	}
 }
 
@@ -423,7 +423,7 @@ func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	_, err := core.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	_, err := transition.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -438,7 +438,7 @@ func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	_, err := core.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	_, err := transition.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -452,7 +452,7 @@ func TestProcessBlock_OverMaxAttestations(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	_, err := core.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	_, err := transition.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -467,7 +467,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.VoluntaryExits), maxExits)
-	_, err := core.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	_, err := transition.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -487,7 +487,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 	}
 	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
-	_, err = core.VerifyOperationLengths(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -496,7 +496,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
-	_, err = core.ProcessSlots(context.Background(), parentState, slot)
+	_, err = transition.ProcessSlots(context.Background(), parentState, slot)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 2", err)
 }
 
@@ -505,19 +505,19 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
-	_, err = core.ProcessSlots(context.Background(), parentState, slot-1)
+	_, err = transition.ProcessSlots(context.Background(), parentState, slot-1)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
 
 func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
 	defer params.UseMainnetConfig()
 
 	st, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	st, err := core.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
 	require.Equal(t, version.Altair, st.Version())
 
@@ -545,7 +545,7 @@ func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 }
 
 func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
@@ -553,7 +553,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 
 	st, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
-	st, err := core.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
 	require.Equal(t, version.Altair, st.Version())
 
@@ -584,7 +584,7 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	ctx := context.Background()
 	s, _ := testutil.DeterministicGenesisState(t, 1)
 	r := []byte{'a'}
-	s, err := core.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	s, err := transition.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }
@@ -616,7 +616,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := core.CanUpgradeToAltair(tt.slot); got != tt.want {
+			if got := transition.CanUpgradeToAltair(tt.slot); got != tt.want {
 				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
 			}
 		})

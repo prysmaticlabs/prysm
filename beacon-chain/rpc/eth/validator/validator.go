@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -562,7 +562,7 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 
 // advanceState advances state with empty transitions up to the requested epoch start slot.
 // In case 1 epoch ahead was requested, we take the start slot of the current epoch.
-// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
+// Taking the start slot of the next epoch would result in an error inside transition.ProcessSlots.
 func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
 	var epochStartSlot types.Slot
 	var err error
@@ -578,7 +578,7 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 		}
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = core.ProcessSlots(ctx, s, epochStartSlot)
+		s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 		}

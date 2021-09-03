@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -126,7 +126,7 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 			return nil, errors.New("nil state")
 		}
 		if slot > headState.Slot() {
-			headState, err = core.ProcessSlots(ctx, headState, slot)
+			headState, err = transition.ProcessSlots(ctx, headState, slot)
 			if err != nil {
 				return nil, err
 			}
