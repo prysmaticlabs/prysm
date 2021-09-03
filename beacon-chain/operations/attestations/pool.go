@@ -42,6 +42,10 @@ type Pool interface {
 	ForkchoiceAttestations() []*ethpb.Attestation
 	DeleteForkchoiceAttestation(att *ethpb.Attestation) error
 	ForkchoiceAttestationCount() int
+	// For attestations that were orphaned.
+	SaveOrphanedAggregatedAttestation(att *ethpb.Attestation) error
+	DeleteOrphanedAggregatedAttestation(att *ethpb.Attestation) error
+	OrphanedAggregatedAttestations() []*ethpb.Attestation
 }
 
 // NewPool initializes a new attestation pool.

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -270,7 +271,11 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
 	defer span.End()
 
-	allAtts := vs.AttestationsPool.AggregatedAttestations()
+	orphanedAtts := make([]*ethpbalpha.Attestation, 0)
+	if featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		orphanedAtts = vs.AttestationsPool.OrphanedAggregatedAttestations()
+	}
+	allAtts := append(vs.AttestationsPool.AggregatedAttestations(), orphanedAtts...)
 	var bestMatchingAtt *ethpbalpha.Attestation
 	for _, att := range allAtts {
 		if att.Data.Slot == req.Slot {

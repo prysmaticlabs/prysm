@@ -642,7 +642,11 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	defer span.End()
 
 	atts := vs.AttPool.AggregatedAttestations()
-	atts, err := vs.filterAttestationsForBlockInclusion(ctx, latestState, atts)
+	orphanedAtts := make([]*ethpb.Attestation, 0)
+	if featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		orphanedAtts = vs.AttPool.OrphanedAggregatedAttestations()
+	}
+	atts, err := vs.filterAttestationsForBlockInclusion(ctx, latestState, append(atts, orphanedAtts...))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}

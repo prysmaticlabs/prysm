@@ -389,15 +389,11 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) e
 			continue
 		}
 		if helpers.IsAggregated(a) {
-			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+			if err := s.cfg.AttPool.SaveOrphanedAggregatedAttestation(a); err != nil {
 				return err
 			}
-		} else {
-			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
-				return err
-			}
+			saveOrphanedAttCount.Inc()
 		}
-		saveOrphanedAttCount.Inc()
 	}
 
 	return nil

@@ -27,7 +27,11 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpbv1.Attesta
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
 	defer span.End()
 
-	attestations := bs.AttestationsPool.AggregatedAttestations()
+	orphanedAtts := make([]*ethpbalpha.Attestation, 0)
+	if featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		orphanedAtts = bs.AttestationsPool.OrphanedAggregatedAttestations()
+	}
+	attestations := append(bs.AttestationsPool.AggregatedAttestations(), orphanedAtts...)
 	unaggAtts, err := bs.AttestationsPool.UnaggregatedAttestations()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get unaggregated attestations: %v", err)
