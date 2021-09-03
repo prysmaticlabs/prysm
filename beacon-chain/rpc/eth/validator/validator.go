@@ -494,6 +494,7 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	panic("implement me")
 }
 
+// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
 func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitContributionAndProofs")
 	defer span.End()
