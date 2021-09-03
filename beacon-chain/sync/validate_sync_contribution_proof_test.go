@@ -219,7 +219,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.initCaches()
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
-					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 				}
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				incorrectProof := [96]byte{0xBB}
@@ -262,7 +262,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.initCaches()
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
-					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 				}
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				hState, err := db.State(context.Background(), headRoot)
@@ -345,7 +345,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 				}
 
@@ -422,7 +422,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(pubkey),
 					SyncSelectionProofDomain:    d,
@@ -505,7 +505,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				}
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{1},
 				}
 
@@ -586,7 +586,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    d,
@@ -681,7 +681,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,
@@ -779,7 +779,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,

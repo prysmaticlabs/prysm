@@ -111,7 +111,7 @@ func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 
 func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) pubsub.ValidationResult {
-		seen := s.hasSeenSyncMessageIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, m.Message.Contribution.SubcommitteeIndex)
+		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if seen {
 			return pubsub.ValidationIgnore
 		}
@@ -242,6 +242,17 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		}
 		return pubsub.ValidationAccept
 	}
+}
+
+// Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
+func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
+	s.seenSyncContributionLock.RLock()
+	defer s.seenSyncContributionLock.RUnlock()
+
+	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
+	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
+	_, seen := s.seenSyncContributionCache.Get(string(b))
+	return seen
 }
 
 // Set sync contributor's aggregate index, slot and subcommittee index as seen.
