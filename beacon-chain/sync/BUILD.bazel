@@ -92,6 +92,7 @@ go_library(
         "//shared/sszutil:go_default_library",
         "//shared/timeutils:go_default_library",
         "//shared/traceutil:go_default_library",
+        "//shared/version:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_kevinms_leakybucket_go//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//:go_default_library",
@@ -124,6 +125,7 @@ go_test(
         "rate_limiter_test.go",
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
+        "rpc_chunked_response_test.go",
         "rpc_goodbye_test.go",
         "rpc_metadata_test.go",
         "rpc_ping_test.go",
@@ -149,6 +151,7 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 4,
     deps = [
+        "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core:go_default_library",

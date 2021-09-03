@@ -488,11 +488,33 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	return &empty.Empty{}, nil
 }
 
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (vs *Server) ProduceSyncCommitteeContribution(
 	ctx context.Context,
-	request *ethpbv2.ProduceSyncCommitteeContributionRequest,
+	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
 ) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
-	panic("implement me")
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
+	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+	}
+	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
+	}
+	contribution := &ethpbv2.SyncCommitteeContribution{
+		Slot:              req.Slot,
+		BeaconBlockRoot:   req.BeaconBlockRoot,
+		SubcommitteeIndex: req.SubcommitteeIndex,
+		AggregationBits:   bits,
+		Signature:         aggregatedSig,
+	}
+
+	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
+		Data: contribution,
+	}, nil
 }
 
 func (vs *Server) SubmitContributionAndProofs(ctx context.Context, request *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
