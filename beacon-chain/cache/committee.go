@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -49,14 +50,8 @@ func committeeKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
-	cCache, err := lru.New(int(maxCommitteesCacheSize))
-	// An error is only returned if the size of the cache is
-	// <= 0.
-	if err != nil {
-		panic(err)
-	}
 	return &CommitteeCache{
-		CommitteeCache: cCache,
+		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
 	}
 }
 

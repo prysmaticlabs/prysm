@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -30,6 +32,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -42,6 +45,8 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
+const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
+const seenSyncContributionSize = 512 // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -54,7 +59,12 @@ var (
 	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	errWrongMessage                     = errors.New("wrong pubsub message")
+	errNilMessage                       = errors.New("nil pubsub message")
 )
+
+// Common type for functional p2p validation options.
+type validationFn func(ctx context.Context) pubsub.ValidationResult
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -63,6 +73,7 @@ type Config struct {
 	AttPool           attestations.Pool
 	ExitPool          voluntaryexits.PoolManager
 	SlashingPool      slashings.PoolManager
+	SyncCommsPool     synccommittee.Pool
 	Chain             blockchainService
 	InitialSync       Checker
 	StateNotifier     statefeed.Notifier
@@ -92,6 +103,7 @@ type Service struct {
 	slotToPendingBlocks              *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
+	subHandler                       *subTopicHandler
 	pendingAttsLock                  sync.RWMutex
 	pendingQueueLock                 sync.RWMutex
 	chainStarted                     *abool.AtomicBool
@@ -109,6 +121,10 @@ type Service struct {
 	seenProposerSlashingCache        *lru.Cache
 	seenAttesterSlashingLock         sync.RWMutex
 	seenAttesterSlashingCache        map[uint64]bool
+	seenSyncMessageLock              sync.RWMutex
+	seenSyncMessageCache             *lru.Cache
+	seenSyncContributionLock         sync.RWMutex
+	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
@@ -127,6 +143,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		subHandler:           newSubTopicHandler(),
 		rateLimiter:          rLimiter,
 	}
 
@@ -137,9 +154,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	if err := s.initCaches(); err != nil {
-		panic(err)
-	}
+	s.initCaches()
 
 	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
@@ -171,9 +186,7 @@ func (s *Service) Stop() error {
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
-		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
-			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
-		}
+		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
 	return nil
@@ -192,40 +205,16 @@ func (s *Service) Status() error {
 
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
-func (s *Service) initCaches() error {
-	blkCache, err := lru.New(seenBlockSize)
-	if err != nil {
-		return err
-	}
-	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	exitCache, err := lru.New(seenExitSize)
-	if err != nil {
-		return err
-	}
-	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
-	if err != nil {
-		return err
-	}
-	badBlockCache, err := lru.New(badBlockSize)
-	if err != nil {
-		return err
-	}
-	s.seenBlockCache = blkCache
-	s.seenAggregatedAttestationCache = aggregatedAttCache
-	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
-	s.seenExitCache = exitCache
+func (s *Service) initCaches() {
+	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
+	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
+	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
+	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
-	s.seenProposerSlashingCache = proposerSlashingCache
-	s.badBlockCache = badBlockCache
-
-	return nil
+	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
+	s.badBlockCache = lruwrpr.New(badBlockSize)
 }
 
 func (s *Service) registerHandlers() {
