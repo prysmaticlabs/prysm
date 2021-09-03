@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -165,7 +164,7 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	slot types.Slot,
 	subnetId uint64,
 	blockRoot []byte,
-) ([]byte, bitfield.Bitvector128, error) {
+) ([]byte, []byte, error) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([]bls.Signature, 0, subCommitteeSize)
 	bits := ethpb.NewSyncCommitteeAggregationBits()
