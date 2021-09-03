@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -41,7 +41,7 @@ func (s *Service) persistentSubnetIndices() []uint64 {
 }
 
 func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
-	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
+	endEpoch := core.SlotToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
@@ -51,7 +51,7 @@ func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
 }
 
 func (s *Service) attesterSubnetIndices(currentSlot types.Slot) []uint64 {
-	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
+	endEpoch := core.SlotToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {

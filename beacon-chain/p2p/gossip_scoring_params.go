@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -132,7 +133,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 		if genState == nil || genState.IsNil() {
 			return 0, errors.New("no genesis state exists")
 		}
-		activeVals, err := helpers.ActiveValidatorCount(genState, helpers.CurrentEpoch(genState))
+		activeVals, err := helpers.ActiveValidatorCount(genState, core.CurrentEpoch(genState))
 		if err != nil {
 			return 0, err
 		}
@@ -147,7 +148,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	if bState == nil || bState.IsNil() {
 		return 0, errors.Errorf("no state with root %#x exists", rt)
 	}
-	activeVals, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
+	activeVals, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}

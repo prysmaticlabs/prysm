@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -193,8 +193,8 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) e
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
 		slot := bytesutil.BytesToSlotBigEndian(k)
-		epoch := helpers.SlotToEpoch(slot)
-		newestEpoch := helpers.SlotToEpoch(newestSlot)
+		epoch := core.SlotToEpoch(slot)
+		newestEpoch := core.SlotToEpoch(newestSlot)
 		// Only delete epochs that are older than the weak subjectivity period.
 		if epoch+params.BeaconConfig().WeakSubjectivityPeriod <= newestEpoch {
 			if err := c.Delete(); err != nil {

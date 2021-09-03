@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
@@ -40,7 +41,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 
 	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := helpers.SlotToEpoch(cs)
+	currentEpoch := core.SlotToEpoch(cs)
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
@@ -114,7 +115,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := helpers.SlotToEpoch(cs)
+	currentEpoch := core.SlotToEpoch(cs)
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
 	}
@@ -174,7 +175,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	slot, err := helpers.StartSlot(req.Epoch)
+	slot, err := core.StartSlot(req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
@@ -373,7 +374,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	}
 
 	fetchValsLen := func(slot types.Slot) (uint64, error) {
-		wantedEpoch := helpers.SlotToEpoch(slot)
+		wantedEpoch := core.SlotToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
@@ -386,16 +387,16 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 	}
-	currEpoch := helpers.SlotToEpoch(req.Data[0].Slot)
+	currEpoch := core.SlotToEpoch(req.Data[0].Slot)
 
 	for _, sub := range req.Data {
 		// If epoch has changed, re-request active validators length
-		if currEpoch != helpers.SlotToEpoch(sub.Slot) {
+		if currEpoch != core.SlotToEpoch(sub.Slot) {
 			currValsLen, err = fetchValsLen(sub.Slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 			}
-			currEpoch = helpers.SlotToEpoch(sub.Slot)
+			currEpoch = core.SlotToEpoch(sub.Slot)
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
 		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
@@ -435,7 +436,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	currEpoch := helpers.SlotToEpoch(s.Slot())
+	currEpoch := core.SlotToEpoch(s.Slot())
 	validators := make([]state.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
@@ -452,7 +453,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		validators[i] = val
 	}
 
-	currPeriod := helpers.SyncCommitteePeriod(currEpoch)
+	currPeriod := core.SyncCommitteePeriod(currEpoch)
 	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 
 	for i, sub := range req.Data {
@@ -527,7 +528,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 	if epoch <= 1 {
 		dependentRootSlot = 0
 	} else {
-		prevEpochStartSlot, err := helpers.StartSlot(epoch.Sub(1))
+		prevEpochStartSlot, err := core.StartSlot(epoch.Sub(1))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
@@ -547,7 +548,7 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 	if epoch == 0 {
 		dependentRootSlot = 0
 	} else {
-		epochStartSlot, err := helpers.StartSlot(epoch)
+		epochStartSlot, err := core.StartSlot(epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
@@ -567,12 +568,12 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
-		epochStartSlot, err = helpers.StartSlot(requestedEpoch.Sub(1))
+		epochStartSlot, err = core.StartSlot(requestedEpoch.Sub(1))
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}
 	} else {
-		epochStartSlot, err = helpers.StartSlot(requestedEpoch)
+		epochStartSlot, err = core.StartSlot(requestedEpoch)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -38,7 +39,7 @@ const signExitErr = "could not sign voluntary exit proposal"
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
-	currEpoch := helpers.SlotToEpoch(slot)
+	currEpoch := core.SlotToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)

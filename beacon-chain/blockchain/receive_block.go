@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -165,7 +165,7 @@ func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
-	currentEpoch := helpers.SlotToEpoch(s.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
 	if currentEpoch > s.finalizedCheckpt.Epoch {

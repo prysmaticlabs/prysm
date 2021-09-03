@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -22,7 +23,7 @@ func TestBlockSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-	epoch := helpers.SlotToEpoch(block.Block.Slot)
+	epoch := core.SlotToEpoch(block.Block.Slot)
 	blockSig, err := helpers.ComputeDomainAndSign(beaconState, epoch, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -37,7 +38,7 @@ func TestBlockSignature(t *testing.T) {
 func TestRandaoReveal(t *testing.T) {
 	beaconState, privKeys := DeterministicGenesisState(t, 100)
 
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := core.CurrentEpoch(beaconState)
 	randaoReveal, err := RandaoReveal(beaconState, epoch, privKeys)
 	assert.NoError(t, err)
 

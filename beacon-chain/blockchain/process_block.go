@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -238,7 +239,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, nil, err
 		}
 		// Save potential boundary states.
-		if helpers.IsEpochStart(preState.Slot()) {
+		if core.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
@@ -323,7 +324,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, core.NextEpoch(postState)); err != nil {
 			return err
 		}
 		copied := postState.Copy()
@@ -339,14 +340,14 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		var err error
-		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
+		s.nextEpochBoundarySlot, err = core.StartSlot(core.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
 
 		// Update caches at epoch boundary slot.
 		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, core.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {

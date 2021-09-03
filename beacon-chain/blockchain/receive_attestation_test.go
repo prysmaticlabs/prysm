@@ -6,6 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -29,7 +30,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, beaconDB)
 	chainService.genesisTime = time.Now()
 
-	e := types.Epoch(helpers.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
+	e := types.Epoch(core.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
 	_, err := chainService.AttestationPreState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }

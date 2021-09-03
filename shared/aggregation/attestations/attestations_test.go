@@ -388,11 +388,11 @@ func TestAggregateAttestations_PerformanceComparison(t *testing.T) {
 
 			atts, err = MaxCoverAttestationAggregation(generateAtts(tt.bitsList))
 			require.NoError(t, err)
-			score2 := scoreAtts(atts)
+			score := scoreAtts(atts)
 
-			t.Logf("native = %d, max-cover: %d\n", score1, score2)
-			assert.Equal(t, true, score1 <= score2,
-				"max-cover failed to produce higher score (naive: %d, max-cover: %d)", score1, score2)
+			t.Logf("native = %d, max-cover: %d\n", score1, score)
+			assert.Equal(t, true, score1 <= score,
+				"max-cover failed to produce higher score (naive: %d, max-cover: %d)", score1, score)
 		})
 	}
 }

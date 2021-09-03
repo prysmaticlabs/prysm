@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -525,7 +526,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	for _, h := range []*ethpb.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
-			helpers.SlotToEpoch(h.Message.Slot),
+			core.SlotToEpoch(h.Message.Slot),
 			h.Message,
 			params.BeaconConfig().DomainBeaconProposer,
 			keys[0],
@@ -765,7 +766,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	for _, att := range []*ethpb.Attestation{att1, att2} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
-			helpers.SlotToEpoch(att.Data.Slot),
+			core.SlotToEpoch(att.Data.Slot),
 			att.Data,
 			params.BeaconConfig().DomainBeaconAttester,
 			keys[0],
@@ -872,7 +873,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	// Don't sign attInvalidSignature.
 	sb, err := helpers.ComputeDomainAndSign(
 		state,
-		helpers.SlotToEpoch(attValid.Data.Slot),
+		core.SlotToEpoch(attValid.Data.Slot),
 		attValid.Data,
 		params.BeaconConfig().DomainBeaconAttester,
 		keys[0],

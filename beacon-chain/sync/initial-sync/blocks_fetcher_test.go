@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
-	core "github.com/libp2p/go-libp2p-core"
+	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -124,7 +124,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -136,7 +136,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -148,17 +148,17 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: helpers.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -506,7 +506,7 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:   p2p,
 		})
 
-	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
+	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, core.SlotToEpoch(mc.HeadSlot()))
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,
@@ -537,7 +537,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	}
 
 	topic := p2pm.RPCBlocksByRangeTopicV1
-	protocol := core.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
+	protocol := libp2pcore.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
 	streamHandlerFn := func(stream network.Stream) {
 		assert.NoError(t, stream.Close())
 	}
@@ -813,7 +813,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 	}
 
 	topic := p2pm.RPCBlocksByRangeTopicV1
-	protocol := core.ProtocolID(topic + p1.Encoding().ProtocolSuffix())
+	protocol := libp2pcore.ProtocolID(topic + p1.Encoding().ProtocolSuffix())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -8,6 +8,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -73,8 +74,8 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 		att.Data.Target.Epoch,
-		helpers.PrevEpoch(beaconState),
-		helpers.CurrentEpoch(beaconState),
+		core.PrevEpoch(beaconState),
+		core.CurrentEpoch(beaconState),
 	)
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -109,7 +110,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
-	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Source.Epoch = core.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -150,8 +151,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
-	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
-	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Source.Epoch = core.PrevEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Target.Epoch = core.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -470,7 +471,7 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 			beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 			require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-			currentEpoch := helpers.CurrentEpoch(beaconState)
+			currentEpoch := core.CurrentEpoch(beaconState)
 			if test.epoch == currentEpoch {
 				require.NoError(t, beaconState.SetCurrentParticipationBits(test.epochParticipation))
 			} else {

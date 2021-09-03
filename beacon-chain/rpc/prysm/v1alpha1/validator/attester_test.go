@@ -10,7 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -189,10 +189,10 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	block.Block.Slot = 10000
 	epochBoundaryBlock := testutil.NewBeaconBlock()
 	var err error
-	epochBoundaryBlock.Block.Slot, err = helpers.StartSlot(helpers.SlotToEpoch(10000))
+	epochBoundaryBlock.Block.Slot, err = core.StartSlot(core.SlotToEpoch(10000))
 	require.NoError(t, err)
 	justifiedBlock := testutil.NewBeaconBlock()
-	justifiedBlock.Block.Slot, err = helpers.StartSlot(helpers.SlotToEpoch(1500))
+	justifiedBlock.Block.Slot, err = core.StartSlot(core.SlotToEpoch(1500))
 	require.NoError(t, err)
 	justifiedBlock.Block.Slot -= 2 // Imagine two skip block
 	blockRoot, err := block.Block.HashTreeRoot()
@@ -207,7 +207,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: helpers.SlotToEpoch(1500),
+		Epoch: core.SlotToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
 	})
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot:            req.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
-			Epoch: helpers.SlotToEpoch(1500),
+			Epoch: core.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
 		Target: &ethpb.Checkpoint{

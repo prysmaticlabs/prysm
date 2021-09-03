@@ -6,6 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -116,7 +117,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		},
 		Signature: []byte{'B'},
 	}
-	valCount, err := helpers.ActiveValidatorCount(state, helpers.SlotToEpoch(att.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(state, core.SlotToEpoch(att.Data.Slot))
 	require.NoError(t, err)
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")
