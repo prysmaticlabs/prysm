@@ -99,19 +99,20 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	}
 
 	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := client.ListBlocks(context.Background(), req)
+	blks, err := client.ListBeaconBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 	var deposits uint64
 	for _, blk := range blks.BlockContainers {
+		b := blk.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block.Block
 		fmt.Printf(
 			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
-			blk.Block.Block.Slot,
-			len(blk.Block.Block.Body.Deposits),
-			blk.Block.Block.Body.Eth1Data.BlockHash, blk.Block.Block.Body.Eth1Data.DepositCount,
+			b.Slot,
+			len(b.Body.Deposits),
+			b.Body.Eth1Data.BlockHash, b.Body.Eth1Data.DepositCount,
 		)
-		deposits += uint64(len(blk.Block.Block.Body.Deposits))
+		deposits += uint64(len(b.Body.Deposits))
 	}
 	if deposits != depositValCount {
 		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, deposits)
@@ -129,19 +130,20 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	}
 
 	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := client.ListBlocks(context.Background(), req)
+	blks, err := client.ListBeaconBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 	for _, blk := range blks.BlockContainers {
 		var e bool
+		b := blk.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block.Block
 		for _, graffiti := range helpers.Graffiti {
-			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block.Block.Body.Graffiti) {
+			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), b.Body.Graffiti) {
 				e = true
 				break
 			}
 		}
-		if !e && blk.Block.Block.Slot != 0 {
+		if !e && b.Slot != 0 {
 			return errors.New("could not get graffiti from the list")
 		}
 	}
@@ -339,7 +341,8 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	}
 
 	for _, blk := range blks.BlockContainers {
-		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
+		b := blk.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block.Block
+		slot, vote := b.Slot, b.Body.Eth1Data.BlockHash
 		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
