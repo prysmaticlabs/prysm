@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -103,7 +103,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 	t.Run("Next epoch", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: helpers.SlotToEpoch(bs.Slot()) + 1,
+			Epoch: core.SlotToEpoch(bs.Slot()) + 1,
 			Index: []types.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
@@ -169,7 +169,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: currentEpoch + 2,
 			Index: []types.ValidatorIndex{0},
@@ -301,7 +301,7 @@ func TestGetProposerDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 1,
 		}

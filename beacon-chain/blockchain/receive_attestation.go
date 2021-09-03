@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -44,11 +45,11 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 // AttestationPreState returns the pre state of attestation.
 func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
-	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
+	ss, err := core.StartSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
 	return s.getAttPreState(ctx, att.Data.Target)
@@ -56,7 +57,7 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	targetSlot, err := helpers.StartSlot(a.Data.Target.Epoch)
+	targetSlot, err := core.StartSlot(a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
-	ss, err := helpers.StartSlot(f.Epoch)
+	ss, err := core.StartSlot(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := core.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

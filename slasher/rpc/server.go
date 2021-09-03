@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -173,7 +174,7 @@ func (s *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBl
 	if err != nil {
 		return nil, err
 	}
-	blockEpoch := helpers.SlotToEpoch(req.Header.Slot)
+	blockEpoch := core.SlotToEpoch(req.Header.Slot)
 	fork, err := p2putils.Fork(blockEpoch)
 	if err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -73,7 +73,7 @@ func (v *validator) LogNextDutyTimeLeft(slot types.Slot) error {
 	if nextDutySlot == 0 {
 		log.WithField("slotInEpoch", slot%params.BeaconConfig().SlotsPerEpoch).Info("No duty until next epoch")
 	} else {
-		nextDutyTime, err := helpers.SlotToTime(v.genesisTime, nextDutySlot)
+		nextDutyTime, err := core.SlotToTime(v.genesisTime, nextDutySlot)
 		if err != nil {
 			return err
 		}
