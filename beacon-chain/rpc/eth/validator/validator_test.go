@@ -1374,6 +1374,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		}
 		require.DeepEqual(t, expectedContributions, savedMsgs)
 		savedMsgs, err = v1Server.SyncCommitteePool.SyncCommitteeContributions(1)
+		require.NoError(t, err)
 		expectedContributions = []*ethpbalpha.SyncCommitteeContribution{
 			{
 				Slot:              req.Data[1].Message.Contribution.Slot,
