@@ -1283,14 +1283,14 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	aggBits := bitfield.NewBitvector128()
 	aggBits.SetBitAt(0, true)
 	v1Server := &v1alpha1validator.Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &p2pmock.MockBroadcaster{},
+		P2P: &p2pmock.MockBroadcaster{},
 	}
 	server := &Server{
 		V1Alpha1Server: v1Server,
 	}
 
 	t.Run("Single contribution", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
 		req := &ethpbv2.SubmitContributionAndProofsRequest{
 			Data: []*ethpbv2.SignedContributionAndProof{
 				{
@@ -1325,6 +1325,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	})
 
 	t.Run("Multiple contributions", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
 		req := &ethpbv2.SubmitContributionAndProofsRequest{
 			Data: []*ethpbv2.SignedContributionAndProof{
 				{
