@@ -464,7 +464,7 @@ func TestAssignValidatorToSyncSubnet(t *testing.T) {
 	sCommittee := &ethpb.SyncCommittee{
 		Pubkeys: committee,
 	}
-	assignValidatorToSyncSubnet(0, 0, k, sCommittee, ethpb.ValidatorStatus_ACTIVE)
+	registerSyncSubnet(0, 0, k, sCommittee, ethpb.ValidatorStatus_ACTIVE)
 	coms, _, ok, exp := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(k, 0)
 	require.Equal(t, true, ok, "No cache entry found for validator")
 	assert.Equal(t, uint64(1), uint64(len(coms)))

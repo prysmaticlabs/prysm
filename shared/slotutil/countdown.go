@@ -41,14 +41,14 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 			ticker = time.NewTicker(time.Second)
 			secondTimerActivated = true
 		}
+		if timeRemaining >= time.Second {
+			log.WithFields(logFields).Infof(
+				"%s until chain genesis",
+				timeRemaining.Truncate(time.Second),
+			)
+		}
 		select {
 		case <-ticker.C:
-			if timeRemaining >= time.Second {
-				log.WithFields(logFields).Infof(
-					"%s until chain genesis",
-					timeRemaining.Truncate(time.Second),
-				)
-			}
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
