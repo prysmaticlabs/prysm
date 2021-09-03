@@ -13,6 +13,9 @@ const forkDigestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
 func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ChainInfoFetcher) error {
+	// The rpc context for our v2 methods is the fork-digest of
+	// the relevant payload. We write the associated fork-digest(context)
+	// into the stream for the payload.
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return err
@@ -67,16 +70,4 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 	default:
 		return nil, errors.New("invalid version of %s registered for topic: %s")
 	}
-}
-
-// Validates that the rpc topic matches the provided version.
-func validateVersion(version string, stream network.Stream) error {
-	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
-	if err != nil {
-		return err
-	}
-	if streamVersion != version {
-		return errors.Errorf("stream version of %s doesn't match provided version %s", streamVersion, version)
-	}
-	return nil
 }
