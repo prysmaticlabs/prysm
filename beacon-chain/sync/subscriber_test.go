@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -23,6 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -169,8 +169,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := Service{
 		ctx: ctx,
 		cfg: &Config{
@@ -180,7 +178,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 			Chain:        chainService,
 			DB:           d,
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 		chainStarted:              abool.New(),
 		subHandler:                newSubTopicHandler(),
 	}

@@ -5,7 +5,10 @@ go_library(
     srcs = ["bytes.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/bytesutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
+    deps = [
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
 )
 
 go_test(

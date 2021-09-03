@@ -32,6 +32,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -44,7 +45,8 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
-const seenSyncMsgSize = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
+const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
+const seenSyncContributionSize = 512 // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -121,6 +123,8 @@ type Service struct {
 	seenAttesterSlashingCache        map[uint64]bool
 	seenSyncMessageLock              sync.RWMutex
 	seenSyncMessageCache             *lru.Cache
+	seenSyncContributionLock         sync.RWMutex
+	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
@@ -150,9 +154,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	if err := s.initCaches(); err != nil {
-		panic(err)
-	}
+	s.initCaches()
 
 	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
@@ -203,45 +205,16 @@ func (s *Service) Status() error {
 
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
-func (s *Service) initCaches() error {
-	blkCache, err := lru.New(seenBlockSize)
-	if err != nil {
-		return err
-	}
-	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
-	if err != nil {
-		return err
-	}
-	syncMsgCache, err := lru.New(seenSyncMsgSize)
-	if err != nil {
-		return err
-	}
-	exitCache, err := lru.New(seenExitSize)
-	if err != nil {
-		return err
-	}
-	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
-	if err != nil {
-		return err
-	}
-	badBlockCache, err := lru.New(badBlockSize)
-	if err != nil {
-		return err
-	}
-	s.seenBlockCache = blkCache
-	s.seenAggregatedAttestationCache = aggregatedAttCache
-	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
-	s.seenSyncMessageCache = syncMsgCache
-	s.seenExitCache = exitCache
+func (s *Service) initCaches() {
+	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
+	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
+	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
+	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
-	s.seenProposerSlashingCache = proposerSlashingCache
-	s.badBlockCache = badBlockCache
-
-	return nil
+	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
+	s.badBlockCache = lruwrpr.New(badBlockSize)
 }
 
 func (s *Service) registerHandlers() {
