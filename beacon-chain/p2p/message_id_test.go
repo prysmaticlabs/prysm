@@ -66,10 +66,9 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 
 func TestMsgID_WithNilTopic(t *testing.T) {
 	msg := &pubsubpb.Message{
-		Data: make([]byte, 32),
+		Data:  make([]byte, 32),
 		Topic: nil,
 	}
-
 
 	invalid := make([]byte, 20)
 	copy(invalid, "invalid")
