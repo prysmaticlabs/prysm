@@ -136,12 +136,29 @@ service BeaconNodeValidator {
         };
     }
 
+    // DEPRECATED: do not use.
+    rpc GetBlock(BlockRequest) returns (BeaconBlock) {
+        option deprecated = true;
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/block"
+        };
+    }
+
+    // DEPRECATED: do not use.
+    rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+        option deprecated = true;
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/block"
+            body: "*"
+        };
+    }
+
     // Retrieves the latest valid beacon block to be proposed on the beacon chain.
     //
     // The server returns a new beacon block, without proposer signature, that can be
     // proposed on the beacon chain. The block should be filled with all the necessary
     // data for proposer to sign.
-    rpc GetBlock(BlockRequest) returns (BeaconBlock) {
+    rpc GetBeaconBlock(BlockRequest) returns (GenericBeaconBlock) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/block"
         };
@@ -152,7 +169,7 @@ service BeaconNodeValidator {
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
     // be included in the beacon chain. The beacon node is expected to validate and process the
     // beacon block into its state.
-    rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+    rpc ProposeBeaconBlock(GenericSignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
             body: "*"
@@ -228,29 +245,6 @@ service BeaconNodeValidator {
     rpc CheckDoppelGanger(DoppelGangerRequest) returns (DoppelGangerResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/doppelganger"
-        };
-    }
-
-    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
-    //
-    // The server returns a new beacon block, without proposer signature, that can be
-    // proposed on the beacon chain. The block should be filled with all the necessary
-    // data for proposer to sign. This block is versioned from Altair onwards.
-    rpc GetBlockAltair(BlockRequest) returns (BeaconBlockAltair) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/block"
-        };
-    }
-
-    // Sends the newly signed beacon block to beacon node.
-    //
-    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
-    // be included in the beacon chain. The beacon node is expected to validate and process the
-    // beacon block into its state. This block is versioned from Altair onwards.
-    rpc ProposeBlockAltair(SignedBeaconBlockAltair) returns (ProposeResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/block"
-            body: "*"
         };
     }
 
