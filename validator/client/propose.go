@@ -12,7 +12,11 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+<<<<<<< HEAD
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+=======
+	wrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+>>>>>>> develop
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -43,11 +47,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)
 	default:
+<<<<<<< HEAD
 		v.proposeBlock(ctx, slot, pubKey)
 	}
 }
 
 func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+=======
+		v.proposeBlockPhase0(ctx, slot, pubKey)
+	}
+}
+
+func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+>>>>>>> develop
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -55,7 +67,11 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
+<<<<<<< HEAD
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlock")
+=======
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
+>>>>>>> develop
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -168,6 +184,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
+<<<<<<< HEAD
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
@@ -175,6 +192,16 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
+=======
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockAltair")
+	defer span.End()
+
+	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
+
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+>>>>>>> develop
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
@@ -246,6 +273,12 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.WithFields(
 			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
+<<<<<<< HEAD
+=======
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+>>>>>>> develop
 		return
 	}
 
@@ -261,6 +294,12 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		log.WithFields(
 			blockLogFields(pubKey, wb, sig),
 		).WithError(err).Error("Failed block slashing protection check")
+<<<<<<< HEAD
+=======
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+>>>>>>> develop
 		return
 	}
 
