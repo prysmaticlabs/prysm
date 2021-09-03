@@ -111,15 +111,15 @@ func (bs *Server) ListBlocks(
 	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
-// ListBlocksAltair retrieves blocks by root, slot, or epoch.
+// ListBeaconBlocks retrieves blocks by root, slot, or epoch.
 //
 // The server may return multiple blocks in the case that a slot or epoch is
 // provided as the filter criteria. The server may return an empty list when
 // no blocks in their database match the filter criteria. This RPC should
 // not return NOT_FOUND. Only one filter criteria should be used.
-func (bs *Server) ListBlocksAltair(
+func (bs *Server) ListBeaconBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
-) (*ethpb.ListBlocksResponseAltair, error) {
+) (*ethpb.ListBeaconBlocksResponse, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
@@ -135,7 +135,7 @@ func (bs *Server) ListBlocksAltair(
 		if err != nil {
 			return nil, err
 		}
-		return &ethpb.ListBlocksResponseAltair{
+		return &ethpb.ListBeaconBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -149,7 +149,7 @@ func (bs *Server) ListBlocksAltair(
 		if err != nil {
 			return nil, err
 		}
-		return &ethpb.ListBlocksResponseAltair{
+		return &ethpb.ListBeaconBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -164,7 +164,7 @@ func (bs *Server) ListBlocksAltair(
 		if err != nil {
 			return nil, err
 		}
-		return &ethpb.ListBlocksResponseAltair{
+		return &ethpb.ListBeaconBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -178,7 +178,7 @@ func (bs *Server) ListBlocksAltair(
 		if err != nil {
 			return nil, err
 		}
-		return &ethpb.ListBlocksResponseAltair{
+		return &ethpb.ListBeaconBlocksResponse{
 			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
@@ -188,8 +188,8 @@ func (bs *Server) ListBlocksAltair(
 	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
-func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainerAltair, error) {
-	protoCtrs := make([]*ethpb.BeaconBlockContainerAltair, len(ctrs))
+func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error) {
+	protoCtrs := make([]*ethpb.BeaconBlockContainer, len(ctrs))
 	var err error
 	for i, c := range ctrs {
 		protoCtrs[i], err = convertToBlockContainer(c.blk, c.root, c.isCanonical)
@@ -200,8 +200,8 @@ func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContain
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainerAltair, error) {
-	ctr := &ethpb.BeaconBlockContainerAltair{
+func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
+	ctr := &ethpb.BeaconBlockContainer{
 		BlockRoot: root[:],
 		Canonical: isCanonical,
 	}
@@ -212,13 +212,13 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 		if err != nil {
 			return nil, err
 		}
-		ctr.Block = &ethpb.BeaconBlockContainerAltair_Phase0Block{Phase0Block: rBlk}
+		ctr.Block = &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: rBlk}
 	case version.Altair:
 		rBlk, err := blk.PbAltairBlock()
 		if err != nil {
 			return nil, err
 		}
-		ctr.Block = &ethpb.BeaconBlockContainerAltair_AltairBlock{AltairBlock: rBlk}
+		ctr.Block = &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: rBlk}
 	}
 	return ctr, nil
 }
@@ -352,7 +352,7 @@ func convertToProto(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error
 		}
 		copiedRoot := c.root
 		protoCtrs[i] = &ethpb.BeaconBlockContainer{
-			Block:     phBlk,
+			Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: phBlk},
 			BlockRoot: copiedRoot[:],
 			Canonical: c.isCanonical,
 		}
