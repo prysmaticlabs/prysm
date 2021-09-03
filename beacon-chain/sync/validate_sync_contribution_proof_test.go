@@ -13,9 +13,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -324,7 +325,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -381,7 +382,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -448,7 +449,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -458,7 +459,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							pubkey = keys[idx].PublicKey().Marshal()
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
-							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.Slot = core.PrevSlot(hState.Slot())
 							msg.Message.Contribution.SubcommitteeIndex = i
 							msg.Message.Contribution.Signature = infiniteSig[:]
 							msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -469,7 +470,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						}
 					}
 				}
-				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -526,7 +527,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -537,7 +538,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							badSig := keys[idx].Sign(junkRoot[:])
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
-							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.Slot = core.PrevSlot(hState.Slot())
 							msg.Message.Contribution.SubcommitteeIndex = i
 							msg.Message.Contribution.Signature = badSig.Marshal()
 							msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -545,7 +546,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 							msg.Signature = infiniteSig[:]
 
-							d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+							d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 							assert.NoError(t, err)
 							sigRoot, err := helpers.ComputeSigningRoot(msg.Message, d)
 							assert.NoError(t, err)
@@ -602,7 +603,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
@@ -610,7 +611,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -619,7 +620,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							infiniteSig := [96]byte{0xC0}
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
-							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.Slot = core.PrevSlot(hState.Slot())
 							msg.Message.Contribution.SubcommitteeIndex = i
 							msg.Message.Contribution.Signature = infiniteSig[:]
 							msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -634,7 +635,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -686,9 +687,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
-				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				var pubkeys [][]byte
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
@@ -698,7 +699,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -706,7 +707,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						if isAggregator {
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
-							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.Slot = core.PrevSlot(hState.Slot())
 							msg.Message.Contribution.SubcommitteeIndex = i
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
@@ -729,7 +730,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				pd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				pd, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -782,9 +783,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
-				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				var pubkeys [][]byte
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
@@ -794,7 +795,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := syncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						isAggregator, err := altair.IsSyncCommitteeAggregator(sig.Marshal())
@@ -802,7 +803,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						if isAggregator {
 							msg.Message.AggregatorIndex = idx
 							msg.Message.SelectionProof = sig.Marshal()
-							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.Slot = core.PrevSlot(hState.Slot())
 							msg.Message.Contribution.SubcommitteeIndex = i
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
@@ -827,7 +828,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				pd, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				pd, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -902,7 +903,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		_, testState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
+		_, testState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
 		assert.NoError(t, err)
 		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: i, Root: r[:]}))
@@ -914,7 +915,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 }
 
 func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
-	dom, err := helpers.Domain(st.Fork(), helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
+	dom, err := helpers.Domain(st.Fork(), core.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
 	if err != nil {
 		return [32]byte{}, err
 	}

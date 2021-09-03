@@ -3,6 +3,7 @@ package testutil
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -18,12 +19,12 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
 	}
-	nextSlotEpoch := helpers.SlotToEpoch(st.Slot() + 1)
-	currEpoch := helpers.SlotToEpoch(st.Slot())
+	nextSlotEpoch := core.SlotToEpoch(st.Slot() + 1)
+	currEpoch := core.SlotToEpoch(st.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
 	var err error
-	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
+	if core.SyncCommitteePeriod(currEpoch) == core.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -51,7 +52,7 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 		if !ok {
 			continue
 		}
-		d, err := helpers.Domain(st.Fork(), helpers.SlotToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorRoot())
+		d, err := helpers.Domain(st.Fork(), core.SlotToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorRoot())
 		if err != nil {
 			return nil, err
 		}

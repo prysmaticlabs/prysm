@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -284,7 +285,7 @@ func BlockSignatureAltair(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(bState.Fork(), core2.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +400,7 @@ func GenerateFullBlockAltair(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, core2.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}

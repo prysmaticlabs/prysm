@@ -73,10 +73,6 @@ func (vs *Server) ProposeBlockAltair(ctx context.Context, altair *ethpb.SignedBe
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
-func (vs *Server) StreamBlocksAltair(request *ethpb.StreamBlocksRequest, server ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
-	return status.Error(codes.Unimplemented, "Unimplemented")
-}
-
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.

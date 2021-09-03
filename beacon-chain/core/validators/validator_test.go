@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -133,7 +134,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	v, err := state.ValidatorAtIndex(slashedIdx)
 	require.NoError(t, err)
 	assert.Equal(t, true, v.Slashed, "Validator not slashed despite supposed to being slashed")
-	assert.Equal(t, helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
+	assert.Equal(t, core.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
 	slashedBalance := state.Slashings()[state.Slot().Mod(uint64(params.BeaconConfig().EpochsPerSlashingsVector))]
@@ -203,7 +204,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activatedIndices := ActivatedValidatorIndices(helpers.CurrentEpoch(s), tt.state.Validators)
+		activatedIndices := ActivatedValidatorIndices(core.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, activatedIndices)
 	}
 }
@@ -257,7 +258,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		slashedIndices := SlashedValidatorIndices(helpers.CurrentEpoch(s), tt.state.Validators)
+		slashedIndices := SlashedValidatorIndices(core.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, slashedIndices)
 	}
 }
@@ -317,7 +318,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activeCount, err := helpers.ActiveValidatorCount(s, helpers.PrevEpoch(s))
+		activeCount, err := helpers.ActiveValidatorCount(s, core.PrevEpoch(s))
 		require.NoError(t, err)
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)
