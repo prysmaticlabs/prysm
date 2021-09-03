@@ -21,7 +21,7 @@ import (
 //    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
 //    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
 func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
-	if pmsg == nil || pmsg.Data == nil {
+	if pmsg == nil || pmsg.Data == nil || pmsg.Topic == nil {
 		// Impossible condition that should
 		// never be hit.
 		msg := make([]byte, 20)
