@@ -13,6 +13,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -174,7 +175,7 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = copyutil.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		ss, err := core2.StartSlot(s.finalizedCheckpt.Epoch)
 		if err != nil {
 			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
@@ -411,7 +412,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headEpoch := helpers.SlotToEpoch(headBlock.Block().Slot())
+		headEpoch := core2.SlotToEpoch(headBlock.Block().Slot())
 		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch

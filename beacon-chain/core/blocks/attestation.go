@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -50,8 +51,8 @@ func VerifyAttestationNoVerifySignature(
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	currEpoch := helpers.CurrentEpoch(beaconState)
-	prevEpoch := helpers.PrevEpoch(beaconState)
+	currEpoch := core.CurrentEpoch(beaconState)
+	prevEpoch := core.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
 		return fmt.Errorf(
@@ -135,7 +136,7 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	currEpoch := helpers.CurrentEpoch(beaconState)
+	currEpoch := core.CurrentEpoch(beaconState)
 	data := att.Data
 	s := att.Data.Slot
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)

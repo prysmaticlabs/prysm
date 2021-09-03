@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -43,7 +44,7 @@ func (bs *Server) ListValidatorAssignments(
 		requestedEpoch = q.Epoch
 	}
 
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -53,7 +54,7 @@ func (bs *Server) ListValidatorAssignments(
 		)
 	}
 
-	startSlot, err := helpers.StartSlot(requestedEpoch)
+	startSlot, err := core.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
