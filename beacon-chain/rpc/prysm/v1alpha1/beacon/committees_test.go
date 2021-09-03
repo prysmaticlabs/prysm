@@ -7,6 +7,7 @@ import (
 	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -106,7 +107,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	startSlot, err := helpers.StartSlot(1)
+	startSlot, err := core.StartSlot(1)
 	require.NoError(t, err)
 	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
 	require.NoError(t, err)

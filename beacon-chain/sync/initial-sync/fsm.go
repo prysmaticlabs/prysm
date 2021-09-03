@@ -8,7 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -189,7 +189,7 @@ func (m *stateMachine) isLast() bool {
 
 // String returns human-readable representation of a FSM state.
 func (m *stateMachine) String() string {
-	return fmt.Sprintf("{%d:%s}", helpers.SlotToEpoch(m.start), m.state)
+	return fmt.Sprintf("{%d:%s}", core.SlotToEpoch(m.start), m.state)
 }
 
 // String returns human-readable representation of a state.

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -104,7 +105,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
 	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
-	currEpoch := helpers.SlotToEpoch(headState.Slot())
+	currEpoch := core.SlotToEpoch(headState.Slot())
 	previousEpoch, err := currEpoch.SafeSub(1)
 	if err != nil {
 		previousEpoch = currEpoch
@@ -302,7 +303,7 @@ func (vs *Server) validatorStatus(
 			if err != nil {
 				return resp, idx
 			}
-			if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(headState)) {
+			if helpers.IsActiveValidatorUsingTrie(val, core.CurrentEpoch(headState)) {
 				lastActivatedvalidatorIndex = types.ValidatorIndex(j)
 				break
 			}
@@ -333,7 +334,7 @@ func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex type
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
+	currentEpoch := core.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validatorBalance := validator.EffectiveBalance()
 

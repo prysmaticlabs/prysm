@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -522,21 +523,21 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		}
 	}
 
-	fSlot, err := helpers.StartSlot(finalizedCheckpoint.Epoch)
+	fSlot, err := core.StartSlot(finalizedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	jSlot, err := helpers.StartSlot(justifiedCheckpoint.Epoch)
+	jSlot, err := core.StartSlot(justifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	pjSlot, err := helpers.StartSlot(prevJustifiedCheckpoint.Epoch)
+	pjSlot, err := core.StartSlot(prevJustifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block().Slot(),
-		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block().Slot()),
+		HeadEpoch:                  core.SlotToEpoch(headBlock.Block().Slot()),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
@@ -560,7 +561,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
 	}
-	wsSlot, err := helpers.StartSlot(wsEpoch)
+	wsSlot, err := core.StartSlot(wsEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
 	}

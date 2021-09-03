@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -22,8 +23,8 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 	if len(genesisValidatorsRoot) == 0 {
 		return false, errors.New("genesis validators root is not set")
 	}
-	currentSlot := helpers.SlotsSince(genesisTime)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	currentSlot := core.SlotsSince(genesisTime)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	scheduledForks := SortedForkVersions(fSchedule)
 	isForkEpoch := false
@@ -63,8 +64,8 @@ func CreateForkDigest(
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")
 	}
-	currentSlot := helpers.SlotsSince(genesisTime)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	currentSlot := core.SlotsSince(genesisTime)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 
 	forkData, err := Fork(currentEpoch)
 	if err != nil {

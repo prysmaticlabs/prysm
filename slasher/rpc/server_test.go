@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -215,7 +216,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
-	savedBlockEpoch := helpers.SlotToEpoch(savedBlock.Header.Slot)
+	savedBlockEpoch := core.SlotToEpoch(savedBlock.Header.Slot)
 	fork, err := p2putils.Fork(savedBlockEpoch)
 	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
@@ -299,7 +300,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
-	savedBlockEpoch := helpers.SlotToEpoch(savedBlock.Header.Slot)
+	savedBlockEpoch := core.SlotToEpoch(savedBlock.Header.Slot)
 	fork, err := p2putils.Fork(savedBlockEpoch)
 	require.NoError(t, err)
 	domain, err := helpers.Domain(fork, savedBlockEpoch, params.BeaconConfig().DomainBeaconProposer, wantedGenesis.GenesisValidatorsRoot)
