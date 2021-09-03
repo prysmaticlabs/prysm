@@ -9,10 +9,13 @@ import (
 )
 
 // Specifies the fixed size context length.
-const digestLength = 4
+const forkDigestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
 func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ChainInfoFetcher) error {
+	// The rpc context for our v2 methods is the fork-digest of
+	// the relevant payload. We write the associated fork-digest(context)
+	// into the stream for the payload.
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return err
@@ -39,7 +42,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 		return []byte{}, nil
 	}
 	// Read context (fork-digest) from stream
-	b := make([]byte, digestLength)
+	b := make([]byte, forkDigestLength)
 	if _, err := stream.Read(b); err != nil {
 		return nil, err
 	}
@@ -58,8 +61,8 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 		return []byte{}, nil
 	case p2p.SchemaVersionV2:
 		currFork := chain.CurrentFork()
-		genVersion := chain.GenesisValidatorRoot()
-		digest, err := helpers.ComputeForkDigest(currFork.CurrentVersion, genVersion[:])
+		genRoot := chain.GenesisValidatorRoot()
+		digest, err := helpers.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
 		if err != nil {
 			return nil, err
 		}
