@@ -57,7 +57,6 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
->>>>>>> develop
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
