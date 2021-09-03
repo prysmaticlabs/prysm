@@ -1289,7 +1289,6 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
 	v1Server := &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
-		P2P:               &p2pmock.MockBroadcaster{},
 		HeadFetcher: &mockChain.ChainService{
 			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
