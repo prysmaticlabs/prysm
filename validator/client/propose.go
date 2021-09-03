@@ -211,7 +211,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	altairBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_AltairBlock)
+	altairBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Altair)
 	if !ok {
 		log.Error("Not an Altair block")
 		if v.emitAccountMetrics {
@@ -221,7 +221,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedAltairBeaconBlock(altairBlk.AltairBlock)
+	wb, err := wrapper.WrappedAltairBeaconBlock(altairBlk.Altair)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -238,11 +238,11 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		return
 	}
 	blk := &ethpb.SignedBeaconBlockAltair{
-		Block:     altairBlk.AltairBlock,
+		Block:     altairBlk.Altair,
 		Signature: sig,
 	}
 
-	signingRoot, err := helpers.ComputeSigningRoot(altairBlk.AltairBlock, domain.SignatureDomain)
+	signingRoot, err := helpers.ComputeSigningRoot(altairBlk.Altair, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -281,7 +281,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
-		Block: &ethpb.GenericSignedBeaconBlock_AltairBlock{AltairBlock: blk},
+		Block: &ethpb.GenericSignedBeaconBlock_Altair{Altair: blk},
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
@@ -293,17 +293,17 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 
 	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
-		trace.Int64Attribute("numDeposits", int64(len(altairBlk.AltairBlock.Body.Deposits))),
-		trace.Int64Attribute("numAttestations", int64(len(altairBlk.AltairBlock.Body.Attestations))),
+		trace.Int64Attribute("numDeposits", int64(len(altairBlk.Altair.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(altairBlk.Altair.Body.Attestations))),
 	)
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
-		"slot":            altairBlk.AltairBlock.Slot,
+		"slot":            altairBlk.Altair.Slot,
 		"blockRoot":       blkRoot,
-		"numAttestations": len(altairBlk.AltairBlock.Body.Attestations),
-		"numDeposits":     len(altairBlk.AltairBlock.Body.Deposits),
-		"graffiti":        string(altairBlk.AltairBlock.Body.Graffiti),
+		"numAttestations": len(altairBlk.Altair.Body.Attestations),
+		"numDeposits":     len(altairBlk.Altair.Body.Deposits),
+		"graffiti":        string(altairBlk.Altair.Body.Graffiti),
 		"fork":            "altair",
 	}).Info("Submitted new block")
 
