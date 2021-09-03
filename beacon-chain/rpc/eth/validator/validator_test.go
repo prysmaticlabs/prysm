@@ -1275,6 +1275,44 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 }
 
+func TestProduceSyncCommitteeContribution(t *testing.T) {
+	ctx := context.Background()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	sig := bls.NewAggregateSignature().Marshal()
+	messsage := &ethpbalpha.SyncCommitteeMessage{
+		Slot:           0,
+		BlockRoot:      root,
+		ValidatorIndex: 0,
+		Signature:      sig,
+	}
+	syncCommitteePool := synccommittee.NewStore()
+	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
+	v1Server := &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
+		},
+	}
+	server := Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+
+	req := &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, types.Slot(0), resp.Data.Slot)
+	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
+	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
+	aggregationBits := resp.Data.AggregationBits
+	assert.Equal(t, true, aggregationBits.BitAt(0))
+	assert.DeepEqual(t, sig, resp.Data.Signature)
+}
+
 func TestSubmitContributionAndProofs(t *testing.T) {
 	ctx := context.Background()
 	sig := bls.NewAggregateSignature().Marshal()
@@ -1386,5 +1424,4 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		}
 		require.DeepEqual(t, expectedContributions, savedMsgs)
 	})
-
 }
