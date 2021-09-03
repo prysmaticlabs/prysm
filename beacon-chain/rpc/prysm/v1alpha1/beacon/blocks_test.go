@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -402,7 +403,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
-	b.Block.Slot, err = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
+	b.Block.Slot, err = core.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 	b.Block.Slot++
 	bs := &Server{
@@ -492,7 +493,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
-	b.Block.Slot, err = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
+	b.Block.Slot, err = core.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 
 	hRoot, err := b.Block.HashTreeRoot()
@@ -517,7 +518,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Send(
 		&ethpb.ChainHead{
 			HeadSlot:                   b.Block.Slot,
-			HeadEpoch:                  helpers.SlotToEpoch(b.Block.Slot),
+			HeadEpoch:                  core.SlotToEpoch(b.Block.Slot),
 			HeadBlockRoot:              hRoot[:],
 			FinalizedSlot:              32,
 			FinalizedEpoch:             1,

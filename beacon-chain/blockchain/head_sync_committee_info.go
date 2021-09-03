@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -76,11 +77,11 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 		return nil, err
 	}
 
-	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
-	currEpoch := helpers.SlotToEpoch(headState.Slot())
+	nextSlotEpoch := core2.SlotToEpoch(headState.Slot() + 1)
+	currEpoch := core2.SlotToEpoch(headState.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
-	if currEpoch == nextSlotEpoch || helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
+	if currEpoch == nextSlotEpoch || core2.SyncCommitteePeriod(currEpoch) == core2.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -101,7 +102,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 	if err != nil {
 		return nil, err
 	}
-	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
+	return helpers.Domain(headState.Fork(), core2.SlotToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.

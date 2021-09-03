@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,7 +38,7 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		return fmt.Errorf("node does not have root in DB: %#x", r)
 	}
 
-	startSlot, err := helpers.StartSlot(s.cfg.WeakSubjectivityCheckpt.Epoch)
+	startSlot, err := core.StartSlot(s.cfg.WeakSubjectivityCheckpt.Epoch)
 	if err != nil {
 		return err
 	}

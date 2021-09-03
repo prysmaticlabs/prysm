@@ -41,6 +41,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",

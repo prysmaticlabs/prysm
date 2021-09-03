@@ -18,7 +18,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -473,7 +473,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ss, err := helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
+	ss, err := core.StartSlot(core.SlotToEpoch(slot) + 1)
 	if err != nil {
 		return err
 	}
@@ -671,7 +671,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 		params.BeaconConfig().DomainSelectionProof[:],
 		params.BeaconConfig().DomainAggregateAndProof[:],
 	} {
-		_, err := v.domainData(ctx, helpers.SlotToEpoch(slot), d)
+		_, err := v.domainData(ctx, core.SlotToEpoch(slot), d)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
