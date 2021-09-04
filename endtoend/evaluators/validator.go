@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -125,7 +125,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
 	}
-	currSlot := helpers.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
+	currSlot := core.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := core.SlotToEpoch(currSlot)
 	lowestBound := currEpoch - 1
 
@@ -144,7 +144,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := helpers.StartSlot(params.AltairE2EForkEpoch)
+		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := helpers.StartSlot(params.AltairE2EForkEpoch)
+		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
