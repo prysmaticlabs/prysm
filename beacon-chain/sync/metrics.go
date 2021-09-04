@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -84,7 +84,7 @@ func (s *Service) updateMetrics() {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
 	indices := s.aggregatorSubnetIndices(s.cfg.Chain.CurrentSlot())
-	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
 	attTopic += s.cfg.P2P.Encoding().ProtocolSuffix()

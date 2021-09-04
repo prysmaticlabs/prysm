@@ -256,7 +256,7 @@ func (s *Service) registerHandlers() {
 				if err != nil {
 					log.WithError(err).Error("Could not retrieve current fork digest")
 				}
-				currentEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
+				currentEpoch := core.SlotToEpoch(core.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
 				go s.forkWatcher()
 				return

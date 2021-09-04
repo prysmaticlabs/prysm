@@ -126,7 +126,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get genesis data")
 	}
 	currSlot := helpers.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
-	currEpoch := helpers.SlotToEpoch(currSlot)
+	currEpoch := core.SlotToEpoch(currSlot)
 	lowestBound := currEpoch - 1
 
 	if lowestBound < params.AltairE2EForkEpoch {

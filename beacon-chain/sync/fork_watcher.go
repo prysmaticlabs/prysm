@@ -3,7 +3,7 @@ package sync
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,7 +17,7 @@ func (s *Service) forkWatcher() {
 	for {
 		select {
 		case currSlot := <-slotTicker.C():
-			currEpoch := helpers.SlotToEpoch(currSlot)
+			currEpoch := core.SlotToEpoch(currSlot)
 			if err := s.checkForNextEpochFork(currEpoch); err != nil {
 				log.WithError(err).Error("Unable to check for fork in the next epoch")
 				continue

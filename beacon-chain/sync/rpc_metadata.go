@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -88,7 +89,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		return nil, errors.New(errMsg)
 	}
 	valRoot := s.cfg.Chain.GenesisValidatorRoot()
-	rpcCtx, err := p2putils.ForkDigestFromEpoch(helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
+	rpcCtx, err := p2putils.ForkDigestFromEpoch(core.SlotToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}

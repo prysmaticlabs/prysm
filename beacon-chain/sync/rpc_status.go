@@ -139,7 +139,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.Chain.HeadSlot(),
 	}
-	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return err
 	}
