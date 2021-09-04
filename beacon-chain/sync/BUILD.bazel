@@ -183,7 +183,6 @@ go_test(
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/lru:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
