@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -258,7 +257,7 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := copyutil.CopyValidator(val)
+			newVal := ethpb.CopyValidator(val)
 			newVal.EffectiveBalance = maxEffBalance
 			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
 				newVal.EffectiveBalance = balance - balance%effBalanceInc
@@ -284,7 +283,7 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 					effectiveBal = balance - balance%effBalanceInc
 				}
 				if effectiveBal != val.EffectiveBalance {
-					newVal := copyutil.CopyValidator(val)
+					newVal := ethpb.CopyValidator(val)
 					newVal.EffectiveBalance = effectiveBal
 					return true, newVal, nil
 				}
