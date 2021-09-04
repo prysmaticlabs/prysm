@@ -88,7 +88,6 @@ go_test(
         "//shared/benchutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

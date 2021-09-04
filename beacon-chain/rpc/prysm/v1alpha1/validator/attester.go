@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -185,7 +183,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := copyutil.CopyAttestation(att)
+		attCopy := ethpb.CopyAttestation(att)
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return

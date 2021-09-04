@@ -53,7 +53,6 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
