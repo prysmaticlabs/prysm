@@ -13,7 +13,10 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -91,27 +94,31 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 
 func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-
+	client := ethpb.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := client.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 	var deposits uint64
-	for _, blk := range blks.BlockContainers {
+	for _, ctr := range blks.BlockContainers {
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
 		fmt.Printf(
 			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
-			blk.Block.Block.Slot,
-			len(blk.Block.Block.Body.Deposits),
-			blk.Block.Block.Body.Eth1Data.BlockHash, blk.Block.Block.Body.Eth1Data.DepositCount,
+			blk.Block().Slot(),
+			len(blk.Block().Body().Deposits()),
+			blk.Block().Body().Eth1Data().BlockHash, blk.Block().Body().Eth1Data().DepositCount,
 		)
-		deposits += uint64(len(blk.Block.Block.Body.Deposits))
+		deposits += uint64(len(blk.Block().Body().Deposits()))
 	}
 	if deposits != depositValCount {
 		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, deposits)
@@ -121,27 +128,32 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 
 func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := client.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
-	for _, blk := range blks.BlockContainers {
+	for _, ctr := range blks.BlockContainers {
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
 		var e bool
 		for _, graffiti := range helpers.Graffiti {
-			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block.Block.Body.Graffiti) {
+			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block().Body().Graffiti()) {
 				e = true
 				break
 			}
 		}
-		if !e && blk.Block.Block.Slot != 0 {
+		if !e && blk.Block().Slot() != 0 {
 			return errors.New("could not get graffiti from the list")
 		}
 	}
@@ -151,14 +163,14 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 
 func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	validatorRequest := &eth.ListValidatorsRequest{
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
 	}
@@ -210,8 +222,8 @@ func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 
 func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.ListValidatorsRequest{
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
 	}
@@ -260,8 +272,8 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 
 func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := eth.NewBeaconNodeValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn)
+	valClient := ethpb.NewBeaconNodeValidatorClient(conn)
+	beaconClient := ethpb.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -277,11 +289,11 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	exitedIndex = types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 	valExited = true
 
-	voluntaryExit := &eth.VoluntaryExit{
+	voluntaryExit := &ethpb.VoluntaryExit{
 		Epoch:          chainHead.HeadEpoch,
 		ValidatorIndex: exitedIndex,
 	}
-	req := &eth.DomainRequest{
+	req := &ethpb.DomainRequest{
 		Epoch:  chainHead.HeadEpoch,
 		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
 	}
@@ -294,7 +306,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	signature := privKeys[exitedIndex].Sign(signingData[:])
-	signedExit := &eth.SignedVoluntaryExit{
+	signedExit := &ethpb.SignedVoluntaryExit{
 		Exit:      voluntaryExit,
 		Signature: signature.Marshal(),
 	}
@@ -307,9 +319,9 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 
 func validatorIsExited(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.GetValidatorRequest{
-		QueryFilter: &eth.GetValidatorRequest_Index{
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.GetValidatorRequest{
+		QueryFilter: &ethpb.GetValidatorRequest_Index{
 			Index: exitedIndex,
 		},
 	}
@@ -325,21 +337,24 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 
 func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-
+	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
-	blks, err := client.ListBlocks(context.Background(), req)
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBlocksAltair(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 
-	for _, blk := range blks.BlockContainers {
-		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
+	for _, ctr := range blks.BlockContainers {
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
+		slot, vote := blk.Block().Slot(), blk.Block().Body().Eth1Data().BlockHash
 		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
@@ -369,3 +384,13 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 }
 
 var expectedEth1DataVote []byte
+
+func convertToBlockInterface(obj *ethpb.BeaconBlockContainerAltair) (block.SignedBeaconBlock, error) {
+	if obj.GetPhase0Block() != nil {
+		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
+	}
+	if obj.GetAltairBlock() != nil {
+		return wrapperv2.WrappedAltairSignedBeaconBlock(obj.GetAltairBlock())
+	}
+	return nil, errors.New("container has no block")
+}
