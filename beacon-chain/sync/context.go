@@ -71,15 +71,3 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 		return nil, errors.New("invalid version of %s registered for topic: %s")
 	}
 }
-
-// Validates that the rpc topic matches the provided version.
-func validateVersion(version string, stream network.Stream) error {
-	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
-	if err != nil {
-		return err
-	}
-	if streamVersion != version {
-		return errors.Errorf("stream version of %s doesn't match provided version %s", streamVersion, version)
-	}
-	return nil
-}
