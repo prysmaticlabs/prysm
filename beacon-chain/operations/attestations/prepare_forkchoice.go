@@ -6,8 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
@@ -89,7 +87,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
 	clonedAtts := make([]*ethpb.Attestation, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = copyutil.CopyAttestation(a)
+		clonedAtts[i] = ethpb.CopyAttestation(a)
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
