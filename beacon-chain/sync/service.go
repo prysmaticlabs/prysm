@@ -252,7 +252,12 @@ func (s *Service) registerHandlers() {
 					return
 				}
 				// Register respective pubsub handlers at state synced event.
-				s.registerSubscribers()
+				digest, err := s.currentForkDigest()
+				if err != nil {
+					log.WithError(err).Error("Could not retrieve current fork digest")
+				}
+				currentEpoch := core.SlotToEpoch(core.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
+				s.registerSubscribers(currentEpoch, digest)
 				return
 			}
 		case <-s.ctx.Done():

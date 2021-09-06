@@ -128,7 +128,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 }
 
 func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
