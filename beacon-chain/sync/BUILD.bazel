@@ -29,6 +29,8 @@ go_library(
         "subscriber_beacon_attestation.go",
         "subscriber_beacon_blocks.go",
         "subscriber_handlers.go",
+        "subscriber_sync_committee_message.go",
+        "subscriber_sync_contribution_proof.go",
         "subscription_topic_handler.go",
         "utils.go",
         "validate_aggregate_proof.go",
