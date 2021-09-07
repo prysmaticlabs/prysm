@@ -135,6 +135,11 @@ var (
 		Name:  "enable-active-balance-cache",
 		Usage: "This enables active balance cache cache to improve node performance during block processing",
 	}
+
+	enableGetBlockOptimizations = &cli.BoolFlag{
+		Name:  "enable-get-block-optimizations",
+		Usage: "This enables some optimizations on the GetBlock() function.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -196,6 +201,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 	enableActiveBalanceCache,
+	enableGetBlockOptimizations,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

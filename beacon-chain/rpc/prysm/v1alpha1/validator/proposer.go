@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -33,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -91,16 +93,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
 
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
+	deposits, atts, err := vs.depositAndPackAttestations(ctx, head, eth1Data)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+		return nil, err
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -140,6 +135,70 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	blk.StateRoot = stateRoot
 
 	return blk, nil
+}
+
+func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *eth.Eth1Data) ([]*eth.Deposit, []*eth.Attestation, error) {
+	if featureconfig.Get().EnableGetBlockOptimizations {
+		deposits, atts, err := vs.optimizedDepositAndPackAttestations(ctx, head, eth1Data)
+		if err != nil {
+			return nil, nil, err
+		}
+		return deposits, atts, nil
+	}
+
+	// Pack ETH1 deposits which have not been included in the beacon chain.
+	deposits, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	}
+
+	// Pack aggregated attestations which have not been included in the beacon chain.
+	atts, err := vs.packAttestations(ctx, head)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+	}
+
+	return deposits, atts, nil
+}
+
+func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *eth.Eth1Data) ([]*eth.Deposit, []*eth.Attestation, error) {
+	eg, egctx := errgroup.WithContext(ctx)
+	var deposits []*eth.Deposit
+	var atts []*eth.Attestation
+
+	eg.Go(func() error {
+		// Pack ETH1 deposits which have not been included in the beacon chain.
+		localDeposits, err := vs.deposits(ctx, head, eth1Data)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine toobazel run //:gazelle -- fix`
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		deposits = localDeposits
+		return nil
+	})
+
+	eg.Go(func() error {
+		// Pack aggregated attestations which have not been included in the beacon chain.
+		localAtts, err := vs.packAttestations(ctx, head)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine too
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		atts = localAtts
+		return nil
+	})
+
+	return deposits, atts, eg.Wait()
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -209,15 +268,17 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
-	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get last block by earliest valid time")
-		return vs.randomETH1DataVote(ctx)
-	}
-	// Increment the earliest block if the original block's time is before valid time.
-	// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
-	if lastBlockByEarliestValidTime.Time < earliestValidTime {
-		lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
+	if !featureconfig.Get().EnableGetBlockOptimizations {
+		lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
+		if err != nil {
+			log.WithError(err).Error("Could not get last block by earliest valid time")
+			return vs.randomETH1DataVote(ctx)
+		}
+		// Increment the earliest block if the original block's time is before valid time.
+		// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
+		if lastBlockByEarliestValidTime.Time < earliestValidTime {
+			lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
+		}
 	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
