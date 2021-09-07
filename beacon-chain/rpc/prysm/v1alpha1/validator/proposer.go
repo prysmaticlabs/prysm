@@ -52,6 +52,13 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
+// GetBlockBeacon is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot.
+// Once implemented, this method will DEPRECATE GetBlock.
+func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -140,6 +147,13 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	blk.StateRoot = stateRoot
 
 	return blk, nil
+}
+
+// ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+// This method will DEPRECATE ProposeBlock once implemented.
+func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
