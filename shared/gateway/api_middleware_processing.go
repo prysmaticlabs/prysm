@@ -154,7 +154,7 @@ func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonRes
 }
 
 // WriteMiddlewareResponseHeadersAndBody populates headers and the body of the final response.
-func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Response, responseJson []byte, w http.ResponseWriter) ErrorJson {
+func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson []byte, w http.ResponseWriter) ErrorJson {
 	var statusCodeHeader string
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
@@ -168,7 +168,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			}
 		}
 	}
-	if responseJson != nil {
+	if !GrpcResponseIsEmpty(responseJson) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
@@ -183,6 +183,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else {
+		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(grpcResp.StatusCode)
 	}
 	return nil
