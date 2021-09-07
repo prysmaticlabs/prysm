@@ -2042,34 +2042,29 @@ func TestProposer_GetBeaconBlocks_BeforeForkEpoch(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)
-	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
-
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genAltair := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
+	genBlk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
 			Slot:       genesis.Block.Slot,
 			ParentRoot: genesis.Block.ParentRoot,
 			StateRoot:  genesis.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyAltair{
-				RandaoReveal:  genesis.Block.Body.RandaoReveal,
-				Graffiti:      genesis.Block.Body.Graffiti,
-				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: genesis.Block.Body.RandaoReveal,
+				Graffiti:     genesis.Block.Body.Graffiti,
+				Eth1Data:     genesis.Block.Body.Eth1Data,
 			},
 		},
 		Signature: genesis.Signature,
 	}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(genAltair)
+	wsb := wrapper.WrappedPhase0SignedBeaconBlock(genBlk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
-	parentRoot, err := genAltair.Block.HashTreeRoot()
+	parentRoot, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
