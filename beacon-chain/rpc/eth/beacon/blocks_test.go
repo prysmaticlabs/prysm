@@ -203,7 +203,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	}
 }
 
-/*func TestServer_ListBlockHeaders(t *testing.T) {
+func TestServer_ListBlockHeaders(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -273,16 +273,17 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 			require.Equal(t, len(tt.want), len(headers.Data))
 			for i, blk := range tt.want {
-				signedHdr, err := migration.BlockToV1BlockHeader(blk)
+				assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
+				assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
+				assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)
+				expectedRoot, err := blk.Block.Body.HashTreeRoot()
 				require.NoError(t, err)
-
-				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Message) {
-					t.Error("Expected blocks to equal")
-				}
+				assert.DeepEqual(t, expectedRoot[:], headers.Data[i].Header.Message.BodyRoot)
+				assert.Equal(t, blk.Block.ProposerIndex, headers.Data[i].Header.Message.ProposerIndex)
 			}
 		})
 	}
-}*/
+}
 
 func TestServer_ProposeBlock_OK(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)

@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -84,7 +85,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockHeaders")
 	defer span.End()
 
-	/*var err error
+	var err error
 	var blks []block.SignedBeaconBlock
 	var blkRoots [][32]byte
 	if len(req.ParentRoot) == 32 {
@@ -112,34 +113,30 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
-		blk, err := bl.PbPhase0Block()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-		}
-		blkHdr, err := migration.BlockToV1BlockHeader(blk)
+		v1alpha1Header, err := bl.Header()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
+		}
+		header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
+		headerRoot, err := header.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
 		canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
-		root, err := blkHdr.Message.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
-		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
-			Root:      root[:],
+			Root:      headerRoot[:],
 			Canonical: canonical,
 			Header: &ethpbv1.BeaconBlockHeaderContainer{
-				Message:   blkHdr.Message,
-				Signature: blkHdr.Signature,
+				Message:   header.Message,
+				Signature: header.Signature,
 			},
 		}
 	}
 
-	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs}, nil*/
-	return nil, nil
+	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
