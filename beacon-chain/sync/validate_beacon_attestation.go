@@ -157,7 +157,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	}
 	subnet := helpers.ComputeSubnetForAttestation(valCount, a)
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not compute fork digest")
 		traceutil.AnnotateError(span, err)

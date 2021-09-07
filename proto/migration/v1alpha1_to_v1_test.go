@@ -73,26 +73,6 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 	assert.DeepEqual(t, v1.SelectionProof, proof[:])
 }
 
-func Test_V1Alpha1BlockToV1BlockHeader(t *testing.T) {
-	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
-	alphaBlock.Block.Slot = slot
-	alphaBlock.Block.ProposerIndex = validatorIndex
-	alphaBlock.Block.ParentRoot = parentRoot
-	alphaBlock.Block.StateRoot = stateRoot
-	alphaBlock.Signature = signature
-
-	v1Header, err := V1Alpha1BlockToV1BlockHeader(alphaBlock)
-	require.NoError(t, err)
-	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, bodyRoot[:], v1Header.Message.BodyRoot)
-	assert.Equal(t, slot, v1Header.Message.Slot)
-	assert.Equal(t, validatorIndex, v1Header.Message.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Header.Message.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Header.Message.StateRoot)
-	assert.DeepEqual(t, signature, v1Header.Signature)
-}
-
 func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
 	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
