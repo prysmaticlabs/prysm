@@ -7,10 +7,10 @@ import (
 	"reflect"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -20,6 +20,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -52,7 +53,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	exit.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	exit.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
 	val, err := state.ValidatorAtIndex(0)
@@ -73,8 +74,6 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -83,11 +82,11 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: c,
+		seenExitCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, exit)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{
@@ -108,8 +107,6 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	exit, s := setupValidExit(t)
 	// Set state slot to 1 to cause exit object fail to verify.
 	require.NoError(t, s.SetSlot(1))
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P: p,
@@ -118,11 +115,11 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenExitCache: c,
+		seenExitCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, exit)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
 	m := &pubsub.Message{

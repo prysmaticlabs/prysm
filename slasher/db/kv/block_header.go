@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -72,7 +72,7 @@ func (s *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorIn
 func (s *Store) SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
-	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
+	epoch := core.SlotToEpoch(blockHeader.Header.Slot)
 	key := encodeSlotValidatorIndexSig(blockHeader.Header.Slot, blockHeader.Header.ProposerIndex, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {

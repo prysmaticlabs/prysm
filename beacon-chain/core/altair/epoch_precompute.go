@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -20,8 +21,8 @@ func InitializeEpochValidators(ctx context.Context, st state.BeaconStateAltair) 
 	defer span.End()
 	pValidators := make([]*precompute.Validator, st.NumValidators())
 	bal := &precompute.Balance{}
-	prevEpoch := helpers.PrevEpoch(st)
-	currentEpoch := helpers.CurrentEpoch(st)
+	prevEpoch := core.PrevEpoch(st)
+	currentEpoch := core.CurrentEpoch(st)
 	inactivityScores, err := st.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -77,7 +78,7 @@ func ProcessInactivityScores(
 	defer span.End()
 
 	cfg := params.BeaconConfig()
-	if helpers.CurrentEpoch(state) == cfg.GenesisEpoch {
+	if core.CurrentEpoch(state) == cfg.GenesisEpoch {
 		return state, vals, nil
 	}
 
@@ -88,7 +89,7 @@ func ProcessInactivityScores(
 
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
-	prevEpoch := helpers.PrevEpoch(state)
+	prevEpoch := core.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	for i, v := range vals {
 		if !precompute.EligibleForRewards(v) {
@@ -181,7 +182,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	vals []*precompute.Validator,
 ) (state.BeaconStateAltair, error) {
 	// Don't process rewards and penalties in genesis epoch.
-	if helpers.CurrentEpoch(state) == 0 {
+	if core.CurrentEpoch(state) == 0 {
 		return state, nil
 	}
 
@@ -221,7 +222,7 @@ func AttestationsDelta(state state.BeaconStateAltair, bal *precompute.Balance, v
 	numOfVals := state.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)
-	prevEpoch := helpers.PrevEpoch(state)
+	prevEpoch := core.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
 	cfg := params.BeaconConfig()

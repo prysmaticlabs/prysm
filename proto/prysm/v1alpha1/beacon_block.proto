@@ -25,6 +25,26 @@ option java_outer_classname = "BeaconBlockProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
+message GenericSignedBeaconBlock {
+    oneof block {
+        // Representing a signed, phase 0 beacon block.
+        SignedBeaconBlock phase0 = 1;
+
+        // Representing a signed, post-Altair fork beacon block.
+        SignedBeaconBlockAltair altair = 2;
+    }
+}
+
+message GenericBeaconBlock {
+    oneof block {
+        // Representing a phase 0 beacon block.
+        BeaconBlock phase0 = 1;
+
+        // Representing a post-Altair fork beacon block.
+        BeaconBlockAltair altair = 2;
+    }
+}
+
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
     // Beacon chain slot that this block represents.

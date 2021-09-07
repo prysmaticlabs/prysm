@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -57,6 +58,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/state/stateutils:go_default_library",

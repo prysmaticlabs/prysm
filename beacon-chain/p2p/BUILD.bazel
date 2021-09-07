@@ -19,6 +19,7 @@ go_library(
         "interfaces.go",
         "iterator.go",
         "log.go",
+        "message_id.go",
         "monitoring.go",
         "options.go",
         "pubsub.go",
@@ -40,6 +41,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -113,6 +115,7 @@ go_test(
         "fork_test.go",
         "gossip_scoring_params_test.go",
         "gossip_topic_mappings_test.go",
+        "message_id_test.go",
         "options_test.go",
         "parameter_test.go",
         "pubsub_filter_test.go",

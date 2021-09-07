@@ -1,4 +1,4 @@
-package helpers
+package core
 
 import (
 	"math"
@@ -7,7 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -42,7 +42,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
 	}
@@ -58,7 +58,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
 	}
@@ -76,7 +76,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: tt.slot})
+		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, NextEpoch(state), "NextEpoch(%d)", state.Slot())
 	}

@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -187,9 +187,9 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			},
 			genesisRoot: genesisRoot,
 		}
-		epoch1Start, err := helpers.StartSlot(1)
+		epoch1Start, err := core.StartSlot(1)
 		require.NoError(t, err)
-		epoch2Start, err := helpers.StartSlot(1)
+		epoch2Start, err := core.StartSlot(1)
 		require.NoError(t, err)
 		require.NoError(t, bState.SetSlot(epoch1Start))
 

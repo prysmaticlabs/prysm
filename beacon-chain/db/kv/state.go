@@ -7,6 +7,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
@@ -665,7 +666,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	if err != nil {
 		return err
 	}
-	finalizedSlot, err := helpers.StartSlot(f.Epoch)
+	finalizedSlot, err := core.StartSlot(f.Epoch)
 	if err != nil {
 		return err
 	}

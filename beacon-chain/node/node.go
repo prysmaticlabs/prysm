@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -59,23 +60,24 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx          *cli.Context
-	ctx             context.Context
-	cancel          context.CancelFunc
-	services        *shared.ServiceRegistry
-	lock            sync.RWMutex
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationPool attestations.Pool
-	exitPool        voluntaryexits.PoolManager
-	slashingsPool   slashings.PoolManager
-	depositCache    *depositcache.DepositCache
-	stateFeed       *event.Feed
-	blockFeed       *event.Feed
-	opFeed          *event.Feed
-	forkChoiceStore forkchoice.ForkChoicer
-	stateGen        *stategen.State
-	collector       *bcnodeCollector
+	cliCtx            *cli.Context
+	ctx               context.Context
+	cancel            context.CancelFunc
+	services          *shared.ServiceRegistry
+	lock              sync.RWMutex
+	stop              chan struct{} // Channel to wait for termination notifications.
+	db                db.Database
+	attestationPool   attestations.Pool
+	exitPool          voluntaryexits.PoolManager
+	slashingsPool     slashings.PoolManager
+	syncCommitteePool synccommittee.Pool
+	depositCache      *depositcache.DepositCache
+	stateFeed         *event.Feed
+	blockFeed         *event.Feed
+	opFeed            *event.Feed
+	forkChoiceStore   forkchoice.ForkChoicer
+	stateGen          *stategen.State
+	collector         *bcnodeCollector
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -99,17 +101,18 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:          cliCtx,
-		ctx:             ctx,
-		cancel:          cancel,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		blockFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-		exitPool:        voluntaryexits.NewPool(),
-		slashingsPool:   slashings.NewPool(),
+		cliCtx:            cliCtx,
+		ctx:               ctx,
+		cancel:            cancel,
+		services:          registry,
+		stop:              make(chan struct{}),
+		stateFeed:         new(event.Feed),
+		blockFeed:         new(event.Feed),
+		opFeed:            new(event.Feed),
+		attestationPool:   attestations.NewPool(),
+		exitPool:          voluntaryexits.NewPool(),
+		slashingsPool:     slashings.NewPool(),
+		syncCommitteePool: synccommittee.NewPool(),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -588,6 +591,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
+		SyncCommitteeObjectPool: b.syncCommitteePool,
 		POWChainService:         web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,

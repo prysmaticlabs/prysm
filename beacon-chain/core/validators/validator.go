@@ -7,6 +7,7 @@ package validators
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -54,7 +55,7 @@ func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state
 	if err != nil {
 		return nil, err
 	}
-	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(helpers.CurrentEpoch(s)))
+	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(core.CurrentEpoch(s)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
 	exitQueueEpoch := types.Epoch(0)
@@ -75,7 +76,7 @@ func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state
 	if err != nil {
 		return nil, err
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(s, helpers.CurrentEpoch(s))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(s, core.CurrentEpoch(s))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
@@ -130,7 +131,7 @@ func SlashValidator(
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
-	currentEpoch := helpers.SlotToEpoch(s.Slot())
+	currentEpoch := core.SlotToEpoch(s.Slot())
 	validator, err := s.ValidatorAtIndex(slashedIdx)
 	if err != nil {
 		return nil, err
