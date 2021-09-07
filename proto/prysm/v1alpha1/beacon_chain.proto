@@ -91,7 +91,15 @@ service BeaconChain {
         };
     }
 
-    // DEPRECATED: Do not use.
+	// DEPRECATED in favor of ListBeaconBlocks.
+	//
+    // Retrieve blocks by root, slot, or epoch.
+    //
+    // The server may return multiple blocks in the case that a slot or epoch is
+    // provided as the filter criteria. The server may return an empty list when
+    // no blocks in their database match the filter criteria. This RPC should
+    // not return NOT_FOUND. Only one filter criteria should be used. This endpoint
+    // allows for retrieval of genesis information via a boolean query filter.
     rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
         option deprecated = true;
         option (google.api.http) = {
