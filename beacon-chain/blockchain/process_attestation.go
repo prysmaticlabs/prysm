@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
@@ -46,7 +46,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
 		return err
 	}
-	tgt := copyutil.CopyCheckpoint(a.Data.Target)
+	tgt := ethpb.CopyCheckpoint(a.Data.Target)
 
 	// Note that target root check is ignored here because it was performed in sync's validation pipeline:
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
@@ -75,7 +75,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := core.VerifySlotTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return err
 	}
 

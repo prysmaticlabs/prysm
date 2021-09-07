@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -171,7 +171,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	for _, tt := range tests {
 		bha, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		require.NoError(t, err, "Failed to get block header")
-		if helpers.SlotToEpoch(tt.bh.Header.Slot) >= currentEpoch-historyToKeep {
+		if core.SlotToEpoch(tt.bh.Header.Slot) >= currentEpoch-historyToKeep {
 			require.NotNil(t, bha)
 			require.DeepEqual(t, tt.bh, bha[0], "Should return bh")
 		} else {

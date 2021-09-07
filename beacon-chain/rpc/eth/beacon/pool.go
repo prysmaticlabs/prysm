@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -12,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
@@ -88,7 +88,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		go func() {
 			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := copyutil.CopyAttestation(att)
+			attCopy := ethpbalpha.CopyAttestation(att)
 			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 				log.WithError(err).Error("Could not handle attestation in operations service")
 				return
@@ -99,7 +99,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 	broadcastFailed := false
 	for _, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
-		wantedEpoch := corehelpers.SlotToEpoch(att.Data.Slot)
+		wantedEpoch := core.SlotToEpoch(att.Data.Slot)
 		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return nil, err

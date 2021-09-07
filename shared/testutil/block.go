@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -148,7 +149,7 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, core.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +199,7 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	})
-	currentEpoch := helpers.CurrentEpoch(bState)
+	currentEpoch := core.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
@@ -251,7 +252,7 @@ func GenerateAttesterSlashingForValidator(
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
-	currentEpoch := helpers.CurrentEpoch(bState)
+	currentEpoch := core.CurrentEpoch(bState)
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -351,7 +352,7 @@ func generateVoluntaryExits(
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
-	currentEpoch := helpers.CurrentEpoch(bState)
+	currentEpoch := core.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -361,7 +362,7 @@ func generateVoluntaryExits(
 		}
 		exit := &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          helpers.PrevEpoch(bState),
+				Epoch:          core.PrevEpoch(bState),
 				ValidatorIndex: valIndex,
 			},
 		}
@@ -375,7 +376,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}

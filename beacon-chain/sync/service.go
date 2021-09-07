@@ -16,11 +16,11 @@ import (
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -45,7 +45,8 @@ const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
-const seenSyncMsgSize = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
+const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
+const seenSyncContributionSize = 512 // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -122,6 +123,8 @@ type Service struct {
 	seenAttesterSlashingCache        map[uint64]bool
 	seenSyncMessageLock              sync.RWMutex
 	seenSyncMessageCache             *lru.Cache
+	seenSyncContributionLock         sync.RWMutex
+	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
 }
@@ -193,7 +196,7 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := helpers.SlotToEpoch(s.cfg.Chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()) &&
+	if headEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot()); headEpoch+1 < core.SlotToEpoch(s.cfg.Chain.CurrentSlot()) &&
 		headEpoch+1 < s.cfg.P2P.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
@@ -207,6 +210,7 @@ func (s *Service) initCaches() {
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
+	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
 	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)

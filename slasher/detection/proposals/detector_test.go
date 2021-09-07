@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -22,7 +22,7 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	s0, err := helpers.StartSlot(0)
+	s0, err := core.StartSlot(0)
 	require.NoError(t, err)
 	blk1slot0, err := testDetect.SignedBlockHeader(s0, 0)
 	require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 	require.NoError(t, err)
 	blk1slot1, err := testDetect.SignedBlockHeader(s0+1, 0)
 	require.NoError(t, err)
-	s1, err := helpers.StartSlot(1)
+	s1, err := core.StartSlot(1)
 	require.NoError(t, err)
 	blk1epoch1, err := testDetect.SignedBlockHeader(s1, 0)
 	require.NoError(t, err)

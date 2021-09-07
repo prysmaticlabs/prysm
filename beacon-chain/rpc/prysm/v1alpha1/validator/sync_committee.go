@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -80,11 +80,11 @@ func (vs *Server) syncSubcommitteeIndex(
 	ctx context.Context, index types.ValidatorIndex, slot types.Slot,
 ) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 
-	nextSlotEpoch := helpers.SlotToEpoch(slot + 1)
-	currentEpoch := helpers.SlotToEpoch(slot)
+	nextSlotEpoch := core.SlotToEpoch(slot + 1)
+	currentEpoch := core.SlotToEpoch(slot)
 
 	switch {
-	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch):
+	case core.SyncCommitteePeriod(nextSlotEpoch) == core.SyncCommitteePeriod(currentEpoch):
 		indices, err := vs.HeadFetcher.HeadCurrentSyncCommitteeIndices(ctx, index, slot)
 		if err != nil {
 			return nil, err
@@ -93,7 +93,7 @@ func (vs *Server) syncSubcommitteeIndex(
 			Indices: indices,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
-	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
+	case core.SyncCommitteePeriod(nextSlotEpoch) == core.SyncCommitteePeriod(currentEpoch)+1:
 		indices, err := vs.HeadFetcher.HeadNextSyncCommitteeIndices(ctx, index, slot)
 		if err != nil {
 			return nil, err
@@ -120,38 +120,9 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-
-	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	sigs := make([]bls.Signature, 0, subCommitteeSize)
-	bits := ethpb.NewSyncCommitteeAggregationBits()
-	for _, msg := range msgs {
-		if bytes.Equal(headRoot, msg.BlockRoot) {
-			idxResp, err := vs.syncSubcommitteeIndex(ctx, msg.ValidatorIndex, req.Slot)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee index: %v", err)
-			}
-			for _, index := range idxResp.Indices {
-				i := uint64(index)
-				subnetIndex := i / subCommitteeSize
-				if subnetIndex == req.SubnetId {
-					bits.SetBitAt(i%subCommitteeSize, true)
-					sig, err := bls.SignatureFromBytes(msg.Signature)
-					if err != nil {
-						return nil, status.Errorf(
-							codes.Internal,
-							"Could not get bls signature from bytes: %v",
-							err,
-						)
-					}
-					sigs = append(sigs, sig)
-				}
-			}
-		}
-	}
-	aggregatedSig := make([]byte, 96)
-	aggregatedSig[0] = 0xC0
-	if len(sigs) != 0 {
-		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
+	aggregatedSig, bits, err := vs.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubnetId, headRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
 	}
 	contribution := &ethpb.SyncCommitteeContribution{
 		Slot:              req.Slot,
@@ -183,4 +154,45 @@ func (vs *Server) SubmitSignedContributionAndProof(
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
 	return &emptypb.Empty{}, err
+}
+
+// AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
+// associated with a particular set of sync committee messages.
+func (vs *Server) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	msgs []*ethpb.SyncCommitteeMessage,
+	slot types.Slot,
+	subnetId uint64,
+	blockRoot []byte,
+) ([]byte, []byte, error) {
+	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	sigs := make([]bls.Signature, 0, subCommitteeSize)
+	bits := ethpb.NewSyncCommitteeAggregationBits()
+	for _, msg := range msgs {
+		if bytes.Equal(blockRoot, msg.BlockRoot) {
+			idxResp, err := vs.syncSubcommitteeIndex(ctx, msg.ValidatorIndex, slot)
+			if err != nil {
+				return []byte{}, nil, errors.Wrapf(err, "could not get sync subcommittee index")
+			}
+			for _, index := range idxResp.Indices {
+				i := uint64(index)
+				subnetIndex := i / subCommitteeSize
+				if subnetIndex == subnetId {
+					bits.SetBitAt(i%subCommitteeSize, true)
+					sig, err := bls.SignatureFromBytes(msg.Signature)
+					if err != nil {
+						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytes")
+					}
+					sigs = append(sigs, sig)
+				}
+			}
+		}
+	}
+	aggregatedSig := make([]byte, 96)
+	aggregatedSig[0] = 0xC0
+	if len(sigs) != 0 {
+		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
+	}
+
+	return aggregatedSig, bits, nil
 }

@@ -12,6 +12,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -64,6 +65,13 @@ type blockData struct {
 	ProposerSlashings []*ethpb.ProposerSlashing
 	AttesterSlashings []*ethpb.AttesterSlashing
 	VoluntaryExits    []*ethpb.SignedVoluntaryExit
+}
+
+// GetBlockBeacon is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot.
+// Once implemented, this method will DEPRECATE GetBlock.
+func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -181,6 +189,13 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 		AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 		VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 	}, nil
+}
+
+// ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+// This method will DEPRECATE ProposeBlock once implemented.
+func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -421,7 +436,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return helpers.VotingPeriodStartTime(startTime, slot)
+	return core2.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -504,7 +519,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(helpers.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
+	enc = fastssz.MarshalUint64(enc, uint64(core2.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -36,7 +37,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
-	epoch := helpers.SlotToEpoch(req.Slot)
+	epoch := core.SlotToEpoch(req.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)

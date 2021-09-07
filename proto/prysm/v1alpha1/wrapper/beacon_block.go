@@ -5,7 +5,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -48,7 +47,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 // Copy performs a deep copy of the signed beacon block
 // object.
 func (w Phase0SignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return WrappedPhase0SignedBeaconBlock(copyutil.CopySignedBeaconBlock(w.b))
+	return WrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
@@ -291,7 +290,7 @@ func (w altairSignedBeaconBlock) IsNil() bool {
 // Copy performs a deep copy of the signed beacon block
 // object.
 func (w altairSignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return altairSignedBeaconBlock{b: copyutil.CopySignedBeaconBlockAltair(w.b)}
+	return altairSignedBeaconBlock{b: eth.CopySignedBeaconBlockAltair(w.b)}
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
