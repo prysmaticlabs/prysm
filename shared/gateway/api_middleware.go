@@ -172,7 +172,7 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 			}
 		}
 
-		if errJson := WriteMiddlewareResponseHeadersAndBody(req, grpcResponse, responseJson, w); errJson != nil {
+		if errJson := WriteMiddlewareResponseHeadersAndBody(grpcResponse, responseJson, w); errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
