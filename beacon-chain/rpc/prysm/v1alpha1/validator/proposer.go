@@ -67,7 +67,7 @@ type blockData struct {
 	VoluntaryExits    []*ethpb.SignedVoluntaryExit
 }
 
-// GetBlockBeacon is called by a proposer during its assigned slot to request a block to sign
+// GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 // Once implemented, this method will DEPRECATE GetBlock.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
