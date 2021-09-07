@@ -286,8 +286,8 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 			// such peers can be selected. That's why they are sorted here.
 			sort.SliceStable(filteredPIDs, func(i, j int) bool {
 				score1 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(filteredPIDs[i])
-				score := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(filteredPIDs[j])
-				if score1 == score {
+				score2 := fetcher.p2p.Peers().Scorers().BlockProviderScorer().Score(filteredPIDs[j])
+				if score1 == score2 {
 					cap1 := fetcher.rateLimiter.Remaining(filteredPIDs[i].String())
 					cap2 := fetcher.rateLimiter.Remaining(filteredPIDs[j].String())
 					if cap1 == cap2 {
