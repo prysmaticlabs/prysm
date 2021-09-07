@@ -22,8 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -287,9 +286,9 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		var blk block.SignedBeaconBlock
 		switch {
 		case res.GetPhase0Block() != nil:
-			blk = wrapperv1.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
+			blk = wrapper.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
 		case res.GetAltairBlock() != nil:
-			blk, err = wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+			blk, err = wrapper.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
 			if err != nil {
 				log.WithError(err).Error("Failed to wrap altair signed block")
 				continue

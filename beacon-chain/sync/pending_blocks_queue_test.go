@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -436,15 +435,15 @@ func TestService_AddPeningBlockToQueueOverMax(t *testing.T) {
 	}
 
 	b := testutil.NewBeaconBlock()
-	b1 := copyutil.CopySignedBeaconBlock(b)
+	b1 := ethpb.CopySignedBeaconBlock(b)
 	b1.Block.StateRoot = []byte{'a'}
-	b2 := copyutil.CopySignedBeaconBlock(b)
+	b2 := ethpb.CopySignedBeaconBlock(b)
 	b2.Block.StateRoot = []byte{'b'}
 	require.NoError(t, r.insertBlockToPendingQueue(0, wrapper.WrappedPhase0SignedBeaconBlock(b), [32]byte{}))
 	require.NoError(t, r.insertBlockToPendingQueue(0, wrapper.WrappedPhase0SignedBeaconBlock(b1), [32]byte{1}))
 	require.NoError(t, r.insertBlockToPendingQueue(0, wrapper.WrappedPhase0SignedBeaconBlock(b2), [32]byte{2}))
 
-	b3 := copyutil.CopySignedBeaconBlock(b)
+	b3 := ethpb.CopySignedBeaconBlock(b)
 	b3.Block.StateRoot = []byte{'c'}
 	require.NoError(t, r.insertBlockToPendingQueue(0, wrapper.WrappedPhase0SignedBeaconBlock(b2), [32]byte{3}))
 	require.Equal(t, maxBlocksPerSlot, len(r.pendingBlocksInCache(0)))

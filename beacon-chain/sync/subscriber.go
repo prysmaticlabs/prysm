@@ -122,10 +122,12 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
+		// Impossible condition as it would mean digest does not exist.
 		panic(err)
 	}
 	base := p2p.GossipTopicMappings(topic, e)
 	if base == nil {
+		// Impossible condition as it would mean topic does not exist.
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
 	return s.subscribeWithBase(s.addDigestToTopic(topic, digest), validator, handle)
@@ -266,10 +268,12 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
+		// Impossible condition as it would mean digest does not exist.
 		panic(err)
 	}
 	base := p2p.GossipTopicMappings(topic, e)
 	if base == nil {
+		// Impossible condition as it would mean topic does not exist.
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
@@ -337,6 +341,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
+		// Impossible condition as it would mean digest does not exist.
 		panic(err)
 	}
 	base := p2p.GossipTopicMappings(topicFormat, e)

@@ -241,6 +241,4 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (fv *FakeValidator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
-
-}
+func (fv *FakeValidator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {}

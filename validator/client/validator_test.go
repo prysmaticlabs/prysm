@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -1283,4 +1284,45 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 		},
 		Signature: make([]byte, 96),
 	}
+}
+
+func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
+	v, m, validatorKey, finish := setup(t)
+	defer finish()
+
+	slot := types.Slot(1)
+	pubKey := validatorKey.PublicKey().Marshal()
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+
+	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	require.NoError(t, err)
+	require.Equal(t, false, aggregator)
+
+	c := params.BeaconConfig()
+	c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
+	params.OverrideBeaconConfig(c)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{0}}, nil /*err*/)
+
+	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	require.NoError(t, err)
+	require.Equal(t, true, aggregator)
 }

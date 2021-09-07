@@ -101,6 +101,7 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
+<<<<<<< HEAD
 	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
 	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
 	if err != nil {
@@ -119,9 +120,42 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 			blk.Block().Body().Eth1Data().BlockHash, blk.Block().Body().Eth1Data().DepositCount,
 		)
 		deposits += uint64(len(blk.Block().Body().Deposits()))
+=======
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBeaconBlocks(context.Background(), req)
+	if err != nil {
+		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
-	if deposits != depositValCount {
-		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, deposits)
+	var numDeposits uint64
+	for _, blk := range blks.BlockContainers {
+		var slot types.Slot
+		var eth1Data *eth.Eth1Data
+		var deposits []*eth.Deposit
+		switch blk.Block.(type) {
+		case *eth.BeaconBlockContainer_Phase0Block:
+			b := blk.GetPhase0Block().Block
+			slot = b.Slot
+			eth1Data = b.Body.Eth1Data
+			deposits = b.Body.Deposits
+		case *eth.BeaconBlockContainer_AltairBlock:
+			b := blk.GetAltairBlock().Block
+			slot = b.Slot
+			eth1Data = b.Body.Eth1Data
+			deposits = b.Body.Deposits
+		default:
+			return errors.New("block neither phase0 nor altair")
+		}
+		fmt.Printf(
+			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
+			slot,
+			len(deposits),
+			eth1Data.BlockHash, eth1Data.DepositCount,
+		)
+		numDeposits += uint64(len(deposits))
+>>>>>>> d7679d2e71d0b3cdfa0f668cb6ebb35f5ebfed6d
+	}
+	if numDeposits != depositValCount {
+		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, numDeposits)
 	}
 	return nil
 }
@@ -136,8 +170,13 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
+<<<<<<< HEAD
 	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
 	blks, err := altairClient.ListBlocksAltair(context.Background(), req)
+=======
+	req := &eth.ListBlocksRequest{QueryFilter: &eth.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch - 1}}
+	blks, err := client.ListBeaconBlocks(context.Background(), req)
+>>>>>>> d7679d2e71d0b3cdfa0f668cb6ebb35f5ebfed6d
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
@@ -147,13 +186,35 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		var e bool
+		var slot types.Slot
+		var graffitiInBlock []byte
+		switch blk.Block.(type) {
+		case *eth.BeaconBlockContainer_Phase0Block:
+			b := blk.GetPhase0Block().Block
+			slot = b.Slot
+			graffitiInBlock = b.Body.Graffiti
+		case *eth.BeaconBlockContainer_AltairBlock:
+			b := blk.GetAltairBlock().Block
+			slot = b.Slot
+			graffitiInBlock = b.Body.Graffiti
+		default:
+			return errors.New("block neither phase0 nor altair")
+		}
 		for _, graffiti := range helpers.Graffiti {
+<<<<<<< HEAD
 			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block().Body().Graffiti()) {
+=======
+			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), graffitiInBlock) {
+>>>>>>> d7679d2e71d0b3cdfa0f668cb6ebb35f5ebfed6d
 				e = true
 				break
 			}
 		}
+<<<<<<< HEAD
 		if !e && blk.Block().Slot() != 0 {
+=======
+		if !e && slot != 0 {
+>>>>>>> d7679d2e71d0b3cdfa0f668cb6ebb35f5ebfed6d
 			return errors.New("could not get graffiti from the list")
 		}
 	}
@@ -349,12 +410,30 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 
+<<<<<<< HEAD
 	for _, ctr := range blks.BlockContainers {
 		blk, err := convertToBlockInterface(ctr)
 		if err != nil {
 			return err
 		}
 		slot, vote := blk.Block().Slot(), blk.Block().Body().Eth1Data().BlockHash
+=======
+	for _, blk := range blks.BlockContainers {
+		var slot types.Slot
+		var vote []byte
+		switch blk.Block.(type) {
+		case *eth.BeaconBlockContainer_Phase0Block:
+			b := blk.GetPhase0Block().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
+		case *eth.BeaconBlockContainer_AltairBlock:
+			b := blk.GetAltairBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
+		default:
+			return errors.New("block neither phase0 nor altair")
+		}
+>>>>>>> d7679d2e71d0b3cdfa0f668cb6ebb35f5ebfed6d
 		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
