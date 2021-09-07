@@ -48,11 +48,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
 				if _, ok := object.(*ethpb.BeaconStateAltair); ok {
-					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := stateAltair.InitializeFromProto(s.(*ethpb.BeaconStateAltair))
-						require.NoError(t, err)
-						return beaconState.HashTreeRoot(context.Background())
-					}
+					verifyBeaconState(t, object, rootsYaml)
 				} else {
 					htr = func(s interface{}) ([32]byte, error) {
 						sszObj, ok := s.(fssz.HashRoot)
@@ -61,32 +57,52 @@ func RunSSZStaticTests(t *testing.T, config string) {
 						}
 						return sszObj.HashTreeRoot()
 					}
+
+					root, err := htr(object)
+					require.NoError(t, err)
+					rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
+					require.NoError(t, err)
+					require.DeepEqual(t, rootBytes, root[:], "Did not receive expected hash tree root")
+
+					if rootsYaml.SigningRoot == "" {
+						return
+					}
+
+					var signingRoot [32]byte
+					if v, ok := object.(fssz.HashRoot); ok {
+						signingRoot, err = v.HashTreeRoot()
+					} else {
+						t.Fatal("object does not meet fssz.HashRoot")
+					}
+
+					require.NoError(t, err)
+					signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
+					require.NoError(t, err)
+					require.DeepEqual(t, signingRootBytes, signingRoot[:], "Did not receive expected signing root")
 				}
-
-				root, err := htr(object)
-				require.NoError(t, err)
-				rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
-				require.NoError(t, err)
-				require.DeepEqual(t, rootBytes, root[:], "Did not receive expected hash tree root")
-
-				if rootsYaml.SigningRoot == "" {
-					return
-				}
-
-				var signingRoot [32]byte
-				if v, ok := object.(fssz.HashRoot); ok {
-					signingRoot, err = v.HashTreeRoot()
-				} else {
-					t.Fatal("object does not meet fssz.HashRoot")
-				}
-
-				require.NoError(t, err)
-				signingRootBytes, err := hex.DecodeString(rootsYaml.SigningRoot[2:])
-				require.NoError(t, err)
-				require.DeepEqual(t, signingRootBytes, signingRoot[:], "Did not receive expected signing root")
 			})
 		}
 	}
+}
+
+func verifyBeaconState(t *testing.T, s interface{}, rootsYaml *SSZRoots) {
+	wantedRoot, err := hex.DecodeString(rootsYaml.Root[2:])
+	require.NoError(t, err)
+
+	// Verify fssz HTR
+	require.NoError(t, err)
+	sszObj, ok := s.(fssz.HashRoot)
+	require.Equal(t, true, ok)
+	fsszHashTreeRoot, err := sszObj.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, wantedRoot, fsszHashTreeRoot[:], "Did not receive expected hash tree root")
+
+	// Verify custom HTR
+	beaconState, err := stateAltair.InitializeFromProto(s.(*ethpb.BeaconStateAltair))
+	require.NoError(t, err)
+	customHashTreeRoot, err := beaconState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.DeepEqual(t, wantedRoot, customHashTreeRoot[:], "Did not receive expected hash tree root")
 }
 
 // UnmarshalledSSZ unmarshalls serialized input.
