@@ -13,6 +13,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -31,7 +32,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -164,17 +164,17 @@ func (s *Service) Start() {
 		}
 
 		// Resume fork choice.
-		s.justifiedCheckpt = copyutil.CopyCheckpoint(justifiedCheckpoint)
+		s.justifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
 		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
-		s.prevJustifiedCheckpt = copyutil.CopyCheckpoint(justifiedCheckpoint)
-		s.bestJustifiedCheckpt = copyutil.CopyCheckpoint(justifiedCheckpoint)
-		s.finalizedCheckpt = copyutil.CopyCheckpoint(finalizedCheckpoint)
-		s.prevFinalizedCheckpt = copyutil.CopyCheckpoint(finalizedCheckpoint)
+		s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
+		s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
+		s.finalizedCheckpt = ethpb.CopyCheckpoint(finalizedCheckpoint)
+		s.prevFinalizedCheckpt = ethpb.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		ss, err := core2.StartSlot(s.finalizedCheckpt.Epoch)
 		if err != nil {
 			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
@@ -351,14 +351,14 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
-	s.justifiedCheckpt = copyutil.CopyCheckpoint(genesisCheckpoint)
+	s.justifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
 		return err
 	}
-	s.prevJustifiedCheckpt = copyutil.CopyCheckpoint(genesisCheckpoint)
-	s.bestJustifiedCheckpt = copyutil.CopyCheckpoint(genesisCheckpoint)
-	s.finalizedCheckpt = copyutil.CopyCheckpoint(genesisCheckpoint)
-	s.prevFinalizedCheckpt = copyutil.CopyCheckpoint(genesisCheckpoint)
+	s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
+	s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
+	s.finalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
+	s.prevFinalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block().Slot(),
@@ -411,7 +411,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headEpoch := helpers.SlotToEpoch(headBlock.Block().Slot())
+		headEpoch := core2.SlotToEpoch(headBlock.Block().Slot())
 		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch

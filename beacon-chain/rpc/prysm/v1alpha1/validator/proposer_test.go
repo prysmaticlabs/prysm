@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -274,7 +275,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
-	currentEpoch := helpers.CurrentEpoch(beaconState)
+	currentEpoch := core.CurrentEpoch(beaconState)
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -442,10 +443,10 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	blk := testutil.NewBeaconBlock()
@@ -577,10 +578,10 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{
@@ -676,10 +677,10 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{
@@ -772,10 +773,10 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{
@@ -866,10 +867,10 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{
@@ -975,10 +976,10 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{
@@ -1085,10 +1086,10 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot())
 	}
 	d := depositCache.AllDepositContainers(ctx)
 	origDeposit, ok := proto.Clone(d[0].Deposit).(*ethpb.Deposit)
@@ -1197,6 +1198,7 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
+	params.UseMinimalConfig()
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
@@ -1229,7 +1231,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, dp := range deps {
-		assert.NoError(t, depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 
 	p := &mockPOW.POWChain{
@@ -1281,7 +1283,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 	require.NoError(t, err)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dc.Deposit, dc.Eth1BlockHeight, dc.Index, depositTrie.HashTreeRoot()))
 
 	t.Run("choose highest count", func(t *testing.T) {
 		t.Skip()
@@ -1983,10 +1985,10 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot())
 	}
 
 	bs := &Server{

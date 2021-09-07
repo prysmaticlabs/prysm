@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -281,8 +282,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
 func CanUpgradeToAltair(slot types.Slot) bool {
-	epochStart := helpers.IsEpochStart(slot)
-	altairEpoch := helpers.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	epochStart := core.IsEpochStart(slot)
+	altairEpoch := core.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
 
@@ -355,7 +356,7 @@ func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
 func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(core.CurrentEpoch(state))))
 
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")

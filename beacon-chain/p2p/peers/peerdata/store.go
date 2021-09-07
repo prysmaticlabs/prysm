@@ -18,6 +18,10 @@ import (
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
+	// ErrNoPeerStatus is returned when there is a map entry for a given peer but there is no chain
+	// status for that peer. This should happen in rare circumstances only, but is a very possible
+	// scenario in a chaotic and adversarial network.
+	ErrNoPeerStatus = errors.New("no chain status for peer")
 )
 
 // PeerConnectionState is the state of the connection.

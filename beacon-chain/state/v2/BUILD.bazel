@@ -19,6 +19,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//proto/migration:__subpackages__",
         "//shared/testutil:__pkg__",
         "//spectest:__subpackages__",
     ],
@@ -31,7 +32,6 @@ go_library(
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/htrutils:go_default_library",

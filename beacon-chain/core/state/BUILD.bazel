@@ -26,6 +26,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
@@ -58,6 +59,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "altair_transition_no_verify_sig_test.go",
         "benchmarks_test.go",
         "skip_slot_cache_test.go",
         "state_fuzz_test.go",
@@ -73,9 +75,11 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 3,
     deps = [
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

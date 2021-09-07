@@ -28,10 +28,10 @@ func init() {
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
-func RunBlockProcessingTest(t *testing.T, config string) {
+func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "sanity/blocks/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", folderPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()

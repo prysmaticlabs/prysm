@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -23,6 +23,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -76,7 +77,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot[:],
 		},
 	}
-	header1.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header1.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
@@ -88,7 +89,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot2[:],
 		},
 	}
-	header2.Signature, err = helpers.ComputeDomainAndSign(state, helpers.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header2.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{
@@ -113,19 +114,17 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidProposerSlashing(t)
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: s},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	m := &pubsub.Message{
@@ -152,15 +151,13 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
 			Chain:       &mock.ChainService{State: state},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		seenProposerSlashingCache: c,
+		seenProposerSlashingCache: lruwrpr.New(10),
 	}
 
 	buf := new(bytes.Buffer)

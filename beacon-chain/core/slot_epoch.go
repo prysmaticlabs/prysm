@@ -1,4 +1,4 @@
-package helpers
+package core
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -65,6 +66,11 @@ func PrevEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 // the slot number stored in beacon state.
 func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot()) + 1
+}
+
+// AltairCompatible returns if the input state `s` is altair compatible and input epoch `e` is higher equal than fork epoch.
+func AltairCompatible(s state.BeaconState, e types.Epoch) bool {
+	return s.Version() == version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
 // StartSlot returns the first slot number of the
@@ -220,4 +226,13 @@ func SyncCommitteePeriodStartEpoch(e types.Epoch) (types.Epoch, error) {
 		return 0, errors.New("start epoch calculation overflow")
 	}
 	return types.Epoch(startEpoch), nil
+}
+
+// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
+func CanUpgradeToAltair(slot types.Slot) bool {
+	epochStart := IsEpochStart(slot)
+	altairEpoch := SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	return epochStart && altairEpoch
 }

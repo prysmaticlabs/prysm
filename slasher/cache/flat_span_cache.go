@@ -3,6 +3,7 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
@@ -16,11 +17,7 @@ func NewEpochFlatSpansCache(size int, onEvicted func(key interface{}, value inte
 	if size != 0 {
 		epochSpansCacheSize = size
 	}
-	cache, err := lru.NewWithEvict(epochSpansCacheSize, onEvicted)
-	if err != nil {
-		return nil, err
-	}
-	return &EpochFlatSpansCache{cache: cache}, nil
+	return &EpochFlatSpansCache{cache: lruwrpr.NewWithEvict(epochSpansCacheSize, onEvicted)}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.

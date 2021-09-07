@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -49,7 +50,7 @@ func ProcessAttesterSlashings(
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
 			return slashableIndices[i] < slashableIndices[j]
 		})
-		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+		currentEpoch := core.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
 		var val state.ReadOnlyValidator
