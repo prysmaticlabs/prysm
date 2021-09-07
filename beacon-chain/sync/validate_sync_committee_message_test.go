@@ -229,7 +229,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Slot = core.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 5)
 
@@ -327,7 +327,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				}
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 
@@ -386,7 +386,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Slot = core.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 
@@ -501,7 +501,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			committeeIndices: []types.CommitteeIndex{0},
 			setupTopic: func(s *Service) string {
 				format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				require.NoError(t, err)
 				prefix := fmt.Sprintf(format, digest, 0 /* validator index 0 */)
 				topic := prefix + "foobar"

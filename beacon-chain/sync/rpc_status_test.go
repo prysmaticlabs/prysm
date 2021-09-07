@@ -145,7 +145,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	digest, err := r.forkDigest()
+	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 
 	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
@@ -206,7 +206,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
-	digest, err := r.forkDigest()
+	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 
 	// Setup streams
@@ -292,7 +292,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
 	}
-	p1.Digest, err = r.forkDigest()
+	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
 	r2 := &Service{
@@ -304,7 +304,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
-	p2.Digest, err = r.forkDigest()
+	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
 	r.Start()
@@ -436,7 +436,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		defer wg.Done()
 		out := &pb.Status{}
 		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
-		digest, err := r.forkDigest()
+		digest, err := r.currentForkDigest()
 		assert.NoError(t, err)
 		expected := &pb.Status{
 			ForkDigest:     digest[:],
@@ -845,7 +845,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		},
 		ctx: context.Background(),
 	}
-	digest, err := r.forkDigest()
+	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 	// There should be no error for a status message
 	// with a genesis checkpoint.
