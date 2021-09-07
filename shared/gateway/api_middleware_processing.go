@@ -154,7 +154,7 @@ func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonRes
 }
 
 // WriteMiddlewareResponseHeadersAndBody populates headers and the body of the final response.
-func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Response, responseJson []byte, w http.ResponseWriter) ErrorJson {
+func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson []byte, w http.ResponseWriter) ErrorJson {
 	var statusCodeHeader string
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
