@@ -68,20 +68,91 @@ type blockData struct {
 }
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot.
-// Once implemented, this method will DEPRECATE GetBlock.
+// by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
+// before the Altair fork epoch and Altair blocks post-fork epoch.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockAltair")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	if core2.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+		blk, err := vs.getPhase0BeaconBlock(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
+	}
+	blk, err := vs.getAltairBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
+//
+// DEPRECATED: Use GetBeaconBlock instead ot handle blocks pre and post Altair hard fork.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	return vs.getPhase0BeaconBlock(ctx, req)
+}
 
-	blkData, err := vs.BuildBlockData(ctx, req)
+func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	blkData, err := vs.buildBlockData(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
+	// an error in the first validity check of this endpoint.
+	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
+	if err != nil {
+		return nil, err
+	}
+
+	blk := &ethpb.BeaconBlockAltair{
+		Slot:          req.Slot,
+		ParentRoot:    blkData.ParentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: blkData.ProposerIdx,
+		Body: &ethpb.BeaconBlockBodyAltair{
+			Eth1Data:          blkData.Eth1Data,
+			Deposits:          blkData.Deposits,
+			Attestations:      blkData.Attestations,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: blkData.ProposerSlashings,
+			AttesterSlashings: blkData.AttesterSlashings,
+			VoluntaryExits:    blkData.VoluntaryExits,
+			Graffiti:          blkData.Graffiti[:],
+			SyncAggregate:     syncAggregate,
+		},
+	}
+	// Compute state root with the newly constructed block.
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
+		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
+	)
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err = vs.ComputeStateRoot(
+		ctx,
+		wsb,
+	)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+	return blk, nil
+}
+
+func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
+	blkData, err := vs.buildBlockData(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
 	}
@@ -117,13 +188,12 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-
 	return blk, nil
 }
 
-// BuildBlockData for creating a new beacon block, so that this method can be shared across forks.
-func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildBlockData")
+// Build data required for creating a new beacon block, so this method can be shared across forks.
+func (vs *Server) buildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildBlockData")
 	defer span.End()
 
 	if vs.SyncChecker.Syncing() {
@@ -232,72 +302,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-// GetBlockAltair is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot. This is used by a validator
-// after the altair fork epoch has been encountered.
-func (vs *Server) GetBlockAltair(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockAltair")
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-
-	if helpers.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
-		return nil, status.Errorf(
-			codes.InvalidArgument, "Cannot request Altair blocks before the Altair fork epoch",
-		)
-	}
-
-	blkData, err := vs.BuildBlockData(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
-	}
-
-	// Use zero hash as stub for state root to compute later.
-	stateRoot := params.BeaconConfig().ZeroHash[:]
-
-	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
-	// an error in the first validity check of this endpoint.
-	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
-	if err != nil {
-		return nil, err
-	}
-
-	blk := &ethpb.BeaconBlockAltair{
-		Slot:          req.Slot,
-		ParentRoot:    blkData.ParentRoot,
-		StateRoot:     stateRoot,
-		ProposerIndex: blkData.ProposerIdx,
-		Body: &ethpb.BeaconBlockBodyAltair{
-			Eth1Data:          blkData.Eth1Data,
-			Deposits:          blkData.Deposits,
-			Attestations:      blkData.Attestations,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: blkData.ProposerSlashings,
-			AttesterSlashings: blkData.AttesterSlashings,
-			VoluntaryExits:    blkData.VoluntaryExits,
-			Graffiti:          blkData.Graffiti[:],
-			SyncAggregate:     syncAggregate,
-		},
-	}
-	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err = vs.ComputeStateRoot(
-		ctx,
-		wsb,
-	)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-
-	return blk, nil
 }
 
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.

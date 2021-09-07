@@ -2036,7 +2036,7 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
-func TestProposer_GetBlockAltair_BeforeForkEpoch(t *testing.T) {
+func TestProposer_GetBeaconBlocks_BeforeForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -2128,20 +2128,22 @@ func TestProposer_GetBlockAltair_BeforeForkEpoch(t *testing.T) {
 		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
 		require.NoError(t, err)
 	}
-	block, err := proposerServer.GetBlockAltair(ctx, req)
-	require.ErrorContains(t, "Cannot request Altair blocks before the Altair fork epoch", err)
+	block, err := proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	phase0Blk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Phase0)
+	require.Equal(t, true, ok)
 
-	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
-	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
-	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct Graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(block.Body.ProposerSlashings)))
-	assert.DeepEqual(t, proposerSlashings, block.Body.ProposerSlashings)
-	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(block.Body.AttesterSlashings)))
-	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
+	assert.Equal(t, req.Slot, phase0Blk.Phase0.Slot, "Expected block to have slot of 1")
+	assert.DeepEqual(t, parentRoot[:], phase0Blk.Phase0.ParentRoot, "Expected block to have correct parent root")
+	assert.DeepEqual(t, randaoReveal, phase0Blk.Phase0.Body.RandaoReveal, "Expected block to have correct randao reveal")
+	assert.DeepEqual(t, req.Graffiti, phase0Blk.Phase0.Body.Graffiti, "Expected block to have correct Graffiti")
+	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(phase0Blk.Phase0.Body.ProposerSlashings)))
+	assert.DeepEqual(t, proposerSlashings, phase0Blk.Phase0.Body.ProposerSlashings)
+	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(phase0Blk.Phase0.Body.AttesterSlashings)))
+	assert.DeepEqual(t, attSlashings, phase0Blk.Phase0.Body.AttesterSlashings)
 }
 
-func TestProposer_GetBlockAltair_OK(t *testing.T) {
+func TestProposer_GetBeaconBlocks_PostForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -2204,7 +2206,7 @@ func TestProposer_GetBlockAltair_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
-	altairSlot, err := helpers.StartSlot(params.BeaconConfig().AltairForkEpoch)
+	altairSlot, err := core.StartSlot(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 	req := &ethpb.BlockRequest{
 		Slot:         altairSlot + 1,
@@ -2237,17 +2239,19 @@ func TestProposer_GetBlockAltair_OK(t *testing.T) {
 		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
 		require.NoError(t, err)
 	}
-	block, err := proposerServer.GetBlockAltair(ctx, req)
+	block, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
+	altairBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Altair)
+	require.Equal(t, true, ok)
 
-	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
-	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
-	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct Graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(block.Body.ProposerSlashings)))
-	assert.DeepEqual(t, proposerSlashings, block.Body.ProposerSlashings)
-	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(block.Body.AttesterSlashings)))
-	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
+	assert.Equal(t, req.Slot, altairBlk.Altair.Slot, "Expected block to have slot of 1")
+	assert.DeepEqual(t, parentRoot[:], altairBlk.Altair.ParentRoot, "Expected block to have correct parent root")
+	assert.DeepEqual(t, randaoReveal, altairBlk.Altair.Body.RandaoReveal, "Expected block to have correct randao reveal")
+	assert.DeepEqual(t, req.Graffiti, altairBlk.Altair.Body.Graffiti, "Expected block to have correct Graffiti")
+	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(altairBlk.Altair.Body.ProposerSlashings)))
+	assert.DeepEqual(t, proposerSlashings, altairBlk.Altair.Body.ProposerSlashings)
+	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(altairBlk.Altair.Body.AttesterSlashings)))
+	assert.DeepEqual(t, attSlashings, altairBlk.Altair.Body.AttesterSlashings)
 }
 
 func TestProposer_GetSyncAggregate_OK(t *testing.T) {
