@@ -49,20 +49,23 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
-		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
+		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{
+			Block:     &ethpbalpha.BeaconBlockContainer_Phase0Block{Phase0Block: b},
+			BlockRoot: root[:],
+		}
 	}
 	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
 	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
 	summary := &ethpbalpha.StateSummary{
 		Root: headRoot[:],
-		Slot: blkContainers[len(blks)-1].Block.Block.Slot,
+		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block.Block.Slot,
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, summary))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 	return genBlk, blkContainers
 }
 
-func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlockAltair, []*ethpbalpha.BeaconBlockContainerAltair) {
+func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlockAltair, []*ethpbalpha.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := testutil.NewBeaconBlockAltair()
 	genBlk.Block.ParentRoot = parentRoot[:]
@@ -75,7 +78,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 
 	count := types.Slot(100)
 	blks := make([]block.SignedBeaconBlock, count)
-	blkContainers := make([]*ethpbalpha.BeaconBlockContainerAltair, count)
+	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = i
@@ -92,13 +95,14 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 		signedB, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 		require.NoError(t, err)
 		blks[i] = signedB
-		blkContainers[i] = &ethpbalpha.BeaconBlockContainerAltair{Block: &ethpbalpha.BeaconBlockContainerAltair_AltairBlock{AltairBlock: b}, BlockRoot: root[:]}
+		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{
+			Block: &ethpbalpha.BeaconBlockContainer_AltairBlock{AltairBlock: b}, BlockRoot: root[:]}
 	}
 	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
 	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
 	summary := &ethpbalpha.StateSummary{
 		Root: headRoot[:],
-		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainerAltair_AltairBlock).AltairBlock.Block.Slot,
+		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock.Block.Slot,
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, summary))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
@@ -127,7 +131,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -142,17 +146,17 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		{
 			name:    "slot",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block,
+			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block,
+			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "canonical",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block,
+			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "genesis",
@@ -167,12 +171,12 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		{
 			name:    "head",
 			blockID: []byte("head"),
-			want:    headBlock.Block,
+			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "finalized",
 			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block,
+			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "no block",
@@ -213,7 +217,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -247,7 +251,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			name: "slot",
 			slot: types.Slot(30),
 			want: []*ethpbalpha.SignedBeaconBlock{
-				blkContainers[30].Block,
+				blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 				b2,
 				b3,
 			},
@@ -256,7 +260,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			name:       "parent root",
 			parentRoot: b2.Block.ParentRoot,
 			want: []*ethpbalpha.SignedBeaconBlock{
-				blkContainers[1].Block,
+				blkContainers[1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 				b2,
 				b4,
 				b5,
@@ -344,7 +348,7 @@ func TestServer_GetBlock(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -363,7 +367,7 @@ func TestServer_GetBlock(t *testing.T) {
 		{
 			name:    "slot",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block,
+			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "bad formatting",
@@ -373,17 +377,17 @@ func TestServer_GetBlock(t *testing.T) {
 		{
 			name:    "canonical",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block,
+			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "head",
 			blockID: []byte("head"),
-			want:    headBlock.Block,
+			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "finalized",
 			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block,
+			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "genesis",
@@ -398,7 +402,7 @@ func TestServer_GetBlock(t *testing.T) {
 		{
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block,
+			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "non-existent root",
@@ -453,7 +457,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			BeaconDB: beaconDB,
 			ChainInfoFetcher: &mock.ChainService{
 				DB:                  beaconDB,
-				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 				Root:                headBlock.BlockRoot,
 				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			},
@@ -472,7 +476,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			{
 				name:    "slot",
 				blockID: []byte("30"),
-				want:    blkContainers[30].Block,
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 			},
 			{
 				name:    "bad formatting",
@@ -482,17 +486,17 @@ func TestServer_GetBlockV2(t *testing.T) {
 			{
 				name:    "canonical",
 				blockID: []byte("30"),
-				want:    blkContainers[30].Block,
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 			},
 			{
 				name:    "head",
 				blockID: []byte("head"),
-				want:    headBlock.Block,
+				want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 			},
 			{
 				name:    "finalized",
 				blockID: []byte("finalized"),
-				want:    blkContainers[64].Block,
+				want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 			},
 			{
 				name:    "genesis",
@@ -507,7 +511,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			{
 				name:    "root",
 				blockID: blkContainers[20].BlockRoot,
-				want:    blkContainers[20].Block,
+				want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 			},
 			{
 				name:    "non-existent root",
@@ -676,7 +680,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -711,7 +715,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			BeaconDB: beaconDB,
 			ChainInfoFetcher: &mock.ChainService{
 				DB:                  beaconDB,
-				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 				Root:                headBlock.BlockRoot,
 				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			},
@@ -787,7 +791,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -878,7 +882,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block),
+			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 		},
@@ -897,7 +901,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		{
 			name:    "slot",
 			blockID: []byte("30"),
-			want:    blkContainers[30].Block,
+			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "bad formatting",
@@ -907,12 +911,12 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		{
 			name:    "head",
 			blockID: []byte("head"),
-			want:    headBlock.Block,
+			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "finalized",
 			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block,
+			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "genesis",
@@ -927,7 +931,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		{
 			name:    "root",
 			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block,
+			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "non-existent root",
@@ -937,7 +941,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		{
 			name:    "slot",
 			blockID: []byte("40"),
-			want:    blkContainers[40].Block,
+			want:    blkContainers[40].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "no block",
