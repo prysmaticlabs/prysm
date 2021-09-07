@@ -1874,7 +1874,7 @@ var (
 
 	pattern_BeaconChain_ListBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "beacon", "blocks"}, ""))
 
-	pattern_BeaconChain_ListBeaconBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "beacon", "blocks"}, ""))
+	pattern_BeaconChain_ListBeaconBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha2", "beacon", "blocks"}, ""))
 
 	pattern_BeaconChain_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "beacon", "blocks", "stream"}, ""))
 

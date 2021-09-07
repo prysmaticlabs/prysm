@@ -108,7 +108,7 @@ service BeaconChain {
     // allows for retrieval of genesis information via a boolean query filter.
     rpc ListBeaconBlocks(ListBlocksRequest) returns (ListBeaconBlocksResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks"
+            get: "/eth/v1alpha2/beacon/blocks"
         };
     }
 

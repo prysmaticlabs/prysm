@@ -160,7 +160,7 @@ service BeaconNodeValidator {
     // data for proposer to sign.
     rpc GetBeaconBlock(BlockRequest) returns (GenericBeaconBlock) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/block"
+            get: "/eth/v1alpha2/validator/block"
         };
     }
 
@@ -171,7 +171,7 @@ service BeaconNodeValidator {
     // beacon block into its state.
     rpc ProposeBeaconBlock(GenericSignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/block"
+            post: "/eth/v1alpha2/validator/block"
             body: "*"
         };
     }
