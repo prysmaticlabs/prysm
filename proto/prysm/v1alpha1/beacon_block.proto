@@ -27,7 +27,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
 message GenericSignedBeaconBlock {
     oneof block {
-        // Representing  signed, phase 0 beacon block.
+        // Representing a signed, phase 0 beacon block.
         SignedBeaconBlock phase0 = 1;
 
         // Representing a signed, post-Altair fork beacon block.
@@ -40,7 +40,7 @@ message GenericBeaconBlock {
         // Representing a phase 0 beacon block.
         BeaconBlock phase0 = 1;
 
-        // Representing an post-Altair fork beacon block.
+        // Representing a post-Altair fork beacon block.
         BeaconBlockAltair altair = 2;
     }
 }
