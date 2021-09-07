@@ -360,6 +360,24 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		assert.Equal(t, 204, writer.Code)
 		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
 	})
+
+	t.Run("POST_with_empty_json_body", func(t *testing.T) {
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		response := &http.Response{
+			Header:     http.Header{},
+			StatusCode: 204,
+		}
+		responseJson, err := json.Marshal(struct{}{})
+		require.NoError(t, err)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		errJson := WriteMiddlewareResponseHeadersAndBody(request, response, responseJson, writer)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, 204, writer.Code)
+		assert.DeepEqual(t, []byte(nil), writer.Body.Bytes())
+		assert.Equal(t, "0", writer.Header()["Content-Length"][0])
+	})
 }
 
 func TestWriteError(t *testing.T) {

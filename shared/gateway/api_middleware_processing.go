@@ -168,7 +168,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			}
 		}
 	}
-	if responseJson != nil {
+	if !GrpcResponseIsEmpty(responseJson) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
@@ -183,6 +183,7 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else {
+		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(grpcResp.StatusCode)
 	}
 	return nil
