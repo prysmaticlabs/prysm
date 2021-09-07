@@ -14,6 +14,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -490,6 +491,22 @@ func TestFilterSubnetPeers(t *testing.T) {
 	assert.DeepEqual(t, 1, len(recPeers), "expected at least 1 suitable peer to prune")
 
 	cancel()
+}
+
+func TestIsDigestValid(t *testing.T) {
+	genRoot := [32]byte{'A'}
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	valid, err := isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, true, valid)
+
+	// Compute future fork digest that will be invalid currently.
+	digest, err = helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	valid, err = isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, false, valid)
 }
 
 // Create peer and register them to provided topics.
