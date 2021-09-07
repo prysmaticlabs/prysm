@@ -20,6 +20,7 @@ type SignedBeaconBlock interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
+	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
 // BeaconBlock describes an interface which states the methods
