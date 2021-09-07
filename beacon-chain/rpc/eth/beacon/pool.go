@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
@@ -89,7 +88,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		go func() {
 			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := copyutil.CopyAttestation(att)
+			attCopy := ethpbalpha.CopyAttestation(att)
 			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 				log.WithError(err).Error("Could not handle attestation in operations service")
 				return

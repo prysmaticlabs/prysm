@@ -41,7 +41,6 @@ go_library(
         "//beacon-chain/state/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/lru:go_default_library",

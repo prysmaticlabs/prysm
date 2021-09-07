@@ -4,7 +4,6 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // naiveSyncContributionAggregation aggregates naively, without any complex algorithms or optimizations.
@@ -73,8 +72,8 @@ func aggregate(c1, c2 *v2.SyncCommitteeContribution) (*v2.SyncCommitteeContribut
 		return nil, aggregation.ErrBitsOverlap
 	}
 
-	baseContribution := copyutil.CopySyncCommitteeContribution(c1)
-	newContribution := copyutil.CopySyncCommitteeContribution(c2)
+	baseContribution := v2.CopySyncCommitteeContribution(c1)
+	newContribution := v2.CopySyncCommitteeContribution(c2)
 	if newContribution.AggregationBits.Count() > baseContribution.AggregationBits.Count() {
 		baseContribution, newContribution = newContribution, baseContribution
 	}

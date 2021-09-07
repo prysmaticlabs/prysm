@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/queue"
 )
 
@@ -29,7 +28,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 		return err
 	}
 
-	copied := copyutil.CopySyncCommitteeContribution(cont)
+	copied := ethpb.CopySyncCommitteeContribution(cont)
 
 	// Contributions exist in the queue. Append instead of insert new.
 	if item != nil {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // SetLatestBlockHeader in the beacon state.
@@ -16,7 +15,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = copyutil.CopyBeaconBlockHeader(val)
+	b.state.LatestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
