@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -638,9 +639,18 @@ func TestRolesAt_OK(t *testing.T) {
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				CommitteeIndex: 1,
-				AttesterSlot:   1,
-				PublicKey:      validatorKey.PublicKey().Marshal(),
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
+			},
+		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
 			},
 		},
 	}
@@ -650,10 +660,52 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
 	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAggregator, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
+
+	// Test sync committee role at epoch boundary.
+	v.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: false,
+			},
+		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
+			},
+		},
+	}
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      31,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+
+	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
+	require.NoError(t, err)
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -921,21 +973,21 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-
+	valClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		blockFeed:       new(event.Feed),
+		validatorClient: valClient,
 	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocks(
+	valClient.EXPECT().StreamBlocksAltair(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{},
+		&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_Phase0Block{
+			Phase0Block: &ethpb.SignedBeaconBlock{}}},
 		nil,
 	).Do(func() {
 		cancel()
@@ -948,22 +1000,25 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		validatorClient: client,
+		blockFeed:       new(event.Feed),
 	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocks(
+	client.EXPECT().StreamBlocksAltair(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	slot := types.Slot(100)
 	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}},
+		&ethpb.StreamBlocksResponse{
+			Block: &ethpb.StreamBlocksResponse_Phase0Block{
+				Phase0Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}}},
+		},
 		nil,
 	).Do(func() {
 		cancel()
@@ -1229,4 +1284,45 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 		},
 		Signature: make([]byte, 96),
 	}
+}
+
+func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
+	v, m, validatorKey, finish := setup(t)
+	defer finish()
+
+	slot := types.Slot(1)
+	pubKey := validatorKey.PublicKey().Marshal()
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
+
+	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	require.NoError(t, err)
+	require.Equal(t, false, aggregator)
+
+	c := params.BeaconConfig()
+	c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
+	params.OverrideBeaconConfig(c)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{0}}, nil /*err*/)
+
+	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	require.NoError(t, err)
+	require.Equal(t, true, aggregator)
 }

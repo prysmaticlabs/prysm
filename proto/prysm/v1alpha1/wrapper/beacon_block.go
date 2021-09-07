@@ -94,6 +94,24 @@ func (w Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
 }
 
+func (w Phase0SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
+}
+
 // Phase0BeaconBlock is the wrapper for the actual block.
 type Phase0BeaconBlock struct {
 	b *eth.BeaconBlock
@@ -335,6 +353,24 @@ func (w altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 // Version of the underlying protobuf object.
 func (w altairSignedBeaconBlock) Version() int {
 	return version.Altair
+}
+
+func (w altairSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
 }
 
 // altairBeaconBlock is the wrapper for the actual block.
