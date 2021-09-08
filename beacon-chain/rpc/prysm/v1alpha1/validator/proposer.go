@@ -152,7 +152,19 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := req.Block.(block.SignedBeaconBlock)
+	var blk block.SignedBeaconBlock
+	var err error
+	switch b := req.Block.(type) {
+	case *ethpb.GenericSignedBeaconBlock_Phase0:
+		blk = wrapper.WrappedPhase0SignedBeaconBlock(b.Phase0)
+	case *ethpb.GenericSignedBeaconBlock_Altair:
+		blk, err = wrapper.WrappedAltairSignedBeaconBlock(b.Altair)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
+		}
+	default:
+		return nil, status.Error(codes.Internal, "block version not supported")
+	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
