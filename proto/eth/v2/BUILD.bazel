@@ -69,7 +69,7 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
-        ":ssz_generated_files",  # keep
+        ":ssz_generated_files",
     ],
     embed = [":go_grpc_gateway_library"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2",
