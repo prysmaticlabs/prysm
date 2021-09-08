@@ -308,7 +308,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
 // The contributions are filtered based on matching of the input root and slot then profitability.
 func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetSyncAggregate")
+	_, span := trace.StartSpan(ctx, "ProposerServer.GetSyncAggregate")
 	defer span.End()
 
 	// Contributions have to match the input root
