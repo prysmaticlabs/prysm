@@ -10,9 +10,7 @@ proto_library(
     name = "proto",
     srcs = [
         "beacon_block.proto",
-        "beacon_state.proto",
-        "sync_committee.proto",
-        "validator.proto",
+        ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -126,7 +124,6 @@ go_library(
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
-        "beacon_block.proto",
         "beacon_state.proto",
         "sync_committee.proto",
         "validator.proto",
