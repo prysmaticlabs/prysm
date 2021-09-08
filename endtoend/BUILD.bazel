@@ -29,7 +29,7 @@ go_test(
         "requires-network",
     ],
     deps = [
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//endtoend/components:go_default_library",
         "//endtoend/evaluators:go_default_library",
         "//endtoend/helpers:go_default_library",

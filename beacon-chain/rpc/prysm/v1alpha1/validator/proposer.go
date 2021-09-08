@@ -12,13 +12,13 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -82,12 +82,12 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	if featureconfig.Get().EnableNextSlotStateCache {
-		head, err = core.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
 		}
 	} else {
-		head, err = core.ProcessSlots(ctx, head, req.Slot)
+		head, err = transition.ProcessSlots(ctx, head, req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
 		}
@@ -265,7 +265,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return core2.VotingPeriodStartTime(startTime, slot)
+	return core.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -348,7 +348,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(core2.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
+	enc = fastssz.MarshalUint64(enc, uint64(core.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
@@ -387,7 +387,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block block.SignedBeacon
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
-	root, err := core.CalculateStateRoot(
+	root, err := transition.CalculateStateRoot(
 		ctx,
 		beaconState,
 		block,
