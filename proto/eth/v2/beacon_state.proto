@@ -20,6 +20,7 @@ import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/validator.proto";
+import "proto/eth/v2/shared.proto";
 import "proto/eth/v2/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
@@ -81,7 +82,8 @@ message StateRequestV2 {
 }
 
 message BeaconStateResponseV2 {
-  BeaconStateContainer data = 1;
+  Version version = 1;
+  BeaconStateContainer data = 2;
 }
 
 message BeaconStateSSZResponseV2 {
