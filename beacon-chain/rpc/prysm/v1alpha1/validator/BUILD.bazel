@@ -54,6 +54,7 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/slotutil:go_default_library",
