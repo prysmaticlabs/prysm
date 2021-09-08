@@ -26,7 +26,7 @@ go_library(
         "//validator/client:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core/state/stateutils:go_default_library",
+        "//beacon-chain/core/transition/stateutils:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",

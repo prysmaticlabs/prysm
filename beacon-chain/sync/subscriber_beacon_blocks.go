@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"

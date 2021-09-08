@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
