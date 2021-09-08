@@ -2035,7 +2035,7 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
-func TestProposer_GetBeaconBlocks_BeforeForkEpoch(t *testing.T) {
+func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -2137,7 +2137,7 @@ func TestProposer_GetBeaconBlocks_BeforeForkEpoch(t *testing.T) {
 	assert.DeepEqual(t, attSlashings, phase0Blk.Phase0.Body.AttesterSlashings)
 }
 
-func TestProposer_GetBeaconBlocks_PostForkEpoch(t *testing.T) {
+func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 

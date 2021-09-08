@@ -74,7 +74,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockAltair")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if core2.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	if core.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, err
