@@ -20,8 +20,8 @@ import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/validator.proto";
-import "proto/eth/v2/shared.proto";
 import "proto/eth/v2/sync_committee.proto";
+import "proto/eth/v2/version.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
