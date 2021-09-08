@@ -1199,6 +1199,7 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	params.UseMinimalConfig()
 	ctx := context.Background()
 
@@ -2151,10 +2152,22 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
+	wsb := wrapper.WrappedPhase0SignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	altairSlot, err := core.StartSlot(params.BeaconConfig().AltairForkEpoch)
+	require.NoError(t, err)
+
 	genAltair := &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
-			Slot:       genesis.Block.Slot,
-			ParentRoot: genesis.Block.ParentRoot,
+			Slot:       altairSlot + 1,
+			ParentRoot: parentRoot[:],
 			StateRoot:  genesis.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyAltair{
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
@@ -2165,18 +2178,15 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		},
 		Signature: genesis.Signature,
 	}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(genAltair)
+
+	//beaconState, err = transition.ProcessSlots(ctx, beaconState, altairSlot+1)
+	//require.NoError(t, err)
+
+	blkRoot, err := genAltair.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-	parentRoot, err := genAltair.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
@@ -2197,7 +2207,6 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
-	altairSlot, err := core.StartSlot(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 	req := &ethpb.BlockRequest{
 		Slot:         altairSlot + 1,

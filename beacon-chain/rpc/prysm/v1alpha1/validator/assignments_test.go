@@ -98,12 +98,11 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	params.UseMainnetConfig()
-	defer params.UseMinimalConfig()
-
-	bc := params.BeaconConfig()
-	bc.AltairForkEpoch = types.Epoch(0)
-	params.OverrideBeaconConfig(bc)
+	cfg := params.BeaconConfig().Copy()
+	cfg.AltairForkEpoch = types.Epoch(0)
+	params.OverrideBeaconConfig(cfg)
 
 	genesis := testutil.NewBeaconBlock()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
