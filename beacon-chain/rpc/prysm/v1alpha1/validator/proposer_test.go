@@ -272,6 +272,7 @@ func TestProposer_ProposeBlock_Altair_OK(t *testing.T) {
 	blockToPropose.Block.ParentRoot = bsRoot[:]
 	blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
 	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(blockToPropose)
+	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wrapped))
 	_, err = proposerServer.ProposeBeaconBlock(context.Background(), &ethpb.GenericSignedBeaconBlock{Block: blk})
 	assert.NoError(t, err, "Could not propose block correctly")
