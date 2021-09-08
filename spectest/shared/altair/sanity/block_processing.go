@@ -12,7 +12,7 @@ import (
 	"github.com/d4l3k/messagediff"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
@@ -63,7 +63,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 				require.NoError(t, err)
-				processedState, transitionError = core.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				if transitionError != nil {
 					break
 				}
