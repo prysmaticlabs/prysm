@@ -151,15 +151,21 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-// This method will DEPRECATE ProposeBlock once implemented.
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	blk := req.Block.(block.SignedBeaconBlock)
+	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
+//
+// DEPRECATED: Use ProposeBeaconBlock instead.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
+	return vs.proposeGenericBeaconBlock(ctx, blk)
+}
+
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
