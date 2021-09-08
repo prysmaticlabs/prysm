@@ -20,8 +20,6 @@ import (
 	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -137,7 +135,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	return blk, nil
 }
 
-func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *eth.Eth1Data) ([]*eth.Deposit, []*eth.Attestation, error) {
+func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	if featureconfig.Get().EnableGetBlockOptimizations {
 		deposits, atts, err := vs.optimizedDepositAndPackAttestations(ctx, head, eth1Data)
 		if err != nil {
@@ -161,14 +159,14 @@ func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.Bea
 	return deposits, atts, nil
 }
 
-func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *eth.Eth1Data) ([]*eth.Deposit, []*eth.Attestation, error) {
+func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
-	var deposits []*eth.Deposit
-	var atts []*eth.Attestation
+	var deposits []*ethpb.Deposit
+	var atts []*ethpb.Attestation
 
 	eg.Go(func() error {
 		// Pack ETH1 deposits which have not been included in the beacon chain.
-		localDeposits, err := vs.deposits(ctx, head, eth1Data)
+		localDeposits, err := vs.deposits(egctx, head, eth1Data)
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 		}
@@ -184,7 +182,7 @@ func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head 
 
 	eg.Go(func() error {
 		// Pack aggregated attestations which have not been included in the beacon chain.
-		localAtts, err := vs.packAttestations(ctx, head)
+		localAtts, err := vs.packAttestations(egctx, head)
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 		}
@@ -463,7 +461,7 @@ func (vs *Server) deposits(
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
-	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// Need to fetch if the deposits up to the state's latest ethpb 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
@@ -488,7 +486,7 @@ func (vs *Server) deposits(
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*dbpb.DepositContainer
+	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)

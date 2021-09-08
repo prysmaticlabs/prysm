@@ -150,6 +150,7 @@ var devModeFlags = []cli.Flag{
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 	enableActiveBalanceCache,
+	enableGetBlockOptimizations,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
