@@ -60,7 +60,7 @@ go_fuzz_test(
     max_len = 30000000,
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -144,7 +144,7 @@ go_fuzz_test(
     max_len = 30000000,
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//shared/params:go_default_library",
@@ -171,7 +171,7 @@ go_library(
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",

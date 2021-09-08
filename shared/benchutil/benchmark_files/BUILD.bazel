@@ -4,7 +4,7 @@ filegroup(
         "*.ssz",
     ]),
     visibility = [
-        "//beacon-chain/core/state:__pkg__",
+        "//beacon-chain/core/transition:__pkg__",
         "//shared/benchutil:__subpackages__",
     ],
 )

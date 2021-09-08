@@ -157,7 +157,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
 		defer span.End()
 		isValid := false
-		digest, err := s.forkDigest()
+		digest, err := s.currentForkDigest()
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore

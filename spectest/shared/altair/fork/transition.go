@@ -8,7 +8,7 @@ import (
 	"github.com/golang/snappy"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -95,7 +95,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				st, err := core.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
 				require.NoError(t, err)
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
@@ -104,7 +104,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 				require.NoError(t, err)
-				st, err := core.ExecuteStateTransition(ctx, altairState, wsb)
+				st, err := transition.ExecuteStateTransition(ctx, altairState, wsb)
 				require.NoError(t, err)
 				altairState, ok = st.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)

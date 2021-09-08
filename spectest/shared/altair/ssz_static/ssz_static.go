@@ -161,8 +161,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SyncAggregatorSelectionData":
 		obj = &ethpb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":
-		t.Skip("TODO(8638): fssz bug, using custom HTR so state works")
-		return nil, nil
+		obj = &ethpb.SyncCommittee{}
 	case "LightClientSnapshot":
 		t.Skip("not a beacon node type, this is a light node type")
 		return nil, nil
