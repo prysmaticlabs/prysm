@@ -8,7 +8,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	prysmP2P "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 // expectSuccess status code from a stream in regular sync.
