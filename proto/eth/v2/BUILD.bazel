@@ -11,6 +11,7 @@ proto_library(
         "beacon_block.proto",
         "beacon_state.proto",
         "sync_committee.proto",
+        "shared.proto",
         "validator.proto",
     ],
     visibility = ["//visibility:public"],
