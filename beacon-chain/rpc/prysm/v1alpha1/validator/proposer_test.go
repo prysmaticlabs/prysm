@@ -10,7 +10,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -2146,10 +2145,7 @@ func TestProposer_GetBeaconBlocks_PostForkEpoch(t *testing.T) {
 	cfg := params.MainnetConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)
-	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
