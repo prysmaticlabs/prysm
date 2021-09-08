@@ -37,7 +37,7 @@ var (
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1V1.GetIdentity")
+	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
 	defer span.End()
 
 	peerId := ns.PeerManager.PeerID().Pretty()

@@ -193,7 +193,6 @@ func (s *Service) Start() {
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 	}
-
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
@@ -291,7 +290,6 @@ func (s *Service) Start() {
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
-
 		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
