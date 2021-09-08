@@ -196,12 +196,13 @@ func TestServer_GetBlockHeader(t *testing.T) {
 				return
 			}
 
-			blkHdr, err := migration.V1Alpha1BlockToV1BlockHeader(tt.want)
+			assert.Equal(t, tt.want.Block.Slot, header.Data.Header.Message.Slot)
+			assert.DeepEqual(t, tt.want.Block.StateRoot, header.Data.Header.Message.StateRoot)
+			assert.DeepEqual(t, tt.want.Block.ParentRoot, header.Data.Header.Message.ParentRoot)
+			expectedRoot, err := tt.want.Block.Body.HashTreeRoot()
 			require.NoError(t, err)
-
-			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Message) {
-				t.Error("Expected blocks to equal")
-			}
+			assert.DeepEqual(t, expectedRoot[:], header.Data.Header.Message.BodyRoot)
+			assert.Equal(t, tt.want.Block.ProposerIndex, header.Data.Header.Message.ProposerIndex)
 		})
 	}
 }
@@ -276,12 +277,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 			require.Equal(t, len(tt.want), len(headers.Data))
 			for i, blk := range tt.want {
-				signedHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
+				assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
+				assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
+				assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)
+				expectedRoot, err := blk.Block.Body.HashTreeRoot()
 				require.NoError(t, err)
-
-				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Message) {
-					t.Error("Expected blocks to equal")
-				}
+				assert.DeepEqual(t, expectedRoot[:], headers.Data[i].Header.Message.BodyRoot)
+				assert.Equal(t, blk.Block.ProposerIndex, headers.Data[i].Header.Message.ProposerIndex)
 			}
 		})
 	}
