@@ -2179,9 +2179,6 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		Signature: genesis.Signature,
 	}
 
-	//beaconState, err = transition.ProcessSlots(ctx, beaconState, altairSlot+1)
-	//require.NoError(t, err)
-
 	blkRoot, err := genAltair.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, err, "Could not get signing root")
