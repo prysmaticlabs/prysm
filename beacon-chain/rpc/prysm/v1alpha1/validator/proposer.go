@@ -71,7 +71,7 @@ type blockData struct {
 // by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
 // before the Altair fork epoch and Altair blocks post-fork epoch.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockAltair")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 	if core.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
