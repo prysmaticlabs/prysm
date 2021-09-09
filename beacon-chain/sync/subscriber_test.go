@@ -14,15 +14,19 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -43,11 +47,11 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 				Genesis:        time.Now(),
 			},
 		},
-		chainStarted: abool.New(),
 		subHandler:   newSubTopicHandler(),
+		chainStarted: abool.New(),
 	}
 	var err error
-	p2pService.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
@@ -61,7 +65,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		}
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	r.markForChainStart()
 
 	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
@@ -87,13 +91,13 @@ func TestSubscribe_UnsubscribeTopic(t *testing.T) {
 		subHandler:   newSubTopicHandler(),
 	}
 	var err error
-	p2pService.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	topic := "/eth2/%x/voluntary_exit"
 
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		return nil
-	})
+	}, p2pService.Digest)
 	r.markForChainStart()
 
 	fullTopic := fmt.Sprintf(topic, p2pService.Digest) + p2pService.Encoding().ProtocolSuffix()
@@ -134,11 +138,14 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	var err error
+	p2pService.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.attesterSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
@@ -149,8 +156,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	)
 	require.NoError(t, err, "Error generating attester slashing")
 	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
-	require.NoError(t, err)
-	p2pService.Digest, err = r.forkDigest()
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 
@@ -187,11 +192,14 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	var err error
+	p2pService.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.proposerSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
@@ -201,8 +209,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating proposer slashing")
-	p2pService.Digest, err = r.forkDigest()
-	require.NoError(t, err)
+
 	p2pService.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -223,11 +230,11 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 			},
 			P2P: p,
 		},
-		chainStarted: abool.New(),
 		subHandler:   newSubTopicHandler(),
+		chainStarted: abool.New(),
 	}
 	var err error
-	p.Digest, err = r.forkDigest()
+	p.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]
@@ -237,7 +244,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
-	})
+	}, p.Digest)
 	r.markForChainStart()
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
@@ -261,7 +268,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 		chainStarted: abool.New(),
 		subHandler:   newSubTopicHandler(),
 	}
-	digest, err := r.forkDigest()
+	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
@@ -299,10 +306,12 @@ func TestStaticSubnets(t *testing.T) {
 		subHandler:   newSubTopicHandler(),
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
-	})
+	}, d)
 	topics := r.cfg.P2P.PubSub().GetTopics()
 	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
@@ -311,6 +320,13 @@ func TestStaticSubnets(t *testing.T) {
 }
 
 func Test_wrapAndReportValidation(t *testing.T) {
+	mChain := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{0x01},
+	}
+	fd, err := p2putils.CreateForkDigest(mChain.GenesisTime(), mChain.ValidatorsRoot[:])
+	assert.NoError(t, err)
+	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
 		topic        string
 		v            pubsub.ValidatorEx
@@ -364,7 +380,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 		{
 			name: "validator OK",
 			args: args{
-				topic: "foo",
+				topic: mockTopic,
 				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
 					return pubsub.ValidationAccept
 				},
@@ -372,7 +388,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{
 						Topic: func() *string {
-							s := "foo"
+							s := mockTopic
 							return &s
 						}(),
 					},
@@ -402,7 +418,10 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			chainStarted.SetTo(tt.args.chainstarted)
 			s := &Service{
 				chainStarted: chainStarted,
-				subHandler:   newSubTopicHandler(),
+				cfg: &Config{
+					Chain: mChain,
+				},
+				subHandler: newSubTopicHandler(),
 			}
 			_, v := s.wrapAndReportValidation(tt.args.topic, tt.args.v)
 			got := v(context.Background(), tt.args.pid, tt.args.msg)
@@ -432,12 +451,13 @@ func TestFilterSubnetPeers(t *testing.T) {
 	}
 	// Empty cache at the end of the test.
 	defer cache.SubnetIDs.EmptyAllCaches()
-
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
 	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.P2P.Encoding().ProtocolSuffix()
-	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, 10)
+	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, digest, 10)
 	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
 
-	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, 20)
+	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, digest, 20)
 	cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
 
 	p1 := createPeer(t, subnet10)
@@ -472,6 +492,180 @@ func TestFilterSubnetPeers(t *testing.T) {
 	assert.DeepEqual(t, 1, len(recPeers), "expected at least 1 suitable peer to prune")
 
 	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	slot := r.cfg.Chain.CurrentSlot()
+	currEpoch := core.SlotToEpoch(slot)
+	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), currEpoch, []uint64{0, 1}, 10*time.Second)
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 2, len(r.cfg.P2P.PubSub().GetTopics()))
+	topicMap := map[string]bool{}
+	for _, t := range r.cfg.P2P.PubSub().GetTopics() {
+		topicMap[t] = true
+	}
+	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[firstSub])
+
+	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[secondSub])
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch = 1
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+	params.BeaconConfig().InitializeForkSchedule()
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now().Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch)*params.BeaconConfig().SecondsPerSlot) * time.Second),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	genRoot := r.cfg.Chain.GenesisValidatorRoot()
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
+
+	// Expect that all old topics will be unsubscribed.
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
+
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch = 1
+	cfg.SecondsPerSlot = 1
+	cfg.SlotsPerEpoch = 4
+	params.OverrideBeaconConfig(cfg)
+	params.BeaconConfig().InitializeForkSchedule()
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now().Add(-time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
+	genRoot := r.cfg.Chain.GenesisValidatorRoot()
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+
+	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 2, len(r.cfg.P2P.PubSub().GetTopics()))
+	topicMap := map[string]bool{}
+	for _, t := range r.cfg.P2P.PubSub().GetTopics() {
+		topicMap[t] = true
+	}
+	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[firstSub])
+
+	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[secondSub])
+
+	// Expect that all old topics will be unsubscribed.
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
+
+	cancel()
+}
+
+func TestIsDigestValid(t *testing.T) {
+	genRoot := [32]byte{'A'}
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	valid, err := isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, true, valid)
+
+	// Compute future fork digest that will be invalid currently.
+	digest, err = helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	valid, err = isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, false, valid)
 }
 
 // Create peer and register them to provided topics.

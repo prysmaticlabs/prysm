@@ -3,8 +3,10 @@ package sync
 import (
 	"context"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
+	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -61,6 +63,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	topic := baseTopic + s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	s.cfg.P2P.SetStreamHandler(topic, func(stream network.Stream) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				log.Errorf("%s", debug.Stack())
+			}
+		}()
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 
@@ -128,8 +136,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
 		if t.Kind() == reflect.Ptr {
-			msg := reflect.New(t.Elem())
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
+			msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				// Debug logs for goodbye/status errors
 				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
@@ -140,7 +152,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				traceutil.AnnotateError(span, err)
 				return
 			}
-			if err := handle(ctx, msg.Interface(), stream); err != nil {
+			if err := handle(ctx, msg, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
@@ -148,13 +160,18 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				traceutil.AnnotateError(span, err)
 			}
 		} else {
-			msg := reflect.New(t)
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
+			nTyp := reflect.New(t)
+			msg, ok := nTyp.Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				log.WithError(err).Debug("Could not decode stream message")
 				traceutil.AnnotateError(span, err)
 				return
 			}
-			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")

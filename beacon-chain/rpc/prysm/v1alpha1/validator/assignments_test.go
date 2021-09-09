@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -41,7 +41,7 @@ func TestGetDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -98,12 +98,11 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	params.UseMainnetConfig()
-	defer params.UseMinimalConfig()
-
-	bc := params.BeaconConfig()
-	bc.AltairForkEpoch = types.Epoch(0)
-	params.OverrideBeaconConfig(bc)
+	cfg := params.BeaconConfig().Copy()
+	cfg.AltairForkEpoch = types.Epoch(0)
+	params.OverrideBeaconConfig(cfg)
 
 	genesis := testutil.NewBeaconBlock()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
@@ -221,7 +220,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bState, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bState, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bState.SetSlot(5))
@@ -262,7 +261,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -322,7 +321,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -379,7 +378,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -484,7 +483,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	require.NoError(b, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(b, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(b, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(b, err, "Could not get signing root")

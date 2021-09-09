@@ -8,12 +8,12 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	core2 "github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -140,12 +140,12 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
-	if core2.SlotToEpoch(attSlot) > core2.SlotToEpoch(bs.Slot()) {
-		startSlot, err := core2.StartSlot(core2.SlotToEpoch(attSlot))
+	if core.SlotToEpoch(attSlot) > core.SlotToEpoch(bs.Slot()) {
+		startSlot, err := core.StartSlot(core.SlotToEpoch(attSlot))
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
-		bs, err = core.ProcessSlots(ctx, bs, startSlot)
+		bs, err = transition.ProcessSlots(ctx, bs, startSlot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
@@ -269,7 +269,7 @@ func validateSelectionIndex(
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof
-	epoch := core2.SlotToEpoch(data.Slot)
+	epoch := core.SlotToEpoch(data.Slot)
 
 	v, err := bs.ValidatorAtIndex(validatorIndex)
 	if err != nil {
@@ -307,7 +307,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 
-	epoch := core2.SlotToEpoch(a.Message.Aggregate.Data.Slot)
+	epoch := core.SlotToEpoch(a.Message.Aggregate.Data.Slot)
 	d, err := helpers.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err

@@ -1,11 +1,11 @@
-package state_test
+package transition_test
 
 import (
 	"context"
 	"sync"
 	"testing"
 
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -16,8 +16,8 @@ import (
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
-	core.SkipSlotCache.Enable()
-	defer core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Enable()
+	defer transition.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 	require.NoError(t, err)
@@ -31,11 +31,11 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	executedState, err := core.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
+	executedState, err := transition.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
 	originalState, ok := executedState.(*v1.BeaconState)
 	require.Equal(t, true, ok)
-	bState, err = core.ExecuteStateTransition(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
+	bState, err = transition.ExecuteStateTransition(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not process state transition")
 
 	assert.DeepEqual(t, originalState.CloneInnerState(), bState.CloneInnerState(), "Skipped slots cache leads to different states")
@@ -51,13 +51,13 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
 
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	executedState, err := core.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
+	executedState, err := transition.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
 	originalState, ok := executedState.(*v1.BeaconState)
 	require.Equal(t, true, ok)
@@ -71,7 +71,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
-		s1, err = core.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))
+		s1, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))
 		require.NoError(t, err, "Could not run state transition")
 	}
 
@@ -82,7 +82,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
-		s0, err = core.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))
+		s0, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))
 		require.NoError(t, err, "Could not run state transition")
 	}
 
@@ -111,24 +111,24 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	problemSlot := s1.Slot() + 2
-	expected1, err := core.ProcessSlots(context.Background(), s1.Copy(), problemSlot)
+	expected1, err := transition.ProcessSlots(context.Background(), s1.Copy(), problemSlot)
 	require.NoError(t, err)
 	expectedRoot1, err := expected1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1[:], problemSlot)
 
-	tmp1, err := core.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
+	tmp1, err := transition.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot := tmp1.StateRoots()[problemSlot]
 	require.DeepEqual(t, expectedRoot1[:], gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
 
-	expected2, err := core.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
+	expected2, err := transition.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
 	require.NoError(t, err)
 	expectedRoot2, err := expected2.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2[:], problemSlot)
 
-	tmp2, err := core.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
+	tmp2, err := transition.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot = tmp2.StateRoots()[problemSlot]
 	require.DeepEqual(t, expectedRoot2[:], gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
@@ -138,7 +138,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 
 	step := func(i int, setup state.BeaconState) {
 		// go at least 1 past problemSlot, to ensure problem slot state root is available
-		outState, err := core.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
+		outState, err := transition.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
 		require.NoError(t, err, "Could not process state transition")
 		roots := outState.StateRoots()
 		gotRoot := roots[problemSlot]
@@ -150,7 +150,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		wg.Done()
 	}
 
-	core.SkipSlotCache.Enable()
+	transition.SkipSlotCache.Enable()
 	// now concurrently apply the blocks (alternating between states, and increasing skip slots)
 	for i, setup := range setups {
 		go step(i, setup)

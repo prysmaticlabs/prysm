@@ -12,7 +12,7 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
@@ -40,8 +40,8 @@ type batchBlockReceiverFn func(ctx context.Context, blks []block.SignedBeaconBlo
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	state.SkipSlotCache.Disable()
-	defer state.SkipSlotCache.Enable()
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
 
