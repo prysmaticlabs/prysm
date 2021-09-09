@@ -1312,3 +1312,116 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	assert.Equal(t, true, aggregationBits.BitAt(0))
 	assert.DeepEqual(t, sig, resp.Data.Signature)
 }
+
+func TestSubmitContributionAndProofs(t *testing.T) {
+	ctx := context.Background()
+	sig := bls.NewAggregateSignature().Marshal()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	proof := bytesutil.PadTo([]byte("proof"), 96)
+	aggBits := bitfield.NewBitvector128()
+	aggBits.SetBitAt(0, true)
+	v1Server := &v1alpha1validator.Server{
+		P2P: &p2pmock.MockBroadcaster{},
+	}
+	server := &Server{
+		V1Alpha1Server: v1Server,
+	}
+
+	t.Run("Single contribution", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
+		req := &ethpbv2.SubmitContributionAndProofsRequest{
+			Data: []*ethpbv2.SignedContributionAndProof{
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 0,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              0,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 0,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := server.SubmitContributionAndProofs(ctx, req)
+		require.NoError(t, err)
+		savedMsgs, err := v1Server.SyncCommitteePool.SyncCommitteeContributions(0)
+		require.NoError(t, err)
+		expectedContribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              req.Data[0].Message.Contribution.Slot,
+			BlockRoot:         req.Data[0].Message.Contribution.BeaconBlockRoot,
+			SubcommitteeIndex: req.Data[0].Message.Contribution.SubcommitteeIndex,
+			AggregationBits:   req.Data[0].Message.Contribution.AggregationBits,
+			Signature:         req.Data[0].Message.Contribution.Signature,
+		}
+		require.DeepEqual(t, []*ethpbalpha.SyncCommitteeContribution{expectedContribution}, savedMsgs)
+	})
+
+	t.Run("Multiple contributions", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
+		req := &ethpbv2.SubmitContributionAndProofsRequest{
+			Data: []*ethpbv2.SignedContributionAndProof{
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 0,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              0,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 0,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              1,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 1,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := server.SubmitContributionAndProofs(ctx, req)
+		require.NoError(t, err)
+		savedMsgs, err := v1Server.SyncCommitteePool.SyncCommitteeContributions(0)
+		require.NoError(t, err)
+		expectedContributions := []*ethpbalpha.SyncCommitteeContribution{
+			{
+				Slot:              req.Data[0].Message.Contribution.Slot,
+				BlockRoot:         req.Data[0].Message.Contribution.BeaconBlockRoot,
+				SubcommitteeIndex: req.Data[0].Message.Contribution.SubcommitteeIndex,
+				AggregationBits:   req.Data[0].Message.Contribution.AggregationBits,
+				Signature:         req.Data[0].Message.Contribution.Signature,
+			},
+		}
+		require.DeepEqual(t, expectedContributions, savedMsgs)
+		savedMsgs, err = v1Server.SyncCommitteePool.SyncCommitteeContributions(1)
+		require.NoError(t, err)
+		expectedContributions = []*ethpbalpha.SyncCommitteeContribution{
+			{
+				Slot:              req.Data[1].Message.Contribution.Slot,
+				BlockRoot:         req.Data[1].Message.Contribution.BeaconBlockRoot,
+				SubcommitteeIndex: req.Data[1].Message.Contribution.SubcommitteeIndex,
+				AggregationBits:   req.Data[1].Message.Contribution.AggregationBits,
+				Signature:         req.Data[1].Message.Contribution.Signature,
+			},
+		}
+		require.DeepEqual(t, expectedContributions, savedMsgs)
+	})
+}
