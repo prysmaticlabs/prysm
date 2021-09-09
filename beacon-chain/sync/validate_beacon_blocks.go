@@ -15,9 +15,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -55,12 +53,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.validateBlockLock.Lock()
 	defer s.validateBlockLock.Unlock()
 
-	rblk, ok := m.(*ethpb.SignedBeaconBlock)
+	blk, ok := m.(block.SignedBeaconBlock)
 	if !ok {
 		log.WithError(errors.New("msg is not ethpb.SignedBeaconBlock")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
-	blk := wrapper.WrappedPhase0SignedBeaconBlock(rblk)
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		log.WithError(errors.New("block.Block is nil")).Debug("Rejected block")
@@ -145,7 +142,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) && !s.cfg.Chain.HasInitSyncBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -158,12 +155,14 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Rejected block")
+		log.WithError(err).WithFields(logrus.Fields{
+			"blockSlot": blk.Block().Slot(),
+			"blockRoot": fmt.Sprintf("%#x", blockRoot)}).Warn("Rejected block")
 		return pubsub.ValidationReject
 	}
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
-	msg.ValidatorData = rblk // Used in downstream subscriber
+	msg.ValidatorData = blk.Proto() // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
 	startTime, err := core.SlotToTime(genesisTime, blk.Block().Slot())
@@ -199,7 +198,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		return err
 	}
 
-	if err := blocks.VerifyBlockSignature(parentState, blk.Block().ProposerIndex(), blk.Signature(), blk.Block().HashTreeRoot); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
