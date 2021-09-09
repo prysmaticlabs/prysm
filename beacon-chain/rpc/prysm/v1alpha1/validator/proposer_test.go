@@ -2167,7 +2167,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	phase0Blk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Phase0)
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, req.Slot, phase0Blk.Phase0.Slot, "Expected block to have slot of 1")
+	assert.Equal(t, req.Slot, phase0Blk.Phase0.Slot)
 	assert.DeepEqual(t, parentRoot[:], phase0Blk.Phase0.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, phase0Blk.Phase0.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, phase0Blk.Phase0.Body.Graffiti, "Expected block to have correct Graffiti")
@@ -2280,7 +2280,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	altairBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Altair)
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, req.Slot, altairBlk.Altair.Slot, "Expected block to have slot of 1")
+	assert.Equal(t, req.Slot, altairBlk.Altair.Slot)
 	assert.DeepEqual(t, parentRoot[:], altairBlk.Altair.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, altairBlk.Altair.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, altairBlk.Altair.Body.Graffiti, "Expected block to have correct Graffiti")

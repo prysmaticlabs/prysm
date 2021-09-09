@@ -77,13 +77,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if core.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
 	}
 	blk, err := vs.getAltairBeaconBlock(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 	}
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 }
@@ -101,9 +101,11 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 }
 
 func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	blkData, err := vs.buildBlockData(ctx, req)
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getAltairBeaconBlock")
+	defer span.End()
+	blkData, err := vs.buildPhase0BlockData(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
+		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -140,22 +142,21 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	if err != nil {
 		return nil, err
 	}
-	stateRoot, err = vs.ComputeStateRoot(
-		ctx,
-		wsb,
-	)
+	stateRoot, err = vs.ComputeStateRoot(ctx, wsb)
 	if err != nil {
 		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
 	return blk, nil
 }
 
 func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
-	blkData, err := vs.buildBlockData(ctx, req)
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPhase0BeaconBlock")
+	defer span.End()
+	blkData, err := vs.buildPhase0BlockData(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not build block data: %v", err)
+		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -186,59 +187,59 @@ func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	)
 	if err != nil {
 		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
 	return blk, nil
 }
 
 // Build data required for creating a new beacon block, so this method can be shared across forks.
-func (vs *Server) buildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildBlockData")
+func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildPhase0BlockData")
 	defer span.End()
 
 	if vs.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+		return nil, fmt.Errorf("could not retrieve head root: %v", err)
 	}
 
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
+		return nil, fmt.Errorf("could not get head state %v", err)
 	}
 
 	if featureconfig.Get().EnableNextSlotStateCache {
 		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
+			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 		}
 	} else {
 		head, err = transition.ProcessSlots(ctx, head, req.Slot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+			return nil, fmt.Errorf("could not advance slot to calculate proposer index: %v", err)
 		}
 	}
 
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
+		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
 	// Pack ETH1 deposits which have not been included in the beacon chain.
 	deposits, err := vs.deposits(ctx, head, eth1Data)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+		return nil, fmt.Errorf("could not get ETH1 deposits: %v", err)
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts, err := vs.packAttestations(ctx, head)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+		return nil, fmt.Errorf("could not get attestations to pack into block: %v", err)
 	}
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
@@ -246,7 +247,7 @@ func (vs *Server) buildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 	// Calculate new proposer index.
 	idx, err := helpers.BeaconProposerIndex(head)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
+		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
 
 	return &blockData{
@@ -265,6 +266,8 @@ func (vs *Server) buildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
+	defer span.End()
 	var blk block.SignedBeaconBlock
 	var err error
 	switch b := req.Block.(type) {
@@ -286,14 +289,18 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 //
 // DEPRECATED: Use ProposeBeaconBlock instead.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBlock")
+	defer span.End()
 	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
+	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
+		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
@@ -308,14 +315,14 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.Signe
 
 	// Broadcast the new block to the network.
 	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
 
 	return &ethpb.ProposeResponse{
@@ -336,7 +343,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	}
 	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
 
-	// Each sync subcommittee is 128 bits and the sync committee is 512 bits(mainnet).
+	// Each sync subcommittee is 128 bits and the sync committee is 512 bits for mainnet.
 	bitsHolder := [][]byte{}
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 		bitsHolder = append(bitsHolder, ethpb.NewSyncCommitteeAggregationBits())
