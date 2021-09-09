@@ -543,6 +543,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
 				}
+				assert.Equal(t, ethpbv2.Version_PHASE0, blk.Version)
 			})
 		}
 	})
@@ -659,6 +660,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")
 				}
+				assert.Equal(t, ethpbv2.Version_ALTAIR, blk.Version)
 			})
 		}
 	})
