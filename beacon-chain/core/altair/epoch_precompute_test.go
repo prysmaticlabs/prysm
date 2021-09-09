@@ -205,26 +205,6 @@ func TestAttestationsDelta(t *testing.T) {
 	require.Equal(t, uint64(0), penalties[len(penalties)-1])
 }
 
-func TestAttestationsDelta_GenesisEpoch(t *testing.T) {
-	s, err := testState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(params.BeaconConfig().GenesisSlot))
-	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
-	require.NoError(t, err)
-	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
-	require.NoError(t, err)
-	rewards, penalties, err := AttestationsDelta(s, balance, validators)
-	require.NoError(t, err)
-
-	for i := 1; i < len(rewards); i++ {
-		require.Equal(t, true, rewards[i] == rewards[i-1])
-	}
-
-	for i := 1; i < len(penalties); i++ {
-		require.Equal(t, true, penalties[i] == penalties[i-1])
-	}
-}
-
 func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)

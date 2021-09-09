@@ -221,10 +221,6 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	penalties = make([]uint64, numOfVals)
 
 	cfg := params.BeaconConfig()
-	if core.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
-		return rewards, penalties, nil
-	}
-
 	prevEpoch := core.PrevEpoch(beaconState)
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	increment := cfg.EffectiveBalanceIncrement
