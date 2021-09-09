@@ -9,6 +9,7 @@ proto_library(
     name = "proto",
     srcs = [
         "beacon_block.proto",
+        "version.proto",
         ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
