@@ -29,7 +29,7 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 
 func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, err := altair.InitializeEpochValidators(ctx, st)
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, st)
 	require.NoError(t, err)
 	vp, bp, err = altair.ProcessEpochParticipation(ctx, st, bp, vp)
 	require.NoError(t, err)

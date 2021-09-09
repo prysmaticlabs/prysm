@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
@@ -39,7 +40,7 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 			return nil, err
 		}
 		if err := helpers.UpdateSyncCommitteeCache(beaconState); err != nil {
-			return nil, err
+			log.Errorf("Could not update sync committee cache: %v", err)
 		}
 	}
 	return beaconState, nil
@@ -97,7 +98,7 @@ func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
 		totalSlashing += slashing
 	}
 
-	// a callback is used here to apply the following actions  to all validators
+	// a callback is used here to apply the following actions to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplierAltair, totalBalance)

@@ -29,7 +29,7 @@ func RunInactivityUpdatesTest(t *testing.T, config string) {
 
 func processInactivityUpdates(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, err := altair.InitializeEpochValidators(ctx, st)
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, st)
 	require.NoError(t, err)
 	vp, _, err = altair.ProcessEpochParticipation(ctx, st, bp, vp)
 	require.NoError(t, err)

@@ -28,7 +28,7 @@ func RunJustificationAndFinalizationTests(t *testing.T, config string) {
 
 func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, err := altair.InitializeEpochValidators(ctx, st)
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, st)
 	require.NoError(t, err)
 	_, bp, err = altair.ProcessEpochParticipation(ctx, st, bp, vp)
 	require.NoError(t, err)
