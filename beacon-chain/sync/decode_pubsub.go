@@ -8,6 +8,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -20,15 +21,19 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errNilPubsubMessage
 	}
 	topic := *msg.Topic
+	fDigest, err := p2p.ExtractGossipDigest(topic)
+	if err != nil {
+		return nil, errors.Wrapf(err, "extraction failed for topic: %s", topic)
+	}
 	topic = strings.TrimSuffix(topic, s.cfg.P2P.Encoding().ProtocolSuffix())
-	topic, err := s.replaceForkDigest(topic)
+	topic, err = s.replaceForkDigest(topic)
 	if err != nil {
 		return nil, err
 	}
 	// Specially handle subnet messages.
 	switch {
 	case strings.Contains(topic, p2p.GossipAttestationMessage):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
+		topic = p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
 		// Given that both sync message related subnets have the same message name, we have to
 		// differentiate them below.
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
@@ -42,6 +47,13 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	m, ok := proto.Clone(base).(ssz.Unmarshaler)
 	if !ok {
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
+	}
+	// Handle different message types across forks.
+	if topic == p2p.BlockSubnetTopicFormat {
+		m, err = extractBlockDataType(fDigest[:], s.cfg.Chain)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := s.cfg.P2P.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
