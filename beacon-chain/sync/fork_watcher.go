@@ -16,6 +16,9 @@ func (s *Service) forkWatcher() {
 	slotTicker := slotutil.NewSlotTicker(s.cfg.Chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
+		// In the event of a node restart, we will still end up subscribing to the correct
+		// topics during/after the fork epoch. This routine is to ensure correct
+		// subscriptions for nodes running before a fork epoch.
 		case currSlot := <-slotTicker.C():
 			currEpoch := core.SlotToEpoch(currSlot)
 			if err := s.checkForNextEpochFork(currEpoch); err != nil {
