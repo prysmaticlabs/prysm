@@ -45,6 +45,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 1)
@@ -58,6 +59,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
 }
 

@@ -69,6 +69,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
 		return &ethpbv2.BeaconStateResponseV2{
+			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoState},
 			},
@@ -83,6 +84,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
 		return &ethpbv2.BeaconStateResponseV2{
+			Version: ethpbv2.Version_ALTAIR,
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
