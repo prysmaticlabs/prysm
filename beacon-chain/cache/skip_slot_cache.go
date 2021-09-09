@@ -26,7 +26,7 @@ var (
 	})
 )
 
-// SkipSlotCache is used to store the cached results of processing skip slots in state.ProcessSlots.
+// SkipSlotCache is used to store the cached results of processing skip slots in transition.ProcessSlots.
 type SkipSlotCache struct {
 	cache      *lru.Cache
 	lock       sync.RWMutex

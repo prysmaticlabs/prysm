@@ -10,7 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/pcli",
     visibility = ["//visibility:private"],
     deps = [
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",

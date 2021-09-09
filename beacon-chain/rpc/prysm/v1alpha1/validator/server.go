@@ -25,8 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,7 +44,7 @@ type Server struct {
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	CanonicalStateChan     chan *statepb.BeaconState
+	CanonicalStateChan     chan *ethpb.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
@@ -63,14 +63,6 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
-}
-
-func (vs *Server) GetBlockAltair(ctx context.Context, request *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
-}
-
-func (vs *Server) ProposeBlockAltair(ctx context.Context, altair *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -132,7 +124,10 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	fork := vs.ForkFetcher.CurrentFork()
+	fork, err := p2putils.Fork(request.Epoch)
+	if err != nil {
+		return nil, err
+	}
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {

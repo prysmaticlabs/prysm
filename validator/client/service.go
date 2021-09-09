@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -173,7 +174,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	v.validator = &validator{
+	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
@@ -197,6 +198,17 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
+	// To resolve a race condition at startup due to the interface
+	// nature of the abstracted block type. We initialize
+	// the inner type of the feed before hand. So that
+	// during future accesses, there will be no panics here
+	// from type incompatibility.
+	tempChan := make(chan block.SignedBeaconBlock)
+	sub := valStruct.blockFeed.Subscribe(tempChan)
+	sub.Unsubscribe()
+	close(tempChan)
+
+	v.validator = valStruct
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
 }

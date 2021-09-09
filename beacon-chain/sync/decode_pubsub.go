@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 
+	ssz "github.com/ferranbt/fastssz"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -14,7 +15,7 @@ import (
 var errNilPubsubMessage = errors.New("nil pubsub message")
 var errInvalidTopic = errors.New("invalid topic format")
 
-func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error) {
+func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, error) {
 	if msg == nil || msg.Topic == nil || *msg.Topic == "" {
 		return nil, errNilPubsubMessage
 	}
@@ -33,11 +34,15 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	}
+
 	base := p2p.GossipTopicMappings(topic, 0)
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
-	m := proto.Clone(base)
+	m, ok := proto.Clone(base).(ssz.Unmarshaler)
+	if !ok {
+		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
+	}
 	if err := s.cfg.P2P.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}
