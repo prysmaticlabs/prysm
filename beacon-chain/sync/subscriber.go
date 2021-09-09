@@ -464,7 +464,7 @@ func (s *Service) subscribeSyncSubnet(
 	}
 }
 
-// subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
+// subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()

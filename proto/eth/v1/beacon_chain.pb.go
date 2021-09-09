@@ -12,11 +12,11 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -1847,9 +1847,9 @@ type GenesisResponse_Genesis struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	GenesisTime           *timestamp.Timestamp `protobuf:"bytes,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	GenesisValidatorsRoot []byte               `protobuf:"bytes,2,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
-	GenesisForkVersion    []byte               `protobuf:"bytes,3,opt,name=genesis_fork_version,json=genesisForkVersion,proto3" json:"genesis_fork_version,omitempty" ssz-size:"4"`
+	GenesisTime           *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	GenesisValidatorsRoot []byte                 `protobuf:"bytes,2,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
+	GenesisForkVersion    []byte                 `protobuf:"bytes,3,opt,name=genesis_fork_version,json=genesisForkVersion,proto3" json:"genesis_fork_version,omitempty" ssz-size:"4"`
 }
 
 func (x *GenesisResponse_Genesis) Reset() {
@@ -1884,7 +1884,7 @@ func (*GenesisResponse_Genesis) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v1_beacon_chain_proto_rawDescGZIP(), []int{0, 0}
 }
 
-func (x *GenesisResponse_Genesis) GetGenesisTime() *timestamp.Timestamp {
+func (x *GenesisResponse_Genesis) GetGenesisTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.GenesisTime
 	}
@@ -2351,19 +2351,19 @@ var file_proto_eth_v1_beacon_chain_proto_goTypes = []interface{}{
 	(*GenesisResponse_Genesis)(nil),                                 // 36: ethereum.eth.v1.GenesisResponse.Genesis
 	(*StateRootResponse_StateRoot)(nil),                             // 37: ethereum.eth.v1.StateRootResponse.StateRoot
 	(*StateFinalityCheckpointResponse_StateFinalityCheckpoint)(nil), // 38: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
-	nil,                         // 39: ethereum.eth.v1.SpecResponse.DataEntry
-	(*Fork)(nil),                // 40: ethereum.eth.v1.Fork
-	(ValidatorStatus)(0),        // 41: ethereum.eth.v1.ValidatorStatus
-	(*ValidatorContainer)(nil),  // 42: ethereum.eth.v1.ValidatorContainer
-	(*Committee)(nil),           // 43: ethereum.eth.v1.Committee
-	(*Attestation)(nil),         // 44: ethereum.eth.v1.Attestation
-	(*BeaconBlockHeader)(nil),   // 45: ethereum.eth.v1.BeaconBlockHeader
-	(*BeaconBlock)(nil),         // 46: ethereum.eth.v1.BeaconBlock
-	(*AttesterSlashing)(nil),    // 47: ethereum.eth.v1.AttesterSlashing
-	(*ProposerSlashing)(nil),    // 48: ethereum.eth.v1.ProposerSlashing
-	(*SignedVoluntaryExit)(nil), // 49: ethereum.eth.v1.SignedVoluntaryExit
-	(*timestamp.Timestamp)(nil), // 50: google.protobuf.Timestamp
-	(*Checkpoint)(nil),          // 51: ethereum.eth.v1.Checkpoint
+	nil,                           // 39: ethereum.eth.v1.SpecResponse.DataEntry
+	(*Fork)(nil),                  // 40: ethereum.eth.v1.Fork
+	(ValidatorStatus)(0),          // 41: ethereum.eth.v1.ValidatorStatus
+	(*ValidatorContainer)(nil),    // 42: ethereum.eth.v1.ValidatorContainer
+	(*Committee)(nil),             // 43: ethereum.eth.v1.Committee
+	(*Attestation)(nil),           // 44: ethereum.eth.v1.Attestation
+	(*BeaconBlockHeader)(nil),     // 45: ethereum.eth.v1.BeaconBlockHeader
+	(*BeaconBlock)(nil),           // 46: ethereum.eth.v1.BeaconBlock
+	(*AttesterSlashing)(nil),      // 47: ethereum.eth.v1.AttesterSlashing
+	(*ProposerSlashing)(nil),      // 48: ethereum.eth.v1.ProposerSlashing
+	(*SignedVoluntaryExit)(nil),   // 49: ethereum.eth.v1.SignedVoluntaryExit
+	(*timestamppb.Timestamp)(nil), // 50: google.protobuf.Timestamp
+	(*Checkpoint)(nil),            // 51: ethereum.eth.v1.Checkpoint
 }
 var file_proto_eth_v1_beacon_chain_proto_depIdxs = []int32{
 	36, // 0: ethereum.eth.v1.GenesisResponse.data:type_name -> ethereum.eth.v1.GenesisResponse.Genesis

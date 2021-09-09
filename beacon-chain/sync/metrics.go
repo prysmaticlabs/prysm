@@ -24,7 +24,7 @@ var (
 	)
 	subscribedTopicPeerCount = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "p2p_subscribed_topic_peer_count",
+			Name: "p2p_subscribed_topic_peer_total",
 			Help: "The number of peers subscribed to topics that a host node is also subscribed to.",
 		}, []string{"topic"},
 	)

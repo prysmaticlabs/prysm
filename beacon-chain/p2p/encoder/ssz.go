@@ -33,16 +33,12 @@ type SszNetworkEncoder struct{}
 // ProtocolSuffixSSZSnappy is the last part of the topic string to identify the encoding protocol.
 const ProtocolSuffixSSZSnappy = "ssz_snappy"
 
-func (e SszNetworkEncoder) doEncode(msg fastssz.Marshaler) ([]byte, error) {
-	return msg.MarshalSSZ()
-}
-
 // EncodeGossip the proto gossip message to the io.Writer.
 func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
-	b, err := e.doEncode(msg)
+	b, err := msg.MarshalSSZ()
 	if err != nil {
 		return 0, err
 	}
@@ -59,7 +55,7 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshale
 	if msg == nil {
 		return 0, nil
 	}
-	b, err := e.doEncode(msg)
+	b, err := msg.MarshalSSZ()
 	if err != nil {
 		return 0, err
 	}
