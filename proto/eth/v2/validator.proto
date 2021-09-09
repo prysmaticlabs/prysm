@@ -107,7 +107,7 @@ message SyncCommitteeContribution {
 
   // A bit is set if a signature from the validator at the corresponding
   // index in the subcommittee is present in the aggregate `signature`.
-  bytes aggregation_bits = 4 [(ethereum.eth.ext.ssz_size) = "sync_committee_aggregate_bytes.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector128"];
+  bytes aggregation_bits = 4 [(ethereum.eth.ext.ssz_size) = "sync_committee_aggregate_bytes.size", (ethereum.eth.ext.cast_type) = "sync_committee_aggregate_bits.type"];
 
   // Signature by the validator(s) over the block root of `slot`.
   bytes signature = 5 [(ethereum.eth.ext.ssz_size) = "96"];
