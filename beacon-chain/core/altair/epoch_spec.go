@@ -3,13 +3,9 @@ package altair
 import (
 	"context"
 
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -65,53 +61,3 @@ func ProcessParticipationFlagUpdates(beaconState state.BeaconStateAltair) (state
 	return beaconState, nil
 }
 
-// ProcessSlashings processes the slashed validators during epoch processing,
-// The function is modified to use PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR.
-//
-// Spec code:
-//  def process_slashings(state: BeaconState) -> None:
-//    epoch = get_current_epoch(state)
-//    total_balance = get_total_active_balance(state)
-//    adjusted_total_slashing_balance = min(sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR, total_balance)
-//    for index, validator in enumerate(state.validators):
-//        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
-//            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
-//            penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
-//            penalty = penalty_numerator // total_balance * increment
-//            decrease_balance(state, ValidatorIndex(index), penalty)
-//            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
-	currentEpoch := core.CurrentEpoch(state)
-	totalBalance, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get total active balance")
-	}
-
-	// Compute slashed balances in the current epoch
-	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
-
-	// Compute the sum of state slashings
-	slashings := state.Slashings()
-	totalSlashing := uint64(0)
-	for _, slashing := range slashings {
-		totalSlashing += slashing
-	}
-
-	// a callback is used here to apply the following actions  to all validators
-	// below equally.
-	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplierAltair, totalBalance)
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
-		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
-		if val.Slashed && correctEpoch {
-			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
-			penalty := penaltyNumerator / totalBalance * increment
-			if err := helpers.DecreaseBalance(state, types.ValidatorIndex(idx), penalty); err != nil {
-				return false, val, err
-			}
-			return true, val, nil
-		}
-		return false, val, nil
-	})
-	return state, err
-}
