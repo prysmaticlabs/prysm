@@ -204,3 +204,28 @@ func TestPrepareGraffiti(t *testing.T) {
 		)
 	})
 }
+
+func TestPrepareValidatorAggregates(t *testing.T) {
+	body := &tempSyncCommitteesResponseJson{
+		Data: &tempSyncCommitteeValidatorsJson{
+			Validators: []string{"1", "2"},
+			ValidatorAggregates: []*tempSyncSubcommitteeValidatorsJson{
+				{
+					Validators: []string{"3", "4"},
+				},
+				{
+					Validators: []string{"5"},
+				},
+			},
+		},
+	}
+	bodyJson, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	container := &syncCommitteesResponseJson{}
+	handled, errJson := prepareValidatorAggregates(bodyJson, container)
+	require.Equal(t, nil, errJson)
+	require.Equal(t, true, handled)
+	assert.DeepEqual(t, []string{"1", "2"}, container.Data.Validators)
+	require.DeepEqual(t, [][]string{{"3", "4"}, {"5"}}, container.Data.ValidatorAggregates)
+}
