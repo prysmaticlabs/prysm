@@ -517,8 +517,34 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	}, nil
 }
 
-func (vs *Server) SubmitContributionAndProofs(ctx context.Context, request *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
-	panic("implement me")
+// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
+func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitContributionAndProofs")
+	defer span.End()
+
+	for _, item := range req.Data {
+		v1alpha1Req := &ethpbalpha.SignedContributionAndProof{
+			Message: &ethpbalpha.ContributionAndProof{
+				AggregatorIndex: item.Message.AggregatorIndex,
+				Contribution: &ethpbalpha.SyncCommitteeContribution{
+					Slot:              item.Message.Contribution.Slot,
+					BlockRoot:         item.Message.Contribution.BeaconBlockRoot,
+					SubcommitteeIndex: item.Message.Contribution.SubcommitteeIndex,
+					AggregationBits:   item.Message.Contribution.AggregationBits,
+					Signature:         item.Message.Contribution.Signature,
+				},
+				SelectionProof: item.Message.SelectionProof,
+			},
+			Signature: item.Signature,
+		}
+		_, err := vs.V1Alpha1Server.SubmitSignedContributionAndProof(ctx, v1alpha1Req)
+		// We simply return err because it's already of a gRPC error type.
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &empty.Empty{}, nil
 }
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
