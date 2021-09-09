@@ -14,6 +14,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -489,6 +490,164 @@ func TestFilterSubnetPeers(t *testing.T) {
 
 	recPeers = r.filterNeededPeers(wantedPeers)
 	assert.DeepEqual(t, 1, len(recPeers), "expected at least 1 suitable peer to prune")
+
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	slot := r.cfg.Chain.CurrentSlot()
+	currEpoch := core.SlotToEpoch(slot)
+	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), currEpoch, []uint64{0, 1}, 10*time.Second)
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 2, len(r.cfg.P2P.PubSub().GetTopics()))
+	topicMap := map[string]bool{}
+	for _, t := range r.cfg.P2P.PubSub().GetTopics() {
+		topicMap[t] = true
+	}
+	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[firstSub])
+
+	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[secondSub])
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch = 1
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+	params.BeaconConfig().InitializeForkSchedule()
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now().Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch)*params.BeaconConfig().SecondsPerSlot) * time.Second),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	genRoot := r.cfg.Chain.GenesisValidatorRoot()
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
+
+	// Expect that all old topics will be unsubscribed.
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
+
+	cancel()
+}
+
+func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch = 1
+	cfg.SecondsPerSlot = 1
+	cfg.SlotsPerEpoch = 4
+	params.OverrideBeaconConfig(cfg)
+	params.BeaconConfig().InitializeForkSchedule()
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now().Add(-time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
+		},
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SyncSubnetIDs.EmptyAllCaches()
+	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
+	genRoot := r.cfg.Chain.GenesisValidatorRoot()
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	assert.NoError(t, err)
+
+	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 2, len(r.cfg.P2P.PubSub().GetTopics()))
+	topicMap := map[string]bool{}
+	for _, t := range r.cfg.P2P.PubSub().GetTopics() {
+		topicMap[t] = true
+	}
+	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[firstSub])
+
+	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	assert.Equal(t, true, topicMap[secondSub])
+
+	// Expect that all old topics will be unsubscribed.
+	time.Sleep(2 * time.Second)
+	assert.Equal(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
 
 	cancel()
 }
