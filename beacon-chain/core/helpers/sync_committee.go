@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -153,7 +154,7 @@ func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
 	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return errors.New("not at the end of the epoch to update cache")
 	}
-	if SlotToEpoch(nextSlot)%params.BeaconConfig().EpochsPerSyncCommitteePeriod != 0 {
+	if core.SlotToEpoch(nextSlot)%params.BeaconConfig().EpochsPerSyncCommitteePeriod != 0 {
 		return errors.New("not at sync committee period boundary to update cache")
 	}
 
@@ -190,11 +191,11 @@ func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([]byte, error) {
 		return params.BeaconConfig().ZeroHash[:], nil
 	}
 
-	startEpoch, err := SyncCommitteePeriodStartEpoch(CurrentEpoch(st))
+	startEpoch, err := core.SyncCommitteePeriodStartEpoch(core.CurrentEpoch(st))
 	if err != nil {
 		return nil, err
 	}
-	startEpochSlot, err := StartSlot(startEpoch)
+	startEpochSlot, err := core.StartSlot(startEpoch)
 	if err != nil {
 		return nil, err
 	}

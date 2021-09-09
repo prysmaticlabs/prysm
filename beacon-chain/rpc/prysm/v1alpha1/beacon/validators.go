@@ -7,10 +7,11 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -44,7 +45,7 @@ func (bs *Server) ListValidatorBalances(
 	if bs.GenesisTimeFetcher == nil {
 		return nil, status.Errorf(codes.Internal, "Nil genesis time fetcher")
 	}
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorBalancesRequest_Epoch:
@@ -64,7 +65,7 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[types.ValidatorIndex]bool{} // Track filtered validators to prevent duplication in the response.
 
-	startSlot, err := helpers.StartSlot(requestedEpoch)
+	startSlot, err := core.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func (bs *Server) ListValidators(
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
@@ -219,7 +220,7 @@ func (bs *Server) ListValidators(
 	var err error
 	if requestedEpoch != currentEpoch {
 		var s types.Slot
-		s, err = helpers.StartSlot(requestedEpoch)
+		s, err = core.StartSlot(requestedEpoch)
 		if err != nil {
 			return nil, err
 		}
@@ -234,13 +235,13 @@ func (bs *Server) ListValidators(
 		return nil, status.Error(codes.Internal, "Requested state is nil")
 	}
 
-	s, err := helpers.StartSlot(requestedEpoch)
+	s, err := core.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
 	if s > reqState.Slot() {
 		reqState = reqState.Copy()
-		reqState, err = core.ProcessSlots(ctx, reqState, s)
+		reqState, err = transition.ProcessSlots(ctx, reqState, s)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -391,7 +392,7 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -411,7 +412,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		)
 	}
 
-	s, err := helpers.StartSlot(requestedEpoch)
+	s, err := core.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -420,18 +421,18 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(requestedState, helpers.CurrentEpoch(requestedState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(requestedState, core.CurrentEpoch(requestedState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
 	vs := requestedState.Validators()
-	activatedIndices := validators.ActivatedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
-	exitedIndices, err := validators.ExitedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	activatedIndices := validators.ActivatedValidatorIndices(core.CurrentEpoch(requestedState), vs)
+	exitedIndices, err := validators.ExitedValidatorIndices(core.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 	}
-	slashedIndices := validators.SlashedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
-	ejectedIndices, err := validators.EjectedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	slashedIndices := validators.SlashedValidatorIndices(core.CurrentEpoch(requestedState), vs)
+	ejectedIndices, err := validators.EjectedValidatorIndices(core.CurrentEpoch(requestedState), vs, activeValidatorCount)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
 	}
@@ -477,7 +478,7 @@ func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -499,7 +500,7 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	// Get current slot state for current epoch attestations.
-	startSlot, err := helpers.StartSlot(requestedEpoch)
+	startSlot, err := core.StartSlot(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +603,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -635,7 +636,7 @@ func (bs *Server) GetValidatorQueue(
 	for _, valIdx := range awaitingExit {
 		val := vals[valIdx]
 		// Ensure the validator has not yet exited before adding its index to the exit queue.
-		if val.WithdrawableEpoch < minEpoch && !validatorHasExited(val, helpers.CurrentEpoch(headState)) {
+		if val.WithdrawableEpoch < minEpoch && !validatorHasExited(val, core.CurrentEpoch(headState)) {
 			exitQueueIndices = append(exitQueueIndices, valIdx)
 		}
 	}
@@ -674,7 +675,7 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
-		headState, err = core.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
+		headState, err = transition.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 		}
@@ -750,7 +751,7 @@ func (bs *Server) GetValidatorPerformance(
 		return validatorIndices[i] < validatorIndices[j]
 	})
 
-	currentEpoch := helpers.CurrentEpoch(headState)
+	currentEpoch := core.CurrentEpoch(headState)
 	responseCap = len(validatorIndices)
 	pubKeys := make([][]byte, 0, responseCap)
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
@@ -811,7 +812,7 @@ func (bs *Server) GetIndividualVotes(
 	ctx context.Context,
 	req *ethpb.IndividualVotesRequest,
 ) (*ethpb.IndividualVotesRespond, error) {
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -821,7 +822,7 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	s, err := helpers.StartSlot(req.Epoch)
+	s, err := core.StartSlot(req.Epoch)
 	if err != nil {
 		return nil, err
 	}

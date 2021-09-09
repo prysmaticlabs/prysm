@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/attestationutil:go_default_library",
@@ -46,12 +47,12 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/copyutil:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",

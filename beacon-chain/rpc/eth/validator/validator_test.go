@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -47,7 +47,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -103,7 +103,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 	t.Run("Next epoch", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: helpers.SlotToEpoch(bs.Slot()) + 1,
+			Epoch: core.SlotToEpoch(bs.Slot()) + 1,
 			Index: []types.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
@@ -124,7 +124,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -169,7 +169,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: currentEpoch + 2,
 			Index: []types.ValidatorIndex{0},
@@ -206,7 +206,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -255,7 +255,7 @@ func TestGetProposerDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -301,7 +301,7 @@ func TestGetProposerDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 1,
 		}
@@ -721,7 +721,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -1311,4 +1311,117 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	aggregationBits := resp.Data.AggregationBits
 	assert.Equal(t, true, aggregationBits.BitAt(0))
 	assert.DeepEqual(t, sig, resp.Data.Signature)
+}
+
+func TestSubmitContributionAndProofs(t *testing.T) {
+	ctx := context.Background()
+	sig := bls.NewAggregateSignature().Marshal()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	proof := bytesutil.PadTo([]byte("proof"), 96)
+	aggBits := bitfield.NewBitvector128()
+	aggBits.SetBitAt(0, true)
+	v1Server := &v1alpha1validator.Server{
+		P2P: &p2pmock.MockBroadcaster{},
+	}
+	server := &Server{
+		V1Alpha1Server: v1Server,
+	}
+
+	t.Run("Single contribution", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
+		req := &ethpbv2.SubmitContributionAndProofsRequest{
+			Data: []*ethpbv2.SignedContributionAndProof{
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 0,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              0,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 0,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := server.SubmitContributionAndProofs(ctx, req)
+		require.NoError(t, err)
+		savedMsgs, err := v1Server.SyncCommitteePool.SyncCommitteeContributions(0)
+		require.NoError(t, err)
+		expectedContribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              req.Data[0].Message.Contribution.Slot,
+			BlockRoot:         req.Data[0].Message.Contribution.BeaconBlockRoot,
+			SubcommitteeIndex: req.Data[0].Message.Contribution.SubcommitteeIndex,
+			AggregationBits:   req.Data[0].Message.Contribution.AggregationBits,
+			Signature:         req.Data[0].Message.Contribution.Signature,
+		}
+		require.DeepEqual(t, []*ethpbalpha.SyncCommitteeContribution{expectedContribution}, savedMsgs)
+	})
+
+	t.Run("Multiple contributions", func(t *testing.T) {
+		v1Server.SyncCommitteePool = synccommittee.NewStore()
+		req := &ethpbv2.SubmitContributionAndProofsRequest{
+			Data: []*ethpbv2.SignedContributionAndProof{
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 0,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              0,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 0,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+				{
+					Message: &ethpbv2.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &ethpbv2.SyncCommitteeContribution{
+							Slot:              1,
+							BeaconBlockRoot:   root,
+							SubcommitteeIndex: 1,
+							AggregationBits:   aggBits,
+							Signature:         sig,
+						},
+						SelectionProof: proof,
+					},
+					Signature: sig,
+				},
+			},
+		}
+
+		_, err := server.SubmitContributionAndProofs(ctx, req)
+		require.NoError(t, err)
+		savedMsgs, err := v1Server.SyncCommitteePool.SyncCommitteeContributions(0)
+		require.NoError(t, err)
+		expectedContributions := []*ethpbalpha.SyncCommitteeContribution{
+			{
+				Slot:              req.Data[0].Message.Contribution.Slot,
+				BlockRoot:         req.Data[0].Message.Contribution.BeaconBlockRoot,
+				SubcommitteeIndex: req.Data[0].Message.Contribution.SubcommitteeIndex,
+				AggregationBits:   req.Data[0].Message.Contribution.AggregationBits,
+				Signature:         req.Data[0].Message.Contribution.Signature,
+			},
+		}
+		require.DeepEqual(t, expectedContributions, savedMsgs)
+		savedMsgs, err = v1Server.SyncCommitteePool.SyncCommitteeContributions(1)
+		require.NoError(t, err)
+		expectedContributions = []*ethpbalpha.SyncCommitteeContribution{
+			{
+				Slot:              req.Data[1].Message.Contribution.Slot,
+				BlockRoot:         req.Data[1].Message.Contribution.BeaconBlockRoot,
+				SubcommitteeIndex: req.Data[1].Message.Contribution.SubcommitteeIndex,
+				AggregationBits:   req.Data[1].Message.Contribution.AggregationBits,
+				Signature:         req.Data[1].Message.Contribution.Signature,
+			},
+		}
+		require.DeepEqual(t, expectedContributions, savedMsgs)
+	})
 }

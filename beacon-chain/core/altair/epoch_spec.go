@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,7 +22,7 @@ import (
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_next_sync_committee(state)
 func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
-	nextEpoch := helpers.NextEpoch(beaconState)
+	nextEpoch := core.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		nextSyncCommittee, err := beaconState.NextSyncCommittee()
 		if err != nil {
@@ -80,7 +81,7 @@ func ProcessParticipationFlagUpdates(beaconState state.BeaconStateAltair) (state
 //            decrease_balance(state, ValidatorIndex(index), penalty)
 //            decrease_balance(state, ValidatorIndex(index), penalty)
 func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
-	currentEpoch := helpers.CurrentEpoch(state)
+	currentEpoch := core.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get total active balance")

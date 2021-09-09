@@ -1,11 +1,10 @@
-package copyutil
+package eth
 
 import (
 	"math/rand"
 	"reflect"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -281,7 +280,7 @@ func TestCopySyncAggregate(t *testing.T) {
 func TestCopyPendingAttestationSlice(t *testing.T) {
 	tests := []struct {
 		name  string
-		input []*ethpb.PendingAttestation
+		input []*PendingAttestation
 	}{
 		{
 			name:  "nil",
@@ -289,11 +288,11 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 		},
 		{
 			name:  "empty",
-			input: []*ethpb.PendingAttestation{},
+			input: []*PendingAttestation{},
 		},
 		{
 			name: "correct copy",
-			input: []*ethpb.PendingAttestation{
+			input: []*PendingAttestation{
 				genPendingAttestation(),
 				genPendingAttestation(),
 			},
@@ -322,24 +321,24 @@ func bytes() []byte {
 	return b
 }
 
-func genAttestation() *ethpb.Attestation {
-	return &ethpb.Attestation{
+func genAttestation() *Attestation {
+	return &Attestation{
 		AggregationBits: bytes(),
 		Data:            genAttData(),
 		Signature:       bytes(),
 	}
 }
 
-func genAttestations(num int) []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, num)
+func genAttestations(num int) []*Attestation {
+	atts := make([]*Attestation, num)
 	for i := 0; i < num; i++ {
 		atts[i] = genAttestation()
 	}
 	return atts
 }
 
-func genAttData() *ethpb.AttestationData {
-	return &ethpb.AttestationData{
+func genAttData() *AttestationData {
+	return &AttestationData{
 		Slot:            1,
 		CommitteeIndex:  2,
 		BeaconBlockRoot: bytes(),
@@ -348,23 +347,23 @@ func genAttData() *ethpb.AttestationData {
 	}
 }
 
-func genCheckpoint() *ethpb.Checkpoint {
-	return &ethpb.Checkpoint{
+func genCheckpoint() *Checkpoint {
+	return &Checkpoint{
 		Epoch: 1,
 		Root:  bytes(),
 	}
 }
 
-func genEth1Data() *ethpb.Eth1Data {
-	return &ethpb.Eth1Data{
+func genEth1Data() *Eth1Data {
+	return &Eth1Data{
 		DepositRoot:  bytes(),
 		DepositCount: 4,
 		BlockHash:    bytes(),
 	}
 }
 
-func genPendingAttestation() *ethpb.PendingAttestation {
-	return &ethpb.PendingAttestation{
+func genPendingAttestation() *PendingAttestation {
+	return &PendingAttestation{
 		AggregationBits: bytes(),
 		Data:            genAttData(),
 		InclusionDelay:  3,
@@ -372,15 +371,15 @@ func genPendingAttestation() *ethpb.PendingAttestation {
 	}
 }
 
-func genSignedBeaconBlock() *ethpb.SignedBeaconBlock {
-	return &ethpb.SignedBeaconBlock{
+func genSignedBeaconBlock() *SignedBeaconBlock {
+	return &SignedBeaconBlock{
 		Block:     genBeaconBlock(),
 		Signature: bytes(),
 	}
 }
 
-func genBeaconBlock() *ethpb.BeaconBlock {
-	return &ethpb.BeaconBlock{
+func genBeaconBlock() *BeaconBlock {
+	return &BeaconBlock{
 		Slot:          4,
 		ProposerIndex: 5,
 		ParentRoot:    bytes(),
@@ -389,8 +388,8 @@ func genBeaconBlock() *ethpb.BeaconBlock {
 	}
 }
 
-func genBeaconBlockBody() *ethpb.BeaconBlockBody {
-	return &ethpb.BeaconBlockBody{
+func genBeaconBlockBody() *BeaconBlockBody {
+	return &BeaconBlockBody{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),
@@ -402,46 +401,46 @@ func genBeaconBlockBody() *ethpb.BeaconBlockBody {
 	}
 }
 
-func genProposerSlashing() *ethpb.ProposerSlashing {
-	return &ethpb.ProposerSlashing{
+func genProposerSlashing() *ProposerSlashing {
+	return &ProposerSlashing{
 		Header_1: genSignedBeaconBlockHeader(),
 		Header_2: genSignedBeaconBlockHeader(),
 	}
 }
 
-func genProposerSlashings(num int) []*ethpb.ProposerSlashing {
-	ps := make([]*ethpb.ProposerSlashing, num)
+func genProposerSlashings(num int) []*ProposerSlashing {
+	ps := make([]*ProposerSlashing, num)
 	for i := 0; i < num; i++ {
 		ps[i] = genProposerSlashing()
 	}
 	return ps
 }
 
-func genAttesterSlashing() *ethpb.AttesterSlashing {
-	return &ethpb.AttesterSlashing{
+func genAttesterSlashing() *AttesterSlashing {
+	return &AttesterSlashing{
 		Attestation_1: genIndexedAttestation(),
 		Attestation_2: genIndexedAttestation(),
 	}
 }
 
-func genIndexedAttestation() *ethpb.IndexedAttestation {
-	return &ethpb.IndexedAttestation{
+func genIndexedAttestation() *IndexedAttestation {
+	return &IndexedAttestation{
 		AttestingIndices: []uint64{1, 2, 3},
 		Data:             genAttData(),
 		Signature:        bytes(),
 	}
 }
 
-func genAttesterSlashings(num int) []*ethpb.AttesterSlashing {
-	as := make([]*ethpb.AttesterSlashing, num)
+func genAttesterSlashings(num int) []*AttesterSlashing {
+	as := make([]*AttesterSlashing, num)
 	for i := 0; i < num; i++ {
 		as[i] = genAttesterSlashing()
 	}
 	return as
 }
 
-func genBeaconBlockHeader() *ethpb.BeaconBlockHeader {
-	return &ethpb.BeaconBlockHeader{
+func genBeaconBlockHeader() *BeaconBlockHeader {
+	return &BeaconBlockHeader{
 		Slot:          10,
 		ProposerIndex: 15,
 		ParentRoot:    bytes(),
@@ -450,15 +449,15 @@ func genBeaconBlockHeader() *ethpb.BeaconBlockHeader {
 	}
 }
 
-func genSignedBeaconBlockHeader() *ethpb.SignedBeaconBlockHeader {
-	return &ethpb.SignedBeaconBlockHeader{
+func genSignedBeaconBlockHeader() *SignedBeaconBlockHeader {
+	return &SignedBeaconBlockHeader{
 		Header:    genBeaconBlockHeader(),
 		Signature: bytes(),
 	}
 }
 
-func genDepositData() *ethpb.Deposit_Data {
-	return &ethpb.Deposit_Data{
+func genDepositData() *Deposit_Data {
+	return &Deposit_Data{
 		PublicKey:             bytes(),
 		WithdrawalCredentials: bytes(),
 		Amount:                20000,
@@ -466,45 +465,45 @@ func genDepositData() *ethpb.Deposit_Data {
 	}
 }
 
-func genDeposit() *ethpb.Deposit {
-	return &ethpb.Deposit{
+func genDeposit() *Deposit {
+	return &Deposit{
 		Data:  genDepositData(),
 		Proof: [][]byte{bytes(), bytes(), bytes(), bytes()},
 	}
 }
 
-func genDeposits(num int) []*ethpb.Deposit {
-	d := make([]*ethpb.Deposit, num)
+func genDeposits(num int) []*Deposit {
+	d := make([]*Deposit, num)
 	for i := 0; i < num; i++ {
 		d[i] = genDeposit()
 	}
 	return d
 }
 
-func genVoluntaryExit() *ethpb.VoluntaryExit {
-	return &ethpb.VoluntaryExit{
+func genVoluntaryExit() *VoluntaryExit {
+	return &VoluntaryExit{
 		Epoch:          5432,
 		ValidatorIndex: 888888,
 	}
 }
 
-func genSignedVoluntaryExit() *ethpb.SignedVoluntaryExit {
-	return &ethpb.SignedVoluntaryExit{
+func genSignedVoluntaryExit() *SignedVoluntaryExit {
+	return &SignedVoluntaryExit{
 		Exit:      genVoluntaryExit(),
 		Signature: bytes(),
 	}
 }
 
-func genSignedVoluntaryExits(num int) []*ethpb.SignedVoluntaryExit {
-	sv := make([]*ethpb.SignedVoluntaryExit, num)
+func genSignedVoluntaryExits(num int) []*SignedVoluntaryExit {
+	sv := make([]*SignedVoluntaryExit, num)
 	for i := 0; i < num; i++ {
 		sv[i] = genSignedVoluntaryExit()
 	}
 	return sv
 }
 
-func genValidator() *ethpb.Validator {
-	return &ethpb.Validator{
+func genValidator() *Validator {
+	return &Validator{
 		PublicKey:                  bytes(),
 		WithdrawalCredentials:      bytes(),
 		EffectiveBalance:           12345,
@@ -516,8 +515,8 @@ func genValidator() *ethpb.Validator {
 	}
 }
 
-func genSyncCommitteeContribution() *ethpb.SyncCommitteeContribution {
-	return &ethpb.SyncCommitteeContribution{
+func genSyncCommitteeContribution() *SyncCommitteeContribution {
+	return &SyncCommitteeContribution{
 		Slot:              12333,
 		BlockRoot:         bytes(),
 		SubcommitteeIndex: 4444,
@@ -526,15 +525,15 @@ func genSyncCommitteeContribution() *ethpb.SyncCommitteeContribution {
 	}
 }
 
-func genSyncAggregate() *ethpb.SyncAggregate {
-	return &ethpb.SyncAggregate{
+func genSyncAggregate() *SyncAggregate {
+	return &SyncAggregate{
 		SyncCommitteeBits:      bytes(),
 		SyncCommitteeSignature: bytes(),
 	}
 }
 
-func genBeaconBlockBodyAltair() *ethpb.BeaconBlockBodyAltair {
-	return &ethpb.BeaconBlockBodyAltair{
+func genBeaconBlockBodyAltair() *BeaconBlockBodyAltair {
+	return &BeaconBlockBodyAltair{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),
@@ -547,8 +546,8 @@ func genBeaconBlockBodyAltair() *ethpb.BeaconBlockBodyAltair {
 	}
 }
 
-func genBeaconBlockAltair() *ethpb.BeaconBlockAltair {
-	return &ethpb.BeaconBlockAltair{
+func genBeaconBlockAltair() *BeaconBlockAltair {
+	return &BeaconBlockAltair{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
@@ -557,15 +556,15 @@ func genBeaconBlockAltair() *ethpb.BeaconBlockAltair {
 	}
 }
 
-func genSignedBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
-	return &ethpb.SignedBeaconBlockAltair{
+func genSignedBeaconBlockAltair() *SignedBeaconBlockAltair {
+	return &SignedBeaconBlockAltair{
 		Block:     genBeaconBlockAltair(),
 		Signature: bytes(),
 	}
 }
 
-func genSyncCommitteeMessage() *ethpb.SyncCommitteeMessage {
-	return &ethpb.SyncCommitteeMessage{
+func genSyncCommitteeMessage() *SyncCommitteeMessage {
+	return &SyncCommitteeMessage{
 		Slot:           424555,
 		BlockRoot:      bytes(),
 		ValidatorIndex: 5443,

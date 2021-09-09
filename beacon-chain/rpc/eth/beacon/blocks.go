@@ -45,27 +45,21 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
 	defer span.End()
 
-	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
-	}
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	err = handleGetBlock(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+		return nil, err
 	}
-	if rBlk == nil || rBlk.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block header")
-	}
-	blk, err := rBlk.PbPhase0Block()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-	}
-
-	v1BlockHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
+	v1alpha1Header, err := blk.Header()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 	}
-
-	blkRoot, err := blk.Block.HashTreeRoot()
+	header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
+	}
+	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
 	}
@@ -73,18 +67,14 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 	}
-	root, err := v1BlockHdr.HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
-	}
 
 	return &ethpbv1.BlockHeaderResponse{
 		Data: &ethpbv1.BlockHeaderContainer{
-			Root:      root[:],
+			Root:      headerRoot[:],
 			Canonical: canonical,
 			Header: &ethpbv1.BeaconBlockHeaderContainer{
-				Message:   v1BlockHdr.Message,
-				Signature: v1BlockHdr.Signature,
+				Message:   header.Message,
+				Signature: header.Signature,
 			},
 		},
 	}, nil
@@ -123,28 +113,25 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
-		blk, err := bl.PbPhase0Block()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-		}
-		blkHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
+		v1alpha1Header, err := bl.Header()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
+		}
+		header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
+		headerRoot, err := header.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
 		canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
-		root, err := blkHdr.Message.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
-		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
-			Root:      root[:],
+			Root:      headerRoot[:],
 			Canonical: canonical,
 			Header: &ethpbv1.BeaconBlockHeaderContainer{
-				Message:   blkHdr.Message,
-				Signature: blkHdr.Signature,
+				Message:   header.Message,
+				Signature: header.Signature,
 			},
 		}
 	}
@@ -255,6 +242,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
 		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.BeaconBlockContainerV2{
 				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
@@ -270,6 +258,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_ALTAIR,
 		Data: &ethpbv2.BeaconBlockContainerV2{
 			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),

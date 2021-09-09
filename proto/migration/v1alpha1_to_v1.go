@@ -29,24 +29,6 @@ func BlockIfaceToV1BlockHeader(block block.SignedBeaconBlock) (*ethpbv1.SignedBe
 	}, nil
 }
 
-// V1Alpha1BlockToV1BlockHeader converts a v1alpha1 SignedBeaconBlock proto to a v1 SignedBeaconBlockHeader proto.
-func V1Alpha1BlockToV1BlockHeader(block *ethpbalpha.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlockHeader, error) {
-	bodyRoot, err := block.Block.Body.HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get body root of block")
-	}
-	return &ethpbv1.SignedBeaconBlockHeader{
-		Message: &ethpbv1.BeaconBlockHeader{
-			Slot:          block.Block.Slot,
-			ProposerIndex: block.Block.ProposerIndex,
-			ParentRoot:    block.Block.ParentRoot,
-			StateRoot:     block.Block.StateRoot,
-			BodyRoot:      bodyRoot[:],
-		},
-		Signature: block.Signature,
-	}, nil
-}
-
 // V1Alpha1ToV1SignedBlock converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1SignedBlock(alphaBlk *ethpbalpha.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)

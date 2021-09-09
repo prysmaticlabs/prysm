@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -25,7 +26,7 @@ func (bs *Server) ListBeaconCommittees(
 	var requestedSlot types.Slot
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
-		startSlot, err := helpers.StartSlot(q.Epoch)
+		startSlot, err := core.StartSlot(q.Epoch)
 		if err != nil {
 			return nil, err
 		}
@@ -36,8 +37,8 @@ func (bs *Server) ListBeaconCommittees(
 		requestedSlot = currentSlot
 	}
 
-	requestedEpoch := helpers.SlotToEpoch(requestedSlot)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	requestedEpoch := core.SlotToEpoch(requestedSlot)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -68,7 +69,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,
 ) (SlotToCommiteesMap, []types.ValidatorIndex, error) {
-	startSlot, err := helpers.StartSlot(epoch)
+	startSlot, err := core.StartSlot(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,7 +91,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
 			"Could not compute committees for epoch %d: %v",
-			helpers.SlotToEpoch(startSlot),
+			core.SlotToEpoch(startSlot),
 			err,
 		)
 	}
@@ -108,7 +109,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
 	}
-	epoch := helpers.CurrentEpoch(requestedState)
+	epoch := core.CurrentEpoch(requestedState)
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, "Could not get seed")
@@ -118,7 +119,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
 	}
 
-	startSlot, err := helpers.StartSlot(epoch)
+	startSlot, err := core.StartSlot(epoch)
 	if err != nil {
 		return nil, nil, err
 	}

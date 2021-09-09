@@ -13,8 +13,9 @@ import (
 	gcache "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -261,8 +262,8 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &statepb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	// The next block is only 1 epoch ahead so as to not induce a new seed.
-	blkSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(helpers.NextEpoch(copied)))
-	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
+	blkSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(core.NextEpoch(copied)))
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
@@ -323,7 +324,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	copied := beaconState.Copy()
 	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
@@ -837,7 +838,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	copied := beaconState.Copy()
 	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)

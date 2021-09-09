@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -98,7 +99,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
-				Block:     blk,
+				Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: blk},
 				BlockRoot: root[:],
 				Canonical: true,
 			},
@@ -172,7 +173,11 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		require.NoError(t, err)
 		chain.CanonicalRoots[root] = true
 		blks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
-		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:], Canonical: true}
+		blkContainers[i] = &ethpb.BeaconBlockContainer{
+			Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: b},
+			BlockRoot: root[:],
+			Canonical: true,
+		}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
@@ -199,32 +204,64 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						Slot: 5}}),
-					BlockRoot: blkContainers[5].BlockRoot,
-					Canonical: blkContainers[5].Canonical}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{
+					{
+						Block: &ethpb.BeaconBlockContainer_Phase0Block{
+							Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+								Block: &ethpb.BeaconBlock{
+									Slot: 5,
+								},
+							}),
+						},
+						BlockRoot: blkContainers[5].BlockRoot,
+						Canonical: blkContainers[5].Canonical,
+					},
+				},
 				NextPageToken: "",
-				TotalSize:     1}},
+				TotalSize:     1,
+			},
+		},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot,
-					Canonical: blkContainers[6].Canonical}},
-				TotalSize: 1, NextPageToken: strconv.Itoa(0)}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{
+					{
+						Block: &ethpb.BeaconBlockContainer_Phase0Block{
+							Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+								Block: &ethpb.BeaconBlock{
+									Slot: 6,
+								},
+							}),
+						},
+						BlockRoot: blkContainers[6].BlockRoot,
+						Canonical: blkContainers[6].Canonical,
+					},
+				},
+				TotalSize:     1,
+				NextPageToken: strconv.Itoa(0),
+			},
+		},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						Slot: 6}}),
-					BlockRoot: blkContainers[6].BlockRoot,
-					Canonical: blkContainers[6].Canonical}},
-				TotalSize: 1, NextPageToken: strconv.Itoa(0)}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{
+					{
+						Block: &ethpb.BeaconBlockContainer_Phase0Block{
+							Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+								Block: &ethpb.BeaconBlock{
+									Slot: 6,
+								},
+							}),
+						},
+						BlockRoot: blkContainers[6].BlockRoot,
+						Canonical: blkContainers[6].Canonical,
+					},
+				},
+				TotalSize:     1,
+				NextPageToken: strconv.Itoa(0),
+			},
+		},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
@@ -262,11 +299,19 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 300},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-					Block: &ethpb.BeaconBlock{
-						Slot: 300}}),
-					BlockRoot: orphanedBlkRoot[:],
-					Canonical: false}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{
+					{
+						Block: &ethpb.BeaconBlockContainer_Phase0Block{
+							Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+								Block: &ethpb.BeaconBlock{
+									Slot: 300,
+								},
+							}),
+						},
+						BlockRoot: orphanedBlkRoot[:],
+						Canonical: false,
+					},
+				},
 				NextPageToken: "",
 				TotalSize:     1}},
 	}
@@ -402,7 +447,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
-	b.Block.Slot, err = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
+	b.Block.Slot, err = core.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 	b.Block.Slot++
 	bs := &Server{
@@ -492,7 +537,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
-	b.Block.Slot, err = helpers.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
+	b.Block.Slot, err = core.StartSlot(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 
 	hRoot, err := b.Block.HashTreeRoot()
@@ -517,7 +562,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Send(
 		&ethpb.ChainHead{
 			HeadSlot:                   b.Block.Slot,
-			HeadEpoch:                  helpers.SlotToEpoch(b.Block.Slot),
+			HeadEpoch:                  core.SlotToEpoch(b.Block.Slot),
 			HeadBlockRoot:              hRoot[:],
 			FinalizedSlot:              32,
 			FinalizedEpoch:             1,
@@ -747,19 +792,19 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	require.DeepEqual(t, sRoot[:], c.StateRoot)
 }
 
-func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
+func TestServer_ListBeaconBlocks_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	bs := &Server{
 		BeaconDB: db,
 	}
-	wanted := &ethpb.ListBlocksResponseAltair{
-		BlockContainers: make([]*ethpb.BeaconBlockContainerAltair, 0),
+	wanted := &ethpb.ListBeaconBlocksResponse{
+		BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 		TotalSize:       int32(0),
 		NextPageToken:   strconv.Itoa(0),
 	}
-	res, err := bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
+	res, err := bs.ListBeaconBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Slot{
 			Slot: 0,
 		},
@@ -768,7 +813,7 @@ func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	res, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
+	res, err = bs.ListBeaconBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Slot{
 			Slot: 0,
 		},
@@ -777,7 +822,7 @@ func TestServer_ListBlocksAltair_NoResults(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	res, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
+	res, err = bs.ListBeaconBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Root{
 			Root: make([]byte, 32),
 		},
@@ -814,12 +859,12 @@ func TestServer_ListBlocksAltair_Genesis(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	ctr, err := convertToBlockContainer(wrapper.WrappedPhase0SignedBeaconBlock(blk), root, true)
 	assert.NoError(t, err)
-	wanted := &ethpb.ListBlocksResponseAltair{
-		BlockContainers: []*ethpb.BeaconBlockContainerAltair{ctr},
+	wanted := &ethpb.ListBeaconBlocksResponse{
+		BlockContainers: []*ethpb.BeaconBlockContainer{ctr},
 		NextPageToken:   "0",
 		TotalSize:       1,
 	}
-	res, err := bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
+	res, err := bs.ListBeaconBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
@@ -857,7 +902,7 @@ func TestServer_ListBlocksAltair_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
 	// Should throw an error if more than one blk returned.
-	_, err = bs.ListBlocksAltair(ctx, &ethpb.ListBlocksRequest{
+	_, err = bs.ListBeaconBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
@@ -877,7 +922,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 
 	count := types.Slot(100)
 	blks := make([]block.SignedBeaconBlock, count)
-	blkContainers := make([]*ethpb.BeaconBlockContainerAltair, count)
+	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
@@ -907,14 +952,14 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 
 	tests := []struct {
 		req *ethpb.ListBlocksRequest
-		res *ethpb.ListBlocksResponseAltair
+		res *ethpb.ListBeaconBlocksResponse
 	}{
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
-			res: &ethpb.ListBlocksResponseAltair{
-				BlockContainers: []*ethpb.BeaconBlockContainerAltair{{Block: &ethpb.BeaconBlockContainerAltair_Phase0Block{Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+			res: &ethpb.ListBeaconBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
 						Slot: 5}})},
 					BlockRoot: blkContainers[5].BlockRoot,
@@ -927,8 +972,8 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
-			res: &ethpb.ListBlocksResponseAltair{
-				BlockContainers: []*ethpb.BeaconBlockContainerAltair{{Block: &ethpb.BeaconBlockContainerAltair_Phase0Block{
+			res: &ethpb.ListBeaconBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlockContainer_Phase0Block{
 					Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 						Block: &ethpb.BeaconBlock{
 							Slot: 6}})},
@@ -936,8 +981,8 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 					Canonical: blkContainers[6].Canonical}},
 				TotalSize: 1, NextPageToken: strconv.Itoa(0)}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
-			res: &ethpb.ListBlocksResponseAltair{
-				BlockContainers: []*ethpb.BeaconBlockContainerAltair{{Block: &ethpb.BeaconBlockContainerAltair_Phase0Block{
+			res: &ethpb.ListBeaconBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlockContainer_Phase0Block{
 					Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 						Block: &ethpb.BeaconBlock{
 							Slot: 6}})},
@@ -948,7 +993,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
 			PageSize:    100},
-			res: &ethpb.ListBlocksResponseAltair{
+			res: &ethpb.ListBeaconBlocksResponse{
 				BlockContainers: blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
@@ -956,7 +1001,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(1),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
 			PageSize:    3},
-			res: &ethpb.ListBlocksResponseAltair{
+			res: &ethpb.ListBeaconBlocksResponse{
 				BlockContainers: blkContainers[43:46],
 				NextPageToken:   "2",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
@@ -964,7 +1009,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(1),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
 			PageSize:    7},
-			res: &ethpb.ListBlocksResponseAltair{
+			res: &ethpb.ListBeaconBlocksResponse{
 				BlockContainers: blkContainers[95:96],
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
@@ -972,7 +1017,7 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
 			PageSize:    4},
-			res: &ethpb.ListBlocksResponseAltair{
+			res: &ethpb.ListBeaconBlocksResponse{
 				BlockContainers: blkContainers[96:100],
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
@@ -980,8 +1025,8 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 300},
 			PageSize:    3},
-			res: &ethpb.ListBlocksResponseAltair{
-				BlockContainers: []*ethpb.BeaconBlockContainerAltair{{Block: &ethpb.BeaconBlockContainerAltair_Phase0Block{
+			res: &ethpb.ListBeaconBlocksResponse{
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlockContainer_Phase0Block{
 					Phase0Block: testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 						Block: &ethpb.BeaconBlock{
 							Slot: 300}})},
@@ -993,14 +1038,14 @@ func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			res, err := bs.ListBlocksAltair(ctx, test.req)
+			res, err := bs.ListBeaconBlocks(ctx, test.req)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
 }
 
-func TestServer_ListBlocksAltair_Errors(t *testing.T) {
+func TestServer_ListBeaconBlocks_Errors(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -1016,29 +1061,29 @@ func TestServer_ListBlocksAltair_Errors(t *testing.T) {
 
 	wanted = "Must specify a filter criteria for fetching"
 	req = &ethpb.ListBlocksRequest{}
-	_, err = bs.ListBlocksAltair(ctx, req)
+	_, err = bs.ListBeaconBlocks(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 0}}
-	res, err := bs.ListBlocksAltair(ctx, req)
+	res, err := bs.ListBeaconBlocks(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
-	res, err = bs.ListBlocksAltair(ctx, req)
+	res, err = bs.ListBeaconBlocks(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBlocksAltair(ctx, req)
+	res, err = bs.ListBeaconBlocks(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 
 	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBlocksAltair(ctx, req)
+	res, err = bs.ListBeaconBlocks(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")

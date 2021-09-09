@@ -3,6 +3,7 @@ package precompute
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -22,7 +23,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	proRewardsFunc proposerRewardsFunc,
 ) (state.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
-	if helpers.CurrentEpoch(state) == 0 {
+	if core.CurrentEpoch(state) == 0 {
 		return state, nil
 	}
 
@@ -65,7 +66,7 @@ func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
-	prevEpoch := helpers.PrevEpoch(state)
+	prevEpoch := core.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
 	sqrtActiveCurrentEpoch := mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch)

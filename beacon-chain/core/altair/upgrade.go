@@ -3,6 +3,7 @@ package altair
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -62,7 +63,7 @@ import (
 //    post.next_sync_committee = get_next_sync_committee(post)
 //    return post
 func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.BeaconStateAltair, error) {
-	epoch := helpers.CurrentEpoch(state)
+	epoch := core.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateAltair{

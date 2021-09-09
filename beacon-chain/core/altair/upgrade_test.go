@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -107,7 +108,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.DeepSSZEqual(t, &ethpb.Fork{
 		PreviousVersion: st.Fork().CurrentVersion,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           helpers.CurrentEpoch(st),
+		Epoch:           core.CurrentEpoch(st),
 	}, f)
 	csc, err := aState.CurrentSyncCommittee()
 	require.NoError(t, err)
