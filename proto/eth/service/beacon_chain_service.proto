@@ -243,7 +243,7 @@ service BeaconChain {
   }
 
   // Submits sync committee signature objects to the node.
-  rpc SubmitSyncCommitteeSignature(v2.SyncCommitteeMessage) returns (google.protobuf.Empty) {
+  rpc SubmitPoolSyncCommitteeSignatures(v2.SubmitPoolSyncCommitteeSignatures) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/beacon/pool/sync_committees"
       body: "*"

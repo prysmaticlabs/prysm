@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 type Config struct {
@@ -61,7 +61,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 				require.NoError(t, err)
-				processedState, err = core.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)

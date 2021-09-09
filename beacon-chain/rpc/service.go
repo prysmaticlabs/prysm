@@ -207,6 +207,7 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -272,8 +273,9 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
-		HeadFetcher:        s.cfg.HeadFetcher,
-		VoluntaryExitsPool: s.cfg.ExitPool,
+		HeadFetcher:             s.cfg.HeadFetcher,
+		VoluntaryExitsPool:      s.cfg.ExitPool,
+		V1Alpha1ValidatorServer: validatorServer,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)

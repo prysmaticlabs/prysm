@@ -12,7 +12,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
@@ -416,7 +415,7 @@ func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
 		return nil
 	}
 
-	return copyutil.CopyETH1Data(b.state.Eth1Data)
+	return ethpb.CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -448,7 +447,7 @@ func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
 
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = copyutil.CopyETH1Data(b.state.Eth1DataVotes[i])
+		res[i] = ethpb.CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }
@@ -508,7 +507,7 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		res[i] = copyutil.CopyValidator(val)
+		res[i] = ethpb.CopyValidator(val)
 	}
 	return res
 }
@@ -552,7 +551,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	defer b.lock.RUnlock()
 
 	val := b.state.Validators[idx]
-	return copyutil.CopyValidator(val), nil
+	return ethpb.CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
@@ -882,7 +881,7 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return copyutil.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -907,7 +906,7 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return copyutil.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -964,7 +963,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return copyutil.CopyCheckpoint(b.state.FinalizedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.

@@ -3,15 +3,16 @@ package beacon
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
@@ -20,20 +21,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// attestationsVerificationFailure represents failures when verifying submitted attestations.
-type attestationsVerificationFailure struct {
-	Failures []*singleAttestationVerificationFailure `json:"failures"`
-}
-
-// singleAttestationVerificationFailure represents an issue when verifying a single submitted attestation.
-type singleAttestationVerificationFailure struct {
-	Index   int    `json:"index"`
-	Message string `json:"message"`
-}
-
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
-func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.AttestationsPoolRequest) (*ethpb.AttestationsPoolResponse, error) {
+func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpbv1.AttestationsPoolRequest) (*ethpbv1.AttestationsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
 	defer span.End()
 
@@ -45,14 +35,14 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 	attestations = append(attestations, unaggAtts...)
 	isEmptyReq := req.Slot == nil && req.CommitteeIndex == nil
 	if isEmptyReq {
-		allAtts := make([]*ethpb.Attestation, len(attestations))
+		allAtts := make([]*ethpbv1.Attestation, len(attestations))
 		for i, att := range attestations {
 			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
 		}
-		return &ethpb.AttestationsPoolResponse{Data: allAtts}, nil
+		return &ethpbv1.AttestationsPoolResponse{Data: allAtts}, nil
 	}
 
-	filteredAtts := make([]*ethpb.Attestation, 0, len(attestations))
+	filteredAtts := make([]*ethpbv1.Attestation, 0, len(attestations))
 	for _, att := range attestations {
 		bothDefined := req.Slot != nil && req.CommitteeIndex != nil
 		committeeIndexMatch := req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex
@@ -64,21 +54,21 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
 		}
 	}
-	return &ethpb.AttestationsPoolResponse{Data: filteredAtts}, nil
+	return &ethpbv1.AttestationsPoolResponse{Data: filteredAtts}, nil
 }
 
 // SubmitAttestations submits Attestation object to node. If attestation passes all validation
 // constraints, node MUST publish attestation on appropriate subnet.
-func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttestationsRequest) (*emptypb.Empty, error) {
+func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAttestationsRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitAttestation")
 	defer span.End()
 
-	var validAttestations []*eth.Attestation
-	var attFailures []*singleAttestationVerificationFailure
+	var validAttestations []*ethpbalpha.Attestation
+	var attFailures []*helpers.SingleIndexedVerificationFailure
 	for i, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
 		if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &singleAttestationVerificationFailure{
+			attFailures = append(attFailures, &helpers.SingleIndexedVerificationFailure{
 				Index:   i,
 				Message: "Incorrect attestation signature: " + err.Error(),
 			})
@@ -98,7 +88,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 
 		go func() {
 			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := copyutil.CopyAttestation(att)
+			attCopy := ethpbalpha.CopyAttestation(att)
 			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 				log.WithError(err).Error("Could not handle attestation in operations service")
 				return
@@ -109,12 +99,12 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	broadcastFailed := false
 	for _, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
-		wantedEpoch := helpers.SlotToEpoch(att.Data.Slot)
+		wantedEpoch := core.SlotToEpoch(att.Data.Slot)
 		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return nil, err
 		}
-		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
+		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 
 		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			broadcastFailed = true
@@ -127,7 +117,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	}
 
 	if len(attFailures) > 0 {
-		failuresContainer := &attestationsVerificationFailure{Failures: attFailures}
+		failuresContainer := &helpers.IndexedVerificationFailure{Failures: attFailures}
 		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
 			return nil, status.Errorf(
@@ -144,7 +134,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *emptypb.Empty) (*ethpb.AttesterSlashingsPoolResponse, error) {
+func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *emptypb.Empty) (*ethpbv1.AttesterSlashingsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttesterSlashings")
 	defer span.End()
 
@@ -154,19 +144,19 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *emptypb.Em
 	}
 	sourceSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
 
-	slashings := make([]*ethpb.AttesterSlashing, len(sourceSlashings))
+	slashings := make([]*ethpbv1.AttesterSlashing, len(sourceSlashings))
 	for i, s := range sourceSlashings {
 		slashings[i] = migration.V1Alpha1AttSlashingToV1(s)
 	}
 
-	return &ethpb.AttesterSlashingsPoolResponse{
+	return &ethpbv1.AttesterSlashingsPoolResponse{
 		Data: slashings,
 	}, nil
 }
 
 // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
-func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.AttesterSlashing) (*emptypb.Empty, error) {
+func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.AttesterSlashing) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitAttesterSlashing")
 	defer span.End()
 
@@ -196,7 +186,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 
 // ListPoolProposerSlashings retrieves proposer slashings known by the node
 // but not necessarily incorporated into any block.
-func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *emptypb.Empty) (*ethpb.ProposerSlashingPoolResponse, error) {
+func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *emptypb.Empty) (*ethpbv1.ProposerSlashingPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolProposerSlashings")
 	defer span.End()
 
@@ -206,19 +196,19 @@ func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *emptypb.Em
 	}
 	sourceSlashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState, true /* return unlimited slashings */)
 
-	slashings := make([]*ethpb.ProposerSlashing, len(sourceSlashings))
+	slashings := make([]*ethpbv1.ProposerSlashing, len(sourceSlashings))
 	for i, s := range sourceSlashings {
 		slashings[i] = migration.V1Alpha1ProposerSlashingToV1(s)
 	}
 
-	return &ethpb.ProposerSlashingPoolResponse{
+	return &ethpbv1.ProposerSlashingPoolResponse{
 		Data: slashings,
 	}, nil
 }
 
 // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
 // passes validation node MUST broadcast it to network.
-func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.ProposerSlashing) (*emptypb.Empty, error) {
+func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.ProposerSlashing) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitProposerSlashing")
 	defer span.End()
 
@@ -248,7 +238,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *emptypb.Empty) (*ethpb.VoluntaryExitsPoolResponse, error) {
+func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
 	defer span.End()
 
@@ -259,19 +249,19 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *emptypb.Empty
 
 	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true /* return unlimited exits */)
 
-	exits := make([]*ethpb.SignedVoluntaryExit, len(sourceExits))
+	exits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
 	for i, s := range sourceExits {
 		exits[i] = migration.V1Alpha1ExitToV1(s)
 	}
 
-	return &ethpb.VoluntaryExitsPoolResponse{
+	return &ethpbv1.VoluntaryExitsPoolResponse{
 		Data: exits,
 	}, nil
 }
 
 // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
 // and if passes validation node MUST broadcast it to network.
-func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*emptypb.Empty, error) {
+func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVoluntaryExit) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
 	defer span.End()
 

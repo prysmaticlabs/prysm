@@ -11,10 +11,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -49,7 +48,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -105,7 +104,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 	t.Run("Next epoch", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: helpers.SlotToEpoch(bs.Slot()) + 1,
+			Epoch: core.SlotToEpoch(bs.Slot()) + 1,
 			Index: []types.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
@@ -126,7 +125,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -171,7 +170,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: currentEpoch + 2,
 			Index: []types.ValidatorIndex{0},
@@ -208,7 +207,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -257,7 +256,7 @@ func TestGetProposerDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -303,7 +302,7 @@ func TestGetProposerDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := helpers.SlotToEpoch(bs.Slot())
+		currentEpoch := core.SlotToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 1,
 		}
@@ -953,7 +952,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -1505,4 +1504,42 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.ErrorContains(t, "Attestation slot is no longer valid from current time", err)
 		assert.Equal(t, false, broadcaster.BroadcastCalled)
 	})
+}
+
+func TestProduceSyncCommitteeContribution(t *testing.T) {
+	ctx := context.Background()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	sig := bls.NewAggregateSignature().Marshal()
+	messsage := &ethpbalpha.SyncCommitteeMessage{
+		Slot:           0,
+		BlockRoot:      root,
+		ValidatorIndex: 0,
+		Signature:      sig,
+	}
+	syncCommitteePool := synccommittee.NewStore()
+	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
+	v1Server := &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
+		},
+	}
+	server := Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+
+	req := &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, types.Slot(0), resp.Data.Slot)
+	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
+	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
+	aggregationBits := resp.Data.AggregationBits
+	assert.Equal(t, true, aggregationBits.BitAt(0))
+	assert.DeepEqual(t, sig, resp.Data.Signature)
 }
