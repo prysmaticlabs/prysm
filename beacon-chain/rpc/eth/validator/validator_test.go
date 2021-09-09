@@ -12,7 +12,9 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -406,7 +408,7 @@ func TestProduceBlock(t *testing.T) {
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
-	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	genesis := b.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
@@ -496,7 +498,7 @@ func TestProduceBlockV2(t *testing.T) {
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
+		genesis := b.NewGenesisBlock(stateRoot[:])
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 		parentRoot, err := genesis.Block.HashTreeRoot()
@@ -661,7 +663,7 @@ func TestProduceBlockV2(t *testing.T) {
 		for i, indice := range syncCommitteeIndices {
 			if aggregationBits.BitAt(uint64(i)) {
 				b := p2pType.SSZBytes(parentRoot[:])
-				sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 				require.NoError(t, err)
 				sig, err := bls.SignatureFromBytes(sb)
 				require.NoError(t, err)

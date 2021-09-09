@@ -236,7 +236,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	defer span.End()
 
 	var resp *ethpbv2.ProduceBlockResponseV2
-	epoch := helpers.SlotToEpoch(req.Slot)
+	epoch := core.SlotToEpoch(req.Slot)
 	if epoch < params.BeaconConfig().AltairForkEpoch {
 		block, err := vs.v1BeaconBlock(ctx, req)
 		if err != nil {
@@ -253,12 +253,16 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			RandaoReveal: req.RandaoReveal,
 			Graffiti:     req.Graffiti,
 		}
-		v1alpha1resp, err := vs.V1Alpha1Server.GetBlockAltair(ctx, v1alpha1req)
+		v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 		if err != nil {
 			// We simply return err because it's already of a gRPC error type.
 			return nil, err
 		}
-		block, err := migration.V1Alpha1BeaconBlockAltairToV2(v1alpha1resp)
+		altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
+		}
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
