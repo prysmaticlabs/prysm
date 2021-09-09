@@ -242,6 +242,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
 		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.BeaconBlockContainerV2{
 				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
@@ -257,6 +258,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_ALTAIR,
 		Data: &ethpbv2.BeaconBlockContainerV2{
 			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),
