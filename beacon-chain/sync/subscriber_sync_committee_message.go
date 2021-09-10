@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// skipcq: SCC-U1000
 func (s *Service) syncCommitteeMessageSubscriber(_ context.Context, msg proto.Message) error {
 	m, ok := msg.(*ethpb.SyncCommitteeMessage)
 	if !ok {
