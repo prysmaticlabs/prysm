@@ -9,6 +9,8 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -32,6 +34,24 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
+	currEpoch := core.SlotToEpoch(s.cfg.Chain.CurrentSlot())
+	// Register V2 handlers if we are past altair fork epoch.
+	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
+		s.registerRPC(
+			p2p.RPCStatusTopicV1,
+			s.statusRPCHandler,
+		)
+		s.registerRPC(
+			p2p.RPCGoodByeTopicV1,
+			s.goodbyeRPCHandler,
+		)
+		s.registerRPC(
+			p2p.RPCPingTopicV1,
+			s.pingHandler,
+		)
+		s.registerRPCHandlersAltair()
+		return
+	}
 	s.registerRPC(
 		p2p.RPCStatusTopicV1,
 		s.statusRPCHandler,
@@ -56,6 +76,34 @@ func (s *Service) registerRPCHandlers() {
 		p2p.RPCMetaDataTopicV1,
 		s.metaDataHandler,
 	)
+}
+
+// registerRPCHandlers for altair.
+func (s *Service) registerRPCHandlersAltair() {
+	s.registerRPC(
+		p2p.RPCBlocksByRangeTopicV2,
+		s.beaconBlocksByRangeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCBlocksByRootTopicV2,
+		s.beaconBlocksRootRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCMetaDataTopicV2,
+		s.metaDataHandler,
+	)
+}
+
+// Remove all v1 Stream handlers that are no longer supported
+// from altair onwards.
+func (s *Service) unregisterPhase0Handlers() {
+	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+	fullMetadataTopic := p2p.RPCMetaDataTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -121,7 +169,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopicV1 {
+		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
