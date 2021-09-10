@@ -27,8 +27,14 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
-	epochsToRun := 10
 	var err error
+	epochsToRun := 10
+	if usePrysmSh {
+		// If using prysm.sh, run for 6 epochs.
+		// TODO(#9166): remove this block once v2 changes are live.
+		epochsToRun = 6
+	}
+
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
