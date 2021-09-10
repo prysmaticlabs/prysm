@@ -27,14 +27,45 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
-	epochsToRun := 10
 	var err error
+	epochsToRun := 10
+	if usePrysmSh {
+		// If using prysm.sh, run for 6 epochs.
+		// TODO(#9166): remove this block once v2 changes are live.
+		epochsToRun = 6
+	}
+
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
 	const tracingEndpoint = "127.0.0.1:9411"
+	evals := []types.Evaluator{
+		ev.PeersConnect,
+		ev.HealthzCheck,
+		ev.MetricsCheck,
+		ev.ValidatorsAreActive,
+		ev.ValidatorsParticipating,
+		ev.FinalizationOccurs,
+		ev.ProcessesDepositsInBlocks,
+		ev.VerifyBlockGraffiti,
+		ev.ActivatesDepositedValidators,
+		ev.DepositedValidatorsAreActive,
+		ev.ProposeVoluntaryExit,
+		ev.ValidatorHasExited,
+		ev.ValidatorsVoteWithTheMajority,
+		ev.ColdStateCheckpoint,
+		ev.ForkTransition,
+		ev.APIGatewayV1VerifyIntegrity,
+		ev.APIGatewayV1Alpha1VerifyIntegrity,
+	}
+	// TODO(#9166): remove this block once v2 changes are live.
+	if !usePrysmSh {
+		evals = append(evals, ev.ValidatorSyncParticipation)
+	} else {
+		t.Log("Warning: Skipping v2 specific evaluators for prior release")
+	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
@@ -46,28 +77,11 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
 		TestDeposits:        true,
-		TestSlasher:         true,
+		TestSlasher:         false,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		TracingSinkEndpoint: tracingEndpoint,
-		Evaluators: []types.Evaluator{
-			ev.PeersConnect,
-			ev.HealthzCheck,
-			ev.MetricsCheck,
-			ev.ValidatorsAreActive,
-			ev.ValidatorsParticipating,
-			ev.FinalizationOccurs,
-			ev.ProcessesDepositsInBlocks,
-			ev.VerifyBlockGraffiti,
-			ev.ActivatesDepositedValidators,
-			ev.DepositedValidatorsAreActive,
-			ev.ProposeVoluntaryExit,
-			ev.ValidatorHasExited,
-			ev.ValidatorsVoteWithTheMajority,
-			ev.ColdStateCheckpoint,
-			ev.APIGatewayV1VerifyIntegrity,
-			ev.APIGatewayV1Alpha1VerifyIntegrity,
-		},
+		Evaluators:          evals,
 	}
 
 	newTestRunner(t, testConfig).run()
