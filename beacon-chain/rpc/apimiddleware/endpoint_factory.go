@@ -24,6 +24,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
+		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/headers",
 		"/eth/v1/beacon/headers/{block_id}",
 		"/eth/v1/beacon/blocks",
@@ -80,6 +81,12 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/states/{state_id}/committees":
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
 		endpoint.GetResponse = &stateCommitteesResponseJson{}
+	case "/eth/v1/beacon/states/{state_id}/sync_committees":
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "epoch"}}
+		endpoint.GetResponse = &syncCommitteesResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeGrpcResponseBodyIntoContainer: []func([]byte, interface{}) (bool, gateway.ErrorJson){prepareValidatorAggregates},
+		}
 	case "/eth/v1/beacon/headers":
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "parent_root", Hex: true}}
 		endpoint.GetResponse = &blockHeadersResponseJson{}
