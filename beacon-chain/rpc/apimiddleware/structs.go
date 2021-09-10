@@ -81,6 +81,12 @@ type blockResponseJson struct {
 	Data *beaconBlockContainerJson `json:"data"`
 }
 
+// blockV2ResponseJson is used in /v2/beacon/blocks/{block_id} API endpoint.
+type blockV2ResponseJson struct {
+	Version string                      `json:"version" enum:"true"`
+	Data    *beaconBlockContainerV2Json `json:"data"`
+}
+
 // blockRootResponseJson is used in /beacon/blocks/{block_id}/root API endpoint.
 type blockRootResponseJson struct {
 	Data *blockRootContainerJson `json:"data"`
@@ -114,6 +120,11 @@ type proposerSlashingsPoolResponseJson struct {
 // voluntaryExitsPoolResponseJson is used in /beacon/pool/voluntary_exits API endpoint.
 type voluntaryExitsPoolResponseJson struct {
 	Data []*signedVoluntaryExitJson `json:"data"`
+}
+
+// submitSyncCommitteeSignaturesRequestJson is used in /beacon/pool/sync_committees API endpoint.
+type submitSyncCommitteeSignaturesRequestJson struct {
+	Data []*syncCommitteeMessageJson `json:"data"`
 }
 
 // identityResponseJson is used in /node/identity API endpoint.
@@ -267,6 +278,42 @@ type beaconBlockBodyJson struct {
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 }
 
+type beaconBlockContainerV2Json struct {
+	Phase0Block *beaconBlockJson       `json:"phase0Block"`
+	AltairBlock *beaconBlockAltairJson `json:"altairBlock"`
+	Signature   string                 `json:"signature" hex:"true"`
+}
+
+type beaconBlockAltairContainerJson struct {
+	Message   *beaconBlockAltairJson `json:"message"`
+	Signature string                 `json:"signature" hex:"true"`
+}
+
+type beaconBlockAltairJson struct {
+	Slot          string                     `json:"slot"`
+	ProposerIndex string                     `json:"proposer_index"`
+	ParentRoot    string                     `json:"parent_root" hex:"true"`
+	StateRoot     string                     `json:"state_root" hex:"true"`
+	Body          *beaconBlockBodyAltairJson `json:"body"`
+}
+
+type beaconBlockBodyAltairJson struct {
+	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
+	Eth1Data          *eth1DataJson              `json:"eth1_data"`
+	Graffiti          string                     `json:"graffiti" hex:"true"`
+	ProposerSlashings []*proposerSlashingJson    `json:"proposer_slashings"`
+	AttesterSlashings []*attesterSlashingJson    `json:"attester_slashings"`
+	Attestations      []*attestationJson         `json:"attestations"`
+	Deposits          []*depositJson             `json:"deposits"`
+	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
+	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
+}
+
+type syncAggregateJson struct {
+	SyncCommitteeBits      string `json:"sync_committee_bits" hex:"true"`
+	SyncCommitteeSignature string `json:"sync_committee_signature" hex:"true"`
+}
+
 type blockHeaderContainerJson struct {
 	Root      string                          `json:"root" hex:"true"`
 	Canonical bool                            `json:"canonical"`
@@ -347,6 +394,13 @@ type signedVoluntaryExitJson struct {
 type voluntaryExitJson struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
+}
+
+type syncCommitteeMessageJson struct {
+	Slot            string `json:"slot"`
+	BeaconBlockRoot string `json:"beacon_block_root" hex:"true"`
+	ValidatorIndex  string `json:"validator_index"`
+	Signature       string `json:"signature" hex:"true"`
 }
 
 type identityJson struct {
