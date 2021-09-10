@@ -230,19 +230,19 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	return ifaceBlocks
 }
 
-func makeBlocksAltair(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
-	blocks := make([]*ethpb.SignedBeaconBlockAltair, n)
-	ifaceBlocks := make([]block.SignedBeaconBlock, n)
-	for j := i; j < n+i; j++ {
+func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
+	ifaceBlocks := make([]block.SignedBeaconBlock, num)
+	for j := startIdx; j < num+startIdx; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = testutil.NewBeaconBlockAltair()
-		blocks[j-i].Block.Slot = types.Slot(j + 1)
-		blocks[j-i].Block.ParentRoot = parentRoot
+		blocks[j-startIdx] = testutil.NewBeaconBlockAltair()
+		blocks[j-startIdx].Block.Slot = types.Slot(j + 1)
+		blocks[j-startIdx].Block.ParentRoot = parentRoot
 		var err error
-		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
+		previousRoot, err = blocks[j-startIdx].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-startIdx], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-startIdx])
 		require.NoError(t, err)
 	}
 	return ifaceBlocks
