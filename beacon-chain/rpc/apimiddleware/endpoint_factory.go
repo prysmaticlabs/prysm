@@ -35,6 +35,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
+		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -121,6 +122,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/pool/voluntary_exits":
 		endpoint.PostRequest = &signedVoluntaryExitJson{}
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
+	case "/eth/v1/beacon/pool/sync_committees":
+		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSignaturesArray},
+		}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":

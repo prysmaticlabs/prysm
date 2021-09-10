@@ -116,6 +116,11 @@ type voluntaryExitsPoolResponseJson struct {
 	Data []*signedVoluntaryExitJson `json:"data"`
 }
 
+// submitSyncCommitteeSignaturesRequestJson is used in /beacon/pool/sync_committees API endpoint.
+type submitSyncCommitteeSignaturesRequestJson struct {
+	Data []*syncCommitteeMessageJson `json:"data"`
+}
+
 // identityResponseJson is used in /node/identity API endpoint.
 type identityResponseJson struct {
 	Data *identityJson `json:"data"`
@@ -347,6 +352,13 @@ type signedVoluntaryExitJson struct {
 type voluntaryExitJson struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
+}
+
+type syncCommitteeMessageJson struct {
+	Slot            string `json:"slot"`
+	BeaconBlockRoot string `json:"beacon_block_root" hex:"true"`
+	ValidatorIndex  string `json:"validator_index"`
+	Signature       string `json:"signature" hex:"true"`
 }
 
 type identityJson struct {
