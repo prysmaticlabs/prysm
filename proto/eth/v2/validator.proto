@@ -102,7 +102,7 @@ message SyncCommitteeContribution {
 }
 
 message SubmitContributionAndProofsRequest {
-  SignedContributionAndProof message = 1;
+  repeated SignedContributionAndProof data = 1;
 }
 
 // Aggregated sync committee signature object with selection proof to support light client.
