@@ -54,7 +54,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.APIGatewayV1VerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 	}
-	// TODO(v2.0.0 release issue tag): remove this block once v2 changes are live.
+	// TODO(#9166): remove this block once v2 changes are live.
 	if !usePrysmSh {
 		evals = append(evals, ev.ValidatorSyncParticipation)
 	} else {
