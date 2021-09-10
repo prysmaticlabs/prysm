@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -18,7 +19,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,9 +39,9 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&statepb.BeaconState{
+	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
@@ -78,7 +78,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		cfg: &Config{
 			P2P: p,
 			Chain: &mock.ChainService{
-				State: s,
+				State:   s,
+				Genesis: time.Now(),
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
@@ -89,6 +90,9 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	_, err := p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
