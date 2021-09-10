@@ -1,11 +1,5 @@
 package params
 
-import "math"
-
-// AltairE2EForkEpoch is the pre-determined altair fork epoch in our
-// E2E test.
-const AltairE2EForkEpoch = math.MaxUint64
-
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
 	beaconConfig = E2ETestConfig()
@@ -42,7 +36,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
-	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.AltairForkEpoch = 6
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
