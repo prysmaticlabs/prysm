@@ -131,53 +131,6 @@ func (x *BlockResponseV2) GetData() *BeaconBlockContainerV2 {
 	return nil
 }
 
-type SignedBlockResponseV2 struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data *SignedBeaconBlockContainerV2 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *SignedBlockResponseV2) Reset() {
-	*x = SignedBlockResponseV2{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SignedBlockResponseV2) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SignedBlockResponseV2) ProtoMessage() {}
-
-func (x *SignedBlockResponseV2) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SignedBlockResponseV2.ProtoReflect.Descriptor instead.
-func (*SignedBlockResponseV2) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *SignedBlockResponseV2) GetData() *SignedBeaconBlockContainerV2 {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
 type BlockSSZResponseV2 struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -190,7 +143,7 @@ type BlockSSZResponseV2 struct {
 func (x *BlockSSZResponseV2) Reset() {
 	*x = BlockSSZResponseV2{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[3]
+		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -203,7 +156,7 @@ func (x *BlockSSZResponseV2) String() string {
 func (*BlockSSZResponseV2) ProtoMessage() {}
 
 func (x *BlockSSZResponseV2) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[3]
+	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +169,7 @@ func (x *BlockSSZResponseV2) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockSSZResponseV2.ProtoReflect.Descriptor instead.
 func (*BlockSSZResponseV2) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{3}
+	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *BlockSSZResponseV2) GetVersion() Version {
@@ -241,13 +194,14 @@ type BeaconBlockContainerV2 struct {
 	// Types that are assignable to Block:
 	//	*BeaconBlockContainerV2_Phase0Block
 	//	*BeaconBlockContainerV2_AltairBlock
-	Block isBeaconBlockContainerV2_Block `protobuf_oneof:"block"`
+	Block     isBeaconBlockContainerV2_Block `protobuf_oneof:"block"`
+	Signature []byte                         `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *BeaconBlockContainerV2) Reset() {
 	*x = BeaconBlockContainerV2{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[4]
+		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -260,7 +214,7 @@ func (x *BeaconBlockContainerV2) String() string {
 func (*BeaconBlockContainerV2) ProtoMessage() {}
 
 func (x *BeaconBlockContainerV2) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[4]
+	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -273,7 +227,7 @@ func (x *BeaconBlockContainerV2) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeaconBlockContainerV2.ProtoReflect.Descriptor instead.
 func (*BeaconBlockContainerV2) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{4}
+	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{3}
 }
 
 func (m *BeaconBlockContainerV2) GetBlock() isBeaconBlockContainerV2_Block {
@@ -297,6 +251,13 @@ func (x *BeaconBlockContainerV2) GetAltairBlock() *BeaconBlockAltair {
 	return nil
 }
 
+func (x *BeaconBlockContainerV2) GetSignature() []byte {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
 type isBeaconBlockContainerV2_Block interface {
 	isBeaconBlockContainerV2_Block()
 }
@@ -313,94 +274,6 @@ func (*BeaconBlockContainerV2_Phase0Block) isBeaconBlockContainerV2_Block() {}
 
 func (*BeaconBlockContainerV2_AltairBlock) isBeaconBlockContainerV2_Block() {}
 
-type SignedBeaconBlockContainerV2 struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// Types that are assignable to Block:
-	//	*SignedBeaconBlockContainerV2_Phase0Block
-	//	*SignedBeaconBlockContainerV2_AltairBlock
-	Block     isSignedBeaconBlockContainerV2_Block `protobuf_oneof:"block"`
-	Signature []byte                               `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
-}
-
-func (x *SignedBeaconBlockContainerV2) Reset() {
-	*x = SignedBeaconBlockContainerV2{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SignedBeaconBlockContainerV2) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SignedBeaconBlockContainerV2) ProtoMessage() {}
-
-func (x *SignedBeaconBlockContainerV2) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SignedBeaconBlockContainerV2.ProtoReflect.Descriptor instead.
-func (*SignedBeaconBlockContainerV2) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{5}
-}
-
-func (m *SignedBeaconBlockContainerV2) GetBlock() isSignedBeaconBlockContainerV2_Block {
-	if m != nil {
-		return m.Block
-	}
-	return nil
-}
-
-func (x *SignedBeaconBlockContainerV2) GetPhase0Block() *v1.BeaconBlock {
-	if x, ok := x.GetBlock().(*SignedBeaconBlockContainerV2_Phase0Block); ok {
-		return x.Phase0Block
-	}
-	return nil
-}
-
-func (x *SignedBeaconBlockContainerV2) GetAltairBlock() *BeaconBlockAltair {
-	if x, ok := x.GetBlock().(*SignedBeaconBlockContainerV2_AltairBlock); ok {
-		return x.AltairBlock
-	}
-	return nil
-}
-
-func (x *SignedBeaconBlockContainerV2) GetSignature() []byte {
-	if x != nil {
-		return x.Signature
-	}
-	return nil
-}
-
-type isSignedBeaconBlockContainerV2_Block interface {
-	isSignedBeaconBlockContainerV2_Block()
-}
-
-type SignedBeaconBlockContainerV2_Phase0Block struct {
-	Phase0Block *v1.BeaconBlock `protobuf:"bytes,1,opt,name=phase0Block,proto3,oneof"`
-}
-
-type SignedBeaconBlockContainerV2_AltairBlock struct {
-	AltairBlock *BeaconBlockAltair `protobuf:"bytes,2,opt,name=altairBlock,proto3,oneof"`
-}
-
-func (*SignedBeaconBlockContainerV2_Phase0Block) isSignedBeaconBlockContainerV2_Block() {}
-
-func (*SignedBeaconBlockContainerV2_AltairBlock) isSignedBeaconBlockContainerV2_Block() {}
-
 type SignedBeaconBlockAltair struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -413,7 +286,7 @@ type SignedBeaconBlockAltair struct {
 func (x *SignedBeaconBlockAltair) Reset() {
 	*x = SignedBeaconBlockAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[6]
+		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -426,7 +299,7 @@ func (x *SignedBeaconBlockAltair) String() string {
 func (*SignedBeaconBlockAltair) ProtoMessage() {}
 
 func (x *SignedBeaconBlockAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[6]
+	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +312,7 @@ func (x *SignedBeaconBlockAltair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignedBeaconBlockAltair.ProtoReflect.Descriptor instead.
 func (*SignedBeaconBlockAltair) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{6}
+	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SignedBeaconBlockAltair) GetMessage() *BeaconBlockAltair {
@@ -471,7 +344,7 @@ type BeaconBlockAltair struct {
 func (x *BeaconBlockAltair) Reset() {
 	*x = BeaconBlockAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[7]
+		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -484,7 +357,7 @@ func (x *BeaconBlockAltair) String() string {
 func (*BeaconBlockAltair) ProtoMessage() {}
 
 func (x *BeaconBlockAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[7]
+	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -497,7 +370,7 @@ func (x *BeaconBlockAltair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeaconBlockAltair.ProtoReflect.Descriptor instead.
 func (*BeaconBlockAltair) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{7}
+	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *BeaconBlockAltair) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
@@ -554,7 +427,7 @@ type BeaconBlockBodyAltair struct {
 func (x *BeaconBlockBodyAltair) Reset() {
 	*x = BeaconBlockBodyAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[8]
+		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -567,7 +440,7 @@ func (x *BeaconBlockBodyAltair) String() string {
 func (*BeaconBlockBodyAltair) ProtoMessage() {}
 
 func (x *BeaconBlockBodyAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[8]
+	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -580,7 +453,7 @@ func (x *BeaconBlockBodyAltair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeaconBlockBodyAltair.ProtoReflect.Descriptor instead.
 func (*BeaconBlockBodyAltair) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{8}
+	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *BeaconBlockBodyAltair) GetRandaoReveal() []byte {
@@ -670,31 +543,14 @@ var file_proto_eth_v2_beacon_block_proto_rawDesc = []byte{
 	0x6e, 0x12, 0x3b, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
 	0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e,
-	0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x56, 0x32, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x5a,
-	0x0a, 0x15, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x56, 0x32, 0x12, 0x41, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65,
-	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e,
-	0x65, 0x72, 0x56, 0x32, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x5c, 0x0a, 0x12, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x56, 0x32,
-	0x12, 0x32, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0e, 0x32, 0x18, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x32, 0x2e, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x07, 0x76, 0x65, 0x72,
-	0x73, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0xab, 0x01, 0x0a, 0x16, 0x42, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65,
-	0x72, 0x56, 0x32, 0x12, 0x40, 0x0a, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x42, 0x6c, 0x6f,
-	0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30,
-	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x46, 0x0a, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42,
-	0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x48, 0x00,
-	0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x07, 0x0a,
-	0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x22, 0xd7, 0x01, 0x0a, 0x1c, 0x53, 0x69, 0x67, 0x6e, 0x65,
-	0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74,
+	0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x56, 0x32, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x5c,
+	0x0a, 0x12, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x56, 0x32, 0x12, 0x32, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x18, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x52,
+	0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0xd1, 0x01, 0x0a,
+	0x16, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74,
 	0x61, 0x69, 0x6e, 0x65, 0x72, 0x56, 0x32, 0x12, 0x40, 0x0a, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65,
 	0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65,
 	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42,
@@ -798,50 +654,45 @@ func file_proto_eth_v2_beacon_block_proto_rawDescGZIP() []byte {
 	return file_proto_eth_v2_beacon_block_proto_rawDescData
 }
 
-var file_proto_eth_v2_beacon_block_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_eth_v2_beacon_block_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_eth_v2_beacon_block_proto_goTypes = []interface{}{
-	(*BlockRequestV2)(nil),               // 0: ethereum.eth.v2.BlockRequestV2
-	(*BlockResponseV2)(nil),              // 1: ethereum.eth.v2.BlockResponseV2
-	(*SignedBlockResponseV2)(nil),        // 2: ethereum.eth.v2.SignedBlockResponseV2
-	(*BlockSSZResponseV2)(nil),           // 3: ethereum.eth.v2.BlockSSZResponseV2
-	(*BeaconBlockContainerV2)(nil),       // 4: ethereum.eth.v2.BeaconBlockContainerV2
-	(*SignedBeaconBlockContainerV2)(nil), // 5: ethereum.eth.v2.SignedBeaconBlockContainerV2
-	(*SignedBeaconBlockAltair)(nil),      // 6: ethereum.eth.v2.SignedBeaconBlockAltair
-	(*BeaconBlockAltair)(nil),            // 7: ethereum.eth.v2.BeaconBlockAltair
-	(*BeaconBlockBodyAltair)(nil),        // 8: ethereum.eth.v2.BeaconBlockBodyAltair
-	(Version)(0),                         // 9: ethereum.eth.v2.Version
-	(*v1.BeaconBlock)(nil),               // 10: ethereum.eth.v1.BeaconBlock
-	(*v1.Eth1Data)(nil),                  // 11: ethereum.eth.v1.Eth1Data
-	(*v1.ProposerSlashing)(nil),          // 12: ethereum.eth.v1.ProposerSlashing
-	(*v1.AttesterSlashing)(nil),          // 13: ethereum.eth.v1.AttesterSlashing
-	(*v1.Attestation)(nil),               // 14: ethereum.eth.v1.Attestation
-	(*v1.Deposit)(nil),                   // 15: ethereum.eth.v1.Deposit
-	(*v1.SignedVoluntaryExit)(nil),       // 16: ethereum.eth.v1.SignedVoluntaryExit
-	(*v1.SyncAggregate)(nil),             // 17: ethereum.eth.v1.SyncAggregate
+	(*BlockRequestV2)(nil),          // 0: ethereum.eth.v2.BlockRequestV2
+	(*BlockResponseV2)(nil),         // 1: ethereum.eth.v2.BlockResponseV2
+	(*BlockSSZResponseV2)(nil),      // 2: ethereum.eth.v2.BlockSSZResponseV2
+	(*BeaconBlockContainerV2)(nil),  // 3: ethereum.eth.v2.BeaconBlockContainerV2
+	(*SignedBeaconBlockAltair)(nil), // 4: ethereum.eth.v2.SignedBeaconBlockAltair
+	(*BeaconBlockAltair)(nil),       // 5: ethereum.eth.v2.BeaconBlockAltair
+	(*BeaconBlockBodyAltair)(nil),   // 6: ethereum.eth.v2.BeaconBlockBodyAltair
+	(Version)(0),                    // 7: ethereum.eth.v2.Version
+	(*v1.BeaconBlock)(nil),          // 8: ethereum.eth.v1.BeaconBlock
+	(*v1.Eth1Data)(nil),             // 9: ethereum.eth.v1.Eth1Data
+	(*v1.ProposerSlashing)(nil),     // 10: ethereum.eth.v1.ProposerSlashing
+	(*v1.AttesterSlashing)(nil),     // 11: ethereum.eth.v1.AttesterSlashing
+	(*v1.Attestation)(nil),          // 12: ethereum.eth.v1.Attestation
+	(*v1.Deposit)(nil),              // 13: ethereum.eth.v1.Deposit
+	(*v1.SignedVoluntaryExit)(nil),  // 14: ethereum.eth.v1.SignedVoluntaryExit
+	(*v1.SyncAggregate)(nil),        // 15: ethereum.eth.v1.SyncAggregate
 }
 var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
-	9,  // 0: ethereum.eth.v2.BlockResponseV2.version:type_name -> ethereum.eth.v2.Version
-	4,  // 1: ethereum.eth.v2.BlockResponseV2.data:type_name -> ethereum.eth.v2.BeaconBlockContainerV2
-	5,  // 2: ethereum.eth.v2.SignedBlockResponseV2.data:type_name -> ethereum.eth.v2.SignedBeaconBlockContainerV2
-	9,  // 3: ethereum.eth.v2.BlockSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
-	10, // 4: ethereum.eth.v2.BeaconBlockContainerV2.phase0Block:type_name -> ethereum.eth.v1.BeaconBlock
-	7,  // 5: ethereum.eth.v2.BeaconBlockContainerV2.altairBlock:type_name -> ethereum.eth.v2.BeaconBlockAltair
-	10, // 6: ethereum.eth.v2.SignedBeaconBlockContainerV2.phase0Block:type_name -> ethereum.eth.v1.BeaconBlock
-	7,  // 7: ethereum.eth.v2.SignedBeaconBlockContainerV2.altairBlock:type_name -> ethereum.eth.v2.BeaconBlockAltair
-	7,  // 8: ethereum.eth.v2.SignedBeaconBlockAltair.message:type_name -> ethereum.eth.v2.BeaconBlockAltair
-	8,  // 9: ethereum.eth.v2.BeaconBlockAltair.body:type_name -> ethereum.eth.v2.BeaconBlockBodyAltair
-	11, // 10: ethereum.eth.v2.BeaconBlockBodyAltair.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	12, // 11: ethereum.eth.v2.BeaconBlockBodyAltair.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
-	13, // 12: ethereum.eth.v2.BeaconBlockBodyAltair.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
-	14, // 13: ethereum.eth.v2.BeaconBlockBodyAltair.attestations:type_name -> ethereum.eth.v1.Attestation
-	15, // 14: ethereum.eth.v2.BeaconBlockBodyAltair.deposits:type_name -> ethereum.eth.v1.Deposit
-	16, // 15: ethereum.eth.v2.BeaconBlockBodyAltair.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
-	17, // 16: ethereum.eth.v2.BeaconBlockBodyAltair.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	7,  // 0: ethereum.eth.v2.BlockResponseV2.version:type_name -> ethereum.eth.v2.Version
+	3,  // 1: ethereum.eth.v2.BlockResponseV2.data:type_name -> ethereum.eth.v2.BeaconBlockContainerV2
+	7,  // 2: ethereum.eth.v2.BlockSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
+	8,  // 3: ethereum.eth.v2.BeaconBlockContainerV2.phase0Block:type_name -> ethereum.eth.v1.BeaconBlock
+	5,  // 4: ethereum.eth.v2.BeaconBlockContainerV2.altairBlock:type_name -> ethereum.eth.v2.BeaconBlockAltair
+	5,  // 5: ethereum.eth.v2.SignedBeaconBlockAltair.message:type_name -> ethereum.eth.v2.BeaconBlockAltair
+	6,  // 6: ethereum.eth.v2.BeaconBlockAltair.body:type_name -> ethereum.eth.v2.BeaconBlockBodyAltair
+	9,  // 7: ethereum.eth.v2.BeaconBlockBodyAltair.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	10, // 8: ethereum.eth.v2.BeaconBlockBodyAltair.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
+	11, // 9: ethereum.eth.v2.BeaconBlockBodyAltair.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
+	12, // 10: ethereum.eth.v2.BeaconBlockBodyAltair.attestations:type_name -> ethereum.eth.v1.Attestation
+	13, // 11: ethereum.eth.v2.BeaconBlockBodyAltair.deposits:type_name -> ethereum.eth.v1.Deposit
+	14, // 12: ethereum.eth.v2.BeaconBlockBodyAltair.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
+	15, // 13: ethereum.eth.v2.BeaconBlockBodyAltair.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_proto_eth_v2_beacon_block_proto_init() }
@@ -876,18 +727,6 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBlockResponseV2); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BlockSSZResponseV2); i {
 			case 0:
 				return &v.state
@@ -899,7 +738,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_eth_v2_beacon_block_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BeaconBlockContainerV2); i {
 			case 0:
 				return &v.state
@@ -911,19 +750,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBeaconBlockContainerV2); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_eth_v2_beacon_block_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SignedBeaconBlockAltair); i {
 			case 0:
 				return &v.state
@@ -935,7 +762,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_eth_v2_beacon_block_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BeaconBlockAltair); i {
 			case 0:
 				return &v.state
@@ -947,7 +774,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_v2_beacon_block_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_eth_v2_beacon_block_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BeaconBlockBodyAltair); i {
 			case 0:
 				return &v.state
@@ -960,13 +787,9 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 	}
-	file_proto_eth_v2_beacon_block_proto_msgTypes[4].OneofWrappers = []interface{}{
+	file_proto_eth_v2_beacon_block_proto_msgTypes[3].OneofWrappers = []interface{}{
 		(*BeaconBlockContainerV2_Phase0Block)(nil),
 		(*BeaconBlockContainerV2_AltairBlock)(nil),
-	}
-	file_proto_eth_v2_beacon_block_proto_msgTypes[5].OneofWrappers = []interface{}{
-		(*SignedBeaconBlockContainerV2_Phase0Block)(nil),
-		(*SignedBeaconBlockContainerV2_AltairBlock)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -974,7 +797,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_v2_beacon_block_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
