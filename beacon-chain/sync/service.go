@@ -259,6 +259,7 @@ func (s *Service) registerHandlers() {
 				}
 				currentEpoch := core.SlotToEpoch(core.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
+				go s.forkWatcher()
 				return
 			}
 		case <-s.ctx.Done():

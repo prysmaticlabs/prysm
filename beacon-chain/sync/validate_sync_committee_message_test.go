@@ -276,7 +276,11 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
 				msg.Slot = core.PrevSlot(hState.Slot())
 
-				return s, topic
+				digest, err := s.currentForkDigest()
+				assert.NoError(t, err)
+				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
+
+				return s, actualTopic
 			},
 			args: args{
 				ctx:   context.Background(),
