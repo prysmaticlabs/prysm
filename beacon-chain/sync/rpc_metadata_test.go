@@ -303,3 +303,7 @@ func TestExtractMetaDataType(t *testing.T) {
 		})
 	}
 }
+
+func oneEpoch() time.Duration {
+	return time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch))
+}
