@@ -64,6 +64,7 @@ type HookCollection struct {
 	OnPreDeserializeRequestBodyIntoContainer      []Hook
 	OnPostDeserializeRequestBodyIntoContainer     []Hook
 	OnPreDeserializeGrpcResponseBodyIntoContainer []func([]byte, interface{}) (bool, ErrorJson)
+	OnPreSerializeMiddlewareResponseIntoJson      []func(interface{}) (bool, []byte, ErrorJson)
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -181,11 +182,26 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 				WriteError(w, errJson, nil)
 				return
 			}
-			var errJson ErrorJson
-			responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
-			if errJson != nil {
-				WriteError(w, errJson, nil)
-				return
+
+			var ok bool
+			runDefault = true
+			for _, hook := range endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson {
+				ok, responseJson, errJson = hook(response)
+				if errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
+				if ok {
+					runDefault = false
+					break
+				}
+			}
+			if runDefault {
+				responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
+				if errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
 			}
 		}
 
