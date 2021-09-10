@@ -16,7 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -411,7 +410,7 @@ func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaco
 		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
 	}
 	if obj.GetAltairBlock() != nil {
-		return wrapperv2.WrappedAltairSignedBeaconBlock(obj.GetAltairBlock())
+		return wrapper.WrappedAltairSignedBeaconBlock(obj.GetAltairBlock())
 	}
 	return nil, errors.New("container has no block")
 }
