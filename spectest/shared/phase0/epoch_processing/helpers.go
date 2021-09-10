@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 type epochOperation func(*testing.T, state.BeaconState) (state.BeaconState, error)
@@ -62,8 +61,6 @@ func RunEpochOperationTest(
 		pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
-			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}
 	} else {
