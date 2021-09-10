@@ -94,10 +94,10 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 
 		errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
-		wrappedAggss := &submitAggregateAndProofsRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggss))
-		require.Equal(t, 1, len(wrappedAggss.Data), "wrong number of wrapped items")
-		assert.Equal(t, "sig", wrappedAggss.Data[0].Signature)
+		wrappedAggs := &submitAggregateAndProofsRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggs))
+		require.Equal(t, 1, len(wrappedAggs.Data), "wrong number of wrapped items")
+		assert.Equal(t, "sig", wrappedAggs.Data[0].Signature)
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
@@ -138,14 +138,14 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 
 		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
-		wrappedAggss := &submitBeaconCommitteeSubscriptionsRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggss))
-		require.Equal(t, 1, len(wrappedAggss.Data), "wrong number of wrapped items")
-		assert.Equal(t, "1", wrappedAggss.Data[0].ValidatorIndex)
-		assert.Equal(t, "1", wrappedAggss.Data[0].CommitteeIndex)
-		assert.Equal(t, "1", wrappedAggss.Data[0].CommitteesAtSlot)
-		assert.Equal(t, "1", wrappedAggss.Data[0].Slot)
-		assert.Equal(t, true, wrappedAggss.Data[0].IsAggregator)
+		wrappedSubs := &submitBeaconCommitteeSubscriptionsRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
+		require.Equal(t, 1, len(wrappedSubs.Data), "wrong number of wrapped items")
+		assert.Equal(t, "1", wrappedSubs.Data[0].ValidatorIndex)
+		assert.Equal(t, "1", wrappedSubs.Data[0].CommitteeIndex)
+		assert.Equal(t, "1", wrappedSubs.Data[0].CommitteesAtSlot)
+		assert.Equal(t, "1", wrappedSubs.Data[0].Slot)
+		assert.Equal(t, true, wrappedSubs.Data[0].IsAggregator)
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
@@ -158,6 +158,52 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
 		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
+}
+
+func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
+		}
+		unwrappedSigs := []*syncCommitteeMessageJson{{
+			Slot:            "1",
+			BeaconBlockRoot: "root",
+			ValidatorIndex:  "1",
+			Signature:       "sig",
+		}}
+		unwrappedSigsJson, err := json.Marshal(unwrappedSigs)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedSigsJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrappedSigs := &submitSyncCommitteeSignaturesRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSigs))
+		require.Equal(t, 1, len(wrappedSigs.Data), "wrong number of wrapped items")
+		assert.Equal(t, "1", wrappedSigs.Data[0].Slot)
+		assert.Equal(t, "root", wrappedSigs.Data[0].BeaconBlockRoot)
+		assert.Equal(t, "1", wrappedSigs.Data[0].ValidatorIndex)
+		assert.Equal(t, "sig", wrappedSigs.Data[0].Signature)
+	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
