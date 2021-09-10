@@ -19,7 +19,6 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 
 // Run minimal e2e config with the current release validator against latest beacon node.
 func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	t.Skip("Skipping for Altair hard fork as there are breaking changes")
 	e2eMinimal(t, true /*usePrysmSh*/)
 }
 
@@ -36,6 +35,32 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		require.NoError(t, err)
 	}
 	const tracingEndpoint = "127.0.0.1:9411"
+	evals := []types.Evaluator{
+		ev.PeersConnect,
+		ev.HealthzCheck,
+		ev.MetricsCheck,
+		ev.ValidatorsAreActive,
+		ev.ValidatorsParticipating,
+		ev.ValidatorSyncParticipation,
+		ev.FinalizationOccurs,
+		ev.ProcessesDepositsInBlocks,
+		ev.VerifyBlockGraffiti,
+		ev.ActivatesDepositedValidators,
+		ev.DepositedValidatorsAreActive,
+		ev.ProposeVoluntaryExit,
+		ev.ValidatorHasExited,
+		ev.ValidatorsVoteWithTheMajority,
+		ev.ColdStateCheckpoint,
+		ev.ForkTransition,
+		ev.APIGatewayV1VerifyIntegrity,
+		ev.APIGatewayV1Alpha1VerifyIntegrity,
+	}
+	// TODO(v2.0.0 release issue tag): remove this block once v2 changes are live.
+	if !usePrysmSh {
+		evals = append(evals, ev.ValidatorSyncParticipation)
+	} else {
+		t.Log("Warning: Skipping v2 specific evaluators for prior release")
+	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
@@ -51,26 +76,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		TracingSinkEndpoint: tracingEndpoint,
-		Evaluators: []types.Evaluator{
-			ev.PeersConnect,
-			ev.HealthzCheck,
-			ev.MetricsCheck,
-			ev.ValidatorsAreActive,
-			ev.ValidatorsParticipating,
-			ev.ValidatorSyncParticipation,
-			ev.FinalizationOccurs,
-			ev.ProcessesDepositsInBlocks,
-			ev.VerifyBlockGraffiti,
-			ev.ActivatesDepositedValidators,
-			ev.DepositedValidatorsAreActive,
-			ev.ProposeVoluntaryExit,
-			ev.ValidatorHasExited,
-			ev.ValidatorsVoteWithTheMajority,
-			ev.ColdStateCheckpoint,
-			ev.ForkTransition,
-			ev.APIGatewayV1VerifyIntegrity,
-			ev.APIGatewayV1Alpha1VerifyIntegrity,
-		},
+		Evaluators:          evals,
 	}
 
 	newTestRunner(t, testConfig).run()
