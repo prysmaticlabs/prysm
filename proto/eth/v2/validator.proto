@@ -17,6 +17,7 @@ package ethereum.eth.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v2/beacon_block.proto";
+import "proto/eth/v2/version.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
@@ -49,7 +50,8 @@ message SyncCommitteeDuty {
 }
 
 message ProduceBlockResponseV2 {
-  BeaconBlockContainerV2 data = 1;
+  Version version = 1;
+  BeaconBlockContainerV2 data = 2;
 }
 
 message SubmitSyncCommitteeSubscriptionsRequest {

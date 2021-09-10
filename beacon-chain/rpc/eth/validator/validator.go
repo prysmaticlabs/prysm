@@ -243,6 +243,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
 		resp = &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.BeaconBlockContainerV2{
 				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
 			},
@@ -267,6 +268,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
 		resp = &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_ALTAIR,
 			Data: &ethpbv2.BeaconBlockContainerV2{
 				Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
 			},

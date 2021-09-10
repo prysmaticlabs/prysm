@@ -559,6 +559,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_Phase0Block)
 		require.Equal(t, true, ok)
@@ -653,9 +654,6 @@ func TestProduceBlockV2(t *testing.T) {
 		for i := range aggregationBits {
 			aggregationBits[i] = 0xAA
 		}
-		//ps := helpers.PrevSlot(beaconState.Slot())
-		//pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
-		//require.NoError(t, err)
 
 		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 		require.NoError(t, err)
@@ -694,6 +692,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_AltairBlock)
 		require.Equal(t, true, ok)
@@ -714,7 +713,12 @@ func TestProduceBlockV2(t *testing.T) {
 			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
-		// TODO sync aggregate
+		expectedBits := bitfield.NewBitvector512()
+		for i := 0; i <= 15; i++ {
+			expectedBits[i] = 0xAA
+		}
+		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
+		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
 }
 
