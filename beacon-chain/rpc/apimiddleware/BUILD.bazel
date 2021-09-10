@@ -12,6 +12,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/rpc/eth/events:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
@@ -30,11 +31,13 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/rpc/eth/events:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_r3labs_sse//:go_default_library",
     ],
 )
