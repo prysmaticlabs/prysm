@@ -14,7 +14,7 @@ var (
 	}
 
 	deprecatedEnableActiveBalanceCache = &cli.BoolFlag{
-		Name:  "enable-active-balance-cache",
+		Name:   "enable-active-balance-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
