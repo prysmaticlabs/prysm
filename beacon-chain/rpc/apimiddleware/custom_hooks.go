@@ -86,6 +86,24 @@ func wrapBeaconCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.Res
 	return nil
 }
 
+// https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolSyncCommitteeSignatures expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSyncCommitteeSignaturesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSignaturesRequestJson); ok {
+		data := make([]*syncCommitteeMessageJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitSyncCommitteeSignaturesRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
 func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.Request) gateway.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*beaconBlockContainerJson); ok {
