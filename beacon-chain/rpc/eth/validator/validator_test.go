@@ -605,6 +605,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
 
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
