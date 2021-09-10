@@ -21,7 +21,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -46,11 +45,11 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 	}
 
 	currentSlot := types.Slot(0)
-	state, err := v1.InitializeFromProto(&statepb.BeaconState{
+	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,
-		Fork: &statepb.Fork{
+		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -117,7 +116,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
+			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
@@ -127,6 +126,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	_, err := p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
