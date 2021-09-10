@@ -70,6 +70,13 @@ var (
 		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
 	}
+	// EthApiHost specifies the host which runs the official Ethereum REST API.
+	// Serves JSON values conforming to the specification: https://ethereum.github.io/beacon-apis/
+	EthApiHost = &cli.StringFlag{
+		Name:  "eth-api-host",
+		Usage: "The host on which the REST API conforming to the official Ethereum API specification runs",
+		Value: "127.0.0.1",
+	}
 	// EthApiPort specifies the port which runs the official Ethereum REST API.
 	// Serves JSON values conforming to the specification: https://ethereum.github.io/beacon-apis/
 	EthApiPort = &cli.IntFlag{

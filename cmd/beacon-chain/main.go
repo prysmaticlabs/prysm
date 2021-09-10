@@ -39,6 +39,7 @@ var appFlags = []cli.Flag{
 	flags.DisableGRPCGateway,
 	flags.GRPCGatewayHost,
 	flags.GRPCGatewayPort,
+	flags.EthApiHost,
 	flags.EthApiPort,
 	flags.GPRCGatewayCorsDomain,
 	flags.MinSyncPeers,

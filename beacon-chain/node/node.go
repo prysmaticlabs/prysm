@@ -654,11 +654,12 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
 	ethApiPort := b.cliCtx.Int(flags.EthApiPort.Name)
+	ethApiHost := b.cliCtx.String(flags.EthApiHost.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
+	apiMiddlewareAddress := fmt.Sprintf("%s:%d", ethApiHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
