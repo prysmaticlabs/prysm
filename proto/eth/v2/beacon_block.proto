@@ -38,23 +38,12 @@ message BlockResponseV2 {
   BeaconBlockContainerV2 data = 2;
 }
 
-message SignedBlockResponseV2 {
-  SignedBeaconBlockContainerV2 data = 1;
-}
-
 message BlockSSZResponseV2 {
   v2.Version version = 1;
   bytes data = 2;
 }
 
 message BeaconBlockContainerV2 {
-  oneof block {
-    v1.BeaconBlock phase0Block = 1;
-    BeaconBlockAltair altairBlock = 2;
-  }
-}
-
-message SignedBeaconBlockContainerV2 {
   oneof block {
     v1.BeaconBlock phase0Block = 1;
     BeaconBlockAltair altairBlock = 2;

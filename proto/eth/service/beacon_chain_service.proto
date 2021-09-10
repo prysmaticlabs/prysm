@@ -152,7 +152,7 @@ service BeaconChain {
   }
 
   // GetBlockV2 retrieves block details for given block id.
-  rpc GetBlockV2(v2.BlockRequestV2) returns (v2.SignedBlockResponseV2) {
+  rpc GetBlockV2(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
     option (google.api.http) = {
       get: "/eth/v2/beacon/blocks/{block_id}"
     };
