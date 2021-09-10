@@ -60,6 +60,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core:go_default_library",
+        "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",

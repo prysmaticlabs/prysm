@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -302,7 +302,7 @@ func TestService_ReceiveBlockBatch_UpdateFinalizedCheckpoint(t *testing.T) {
 	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
 		b, err := testutil.GenerateFullBlock(copied, keys, testutil.DefaultBlockGenConfig(), i)
 		assert.NoError(t, err)
-		copied, err = state.ExecuteStateTransition(context.Background(), copied, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		copied, err = transition.ExecuteStateTransition(context.Background(), copied, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		assert.NoError(t, err)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)

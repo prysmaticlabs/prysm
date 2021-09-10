@@ -15,7 +15,7 @@ import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	beaconkv "github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -197,7 +197,7 @@ func BeaconFuzzBlock(b []byte) {
 		_ = err
 	}
 
-	if _, _, err := state.ProcessBlockNoVerifyAnySig(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
+	if _, _, err := transition.ProcessBlockNoVerifyAnySig(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
 		_ = err
 	}
 }
