@@ -61,6 +61,11 @@ type stateCommitteesResponseJson struct {
 	Data []*committeeJson `json:"data"`
 }
 
+// syncCommitteesResponseJson is used in /beacon/states/{state_id}/sync_committees API endpoint.
+type syncCommitteesResponseJson struct {
+	Data *syncCommitteeValidatorsJson `json:"data"`
+}
+
 // blockHeadersResponseJson is used in /beacon/headers API endpoint.
 type blockHeadersResponseJson struct {
 	Data []*blockHeaderContainerJson `json:"data"`
@@ -426,6 +431,11 @@ type committeeJson struct {
 	Index      string   `json:"index"`
 	Slot       string   `json:"slot"`
 	Validators []string `json:"validators"`
+}
+
+type syncCommitteeValidatorsJson struct {
+	Validators          []string   `json:"validators"`
+	ValidatorAggregates [][]string `json:"validator_aggregates"`
 }
 
 type pendingAttestationJson struct {
