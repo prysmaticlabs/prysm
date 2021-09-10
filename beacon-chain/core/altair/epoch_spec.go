@@ -60,4 +60,3 @@ func ProcessParticipationFlagUpdates(beaconState state.BeaconStateAltair) (state
 	}
 	return beaconState, nil
 }
-
