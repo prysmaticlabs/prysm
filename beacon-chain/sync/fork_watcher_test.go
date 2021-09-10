@@ -101,8 +101,8 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := tt.svcCreator(t)
-			if err := s.checkForNextEpochFork(tt.currEpoch); (err != nil) != tt.wantErr {
-				t.Errorf("checkForNextEpochFork() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.registerForUpcomingFork(tt.currEpoch); (err != nil) != tt.wantErr {
+				t.Errorf("registerForUpcomingFork() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			tt.postSvcCheck(t, s)
 		})
@@ -236,8 +236,8 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := tt.svcCreator(t)
-			if err := s.checkForPreviousEpochFork(tt.currEpoch); (err != nil) != tt.wantErr {
-				t.Errorf("checkForNextEpochFork() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.deregisterFromPastFork(tt.currEpoch); (err != nil) != tt.wantErr {
+				t.Errorf("registerForUpcomingFork() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			tt.postSvcCheck(t, s)
 		})
