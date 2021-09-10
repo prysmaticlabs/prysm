@@ -30,7 +30,7 @@ var exitedIndex types.ValidatorIndex
 var valExited bool
 
 // churnLimit is normally 4 unless the validator set is extremely large.
-var churnLimit = uint64(4)
+var churnLimit = e2e.DepositCount / params.BeaconConfig().ChurnLimitQuotient
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
