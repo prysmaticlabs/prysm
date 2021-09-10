@@ -165,7 +165,7 @@ func ProcessRegistryUpdates(state state.BeaconState) (state.BeaconState, error) 
 //            penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
+func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state.BeaconState, error) {
 	currentEpoch := core.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
@@ -185,7 +185,7 @@ func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, totalBalance)
+	minSlashing := mathutil.Min(totalSlashing*slashingMultiplier, totalBalance)
 	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
