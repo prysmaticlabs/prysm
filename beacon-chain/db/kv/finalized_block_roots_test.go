@@ -170,6 +170,43 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	}
 }
 
+func TestStore_IsFinalizedChildBlockAltair(t *testing.T) {
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	db := setupDB(t)
+	ctx := context.Background()
+
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+
+	blks := makeBlocksAltair(t, 0, slotsPerEpoch*3, genesisBlockRoot)
+
+	require.NoError(t, db.SaveBlocks(ctx, blks))
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  root[:],
+	}
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	// a state is required to save checkpoint
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+
+	// All blocks up to slotsPerEpoch should have a finalized child block.
+	for i := uint64(0); i < slotsPerEpoch; i++ {
+		root, err := blks[i].Block().HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
+		blk, err := db.FinalizedChildBlock(ctx, root)
+		assert.NoError(t, err)
+		if blk == nil {
+			t.Error("Child block doesn't exist for valid finalized block.")
+		}
+	}
+}
+
 func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -189,6 +226,24 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
 		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+	}
+	return ifaceBlocks
+}
+
+func makeBlocksAltair(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+	blocks := make([]*ethpb.SignedBeaconBlockAltair, n)
+	ifaceBlocks := make([]block.SignedBeaconBlock, n)
+	for j := i; j < n+i; j++ {
+		parentRoot := make([]byte, 32)
+		copy(parentRoot, previousRoot[:])
+		blocks[j-i] = testutil.NewBeaconBlockAltair()
+		blocks[j-i].Block.Slot = types.Slot(j + 1)
+		blocks[j-i].Block.ParentRoot = parentRoot
+		var err error
+		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
+		require.NoError(t, err)
+		ifaceBlocks[j-i], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-i])
+		require.NoError(t, err)
 	}
 	return ifaceBlocks
 }
