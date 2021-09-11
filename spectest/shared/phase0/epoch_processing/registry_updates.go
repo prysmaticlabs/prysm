@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -18,6 +19,8 @@ func RunRegistryUpdatesTests(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
+			// Important to clear cache for every test or else the old value of active validator count gets reused.
+			helpers.ClearCache()
 			RunEpochOperationTest(t, folderPath, processRegistryUpdatesWrapper)
 		})
 	}
