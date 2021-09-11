@@ -12,8 +12,15 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableActiveBalanceCache = &cli.BoolFlag{
+		Name:   "enable-active-balance-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
+	deprecatedEnableActiveBalanceCache,
 }
