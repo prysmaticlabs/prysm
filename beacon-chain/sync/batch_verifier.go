@@ -1,10 +1,14 @@
 package sync
 
 import (
+	"context"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
 const signatureVerificationInterval = 50 * time.Millisecond
@@ -16,6 +20,8 @@ type signatureVerifier struct {
 	resChan chan error
 }
 
+// A routine that runs in the background to perform batch
+// verifications of incoming messages from gossip.
 func (s *Service) verifierRoutine() {
 	verifierBatch := make([]*signatureVerifier, 0)
 	ticker := time.NewTicker(signatureVerificationInterval)
@@ -39,6 +45,35 @@ func (s *Service) verifierRoutine() {
 			}
 		}
 	}
+}
+
+func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) pubsub.ValidationResult {
+	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
+	defer span.End()
+
+	resChan := make(chan error)
+	verificationSet := &signatureVerifier{set: set, resChan: resChan}
+	s.signatureChan <- verificationSet
+
+	resErr := <-resChan
+	close(resChan)
+	// If verification fails we fallback to individual verification
+	// of each signature set.
+	if resErr != nil {
+		log.WithError(resErr).Tracef("Could not perform batch verification of %s", message)
+		verified, err := set.Verify()
+		if err != nil {
+			log.WithError(err).Debugf("Could not verify %s", message)
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+		if !verified {
+			log.Debugf("Verification of %s failed", message)
+			traceutil.AnnotateError(span, err)
+			return pubsub.ValidationReject
+		}
+	}
+	return pubsub.ValidationAccept
 }
 
 func verifyBatch(verifierBatch []*signatureVerifier) []*signatureVerifier {

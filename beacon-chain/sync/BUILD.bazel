@@ -123,6 +123,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "batch_verifier_test.go",
         "context_test.go",
         "decode_pubsub_test.go",
         "error_test.go",

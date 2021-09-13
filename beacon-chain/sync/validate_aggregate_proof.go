@@ -196,35 +196,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	return pubsub.ValidationAccept
 }
 
-func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) pubsub.ValidationResult {
-	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
-	defer span.End()
-
-	resChan := make(chan error)
-	verificationSet := &signatureVerifier{set: set, resChan: resChan}
-	s.signatureChan <- verificationSet
-
-	resErr := <-resChan
-	close(resChan)
-	// If verification fails we fallback to individual verification
-	// of each signature set.
-	if resErr != nil {
-		log.WithError(resErr).Tracef("Could not perform batch verification of %s", message)
-		verified, err := set.Verify()
-		if err != nil {
-			log.WithError(err).Debugf("Could not verify %s", message)
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
-		if !verified {
-			log.Debugf("Verification of %s failed", message)
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
-	}
-	return pubsub.ValidationAccept
-}
-
 func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
 	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
