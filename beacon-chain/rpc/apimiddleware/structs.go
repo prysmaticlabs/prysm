@@ -207,6 +207,7 @@ type proposerDutiesResponseJson struct {
 	Data          []*proposerDutyJson `json:"data"`
 }
 
+// syncCommitteeDutiesResponseJson is used in /validator/duties/sync/{epoch} API endpoint.
 type syncCommitteeDutiesResponseJson struct {
 	Data []*syncCommitteeDuty `json:"data"`
 }
