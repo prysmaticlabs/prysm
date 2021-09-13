@@ -91,6 +91,8 @@ service BeaconChain {
         };
     }
 
+	// DEPRECATED in favor of ListBeaconBlocks.
+	//
     // Retrieve blocks by root, slot, or epoch.
     //
     // The server may return multiple blocks in the case that a slot or epoch is
@@ -99,6 +101,7 @@ service BeaconChain {
     // not return NOT_FOUND. Only one filter criteria should be used. This endpoint
     // allows for retrieval of genesis information via a boolean query filter.
     rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/blocks"
         };
@@ -111,9 +114,9 @@ service BeaconChain {
     // no blocks in their database match the filter criteria. This RPC should
     // not return NOT_FOUND. Only one filter criteria should be used. This endpoint
     // allows for retrieval of genesis information via a boolean query filter.
-    rpc ListBlocksAltair(ListBlocksRequest) returns (ListBlocksResponseAltair) {
+    rpc ListBeaconBlocks(ListBlocksRequest) returns (ListBeaconBlocksResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks/altair"
+            get: "/eth/v1alpha2/beacon/blocks"
         };
     }
 
@@ -409,10 +412,10 @@ message ListBlocksResponse {
 }
 
 
-message ListBlocksResponseAltair {
-    repeated BeaconBlockContainerAltair blockContainers = 1;
+message ListBeaconBlocksResponse {
+    repeated BeaconBlockContainer block_containers = 1;
 
-    // A pagination token returned from a previous call to `ListBlocks`
+    // A pagination token returned from a previous call to `ListBeaconBlocks`
     // that indicates from where listing should continue.
     // This field is optional.
     string next_page_token = 2;
@@ -421,9 +424,10 @@ message ListBlocksResponseAltair {
     int32 total_size = 3;
 }
 
-// A container that contains both the beacon block
-// and its corresponding root.
-message BeaconBlockContainerAltair {
+// A container that contains both the beacon block, its corresponding root, and
+// whether or not it is canonical in the chain. This message returns a oneof field
+// representing either a phase 0 beacon block or an Altair beacon block.
+message BeaconBlockContainer {
     // 32 byte merkle tree root of contained beacon block.
     bytes block_root = 1;
 
@@ -438,19 +442,6 @@ message BeaconBlockContainerAltair {
         // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;
     }
-}
-
-// A container that contains both the beacon block
-// and its corresponding root.
-message BeaconBlockContainer {
-    // The contained Ethereum beacon block.
-    SignedBeaconBlock block = 1;
-
-    // 32 byte merkle tree root of contained beacon block.
-    bytes block_root = 2;
-
-    // Boolean indicating whether the block is canonical.
-    bool canonical = 3;
 }
 
 // Information about the head of the beacon chain.

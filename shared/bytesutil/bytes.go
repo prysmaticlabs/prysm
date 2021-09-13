@@ -3,13 +3,15 @@ package bytesutil
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/bits"
 	"regexp"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 )
+
+var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
@@ -110,6 +112,15 @@ func ToBytes48(x []byte) [48]byte {
 // than 64 bytes.
 func ToBytes64(x []byte) [64]byte {
 	var y [64]byte
+	copy(y[:], x)
+	return y
+}
+
+// ToBytes96 is a convenience method for converting a byte slice to a fix
+// sized 96 byte array. This method will truncate the input if it is larger
+// than 96 bytes.
+func ToBytes96(x []byte) [96]byte {
+	var y [96]byte
 	copy(y[:], x)
 	return y
 }
@@ -349,9 +360,20 @@ func BytesToSlotBigEndian(b []byte) types.Slot {
 }
 
 // IsHex checks whether the byte array is a hex number prefixed with '0x'.
-func IsHex(b []byte) (bool, error) {
+func IsHex(b []byte) bool {
 	if b == nil {
-		return false, nil
+		return false
 	}
-	return regexp.Match("^(0x)[0-9a-fA-F]+$", b)
+	return hexRegex.Match(b)
+}
+
+// IsHexOfLen checks whether the byte array is a hex number prefixed with '0x' and containing the required number of digits.
+func IsHexOfLen(b []byte, length uint64) bool {
+	if b == nil {
+		return false
+	}
+	matches := hexRegex.Match(b)
+	// Add 2 to account for '0x'
+	expectedLen := int(length) + 2
+	return matches && len(b) == expectedLen
 }

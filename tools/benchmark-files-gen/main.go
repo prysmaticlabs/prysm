@@ -10,8 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -102,7 +103,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	beaconState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	s, err := core.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	s, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return errors.Wrap(err, "could not calculate state root")
 	}
@@ -140,7 +141,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}
@@ -157,7 +158,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	_, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		beaconState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+		beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		if err != nil {
 			return err
 		}

@@ -4,8 +4,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -48,6 +50,54 @@ func TestGetBalance_OK(t *testing.T) {
 		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Balances: test.b})
 		require.NoError(t, err)
 		assert.Equal(t, test.b[test.i], state.Balances()[test.i], "Incorrect Validator balance")
+	}
+}
+
+func TestTotalActiveBalance(t *testing.T) {
+	tests := []struct {
+		vCount int
+	}{
+		{1},
+		{10},
+		{10000},
+	}
+	for _, test := range tests {
+		validators := make([]*ethpb.Validator, 0)
+		for i := 0; i < test.vCount; i++ {
+			validators = append(validators, &ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 1})
+		}
+		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
+		require.NoError(t, err)
+		bal, err := TotalActiveBalance(state)
+		require.NoError(t, err)
+		require.Equal(t, uint64(test.vCount)*params.BeaconConfig().MaxEffectiveBalance, bal)
+	}
+}
+
+func TestTotalActiveBalance_WithCache(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnableActiveBalanceCache: true,
+	})
+	defer resetCfg()
+
+	tests := []struct {
+		vCount    int
+		wantCount int
+	}{
+		{vCount: 1, wantCount: 1},
+		{vCount: 10, wantCount: 10},
+		{vCount: 10000, wantCount: 10000},
+	}
+	for _, test := range tests {
+		validators := make([]*ethpb.Validator, 0)
+		for i := 0; i < test.vCount; i++ {
+			validators = append(validators, &ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: 1})
+		}
+		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
+		require.NoError(t, err)
+		bal, err := TotalActiveBalance(state)
+		require.NoError(t, err)
+		require.Equal(t, uint64(test.wantCount)*params.BeaconConfig().MaxEffectiveBalance, bal)
 	}
 }
 
@@ -107,24 +157,24 @@ func TestFinalityDelay(t *testing.T) {
 	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = PrevEpoch(beaconState)
+		prevEpoch = core.PrevEpoch(beaconState)
 		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()
 	d := FinalityDelay(prevEpoch, finalizedEpoch)
-	w := PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w := core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
 	setVal()
 	d = FinalityDelay(prevEpoch, finalizedEpoch)
-	w = PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w = core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
 	setVal()
 	d = FinalityDelay(prevEpoch, finalizedEpoch)
-	w = PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w = core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 }
 
@@ -137,7 +187,7 @@ func TestIsInInactivityLeak(t *testing.T) {
 	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = PrevEpoch(beaconState)
+		prevEpoch = core.PrevEpoch(beaconState)
 		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()

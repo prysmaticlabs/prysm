@@ -8,10 +8,11 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -279,12 +280,12 @@ func BlockSignatureAltair(
 	if err != nil {
 		return nil, err
 	}
-	s, err := core.CalculateStateRoot(context.Background(), bState, wsb)
+	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(bState.Fork(), core.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +400,7 @@ func GenerateFullBlockAltair(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, core.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}

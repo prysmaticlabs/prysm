@@ -9,9 +9,9 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -58,6 +58,8 @@ func TestService_InitStartStop(t *testing.T) {
 					FinalizedCheckPoint: &eth.Checkpoint{
 						Epoch: 0,
 					},
+					Genesis:        time.Unix(4113849600, 0),
+					ValidatorsRoot: [32]byte{},
 				}
 			},
 			methodRuns: func(fd *event.Feed) {
@@ -86,6 +88,8 @@ func TestService_InitStartStop(t *testing.T) {
 					FinalizedCheckPoint: &eth.Checkpoint{
 						Epoch: 0,
 					},
+					Genesis:        time.Now().Add(-5 * time.Minute),
+					ValidatorsRoot: [32]byte{},
 				}
 			},
 			methodRuns: func(fd *event.Feed) {
@@ -115,8 +119,10 @@ func TestService_InitStartStop(t *testing.T) {
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
-						Epoch: helpers.SlotToEpoch(futureSlot),
+						Epoch: core.SlotToEpoch(futureSlot),
 					},
+					Genesis:        makeGenesisTime(futureSlot),
+					ValidatorsRoot: [32]byte{},
 				}
 			},
 			methodRuns: func(fd *event.Feed) {
@@ -150,7 +156,7 @@ func TestService_InitStartStop(t *testing.T) {
 			defer hook.Reset()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			mc := &mock.ChainService{}
+			mc := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 			// Allow overriding with customized chain service.
 			if tt.chainService != nil {
 				mc = tt.chainService()
@@ -211,7 +217,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(ctx, &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}})
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
@@ -238,7 +244,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		defer hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(ctx, &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}})
 
 		expectedGenesisTime := time.Unix(358544700, 0)
 		var receivedGenesisTime time.Time
@@ -282,7 +288,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		defer hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		s := newService(ctx, &mock.ChainService{})
+		s := newService(ctx, &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}})
 		// Initialize mock feed
 		_ = s.cfg.StateNotifier.StateFeed()
 
@@ -320,7 +326,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 }
 
 func TestService_markSynced(t *testing.T) {
-	mc := &mock.ChainService{}
+	mc := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	s := NewService(ctx, &Config{
@@ -401,8 +407,10 @@ func TestService_Resync(t *testing.T) {
 					Root:  genesisRoot[:],
 					DB:    beaconDB,
 					FinalizedCheckPoint: &eth.Checkpoint{
-						Epoch: helpers.SlotToEpoch(futureSlot),
+						Epoch: core.SlotToEpoch(futureSlot),
 					},
+					Genesis:        time.Now(),
+					ValidatorsRoot: [32]byte{},
 				}
 			},
 			assert: func(s *Service) {

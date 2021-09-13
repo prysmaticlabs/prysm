@@ -8,10 +8,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestCountdownToGenesis(t *testing.T) {
+	logrus.SetLevel(logrus.DebugLevel)
+
 	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
@@ -47,6 +50,7 @@ func TestCountdownToGenesis(t *testing.T) {
 			[32]byte{},
 		)
 		require.LogsContain(t, hook, "4s until chain genesis")
+		require.LogsContain(t, hook, "3s until chain genesis")
 		require.LogsContain(t, hook, "Context closed, exiting routine")
 		require.LogsDoNotContain(t, hook, "Chain genesis time reached")
 	})

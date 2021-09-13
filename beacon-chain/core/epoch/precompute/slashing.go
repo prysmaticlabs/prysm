@@ -2,6 +2,7 @@ package precompute
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -12,7 +13,7 @@ import (
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
 func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
-	currentEpoch := helpers.CurrentEpoch(s)
+	currentEpoch := core.CurrentEpoch(s)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
 	// Compute the sum of state slashings

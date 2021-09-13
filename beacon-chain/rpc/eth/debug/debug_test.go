@@ -7,7 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -23,11 +24,43 @@ func TestGetBeaconState(t *testing.T) {
 			BeaconState: fakeState,
 		},
 	}
-	resp, err := server.GetBeaconState(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetBeaconState(context.Background(), &ethpbv1.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
+}
+
+func TestGetBeaconStateV2(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		fakeState, err := sharedtestutil.NewBeaconState()
+		require.NoError(t, err)
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		fakeState, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 1)
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
+	})
 }
 
 func TestGetBeaconStateSSZ(t *testing.T) {
@@ -41,13 +74,53 @@ func TestGetBeaconStateSSZ(t *testing.T) {
 			BeaconState: fakeState,
 		},
 	}
-	resp, err := server.GetBeaconStateSSZ(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetBeaconStateSSZ(context.Background(), &ethpbv1.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.DeepEqual(t, sszState, resp.Data)
+}
+
+func TestGetBeaconStateSSZV2(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		fakeState, err := sharedtestutil.NewBeaconState()
+		require.NoError(t, err)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		fakeState, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 1)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+	})
 }
 
 func TestListForkChoiceHeads(t *testing.T) {

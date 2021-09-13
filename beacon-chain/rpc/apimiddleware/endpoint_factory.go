@@ -24,16 +24,19 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
+		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/headers",
 		"/eth/v1/beacon/headers/{block_id}",
 		"/eth/v1/beacon/blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
+		"/eth/v2/beacon/blocks/{block_id}",
 		"/eth/v1/beacon/blocks/{block_id}/root",
 		"/eth/v1/beacon/blocks/{block_id}/attestations",
 		"/eth/v1/beacon/pool/attestations",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
+		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -49,11 +52,14 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
+		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/contribution_and_proofs",
 	}
 }
 
@@ -80,6 +86,12 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/states/{state_id}/committees":
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
 		endpoint.GetResponse = &stateCommitteesResponseJson{}
+	case "/eth/v1/beacon/states/{state_id}/sync_committees":
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "epoch"}}
+		endpoint.GetResponse = &syncCommitteesResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeGrpcResponseBodyIntoContainer: []func([]byte, interface{}) (bool, gateway.ErrorJson){prepareValidatorAggregates},
+		}
 	case "/eth/v1/beacon/headers":
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "parent_root", Hex: true}}
 		endpoint.GetResponse = &blockHeadersResponseJson{}
@@ -93,6 +105,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockResponseJson{}
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconBlockSSZ}
+	case "/eth/v2/beacon/blocks/{block_id}":
+		endpoint.GetResponse = &blockV2ResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2Block},
+		}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
 		endpoint.GetResponse = &blockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
@@ -114,6 +131,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/pool/voluntary_exits":
 		endpoint.PostRequest = &signedVoluntaryExitJson{}
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
+	case "/eth/v1/beacon/pool/sync_committees":
+		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSignaturesArray},
+		}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":
@@ -144,7 +166,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &attesterDutiesRequestJson{}
+		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &attesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Hooks = gateway.HookCollection{
@@ -153,6 +175,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &proposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+	case "/eth/v1/validator/duties/sync/{epoch}":
+		endpoint.PostRequest = &dutiesRequestJson{}
+		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapValidatorIndicesArray},
+		}
 	case "/eth/v1/validator/blocks/{slot}":
 		endpoint.GetResponse = &produceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
@@ -164,14 +193,24 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.GetResponse = &aggregateAttestationResponseJson{}
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}}
 	case "/eth/v1/validator/beacon_committee_subscriptions":
-		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
+		endpoint.PostRequest = &submitBeaconCommitteeSubscriptionsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapBeaconCommitteeSubscriptionsArray},
+		}
+	case "/eth/v1/validator/sync_committee_subscriptions":
+		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSubscriptionsArray},
 		}
 	case "/eth/v1/validator/aggregate_and_proofs":
 		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
+		}
+	case "/eth/v1/validator/contribution_and_proofs":
+		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedContributionAndProofsArray},
 		}
 	default:
 		return nil, errors.New("invalid path")

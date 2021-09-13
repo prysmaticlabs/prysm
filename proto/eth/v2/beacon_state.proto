@@ -21,6 +21,7 @@ import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/validator.proto";
 import "proto/eth/v2/sync_committee.proto";
+import "proto/eth/v2/version.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
@@ -81,9 +82,17 @@ message StateRequestV2 {
 }
 
 message BeaconStateResponseV2 {
-  BeaconStateV2 data = 1;
+  Version version = 1;
+  BeaconStateContainer data = 2;
 }
 
 message BeaconStateSSZResponseV2 {
   bytes data = 1;
+}
+
+message BeaconStateContainer {
+  oneof state {
+    v1.BeaconState phase0State = 1;
+    BeaconStateV2 altairState = 2;
+  }
 }

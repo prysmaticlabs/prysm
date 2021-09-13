@@ -12,43 +12,15 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableSyncBacktracking = &cli.StringFlag{
-		Name:   "enable-sync-backtracking",
+
+	deprecatedEnableActiveBalanceCache = &cli.BoolFlag{
+		Name:   "enable-active-balance-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableSyncBacktracking = &cli.StringFlag{
-		Name:   "disable-sync-backtracking",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisablePruningDepositProofs = &cli.BoolFlag{
-		Name:   "disable-pruning-deposit-proofs",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:   "disable-eth1-data-majority-vote",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableBlst = &cli.BoolFlag{
-		Name:   "disable-blst",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:   "proposer-atts-selection-using-max-cover",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedUpdateHeadTimely = &cli.BoolFlag{
-		Name:   "update-head-timely",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:   "enable-optimized-balance-update",
+
+	deprecatedCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
+		Name:   "correctly-insert-orphaned-atts",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -56,12 +28,6 @@ var (
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedEnableSyncBacktracking,
-	deprecatedDisableSyncBacktracking,
-	deprecatedDisablePruningDepositProofs,
-	deprecatedDisableEth1DataMajorityVote,
-	deprecatedDisableBlst,
-	deprecatedProposerAttsSelectionUsingMaxCover,
-	deprecatedEnableOptimizedBalanceUpdate,
-	deprecatedUpdateHeadTimely,
+	deprecatedEnableActiveBalanceCache,
+	deprecatedCorrectlyInsertOrphanedAtts,
 }

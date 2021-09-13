@@ -1,7 +1,5 @@
 package params
 
-// AltairE2EForkEpoch is the pre-determined altair fork epoch in our
-// E2E test.
 const AltairE2EForkEpoch = 6
 
 // UseE2EConfig for beacon chain services.

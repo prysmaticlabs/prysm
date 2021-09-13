@@ -10,7 +10,6 @@ require (
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cespare/cp v1.1.1 // indirect
-	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/deckarep/golang-set v1.7.1 // indirect
@@ -20,7 +19,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210719200358-90640294cb9c
+	github.com/ferranbt/fastssz v0.0.0-20210905181407-59cf6761a7d5
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -122,9 +121,7 @@ require (
 	google.golang.org/genproto v0.0.0-20210426193834-eac7f76ac494
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
-	gopkg.in/errgo.v2 v2.1.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3

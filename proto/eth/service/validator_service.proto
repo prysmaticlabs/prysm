@@ -89,7 +89,7 @@ service BeaconValidator {
   }
 
 
-  // ProduceBlockAltair requests the beacon node to produce a valid unsigned beacon block,
+  // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block,
   // which can then be signed by a proposer and submitted.
   //
   // HTTP response usage:
@@ -97,7 +97,7 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
-  rpc ProduceBlockAltair(v2.ProduceBlockRequestV2) returns (v2.ProduceBlockResponseV2) {
+  rpc ProduceBlockV2(v1.ProduceBlockRequest) returns (v2.ProduceBlockResponseV2) {
     option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
   }
 

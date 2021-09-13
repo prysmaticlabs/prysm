@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -45,19 +46,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Override topic for decoding.
-	originalTopic := msg.Topic
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	msg.Topic = &format
-
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	// Restore topic.
-	msg.Topic = originalTopic
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
@@ -126,7 +120,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
+	// Verify the block being voted and the processed state is in DB and the block has passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
@@ -150,7 +144,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
-	validationRes := s.validateUnaggregatedAttTopic(ctx, att, preState, *originalTopic)
+	validationRes := s.validateUnaggregatedAttTopic(ctx, att, preState, *msg.Topic)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
 	}
@@ -172,7 +166,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	valCount, err := helpers.ActiveValidatorCount(bs, helpers.SlotToEpoch(a.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(bs, core.SlotToEpoch(a.Data.Slot))
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve active validator count")
 		traceutil.AnnotateError(span, err)
@@ -184,7 +178,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	}
 	subnet := helpers.ComputeSubnetForAttestation(valCount, a)
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not compute fork digest")
 		traceutil.AnnotateError(span, err)
@@ -232,21 +226,21 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
 func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
-	s.seenAttestationLock.RLock()
-	defer s.seenAttestationLock.RUnlock()
+	s.seenUnAggregatedAttestationLock.RLock()
+	defer s.seenUnAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	_, seen := s.seenAttestationCache.Get(string(b))
+	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
 func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) {
-	s.seenAttestationLock.Lock()
-	defer s.seenAttestationLock.Unlock()
+	s.seenUnAggregatedAttestationLock.Lock()
+	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	s.seenAttestationCache.Add(string(b), true)
+	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the

@@ -9,6 +9,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -188,7 +189,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			beaconState, err := testutil.NewBeaconState()
 			require.NoError(t, err)
-			slot, err := helpers.StartSlot(tt.args.currentEpoch)
+			slot, err := core.StartSlot(tt.args.currentEpoch)
 			require.NoError(t, err)
 			require.NoError(t, beaconState.SetSlot(slot))
 			mockChain := &mock.ChainService{
@@ -321,7 +322,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		att := createAttestationWrapper(t, source, target, []uint64{0}, sr[:])
 		s.attsQueue = newAttestationsQueue()
 		s.attsQueue.push(att)
-		slot, err := helpers.StartSlot(i)
+		slot, err := core.StartSlot(i)
 		require.NoError(t, err)
 		require.NoError(t, mockChain.State.SetSlot(slot))
 		s.serviceCfg.HeadStateFetcher = mockChain
@@ -383,7 +384,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.attsQueue = newAttestationsQueue()
 	s.attsQueue.push(att1)
 	s.attsQueue.push(att2)
-	slot, err := helpers.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
+	slot, err := core.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
 	require.NoError(t, err)
 	mockChain.Slot = &slot
 	s.serviceCfg.HeadStateFetcher = mockChain
@@ -762,7 +763,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	slot, err := helpers.StartSlot(1)
+	slot, err := core.StartSlot(1)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	mockChain := &mock.ChainService{

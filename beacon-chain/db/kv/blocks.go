@@ -8,7 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -479,11 +479,11 @@ func blockRootsBySlotRange(
 	endEpoch, endEpochOk := endEpochEncoded.(types.Epoch)
 	var err error
 	if startEpochOk && endEpochOk {
-		startSlot, err = helpers.StartSlot(startEpoch)
+		startSlot, err = core.StartSlot(startEpoch)
 		if err != nil {
 			return nil, err
 		}
-		endSlot, err = helpers.StartSlot(endEpoch)
+		endSlot, err = core.StartSlot(endEpoch)
 		if err != nil {
 			return nil, err
 		}

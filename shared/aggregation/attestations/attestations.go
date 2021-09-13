@@ -5,7 +5,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
@@ -74,8 +73,8 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 		return nil, aggregation.ErrBitsOverlap
 	}
 
-	baseAtt := copyutil.CopyAttestation(a1)
-	newAtt := copyutil.CopyAttestation(a2)
+	baseAtt := ethpb.CopyAttestation(a1)
+	newAtt := ethpb.CopyAttestation(a2)
 	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
 		baseAtt, newAtt = newAtt, baseAtt
 	}

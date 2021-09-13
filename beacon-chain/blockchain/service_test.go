@@ -9,11 +9,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -58,6 +59,11 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 }
 
 func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+	mb.broadcastCalled = true
+	return nil
+}
+
+func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	mb.broadcastCalled = true
 	return nil
 }
@@ -196,7 +202,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 	hashTreeRoot := trie.HashTreeRoot()
-	genState, err := state.EmptyGenesisState()
+	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
 		DepositRoot:  hashTreeRoot[:],
@@ -275,7 +281,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
-	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(finalizedSlot), Root: headRoot[:]}))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: core.SlotToEpoch(finalizedSlot), Root: headRoot[:]}))
 	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)
@@ -369,7 +375,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
-		Epoch: helpers.SlotToEpoch(finalizedBlock.Block.Slot),
+		Epoch: core.SlotToEpoch(finalizedBlock.Block.Slot),
 		Root:  finalizedRoot[:],
 	}))
 

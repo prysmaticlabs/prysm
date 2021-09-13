@@ -11,11 +11,12 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/endtoend/components"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
@@ -41,7 +42,7 @@ const (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 // testRunner abstracts E2E test configuration and running.
@@ -207,7 +208,11 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := slotutil.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		for _, evaluator := range config.Evaluators {
+		wg := new(sync.WaitGroup)
+		for _, ev := range config.Evaluators {
+			// Fix reference to evaluator as it will be running
+			// in a separate goroutine.
+			evaluator := ev
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
 				continue
@@ -240,12 +245,18 @@ func (r *testRunner) runSyncEvaluators(conns []*grpc.ClientConn, tickingStartTim
 			if !evaluator.Policy(currentEpoch) {
 				continue
 			}
-			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+
+			// Add evaluator to our waitgroup.
+			wg.Add(1)
+
+			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				err := evaluator.Evaluation(conns...)
 				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+				wg.Done()
 			})
 		}
-
+		// Wait for all evaluators to finish their evaluation for the epoch.
+		wg.Wait()
 		if t.Failed() || currentEpoch >= types.Epoch(config.EpochsToRunPostSync)-1 {
 			ticker.Done()
 			if t.Failed() {

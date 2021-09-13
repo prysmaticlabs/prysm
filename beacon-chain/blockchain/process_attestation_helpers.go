@@ -7,8 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -38,18 +39,18 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 
-	epochStartSlot, err := helpers.StartSlot(c.Epoch)
+	epochStartSlot, err := core.StartSlot(c.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
 		if featureconfig.Get().EnableNextSlotStateCache {
-			baseState, err = core.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
+			baseState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 			}
 		} else {
-			baseState, err = core.ProcessSlots(ctx, baseState, epochStartSlot)
+			baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 			}
@@ -69,7 +70,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
 func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 	var prevEpoch types.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {

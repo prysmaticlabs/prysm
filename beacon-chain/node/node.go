@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -72,6 +73,7 @@ type BeaconNode struct {
 	attestationPool         attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
+	syncCommitteePool       synccommittee.Pool
 	depositCache            *depositcache.DepositCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
@@ -100,6 +102,9 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	configureNetwork(cliCtx)
 	configureInteropConfig(cliCtx)
 
+	// Initializes any forks here.
+	params.BeaconConfig().InitializeForkSchedule()
+
 	registry := shared.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
@@ -112,11 +117,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		stateFeed:               new(event.Feed),
 		blockFeed:               new(event.Feed),
 		opFeed:                  new(event.Feed),
-		slasherBlockHeadersFeed: new(event.Feed),
-		slasherAttestationsFeed: new(event.Feed),
 		attestationPool:         attestations.NewPool(),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
+		syncCommitteePool:       synccommittee.NewPool(),
+		slasherBlockHeadersFeed: new(event.Feed),
+		slasherAttestationsFeed: new(event.Feed),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -558,9 +564,11 @@ func (b *BeaconNode) registerSyncService() error {
 		StateNotifier:           b,
 		BlockNotifier:           b,
 		AttestationNotifier:     b,
+		OperationNotifier:       b,
 		AttPool:                 b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingPool:            b.slashingsPool,
+		SyncCommsPool:           b.syncCommitteePool,
 		StateGen:                b.stateGen,
 		SlasherAttestationsFeed: b.slasherAttestationsFeed,
 		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
@@ -686,6 +694,7 @@ func (b *BeaconNode) registerRPCService() error {
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
 		SlashingChecker:         slasherService,
+		SyncCommitteeObjectPool: b.syncCommitteePool,
 		POWChainService:         web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,

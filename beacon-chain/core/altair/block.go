@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -98,8 +99,8 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
 func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
-	ps := helpers.PrevSlot(s.Slot())
-	d, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	ps := core.PrevSlot(s.Slot())
+	d, err := helpers.Domain(s.Fork(), core.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

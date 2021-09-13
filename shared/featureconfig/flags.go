@@ -7,11 +7,6 @@ import (
 )
 
 var (
-	// ToledoTestnet flag for the multiclient Ethereum consensus testnet.
-	ToledoTestnet = &cli.BoolFlag{
-		Name:  "toledo",
-		Usage: "This defines the flag through which we can run on the Toledo Multiclient Testnet",
-	}
 	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
 	PyrmontTestnet = &cli.BoolFlag{
 		Name:  "pyrmont",
@@ -35,10 +30,6 @@ var (
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
-	}
-	kafkaBootstrapServersFlag = &cli.StringFlag{
-		Name:  "kafka-url",
-		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
@@ -66,10 +57,6 @@ var (
 	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-opt-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
-	}
-	disableAccountsV2 = &cli.BoolFlag{
-		Name:  "disable-accounts-v2",
-		Usage: "Disables usage of v2 for Prysm validator accounts",
 	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
@@ -125,7 +112,7 @@ var (
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-pruning",
-		Usage: "Enables the pruning of the validator client's slashing protectin database",
+		Usage: "Enables the pruning of the validator client's slashing protection database",
 	}
 	disableOptimizedBalanceUpdate = &cli.BoolFlag{
 		Name:  "disable-optimized-balance-update",
@@ -143,15 +130,19 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	correctlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name: "correctly-insert-orphaned-atts",
-		Usage: "This fixes a bug where orphaned attestations don't get reinserted back to mem pool. This improves validator profitability and overall network health," +
+	disableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
+		Name: "disable-correctly-insert-orphaned-atts",
+		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
 			"see issue #9441 for further detail",
 	}
 	correctlyPruneCanonicalAtts = &cli.BoolFlag{
 		Name: "correctly-prune-canonical-atts",
 		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
+	}
+	disableActiveBalanceCache = &cli.BoolFlag{
+		Name:  "disable-active-balance-cache",
+		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
 )
 
@@ -160,7 +151,6 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 }
 
@@ -169,11 +159,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
-	disableAccountsV2,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
@@ -183,7 +171,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
@@ -198,10 +185,8 @@ var E2EValidatorFlags = []string{
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
-	kafkaBootstrapServersFlag,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
-	ToledoTestnet,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
@@ -216,8 +201,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
-	correctlyInsertOrphanedAtts,
+	disableCorrectlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
+	disableActiveBalanceCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -225,6 +211,6 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
-	"--correctly-insert-orphaned-atts",
 	"--correctly-prune-canonical-atts",
+	"--enable-active-balance-cache",
 }

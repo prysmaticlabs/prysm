@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -56,7 +58,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, next, c)
 
 	// Test boundary condition.
-	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(helpers.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(core.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 	require.NoError(t, s.SetSlot(slot))
 	boundaryCommittee, err := altair.NextSyncCommittee(context.Background(), s)
 	require.NoError(t, err)
@@ -102,7 +104,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 	}
 	s, err := stateAltair.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := altair.ProcessSlashings(s)
+	newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
 	require.NoError(t, err)
 	wanted := params.BeaconConfig().MaxEffectiveBalance
 	assert.Equal(t, wanted, newState.Balances()[0], "Unexpected slashed balance")
@@ -173,7 +175,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			original := proto.Clone(tt.state)
 			s, err := stateAltair.InitializeFromProto(tt.state)
 			require.NoError(t, err)
-			newState, err := altair.ProcessSlashings(s)
+			newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, newState.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d", original, newState.Balances()[0])
 		})

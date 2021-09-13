@@ -11,13 +11,14 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -151,11 +152,7 @@ func (v *ValidatorService) Start() {
 		panic(err)
 	}
 
-	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
-	if err != nil {
-		log.Errorf("Could not initialize cache: %v", err)
-		return
-	}
+	aggregatedSlotCommitteeIDCache := lruwrpr.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
@@ -173,7 +170,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	v.validator = &validator{
+	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
@@ -196,6 +193,17 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
+	// To resolve a race condition at startup due to the interface
+	// nature of the abstracted block type. We initialize
+	// the inner type of the feed before hand. So that
+	// during future accesses, there will be no panics here
+	// from type incompatibility.
+	tempChan := make(chan block.SignedBeaconBlock)
+	sub := valStruct.blockFeed.Subscribe(tempChan)
+	sub.Unsubscribe()
+	close(tempChan)
+
+	v.validator = valStruct
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
 }

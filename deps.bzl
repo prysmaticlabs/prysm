@@ -540,15 +540,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_confluentinc_confluent_kafka_go",
-        importpath = "github.com/confluentinc/confluent-kafka-go",
-        patch_args = ["-p1"],
-        patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
-        version = "v1.4.2",
-    )
-
-    go_repository(
         name = "com_github_consensys_bavard",
         importpath = "github.com/consensys/bavard",
         sum = "h1:+R8G1+Ftumd0DaveLgMIjrFPcAS4G8MsVXWXiyZL5BY=",
@@ -834,8 +825,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:R8HHtp9wrae6trZA2lgJtOhghKl16lWY4cG0l7hH8CM=",
-        version = "v0.0.0-20210719200358-90640294cb9c",
+        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
+        version = "v0.0.0-20210905181407-59cf6761a7d5",
     )
 
     go_repository(
@@ -3027,12 +3018,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_segmentio_kafka_go",
-        importpath = "github.com/segmentio/kafka-go",
-        sum = "h1:HtCSf6B4gN/87yc5qTl7WsxPKQIIGXLPPM1bMCPOsoY=",
-        version = "v0.2.0",
-    )
-    go_repository(
         name = "com_github_sergi_go_diff",
         importpath = "github.com/sergi/go-diff",
         sum = "h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=",
@@ -3771,15 +3756,6 @@ def prysm_deps():
         importpath = "gopkg.in/cheggaaa/pb.v1",
         sum = "h1:Ev7yu1/f6+d+b3pi5vPdRPc6nNtP1umSfcWiEfRqv6I=",
         version = "v1.0.25",
-    )
-
-    go_repository(
-        name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
-        importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
-        patch_args = ["-p1"],
-        patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:JabkIV98VYFqYKHHzXtgGMFuRgFBNTNzBytbGByzrJI=",
-        version = "v1.4.2",
     )
     go_repository(
         name = "in_gopkg_d4l3k_messagediff_v1",

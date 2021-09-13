@@ -11,7 +11,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -24,14 +24,14 @@ import (
 )
 
 func init() {
-	core.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
-func RunBlockProcessingTest(t *testing.T, config string) {
+func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "sanity/blocks/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", folderPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -61,7 +61,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				if transitionError != nil {
 					break
 				}
