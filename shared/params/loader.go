@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -42,6 +44,8 @@ func LoadChainConfigFile(chainConfigFileName string) {
 			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
 		}
 	}
+	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
+	conf.SqrRootSlotsPerEpoch = types.Slot(mathutil.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
 	OverrideBeaconConfig(conf)
 }

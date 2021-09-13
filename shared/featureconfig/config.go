@@ -206,9 +206,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logEnabled(correctlyPruneCanonicalAtts)
 		cfg.CorrectlyPruneCanonicalAtts = true
 	}
-	if ctx.Bool(enableActiveBalanceCache.Name) {
-		logEnabled(enableActiveBalanceCache)
-		cfg.EnableActiveBalanceCache = true
+	cfg.EnableActiveBalanceCache = true
+	if ctx.Bool(disableActiveBalanceCache.Name) {
+		logDisabled(disableActiveBalanceCache)
+		cfg.EnableActiveBalanceCache = false
 	}
 	if ctx.Bool(enableGetBlockOptimizations.Name) {
 		logEnabled(enableGetBlockOptimizations)

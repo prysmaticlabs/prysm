@@ -61,8 +61,10 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.Respo
 
 // HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	OnPreDeserializeRequestBodyIntoContainer  []Hook
-	OnPostDeserializeRequestBodyIntoContainer []Hook
+	OnPreDeserializeRequestBodyIntoContainer      []Hook
+	OnPostDeserializeRequestBodyIntoContainer     []Hook
+	OnPreDeserializeGrpcResponseBodyIntoContainer []func([]byte, interface{}) (bool, ErrorJson)
+	OnPreSerializeMiddlewareResponseIntoJson      []func(interface{}) (bool, []byte, ErrorJson)
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -156,19 +158,50 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 			} else {
 				response = endpoint.PostResponse
 			}
-			if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, response); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
+
+			runDefault := true
+			for _, hook := range endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer {
+				ok, errJson := hook(grpcResponseBody, response)
+				if errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
+				if ok {
+					runDefault = false
+					break
+				}
 			}
+			if runDefault {
+				if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, response); errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
+			}
+
 			if errJson := ProcessMiddlewareResponseFields(response); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
-			var errJson ErrorJson
-			responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
-			if errJson != nil {
-				WriteError(w, errJson, nil)
-				return
+
+			var ok bool
+			runDefault = true
+			for _, hook := range endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson {
+				ok, responseJson, errJson = hook(response)
+				if errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
+				if ok {
+					runDefault = false
+					break
+				}
+			}
+			if runDefault {
+				responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
+				if errJson != nil {
+					WriteError(w, errJson, nil)
+					return
+				}
 			}
 		}
 
