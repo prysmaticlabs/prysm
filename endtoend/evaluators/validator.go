@@ -5,14 +5,18 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var expectedParticipation = 0.95 // 95% participation to make room for minor issues.
+
+var expectedSyncParticipation = 0.95 // 95% participation for sync committee members.
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
@@ -28,11 +32,19 @@ var ValidatorsParticipating = types.Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
+// ValidatorSyncParticipation ensures the expected amount of sync committee participants
+// are active.
+var ValidatorSyncParticipation = types.Evaluator{
+	Name:       "validator_sync_participation_%d",
+	Policy:     policies.AfterNthEpoch(params.AltairE2EForkEpoch - 1),
+	Evaluation: validatorsSyncParticipation,
+}
+
 func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
-	validatorRequest := &eth.ListValidatorsRequest{
+	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		Active:   true,
 	}
@@ -83,8 +95,8 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 // validatorsParticipating ensures the validators have an acceptable participation rate.
 func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
-	validatorRequest := &eth.GetValidatorParticipationRequest{}
+	client := ethpb.NewBeaconChainClient(conn)
+	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validator participation")
@@ -99,6 +111,81 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 			expected,
 			partRate,
 		)
+	}
+	return nil
+}
+
+// validatorsSyncParticipation ensures the validators have an acceptable participation rate for
+// sync committee assignments.
+func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := ethpb.NewNodeClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
+	genesis, err := client.GetGenesis(context.Background(), &emptypb.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get genesis data")
+	}
+	currSlot := core.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
+	currEpoch := core.SlotToEpoch(currSlot)
+	lowestBound := currEpoch - 1
+
+	if lowestBound < params.AltairE2EForkEpoch {
+		lowestBound = params.AltairE2EForkEpoch
+	}
+	blockCtrs, err := altairClient.ListBeaconBlocks(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: lowestBound}})
+	if err != nil {
+		return errors.Wrap(err, "failed to get validator participation")
+	}
+	for _, ctr := range blockCtrs.BlockContainers {
+		if ctr.GetAltairBlock() == nil {
+			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		}
+		blk := ctr.GetAltairBlock()
+		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+			return errors.New("nil block provided")
+		}
+		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
+		if err != nil {
+			return err
+		}
+		// Skip evaluation of the fork slot.
+		if blk.Block.Slot == forkSlot {
+			continue
+		}
+		syncAgg := blk.Block.Body.SyncAggregate
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		if syncAgg.SyncCommitteeBits.Count() < threshold {
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+		}
+	}
+	if lowestBound == currEpoch {
+		return nil
+	}
+	blockCtrs, err = altairClient.ListBeaconBlocks(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: currEpoch}})
+	if err != nil {
+		return errors.Wrap(err, "failed to get validator participation")
+	}
+	for _, ctr := range blockCtrs.BlockContainers {
+		if ctr.GetAltairBlock() == nil {
+			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		}
+		blk := ctr.GetAltairBlock()
+		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+			return errors.New("nil block provided")
+		}
+		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
+		if err != nil {
+			return err
+		}
+		// Skip evaluation of the fork slot.
+		if blk.Block.Slot == forkSlot {
+			continue
+		}
+		syncAgg := blk.Block.Body.SyncAggregate
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		if syncAgg.SyncCommitteeBits.Count() < threshold {
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+		}
 	}
 	return nil
 }

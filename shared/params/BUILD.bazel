@@ -21,6 +21,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bytesutil:go_default_library",
+        "//shared/mathutil:go_default_library",
         "@com_github_ethereum_go_ethereum//params:go_default_library",
         "@com_github_mohae_deepcopy//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

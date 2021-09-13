@@ -20,7 +20,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 2048
 	minimalConfig.MinPerEpochChurnLimit = 4
-	minimalConfig.ChurnLimitQuotient = 65536
+	minimalConfig.ChurnLimitQuotient = 32
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 1578009600

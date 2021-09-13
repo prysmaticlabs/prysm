@@ -121,19 +121,19 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	correctlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name: "correctly-insert-orphaned-atts",
-		Usage: "This fixes a bug where orphaned attestations don't get reinserted back to mem pool. This improves validator profitability and overall network health," +
+	disableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
+		Name: "disable-correctly-insert-orphaned-atts",
+		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
 			"see issue #9441 for further detail",
 	}
-	correctlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name: "correctly-prune-canonical-atts",
-		Usage: "This fixes a bug where any block attestations can get incorrectly pruned. This improves validator profitability and overall network health," +
+	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name: "disable-correctly-prune-canonical-atts",
+		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
-	enableActiveBalanceCache = &cli.BoolFlag{
-		Name:  "enable-active-balance-cache",
-		Usage: "This enables active balance cache cache to improve node performance during block processing",
+	disableActiveBalanceCache = &cli.BoolFlag{
+		Name:  "disable-active-balance-cache",
+		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
 )
 
@@ -142,9 +142,6 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	correctlyInsertOrphanedAtts,
-	correctlyPruneCanonicalAtts,
-	enableActiveBalanceCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -193,9 +190,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
-	correctlyInsertOrphanedAtts,
-	correctlyPruneCanonicalAtts,
-	enableActiveBalanceCache,
+	disableCorrectlyInsertOrphanedAtts,
+	disableCorrectlyPruneCanonicalAtts,
+	disableActiveBalanceCache,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -203,7 +200,5 @@ var E2EBeaconChainFlags = []string{
 	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
-	"--correctly-insert-orphaned-atts",
-	"--correctly-prune-canonical-atts",
 	"--enable-active-balance-cache",
 }

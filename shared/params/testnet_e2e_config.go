@@ -1,10 +1,6 @@
 package params
 
-import "math"
-
-// AltairE2EForkEpoch is the pre-determined altair fork epoch in our
-// E2E test.
-const AltairE2EForkEpoch = math.MaxUint64
+const AltairE2EForkEpoch = 6
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
