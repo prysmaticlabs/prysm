@@ -83,7 +83,6 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 	if err != nil {
 		return nil, err
 	}
-	// This may not work, double check tests.
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }

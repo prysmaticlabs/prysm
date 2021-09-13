@@ -96,20 +96,12 @@ func (s *Service) updateMetrics() {
 		for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 			s.collectMetricForSubnet(syncTopic, digest, i)
 		}
-		for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
-			formattedTopic := fmt.Sprintf(syncTopic, digest, i)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(formattedTopic))))
-		}
 	} else {
 		for _, committeeIdx := range indices {
 			s.collectMetricForSubnet(attTopic, digest, committeeIdx)
 		}
 		for _, committeeIdx := range syncIndices {
 			s.collectMetricForSubnet(syncTopic, digest, committeeIdx)
-		}
-		for _, committeeIdx := range syncIndices {
-			formattedTopic := fmt.Sprintf(syncTopic, digest, committeeIdx)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(formattedTopic))))
 		}
 	}
 
