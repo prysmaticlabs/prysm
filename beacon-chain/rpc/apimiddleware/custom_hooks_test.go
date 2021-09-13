@@ -320,3 +320,43 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
 	})
 }
+
+func TestSerializeV2State(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &beaconStateContainerV2Json{
+				Phase0State: &beaconStateJson{},
+				AltairState: nil,
+			},
+		}
+		ok, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &phase0StateResponseJson{}))
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &beaconStateContainerV2Json{
+				Phase0State: nil,
+				AltairState: &beaconStateV2Json{},
+			},
+		}
+		ok, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &altairStateResponseJson{}))
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		ok, j, errJson := serializeV2State(&types.Empty{})
+		require.Equal(t, false, ok)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+}

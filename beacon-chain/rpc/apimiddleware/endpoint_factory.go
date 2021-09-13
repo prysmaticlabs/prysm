@@ -45,6 +45,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/node/syncing",
 		"/eth/v1/node/health",
 		"/eth/v1/debug/beacon/states/{state_id}",
+		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
@@ -152,6 +153,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/debug/beacon/states/{state_id}":
 		endpoint.GetResponse = &beaconStateResponseJson{}
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconStateSSZ}
+	case "/eth/v2/debug/beacon/states/{state_id}":
+		endpoint.GetResponse = &beaconStateV2ResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2State},
+		}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
