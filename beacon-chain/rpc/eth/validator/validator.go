@@ -235,46 +235,44 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	var resp *ethpbv2.ProduceBlockResponseV2
 	epoch := core.SlotToEpoch(req.Slot)
 	if epoch < params.BeaconConfig().AltairForkEpoch {
 		block, err := vs.v1BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
-		resp = &ethpbv2.ProduceBlockResponseV2{
+		return &ethpbv2.ProduceBlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.BeaconBlockContainerV2{
 				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
 			},
-		}
-	} else {
-		v1alpha1req := &ethpbalpha.BlockRequest{
-			Slot:         req.Slot,
-			RandaoReveal: req.RandaoReveal,
-			Graffiti:     req.Graffiti,
-		}
-		v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-		if err != nil {
-			// We simply return err because it's already of a gRPC error type.
-			return nil, err
-		}
-		altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
-		if !ok {
-			return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
-		}
-		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		resp = &ethpbv2.ProduceBlockResponseV2{
-			Version: ethpbv2.Version_ALTAIR,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
-			},
-		}
+		}, nil
 	}
-	return resp, nil
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
+	}
+	block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+	}
+	return &ethpbv2.ProduceBlockResponseV2{
+		Version: ethpbv2.Version_ALTAIR,
+		Data: &ethpbv2.BeaconBlockContainerV2{
+			Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
+		},
+	}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
