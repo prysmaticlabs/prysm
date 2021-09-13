@@ -128,7 +128,7 @@ var (
 	}
 	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
 		Name: "disable-correctly-prune-canonical-atts",
-		Usage: "Disable the fixe for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
+		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
 	disableActiveBalanceCache = &cli.BoolFlag{
