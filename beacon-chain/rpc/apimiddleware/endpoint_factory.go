@@ -58,6 +58,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/contribution_and_proofs",
 	}
 }
 
@@ -199,6 +200,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
+		}
+	case "/eth/v1/validator/contribution_and_proofs":
+		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedContributionAndProofsArray},
 		}
 	default:
 		return nil, errors.New("invalid path")
