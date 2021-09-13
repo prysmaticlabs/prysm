@@ -86,6 +86,24 @@ func wrapBeaconCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.Res
 	return nil
 }
 
+// https://ethereum.github.io/beacon-APIs/#/Validator/prepareSyncCommitteeSubnets expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSyncCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSubscriptionRequestJson); ok {
+		data := make([]*syncCommitteeSubscriptionJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitSyncCommitteeSubscriptionRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
 // https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolSyncCommitteeSignatures expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSyncCommitteeSignaturesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
