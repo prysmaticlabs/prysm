@@ -52,7 +52,7 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 	defer span.End()
 
 	resChan := make(chan error)
-	verificationSet := &signatureVerifier{set: set, resChan: resChan}
+	verificationSet := &signatureVerifier{set: set.Copy(), resChan: resChan}
 	s.signatureChan <- verificationSet
 
 	resErr := <-resChan

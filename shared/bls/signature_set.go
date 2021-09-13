@@ -31,12 +31,16 @@ func (s *SignatureSet) Verify() (bool, error) {
 	return VerifyMultipleSignatures(s.Signatures, s.Messages, s.PublicKeys)
 }
 
+// Copy the attached signature set and return it
+// to the caller.
 func (s *SignatureSet) Copy() *SignatureSet {
 	signatures := make([][]byte, len(s.Signatures))
 	pubkeys := make([]PublicKey, len(s.PublicKeys))
 	messages := make([][32]byte, len(s.Messages))
 	for i := range s.Signatures {
-		copy(signatures[i], s.Signatures[i])
+		sig := make([]byte, len(s.Signatures[i]))
+		copy(sig, s.Signatures[i])
+		signatures[i] = sig
 	}
 	for i := range s.PublicKeys {
 		pubkeys[i] = s.PublicKeys[i].Copy()
