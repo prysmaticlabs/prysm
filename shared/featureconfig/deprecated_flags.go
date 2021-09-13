@@ -18,9 +18,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name:   "correctly-prune-canonical-atts",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnableActiveBalanceCache,
+	deprecatedCorrectlyPruneCanonicalAtts,
 }
