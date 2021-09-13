@@ -44,13 +44,11 @@ var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
 
-// skipcq: SCC-U1000
 type eth1DataSingleVote struct {
 	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
-// skipcq: SCC-U1000
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
@@ -471,7 +469,6 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	return core.VotingPeriodStartTime(startTime, slot)
 }
 
-// skipcq: SCC-U1000
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
 	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
@@ -499,7 +496,6 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 	return inRangeVotes, nil
 }
 
-// skipcq: SCC-U1000
 func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
 	var voteCount []eth1DataAggregatedVote
 	for _, singleVote := range votes {
