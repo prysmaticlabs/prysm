@@ -135,6 +135,10 @@ var (
 		Name:  "disable-active-balance-cache",
 		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
+	enableBatchGossipVerification = &cli.BoolFlag{
+		Name:  "enable-batch-gossip-verification",
+		Usage: "This enables batch verification of signatures received over gossip.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -144,6 +148,7 @@ var devModeFlags = []cli.Flag{
 	forceOptMaxCoverAggregationStategy,
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
+	enableBatchGossipVerification,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -195,6 +200,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	correctlyInsertOrphanedAtts,
 	correctlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
+	enableBatchGossipVerification,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

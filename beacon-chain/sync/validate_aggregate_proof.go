@@ -18,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -180,38 +181,47 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	set := bls.NewSet()
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 
+	if featureconfig.Get().EnableBatchVerification {
+		return s.validateWithBatchVerifier(ctx, "aggregate", set)
+	}
+	valid, err := set.Verify()
+	if err != nil {
+		traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
+		return pubsub.ValidationIgnore
+	}
+	if !valid {
+		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
+		return pubsub.ValidationReject
+	}
+	return pubsub.ValidationAccept
+}
+
+func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) pubsub.ValidationResult {
+	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
+	defer span.End()
+
 	resChan := make(chan error)
 	verificationSet := &signatureVerifier{set: set, resChan: resChan}
 	s.signatureChan <- verificationSet
 
 	resErr := <-resChan
 	close(resChan)
+	// If verification fails we fallback to individual verification
+	// of each signature set.
 	if resErr != nil {
-		log.WithError(resErr).Debug("Could not perform batch verification")
+		log.WithError(resErr).Tracef("Could not perform batch verification of %s", message)
 		verified, err := set.Verify()
 		if err != nil {
-			log.WithError(err).Debug("Could not verify attestation")
+			log.WithError(err).Debugf("Could not verify %s", message)
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 		if !verified {
-			log.Debug("Verification of attestation failed")
+			log.Debugf("Verification of %s failed", message)
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 	}
-	/*
-		valid, err := set.Verify()
-		if err != nil {
-			traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
-			return pubsub.ValidationIgnore
-		}
-		if !valid {
-			traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
-			return pubsub.ValidationReject
-		}
-	*/
-
 	return pubsub.ValidationAccept
 }
 
