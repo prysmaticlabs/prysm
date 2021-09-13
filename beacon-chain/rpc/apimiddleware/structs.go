@@ -253,6 +253,11 @@ type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
 }
 
+// submitContributionAndProofsRequestJson is used in /validator/contribution_and_proofs API endpoint.
+type submitContributionAndProofsRequestJson struct {
+	Data []*signedContributionAndProofJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------
@@ -554,6 +559,25 @@ type aggregateAttestationAndProofJson struct {
 	SelectionProof  string           `json:"selection_proof" hex:"true"`
 }
 
+type signedContributionAndProofJson struct {
+	Message   *contributionAndProofJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
+}
+
+type contributionAndProofJson struct {
+	AggregatorIndex string                         `json:"aggregator_index"`
+	Contribution    *syncCommitteeContributionJson `json:"contribution"`
+	SelectionProof  string                         `json:"selection_proof" hex:"true"`
+}
+
+type syncCommitteeContributionJson struct {
+	Slot              string `json:"slot"`
+	BeaconBlockRoot   string `json:"beacon_block_root" hex:"true"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
+	AggregationBits   string `json:"aggregation_bits" hex:"true"`
+	Signature         string `json:"signature" hex:"true"`
+}
+
 //----------------
 // SSZ
 // ---------------
@@ -581,7 +605,6 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-// TODO: Documentation
 // ---------------
 // Events.
 // ---------------
