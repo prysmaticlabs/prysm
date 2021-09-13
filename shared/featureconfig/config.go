@@ -197,9 +197,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
 	}
-	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
-		logEnabled(correctlyInsertOrphanedAtts)
-		cfg.CorrectlyInsertOrphanedAtts = true
+	cfg.CorrectlyInsertOrphanedAtts = true
+	if ctx.Bool(disableCorrectlyInsertOrphanedAtts.Name) {
+		logDisabled(disableCorrectlyInsertOrphanedAtts)
+		cfg.CorrectlyInsertOrphanedAtts = false
 	}
 	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
 		logEnabled(correctlyPruneCanonicalAtts)
