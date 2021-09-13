@@ -241,6 +241,11 @@ type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
 }
 
+// produceSyncCommitteeContributionResponseJson is used in /validator/sync_committee_contribution API endpoint.
+type produceSyncCommitteeContributionResponseJson struct {
+	Data *syncCommitteeContributionJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------
@@ -540,6 +545,14 @@ type aggregateAttestationAndProofJson struct {
 	AggregatorIndex string           `json:"aggregator_index"`
 	Aggregate       *attestationJson `json:"aggregate"`
 	SelectionProof  string           `json:"selection_proof" hex:"true"`
+}
+
+type syncCommitteeContributionJson struct {
+	Slot              string `json:"slot"`
+	BeaconBlockRoot   string `json:"beacon_block_root" hex:"true"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
+	AggregationBits   string `json:"aggregation_bits" hex:"true"`
+	Signature         string `json:"signature" hex:"true"`
 }
 
 //----------------

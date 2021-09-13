@@ -57,6 +57,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/sync_committee_contribution",
 	}
 }
 
@@ -192,6 +193,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
 		}
+	case "/eth/v1/validator/sync_committee_contribution":
+		endpoint.GetResponse = &produceSyncCommitteeContributionResponseJson{}
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
 	default:
 		return nil, errors.New("invalid path")
 	}
