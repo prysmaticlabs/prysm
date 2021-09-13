@@ -24,10 +24,17 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
+		Name:   "correctly-insert-orphaned-atts",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnableActiveBalanceCache,
 	deprecatedCorrectlyPruneCanonicalAtts,
+	deprecatedCorrectlyInsertOrphanedAtts,
 }
