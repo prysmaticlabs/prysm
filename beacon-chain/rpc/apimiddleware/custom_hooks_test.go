@@ -57,7 +57,7 @@ func TestWrapAttestationArray(t *testing.T) {
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
-			PostRequest: &attesterDutiesRequestJson{},
+			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
 		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
@@ -70,7 +70,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 		errJson := wrapValidatorIndicesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
-		wrappedIndices := &attesterDutiesRequestJson{}
+		wrappedIndices := &dutiesRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
 		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
 		assert.Equal(t, "1", wrappedIndices.Index[0])

@@ -52,6 +52,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
@@ -163,7 +164,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &attesterDutiesRequestJson{}
+		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &attesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Hooks = gateway.HookCollection{
@@ -172,6 +173,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &proposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+	case "/eth/v1/validator/duties/sync/{epoch}":
+		endpoint.PostRequest = &dutiesRequestJson{}
+		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapValidatorIndicesArray},
+		}
 	case "/eth/v1/validator/blocks/{slot}":
 		endpoint.GetResponse = &produceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}

@@ -190,8 +190,8 @@ type specResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-// attesterDutiesRequestJson is used in /validator/duties/attester/{epoch} API endpoint.
-type attesterDutiesRequestJson struct {
+// dutiesRequestJson is used in several duties-related API endpoints.
+type dutiesRequestJson struct {
 	Index []string `json:"index"`
 }
 
@@ -205,6 +205,10 @@ type attesterDutiesResponseJson struct {
 type proposerDutiesResponseJson struct {
 	DependentRoot string              `json:"dependent_root" hex:"true"`
 	Data          []*proposerDutyJson `json:"data"`
+}
+
+type syncCommitteeDutiesResponseJson struct {
+	Data []*syncCommitteeDuty `json:"data"`
 }
 
 // produceBlockResponseJson is used in /validator/blocks/{slot} API endpoint.
@@ -529,6 +533,12 @@ type proposerDutyJson struct {
 	Pubkey         string `json:"pubkey" hex:"true"`
 	ValidatorIndex string `json:"validator_index"`
 	Slot           string `json:"slot"`
+}
+
+type syncCommitteeDuty struct {
+	Pubkey                        string   `json:"pubkey" hex:"true"`
+	ValidatorIndex                string   `json:"validator_index"`
+	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
 }
 
 type signedAggregateAttestationAndProofJson struct {
