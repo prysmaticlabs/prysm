@@ -202,9 +202,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableCorrectlyInsertOrphanedAtts)
 		cfg.CorrectlyInsertOrphanedAtts = false
 	}
-	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
-		logEnabled(correctlyPruneCanonicalAtts)
-		cfg.CorrectlyPruneCanonicalAtts = true
+	cfg.CorrectlyPruneCanonicalAtts = true
+	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
+		logDisabled(disableCorrectlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = false
 	}
 	cfg.EnableActiveBalanceCache = true
 	if ctx.Bool(disableActiveBalanceCache.Name) {
