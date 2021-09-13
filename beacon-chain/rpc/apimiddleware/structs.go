@@ -222,18 +222,30 @@ type aggregateAttestationResponseJson struct {
 	Data *attestationJson `json:"data"`
 }
 
-// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/beacon_committee_subscriptions
+// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/beacon_committee_subscriptions API endpoint.
 type submitBeaconCommitteeSubscriptionsRequestJson struct {
 	Data []*beaconCommitteeSubscribeJson `json:"data"`
 }
 
-// beaconCommitteeSubscribeJson is used in /validator/beacon_committee_subscriptions
+// beaconCommitteeSubscribeJson is used in /validator/beacon_committee_subscriptions API endpoint.
 type beaconCommitteeSubscribeJson struct {
 	ValidatorIndex   string `json:"validator_index"`
 	CommitteeIndex   string `json:"committee_index"`
 	CommitteesAtSlot string `json:"committees_at_slot"`
 	Slot             string `json:"slot"`
 	IsAggregator     bool   `json:"is_aggregator"`
+}
+
+// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/sync_committee_subscriptions API endpoint.
+type submitSyncCommitteeSubscriptionRequestJson struct {
+	Data []*syncCommitteeSubscriptionJson `json:"data"`
+}
+
+// syncCommitteeSubscriptionJson is used in /validator/sync_committee_subscriptions API endpoint.
+type syncCommitteeSubscriptionJson struct {
+	ValidatorIndex       string   `json:"validator_index"`
+	SyncCommitteeIndices []string `json:"sync_committee_indices"`
+	UntilEpoch           string   `json:"until_epoch"`
 }
 
 // submitAggregateAndProofsRequestJson is used in /validator/aggregate_and_proofs API endpoint.

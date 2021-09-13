@@ -56,6 +56,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
+		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
 		"/eth/v1/validator/contribution_and_proofs",
 	}
@@ -187,6 +188,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.PostRequest = &submitBeaconCommitteeSubscriptionsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapBeaconCommitteeSubscriptionsArray},
+		}
+	case "/eth/v1/validator/sync_committee_subscriptions":
+		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSubscriptionsArray},
 		}
 	case "/eth/v1/validator/aggregate_and_proofs":
 		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
