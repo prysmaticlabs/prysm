@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -30,16 +32,16 @@ func main() {
 	g, ctx := errgroup.WithContext(ctx)
 	v := NewVotes()
 
-	current := helpers.SlotToEpoch(helpers.CurrentSlot(*genesis))
+	current := core.SlotToEpoch(core.CurrentSlot(*genesis))
 	start := current.Div(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)).Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	nextStart := start.AddEpoch(params.BeaconConfig().EpochsPerEth1VotingPeriod)
 
 	fmt.Printf("Looking back from current epoch %d back to %d\n", current, start)
-	nextStartSlot, err := helpers.StartSlot(nextStart)
+	nextStartSlot, err := core.StartSlot(nextStart)
 	if err != nil {
 		panic(err)
 	}
-	nextStartTime, err := helpers.SlotToTime(*genesis, nextStartSlot)
+	nextStartTime, err := core.SlotToTime(*genesis, nextStartSlot)
 	if err != nil {
 		panic(err)
 	}
@@ -48,14 +50,14 @@ func main() {
 	for i := 0; i < int(current.Sub(uint64(start))); i++ {
 		j := i
 		g.Go(func() error {
-			resp, err := c.ListBlocks(ctx, &v1alpha1.ListBlocksRequest{
+			resp, err := c.ListBeaconBlocks(ctx, &v1alpha1.ListBlocksRequest{
 				QueryFilter: &v1alpha1.ListBlocksRequest_Epoch{Epoch: current.Sub(uint64(j))},
 			})
 			if err != nil {
 				return err
 			}
 			for _, c := range resp.GetBlockContainers() {
-				v.Insert(c.Block.Block)
+				v.Insert(wrapBlock(c))
 			}
 
 			return nil
@@ -67,4 +69,17 @@ func main() {
 	}
 
 	fmt.Println(v.Report())
+}
+
+func wrapBlock(b *v1alpha1.BeaconBlockContainer) block.BeaconBlock {
+	if bb := b.GetAltairBlock(); bb != nil {
+		wb, err := wrapper.WrappedAltairBeaconBlock(bb.Block)
+		if err != nil {
+			panic(err)
+		}
+		return wb
+	} else if bb := b.GetPhase0Block(); bb != nil {
+		return wrapper.WrappedPhase0BeaconBlock(bb.Block)
+	}
+	panic("No block")
 }

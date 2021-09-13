@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -29,11 +30,11 @@ func NewVotes() *votes {
 	}
 }
 
-func (v *votes) Insert(blk *v1alpha1.BeaconBlock) {
+func (v *votes) Insert(blk block.BeaconBlock) {
 	v.l.Lock()
 	defer v.l.Unlock()
 
-	e1d := blk.Body.Eth1Data
+	e1d := blk.Body().Eth1Data()
 	htr, err := e1d.HashTreeRoot()
 	if err != nil {
 		panic(err)
