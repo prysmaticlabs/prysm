@@ -1,0 +1,196 @@
+// Copyright 2020 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.service;
+
+import "google/api/annotations.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/v1/validator.proto";
+import "proto/eth/v2/validator.proto";
+
+option csharp_namespace = "Ethereum.Eth.Service";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option java_multiple_files = true;
+option java_outer_classname = "ValidatorServiceProto";
+option java_package = "org.ethereum.eth.service";
+option php_namespace = "Ethereum\\Eth\\Service";
+
+// Beacon chain validator API
+//
+// The beacon chain validator API is a set of endpoints to be used by validators for performing their roles.
+//
+// This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/validator).
+service BeaconValidator {
+  // GetAttesterDuties requests the beacon node to provide a set of attestation duties, which should be performed
+  // by validators, for a particular epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch or index
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc GetAttesterDuties(v1.AttesterDutiesRequest) returns (v1.AttesterDutiesResponse) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/duties/attester/{epoch}"
+      body: "*"
+    };
+  }
+
+  // GetProposerDuties requests beacon node to provide all validators that are scheduled to
+  // propose a block in the given epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc GetProposerDuties(v1.ProposerDutiesRequest) returns (v1.ProposerDutiesResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
+  }
+
+  // GetSyncCommitteeDuties requests the beacon node to provide a set of sync committee duties for a particular epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch or index
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc GetSyncCommitteeDuties(v2.SyncCommitteeDutiesRequest) returns (v2.SyncCommitteeDutiesResponse) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/duties/sync/{epoch}"
+      body: "*"
+    };
+  }
+
+  // ProduceBlock requests the beacon node to produce a valid unsigned beacon block,
+  // which can then be signed by a proposer and submitted.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
+  }
+
+
+  // ProduceBlockAltair requests the beacon node to produce a valid unsigned beacon block,
+  // which can then be signed by a proposer and submitted.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlockAltair(v2.ProduceBlockRequestV2) returns (v2.ProduceBlockResponseV2) {
+    option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
+  }
+
+  // ProduceAttestationData requests that the beacon node produces attestation data for
+  // the requested committee index and slot based on the nodes current head.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid request syntax
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceAttestationData(v1.ProduceAttestationDataRequest) returns (v1.ProduceAttestationDataResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/attestation_data" };
+  }
+
+  // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot,
+  // returning the aggregated result.
+  //
+  // HTTP response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc GetAggregateAttestation(v1.AggregateAttestationRequest) returns (v1.AggregateAttestationResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/aggregate_attestation" };
+  }
+
+  // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+  //
+  // Response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitAggregateAndProofs(v1.SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/aggregate_and_proofs"
+      body: "*"
+    };
+  }
+
+  // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to
+  // the provided subnet information and replaces current peers with those ones if necessary.
+  //
+  // If validator is_aggregator, beacon node must:
+  //   - announce subnet topic subscription on gossipsub.
+  //   - aggregate attestations received on that subnet.
+  //
+  // Response usage:
+  // - 200: Slot signature is valid and beacon node has prepared the attestation subnet
+  //   Note that we cannot be certain Beacon node will find peers for that subnet for various reasons
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  // - 503: Beacon node is currently syncing, try again later
+  rpc SubmitBeaconCommitteeSubscription(v1.SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/beacon_committee_subscriptions"
+      body: "*"
+    };
+  }
+
+  // SubmitSyncCommitteeSubscription subscribes to a number of sync committee subnets
+  //
+  // Response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitSyncCommitteeSubscription(v2.SubmitSyncCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/sync_committee_subscriptions"
+      body: "*"
+    };
+  }
+
+  // ProduceSyncCommitteeContribution requests that the beacon node produces a sync committee contribution.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid request syntax
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceSyncCommitteeContribution(v2.ProduceSyncCommitteeContributionRequest) returns (v2.ProduceSyncCommitteeContributionResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/sync_committee_contribution" };
+  }
+
+  // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
+  //
+  // Response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitContributionAndProofs(v2.SubmitContributionAndProofsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/contribution_and_proofs"
+      body: "*"
+    };
+  }
+}

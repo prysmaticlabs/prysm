@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -96,7 +97,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	postState, err := core.ExecuteStateTransition(ctx, preState, signed)
+	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
 	}
@@ -113,7 +114,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			// with a custom deadline, therefore using the background context instead.
 			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 			defer cancel()
-			if err := core.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
 			}
 		}()
@@ -138,6 +139,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
+		}
+
+		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+			return err
 		}
 
 		// Send notification of the processed block to the state feed.
@@ -229,12 +234,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureSet
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		set, preState, err = core.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
+		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
 		}
 		// Save potential boundary states.
-		if helpers.IsEpochStart(preState.Slot()) {
+		if core.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
@@ -319,11 +324,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, core.NextEpoch(postState)); err != nil {
 			return err
 		}
 		copied := postState.Copy()
-		copied, err := core.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
 		}
@@ -335,14 +340,14 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		var err error
-		s.nextEpochBoundarySlot, err = helpers.StartSlot(helpers.NextEpoch(postState))
+		s.nextEpochBoundarySlot, err = core.StartSlot(core.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
 
 		// Update caches at epoch boundary slot.
 		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, core.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
@@ -410,6 +415,36 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
+	}
+	return nil
+}
+
+// This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
+// meaning the block `b` is part of the canonical chain.
+func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
+	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+		return nil
+	}
+
+	canonical, err := s.IsCanonical(ctx, r)
+	if err != nil {
+		return err
+	}
+	if !canonical {
+		return nil
+	}
+
+	atts := b.Block().Body().Attestations()
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

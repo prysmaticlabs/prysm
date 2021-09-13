@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -12,10 +14,12 @@ import (
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
 func LoadChainConfigFile(chainConfigFileName string) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+	yamlFile, err := ioutil.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
+	// Default to using mainnet.
+	conf := MainnetConfig().Copy()
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
@@ -23,13 +27,16 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
 			continue
 		}
+		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") || strings.HasPrefix(line, "# Minimal preset") {
+			conf = MinimalSpecConfig().Copy()
+		}
+
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := replaceHexStringWithYAMLFormat(line)
 			lines[i] = strings.Join(parts, "\n")
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
-	conf := MainnetConfig()
 	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
 			log.WithError(err).Fatal("Failed to parse chain config yaml file.")
@@ -37,6 +44,8 @@ func LoadChainConfigFile(chainConfigFileName string) {
 			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
 		}
 	}
+	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
+	conf.SqrRootSlotsPerEpoch = types.Slot(mathutil.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
 	OverrideBeaconConfig(conf)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,7 +31,10 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				return slashingprotection.ExportSlashingProtectionJSONCli(cliCtx)
+				if err := slashingprotection.ExportSlashingProtectionJSONCli(cliCtx); err != nil {
+					logrus.Fatalf("Could not export slashing protection file: %v", err)
+				}
+				return nil
 			},
 		},
 		{
@@ -41,7 +45,6 @@ var Commands = &cli.Command{
 				flags.SlashingProtectionJSONFileFlag,
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
-				featureconfig.ToledoTestnet,
 				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -53,7 +56,11 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				return slashingprotection.ImportSlashingProtectionCLI(cliCtx)
+				err := slashingprotection.ImportSlashingProtectionCLI(cliCtx)
+				if err != nil {
+					logrus.Fatalf("Could not import slashing protection cli: %v", err)
+				}
+				return nil
 			},
 		},
 	},

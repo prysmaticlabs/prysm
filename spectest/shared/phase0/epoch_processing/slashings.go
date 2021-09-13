@@ -7,7 +7,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -18,6 +20,7 @@ func RunSlashingsTests(t *testing.T, config string) {
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "epoch_processing/slashings/pyspec_tests")
 	for _, folder := range testFolders {
+		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
 			RunEpochOperationTest(t, folderPath, processSlashingsWrapper)
@@ -26,10 +29,10 @@ func RunSlashingsTests(t *testing.T, config string) {
 	}
 }
 
-func processSlashingsWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessSlashings(state)
+func processSlashingsWrapper(t *testing.T, s state.BeaconState) (state.BeaconState, error) {
+	s, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 	require.NoError(t, err, "Could not process slashings")
-	return state, nil
+	return s, nil
 }
 
 func processSlashingsPrecomputeWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {

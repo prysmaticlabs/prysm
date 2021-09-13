@@ -76,7 +76,7 @@ def deposit(pubkey: bytes[PUBKEY_LENGTH],
     deposit_amount: uint256 = msg.value / as_wei_value(1, "gwei")
     assert deposit_amount >= MIN_DEPOSIT_AMOUNT
 
-    # Length checks to facilitate formal verification (see https://github.com/ethereum/eth2.0-specs/pull/1362/files#r320361859)
+    # Length checks to facilitate formal verification (see https://github.com/ethereum/consensus-specs/pull/1362/files#r320361859)
     assert len(pubkey) == PUBKEY_LENGTH
     assert len(withdrawal_credentials) == WITHDRAWAL_CREDENTIALS_LENGTH
     assert len(signature) == SIGNATURE_LENGTH

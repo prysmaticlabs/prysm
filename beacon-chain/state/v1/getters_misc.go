@@ -5,6 +5,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -64,7 +65,9 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	return root
 }
 
-// Version of the beacon state.
+// Version of the beacon state. This method
+// is strictly meant to be used without a lock
+// internally.
 func (b *BeaconState) Version() int {
 	return version.Phase0
 }
@@ -148,7 +151,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
 }
 
 // balancesLength returns the length of the balances slice.

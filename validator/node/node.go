@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -116,6 +117,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
+
+	// Initializes any forks here.
+	params.BeaconConfig().InitializeForkSchedule()
 
 	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
@@ -518,12 +522,12 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
-		pb.RegisterAuthHandler,
-		pb.RegisterWalletHandler,
+		validatorpb.RegisterAuthHandler,
+		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
-		pb.RegisterAccountsHandler,
-		pb.RegisterBeaconHandler,
-		pb.RegisterSlashingProtectionHandler,
+		validatorpb.RegisterAccountsHandler,
+		validatorpb.RegisterBeaconHandler,
+		validatorpb.RegisterSlashingProtectionHandler,
 	}
 	mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

@@ -197,8 +197,10 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
+consensus_spec_version = "v1.1.0-beta.4"
+
 http_archive(
-    name = "eth2_spec_tests_general",
+    name = "consensus_spec_tests_general",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -209,12 +211,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "deacc076365c727d653ac064894ecf0d1b0a675d86704dc8de271259f6a7314b",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/general.tar.gz",
+    sha256 = "d2d501453cf29777896a5f9ae52e93921f34330e57fcc5b55e4982d4795236b9",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal",
+    name = "consensus_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -225,12 +227,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
+    sha256 = "b152f1f03a4fdacd1882fe867bdfbd5067e74ed3c532bd01d81e7adf6cc3737a",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet",
+    name = "consensus_spec_tests_mainnet",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -241,8 +243,40 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a7b3d0ffc02a567250f424d69b2474fdc9477cd56eada60af7474560b46a8527",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
+    sha256 = "6046f89c679a9ffda217dee6f021eb7c4fe91aad6ff940fae4d2cf894cc61cbb",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "consensus_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "26a0a2c3022a3c5354f3204c7e441580df2e585dbde22a43a1d43f885b3a221c",
+    strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
+    url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "eth2_networks",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = glob([
+        "shared/**/config.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "9dc47bf6b14aed7fac8833e35ab83a69131b43fa5789b3256bf1ac3d4861aeb8",
+    strip_prefix = "eth2-networks-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
+    url = "https://github.com/eth2-clients/eth2-networks/archive/7fa1b868985ee24aad65567f9250cf7fa86f97b1.tar.gz",
 )
 
 http_archive(
@@ -261,27 +295,6 @@ git_repository(
 
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-
-http_archive(
-    name = "rules_foreign_cc",
-    sha256 = "b85ce66a3410f7370d1a9a61dfe3a29c7532b7637caeb2877d8d0dfd41d77abb",
-    strip_prefix = "rules_foreign_cc-3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934.zip",
-)
-
-load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
-
-rules_foreign_cc_dependencies([
-    "@prysm//:built_cmake_toolchain",
-])
-
-http_archive(
-    name = "librdkafka",
-    build_file_content = all_content,
-    sha256 = "3b99a36c082a67ef6295eabd4fb3e32ab0bff7c6b0d397d6352697335f4e57eb",
-    strip_prefix = "librdkafka-1.4.2",
-    urls = ["https://github.com/edenhill/librdkafka/archive/v1.4.2.tar.gz"],
-)
 
 http_archive(
     name = "sigp_beacon_fuzz_corpora",

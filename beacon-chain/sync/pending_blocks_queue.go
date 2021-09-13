@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -261,7 +262,7 @@ func (s *Service) validatePendingSlots() error {
 		slot := cacheKeyToSlot(k)
 		blks := s.pendingBlocksInCache(slot)
 		for _, b := range blks {
-			epoch := helpers.SlotToEpoch(slot)
+			epoch := core.SlotToEpoch(slot)
 			// remove all descendant blocks of old blocks
 			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
 				root, err := b.Block().HashTreeRoot()
@@ -307,9 +308,14 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 		return nil
 	}
 
+	// Defensive check to ignore nil blocks
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
+	}
+
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if sszutil.DeepEqual(blk, b) {
+		if sszutil.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)

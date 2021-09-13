@@ -6,10 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -55,7 +57,11 @@ func ProcessProposerSlashings(
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		cfg := params.BeaconConfig()
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
+		slashingQuotient := cfg.MinSlashingPenaltyQuotient
+		if beaconState.Version() == version.Altair {
+			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+		}
+		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}
@@ -86,12 +92,12 @@ func VerifyProposerSlashing(
 	if err != nil {
 		return err
 	}
-	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.CurrentEpoch(beaconState)) {
+	if !helpers.IsSlashableValidatorUsingTrie(proposer, core.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := helpers.ComputeDomainVerifySigningRoot(beaconState, pIdx, helpers.SlotToEpoch(hSlot),
+		if err := helpers.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
 			header.Header, params.BeaconConfig().DomainBeaconProposer, header.Signature); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}

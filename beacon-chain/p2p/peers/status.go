@@ -35,11 +35,11 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	metadata "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -190,8 +190,8 @@ func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 }
 
 // ChainState gets the chain state of the given remote peer.
-// This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
+// This will error if there is no known chain state for the peer.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 	return p.scorers.PeerStatusScorer().PeerStatus(pid)
 }
@@ -235,7 +235,7 @@ func (p *Status) SetMetadata(pid peer.ID, metaData metadata.Metadata) {
 	defer p.store.Unlock()
 
 	peerData := p.store.PeerDataGetOrCreate(pid)
-	peerData.MetaData = metaData
+	peerData.MetaData = metaData.Copy()
 }
 
 // Metadata returns a copy of the metadata corresponding to the provided
@@ -649,7 +649,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
-			epoch := helpers.SlotToEpoch(peerChainState.HeadSlot)
+			epoch := core.SlotToEpoch(peerChainState.HeadSlot)
 			epochVotes[epoch]++
 			pidEpoch[pid] = epoch
 			pidHead[pid] = peerChainState.HeadSlot
@@ -755,7 +755,7 @@ func (p *Status) HighestEpoch() types.Epoch {
 			highestSlot = peerData.ChainState.HeadSlot
 		}
 	}
-	return helpers.SlotToEpoch(highestSlot)
+	return core.SlotToEpoch(highestSlot)
 }
 
 // ConnectedPeerLimit returns the peer limit of

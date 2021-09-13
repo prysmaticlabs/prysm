@@ -27,3 +27,9 @@ func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a *e
 	m.BroadcastAttestations = append(m.BroadcastAttestations, a)
 	return nil
 }
+
+// BroadcastSyncCommitteeMessage records a broadcast occurred.
+func (m *MockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
+	m.BroadcastCalled = true
+	return nil
+}

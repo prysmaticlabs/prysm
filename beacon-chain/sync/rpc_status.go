@@ -11,7 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -85,7 +85,7 @@ func (s *Service) resyncIfBehind() {
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
 	runutil.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
-			syncedEpoch := helpers.SlotToEpoch(s.cfg.Chain.HeadSlot())
+			syncedEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot())
 			// Factor number of expected minimum sync peers, to make sure that enough peers are
 			// available to resync (some peers may go away between checking non-finalized peers and
 			// actual resyncing).
@@ -93,7 +93,7 @@ func (s *Service) resyncIfBehind() {
 			// Check if the current node is more than 1 epoch behind.
 			if highestEpoch > (syncedEpoch + 1) {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()),
+					"currentEpoch": core.SlotToEpoch(s.cfg.Chain.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
@@ -109,8 +109,8 @@ func (s *Service) resyncIfBehind() {
 
 // shouldReSync returns true if the node is not syncing and falls behind two epochs.
 func (s *Service) shouldReSync() bool {
-	syncedEpoch := helpers.SlotToEpoch(s.cfg.Chain.HeadSlot())
-	currentEpoch := helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot())
+	syncedEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot())
+	currentEpoch := core.SlotToEpoch(s.cfg.Chain.CurrentSlot())
 	prevEpoch := types.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -128,7 +128,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.Chain.HeadSlot(),
 	}
-	stream, err := s.cfg.P2P.Send(ctx, resp, p2p.RPCStatusTopicV1, id)
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	if err != nil {
+		return err
+	}
+	stream, err := s.cfg.P2P.Send(ctx, resp, topic, id)
 	if err != nil {
 		return err
 	}
@@ -153,11 +157,6 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if code != 0 {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(id)
 		return errors.New(errMsg)
-	}
-	// No-op for now with the rpc context.
-	_, err = readContextFromStream(stream, s.cfg.Chain)
-	if err != nil {
-		return err
 	}
 	msg := &pb.Status{}
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
@@ -258,7 +257,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -278,7 +277,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 }
 
 func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -318,11 +317,11 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if blk == nil || blk.IsNil() {
 		return p2ptypes.ErrGeneric
 	}
-	if helpers.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
+	if core.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
 		return nil
 	}
 
-	startSlot, err := helpers.StartSlot(msg.FinalizedEpoch)
+	startSlot, err := core.StartSlot(msg.FinalizedEpoch)
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}

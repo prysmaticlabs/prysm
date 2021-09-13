@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -96,6 +96,8 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 		FinalizedCheckPoint: &eth.Checkpoint{
 			Epoch: 0,
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}, p, beaconDB
 }
 
@@ -108,7 +110,7 @@ func makeGenesisTime(currentSlot types.Slot) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := types.Slot(64)
 	gt := makeGenesisTime(currentSlot)
-	require.Equal(t, currentSlot, helpers.SlotsSince(gt))
+	require.Equal(t, currentSlot, core.SlotsSince(gt))
 }
 
 // helper function for sequences of block slots
@@ -216,8 +218,9 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			ret = ret[:req.Count]
 		}
 
+		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), ret[i]))
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(ret[i])))
 		}
 	})
 
@@ -286,7 +289,8 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blocks)) {
 				break
 			}
-			require.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), blocks[i]))
+			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[i])))
 		}
 	})
 
@@ -316,7 +320,7 @@ func connectPeerHavingBlocks(
 
 	p.Connect(host)
 
-	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
 	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
 	require.NoError(t, err)
 

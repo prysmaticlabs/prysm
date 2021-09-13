@@ -6,12 +6,14 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -21,7 +23,7 @@ func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	signingData := &statepb.SigningData{
+	signingData := &ethpb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}
@@ -64,7 +66,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	currentEpoch := core.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
@@ -77,12 +79,33 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
+// VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
+// from the above method by not using fork data from the state and instead retrieving it
+// via the respective epoch.
+func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState, blk block.SignedBeaconBlock) error {
+	currentEpoch := core.SlotToEpoch(blk.Block().Slot())
+	fork, err := p2putils.Fork(currentEpoch)
+	if err != nil {
+		return err
+	}
+	domain, err := helpers.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	proposer, err := beaconState.ValidatorAtIndex(blk.Block().ProposerIndex())
+	if err != nil {
+		return err
+	}
+	proposerPubKey := proposer.PublicKey
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
+}
+
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
 func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	currentEpoch := core.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -119,7 +142,7 @@ func randaoSigningData(beaconState state.ReadOnlyBeaconState) ([]byte, []byte, [
 	}
 	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
 
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	currentEpoch := core.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
@@ -197,7 +220,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 	var preForkAtts []*ethpb.Attestation
 	var postForkAtts []*ethpb.Attestation
 	for _, a := range atts {
-		if helpers.SlotToEpoch(a.Data.Slot) < fork.Epoch {
+		if core.SlotToEpoch(a.Data.Slot) < fork.Epoch {
 			preForkAtts = append(preForkAtts, a)
 		} else {
 			postForkAtts = append(postForkAtts, a)

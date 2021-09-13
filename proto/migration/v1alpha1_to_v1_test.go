@@ -5,8 +5,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -36,7 +36,7 @@ var (
 )
 
 func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
-	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
+	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
 	alphaBlock.Block.ProposerIndex = validatorIndex
 	alphaBlock.Block.ParentRoot = parentRoot
@@ -57,12 +57,12 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 
 func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 	proof := [32]byte{1}
-	att := testutil.HydrateAttestation(&ethpb_alpha.Attestation{
-		Data: &ethpb_alpha.AttestationData{
+	att := testutil.HydrateAttestation(&ethpbalpha.Attestation{
+		Data: &ethpbalpha.AttestationData{
 			Slot: 5,
 		},
 	})
-	alpha := &ethpb_alpha.AggregateAttestationAndProof{
+	alpha := &ethpbalpha.AggregateAttestationAndProof{
 		AggregatorIndex: 1,
 		Aggregate:       att,
 		SelectionProof:  proof[:],
@@ -73,34 +73,14 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 	assert.DeepEqual(t, v1.SelectionProof, proof[:])
 }
 
-func Test_V1Alpha1BlockToV1BlockHeader(t *testing.T) {
-	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
-	alphaBlock.Block.Slot = slot
-	alphaBlock.Block.ProposerIndex = validatorIndex
-	alphaBlock.Block.ParentRoot = parentRoot
-	alphaBlock.Block.StateRoot = stateRoot
-	alphaBlock.Signature = signature
-
-	v1Header, err := V1Alpha1BlockToV1BlockHeader(alphaBlock)
-	require.NoError(t, err)
-	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, bodyRoot[:], v1Header.Message.BodyRoot)
-	assert.Equal(t, slot, v1Header.Message.Slot)
-	assert.Equal(t, validatorIndex, v1Header.Message.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Header.Message.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Header.Message.StateRoot)
-	assert.DeepEqual(t, signature, v1Header.Signature)
-}
-
 func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
-	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
+	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
 	alphaBlock.Block.ProposerIndex = validatorIndex
 	alphaBlock.Block.ParentRoot = parentRoot
 	alphaBlock.Block.StateRoot = stateRoot
 	alphaBlock.Block.Body.RandaoReveal = randaoReveal
-	alphaBlock.Block.Body.Eth1Data = &ethpb_alpha.Eth1Data{
+	alphaBlock.Block.Body.Eth1Data = &ethpbalpha.Eth1Data{
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
@@ -117,13 +97,13 @@ func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
-	v1Block := testutil.HydrateV1SignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	v1Block := testutil.HydrateV1SignedBeaconBlock(&ethpbv1.SignedBeaconBlock{})
 	v1Block.Block.Slot = slot
 	v1Block.Block.ProposerIndex = validatorIndex
 	v1Block.Block.ParentRoot = parentRoot
 	v1Block.Block.StateRoot = stateRoot
 	v1Block.Block.Body.RandaoReveal = randaoReveal
-	v1Block.Block.Body.Eth1Data = &ethpb.Eth1Data{
+	v1Block.Block.Body.Eth1Data = &ethpbv1.Eth1Data{
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
@@ -140,13 +120,13 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
-	alphaBlock := testutil.HydrateBeaconBlock(&ethpb_alpha.BeaconBlock{})
+	alphaBlock := testutil.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 	alphaBlock.Slot = slot
 	alphaBlock.ProposerIndex = validatorIndex
 	alphaBlock.ParentRoot = parentRoot
 	alphaBlock.StateRoot = stateRoot
 	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpb_alpha.Eth1Data{
+	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
@@ -162,24 +142,24 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 }
 
 func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
-	alphaAttestation := &ethpb_alpha.IndexedAttestation{
+	alphaAttestation := &ethpbalpha.IndexedAttestation{
 		AttestingIndices: attestingIndices,
-		Data: &ethpb_alpha.AttestationData{
+		Data: &ethpbalpha.AttestationData{
 			Slot:            slot,
 			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
-			Source: &ethpb_alpha.Checkpoint{
+			Source: &ethpbalpha.Checkpoint{
 				Epoch: epoch,
 				Root:  sourceRoot,
 			},
-			Target: &ethpb_alpha.Checkpoint{
+			Target: &ethpbalpha.Checkpoint{
 				Epoch: epoch,
 				Root:  targetRoot,
 			},
 		},
 		Signature: signature,
 	}
-	alphaSlashing := &ethpb_alpha.AttesterSlashing{
+	alphaSlashing := &ethpbalpha.AttesterSlashing{
 		Attestation_1: alphaAttestation,
 		Attestation_2: alphaAttestation,
 	}
@@ -193,14 +173,14 @@ func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ProposerSlashingToV1(t *testing.T) {
-	alphaHeader := testutil.HydrateSignedBeaconHeader(&ethpb_alpha.SignedBeaconBlockHeader{})
+	alphaHeader := testutil.HydrateSignedBeaconHeader(&ethpbalpha.SignedBeaconBlockHeader{})
 	alphaHeader.Header.Slot = slot
 	alphaHeader.Header.ProposerIndex = validatorIndex
 	alphaHeader.Header.ParentRoot = parentRoot
 	alphaHeader.Header.StateRoot = stateRoot
 	alphaHeader.Header.BodyRoot = bodyRoot
 	alphaHeader.Signature = signature
-	alphaSlashing := &ethpb_alpha.ProposerSlashing{
+	alphaSlashing := &ethpbalpha.ProposerSlashing{
 		Header_1: alphaHeader,
 		Header_2: alphaHeader,
 	}
@@ -214,8 +194,8 @@ func Test_V1Alpha1ProposerSlashingToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ExitToV1(t *testing.T) {
-	alphaExit := &ethpb_alpha.SignedVoluntaryExit{
-		Exit: &ethpb_alpha.VoluntaryExit{
+	alphaExit := &ethpbalpha.SignedVoluntaryExit{
+		Exit: &ethpbalpha.VoluntaryExit{
 			Epoch:          epoch,
 			ValidatorIndex: validatorIndex,
 		},
@@ -231,8 +211,8 @@ func Test_V1Alpha1ExitToV1(t *testing.T) {
 }
 
 func Test_V1ExitToV1Alpha1(t *testing.T) {
-	v1Exit := &ethpb.SignedVoluntaryExit{
-		Message: &ethpb.VoluntaryExit{
+	v1Exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
 			Epoch:          epoch,
 			ValidatorIndex: validatorIndex,
 		},
@@ -248,24 +228,24 @@ func Test_V1ExitToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
-	v1Attestation := &ethpb.IndexedAttestation{
+	v1Attestation := &ethpbv1.IndexedAttestation{
 		AttestingIndices: attestingIndices,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            slot,
 			Index:           committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
-			Source: &ethpb.Checkpoint{
+			Source: &ethpbv1.Checkpoint{
 				Epoch: epoch,
 				Root:  sourceRoot,
 			},
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: epoch,
 				Root:  targetRoot,
 			},
 		},
 		Signature: signature,
 	}
-	v1Slashing := &ethpb.AttesterSlashing{
+	v1Slashing := &ethpbv1.AttesterSlashing{
 		Attestation_1: v1Attestation,
 		Attestation_2: v1Attestation,
 	}
@@ -279,8 +259,8 @@ func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
-	v1Header := &ethpb.SignedBeaconBlockHeader{
-		Message: &ethpb.BeaconBlockHeader{
+	v1Header := &ethpbv1.SignedBeaconBlockHeader{
+		Message: &ethpbv1.BeaconBlockHeader{
 			Slot:          slot,
 			ProposerIndex: validatorIndex,
 			ParentRoot:    parentRoot,
@@ -289,7 +269,7 @@ func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	v1Slashing := &ethpb.ProposerSlashing{
+	v1Slashing := &ethpbv1.ProposerSlashing{
 		SignedHeader_1: v1Header,
 		SignedHeader_2: v1Header,
 	}
@@ -303,17 +283,17 @@ func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1Alpha1AttToV1(t *testing.T) {
-	alphaAtt := &ethpb_alpha.Attestation{
+	alphaAtt := &ethpbalpha.Attestation{
 		AggregationBits: aggregationBits,
-		Data: &ethpb_alpha.AttestationData{
+		Data: &ethpbalpha.AttestationData{
 			Slot:            slot,
 			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
-			Source: &ethpb_alpha.Checkpoint{
+			Source: &ethpbalpha.Checkpoint{
 				Epoch: epoch,
 				Root:  sourceRoot,
 			},
-			Target: &ethpb_alpha.Checkpoint{
+			Target: &ethpbalpha.Checkpoint{
 				Epoch: epoch,
 				Root:  targetRoot,
 			},
@@ -330,17 +310,17 @@ func Test_V1Alpha1AttToV1(t *testing.T) {
 }
 
 func Test_V1AttToV1Alpha1(t *testing.T) {
-	v1Att := &ethpb.Attestation{
+	v1Att := &ethpbv1.Attestation{
 		AggregationBits: aggregationBits,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            slot,
 			Index:           committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
-			Source: &ethpb.Checkpoint{
+			Source: &ethpbv1.Checkpoint{
 				Epoch: epoch,
 				Root:  sourceRoot,
 			},
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: epoch,
 				Root:  targetRoot,
 			},
@@ -357,13 +337,13 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 }
 
 func Test_BlockInterfaceToV1Block(t *testing.T) {
-	v1Alpha1Block := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
+	v1Alpha1Block := testutil.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	v1Alpha1Block.Block.Slot = slot
 	v1Alpha1Block.Block.ProposerIndex = validatorIndex
 	v1Alpha1Block.Block.ParentRoot = parentRoot
 	v1Alpha1Block.Block.StateRoot = stateRoot
 	v1Alpha1Block.Block.Body.RandaoReveal = randaoReveal
-	v1Alpha1Block.Block.Body.Eth1Data = &ethpb_alpha.Eth1Data{
+	v1Alpha1Block.Block.Body.Eth1Data = &ethpbalpha.Eth1Data{
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
@@ -380,7 +360,7 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 }
 
 func Test_V1Alpha1ValidatorToV1(t *testing.T) {
-	v1Alpha1Validator := &ethpb_alpha.Validator{
+	v1Alpha1Validator := &ethpbalpha.Validator{
 		PublicKey:                  []byte("pubkey"),
 		WithdrawalCredentials:      []byte("withdraw"),
 		EffectiveBalance:           99,
@@ -404,7 +384,7 @@ func Test_V1Alpha1ValidatorToV1(t *testing.T) {
 }
 
 func Test_V1ValidatorToV1Alpha1(t *testing.T) {
-	v1Validator := &ethpb.Validator{
+	v1Validator := &ethpbv1.Validator{
 		Pubkey:                     []byte("pubkey"),
 		WithdrawalCredentials:      []byte("withdraw"),
 		EffectiveBalance:           99,
@@ -428,10 +408,10 @@ func Test_V1ValidatorToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
-	v1Att := &ethpb.SignedAggregateAttestationAndProof{
-		Message: &ethpb.AggregateAttestationAndProof{
+	v1Att := &ethpbv1.SignedAggregateAttestationAndProof{
+		Message: &ethpbv1.AggregateAttestationAndProof{
 			AggregatorIndex: 1,
-			Aggregate:       testutil.HydrateV1Attestation(&ethpb.Attestation{}),
+			Aggregate:       testutil.HydrateV1Attestation(&ethpbv1.Attestation{}),
 			SelectionProof:  selectionProof,
 		},
 		Signature: signature,
@@ -446,7 +426,7 @@ func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1AttestationToV1Alpha1(t *testing.T) {
-	v1Att := testutil.HydrateV1Attestation(&ethpb.Attestation{})
+	v1Att := testutil.HydrateV1Attestation(&ethpbv1.Attestation{})
 	v1Alpha1Att := V1AttToV1Alpha1(v1Att)
 
 	v1Root, err := v1Att.HashTreeRoot()
@@ -454,4 +434,32 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	v1Alpha1Root, err := v1Alpha1Att.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
+}
+
+func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
+	alphaBlock := testutil.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
+	alphaBlock.Slot = slot
+	alphaBlock.ProposerIndex = validatorIndex
+	alphaBlock.ParentRoot = parentRoot
+	alphaBlock.StateRoot = stateRoot
+	alphaBlock.Body.RandaoReveal = randaoReveal
+	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+	syncCommitteeBits := bitfield.NewBitvector512()
+	syncCommitteeBits.SetBitAt(100, true)
+	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: signature,
+	}
+
+	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
+	require.NoError(t, err)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v2Root, err := v2Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v2Root)
 }

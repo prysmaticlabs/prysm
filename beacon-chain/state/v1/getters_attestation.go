@@ -35,7 +35,7 @@ func (b *BeaconState) previousEpochAttestations() []*ethpb.PendingAttestation {
 		return nil
 	}
 
-	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
+	return ethpb.CopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
@@ -60,7 +60,7 @@ func (b *BeaconState) currentEpochAttestations() []*ethpb.PendingAttestation {
 		return nil
 	}
 
-	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
+	return ethpb.CopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
 func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {

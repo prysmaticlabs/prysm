@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -236,7 +236,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create trie")
 	}
-	root := depositTrie.Root()
+	root := depositTrie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		BlockHash:    root[:],
 		DepositRoot:  root[:],
@@ -256,7 +256,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.Beacon
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
-	beaconState, err := core.GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
+	beaconState, err := transition.GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}

@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // VerifyWeakSubjectivityRoot verifies the weak subjectivity root in the service struct.
-// Reference design: https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
+// Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
 func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
 	if s.cfg.WeakSubjectivityCheckpt == nil || len(s.cfg.WeakSubjectivityCheckpt.Root) == 0 || s.cfg.WeakSubjectivityCheckpt.Epoch == 0 {
@@ -38,7 +38,7 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		return fmt.Errorf("node does not have root in DB: %#x", r)
 	}
 
-	startSlot, err := helpers.StartSlot(s.cfg.WeakSubjectivityCheckpt.Epoch)
+	startSlot, err := core.StartSlot(s.cfg.WeakSubjectivityCheckpt.Epoch)
 	if err != nil {
 		return err
 	}

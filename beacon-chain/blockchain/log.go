@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
 func logStateTransitionData(b block.BeaconBlock) {
-	log := log.WithField("slot", b.Slot)
+	log := log.WithField("slot", b.Slot())
 	if len(b.Body().Attestations()) > 0 {
 		log = log.WithField("attestations", len(b.Body().Attestations()))
 	}
@@ -33,11 +34,17 @@ func logStateTransitionData(b block.BeaconBlock) {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
+	if b.Version() == version.Altair {
+		agg, err := b.Body().SyncAggregate()
+		if err == nil {
+			log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
+		}
+	}
 	log.Info("Finished applying state transition")
 }
 
 func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
-	startTime, err := helpers.SlotToTime(genesisTime, block.Slot())
+	startTime, err := core.SlotToTime(genesisTime, block.Slot())
 	if err != nil {
 		return err
 	}
@@ -45,7 +52,7 @@ func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *
 		"slot":           block.Slot(),
 		"slotInEpoch":    block.Slot() % params.BeaconConfig().SlotsPerEpoch,
 		"block":          fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
-		"epoch":          helpers.SlotToEpoch(block.Slot()),
+		"epoch":          core.SlotToEpoch(block.Slot()),
 		"finalizedEpoch": finalized.Epoch,
 		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 	}).Info("Synced new block")

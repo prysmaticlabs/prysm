@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -18,7 +19,7 @@ import (
 // ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
 //
 // Reference spec implementation:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
 //
 // def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
 //    """
@@ -56,7 +57,7 @@ func ComputeWeakSubjectivityPeriod(st state.ReadOnlyBeaconState) (types.Epoch, e
 	wsp := uint64(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 
 	// Cardinality of active validator set.
-	N, err := ActiveValidatorCount(st, CurrentEpoch(st))
+	N, err := ActiveValidatorCount(st, core.CurrentEpoch(st))
 	if err != nil {
 		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
 	}
@@ -107,7 +108,7 @@ func ComputeWeakSubjectivityPeriod(st state.ReadOnlyBeaconState) (types.Epoch, e
 // at a given epoch matches that of the checkpoint.
 //
 // Reference implementation:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
 //
 // def is_within_weak_subjectivity_period(store: Store, ws_state: BeaconState, ws_checkpoint: Checkpoint) -> bool:
 //    # Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint
@@ -130,9 +131,9 @@ func IsWithinWeakSubjectivityPeriod(
 		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
 			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
 	}
-	if SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+	if core.SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
 		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
-			SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+			core.SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
@@ -140,7 +141,7 @@ func IsWithinWeakSubjectivityPeriod(
 	if err != nil {
 		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
 	}
-	wsStateEpoch := SlotToEpoch(wsState.Slot())
+	wsStateEpoch := core.SlotToEpoch(wsState.Slot())
 
 	return currentEpoch <= wsStateEpoch+wsPeriod, nil
 }

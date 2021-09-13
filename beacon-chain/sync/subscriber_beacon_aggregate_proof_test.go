@@ -4,25 +4,23 @@ import (
 	"context"
 	"testing"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.T) {
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
@@ -39,14 +37,12 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 }
 
 func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testing.T) {
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{
 			AttPool:           attestations.NewPool(),
 			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{

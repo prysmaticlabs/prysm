@@ -5,7 +5,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -48,7 +47,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 // Copy performs a deep copy of the signed beacon block
 // object.
 func (w Phase0SignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return WrappedPhase0SignedBeaconBlock(copyutil.CopySignedBeaconBlock(w.b))
+	return WrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
@@ -85,7 +84,7 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 	return w.b, nil
 }
 
-// AltairBlock returns the underlying protobuf object.
+// PbAltairBlock returns the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
@@ -93,6 +92,24 @@ func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 // Version of the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
+}
+
+func (w Phase0SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
 }
 
 // Phase0BeaconBlock is the wrapper for the actual block.
@@ -291,7 +308,7 @@ func (w altairSignedBeaconBlock) IsNil() bool {
 // Copy performs a deep copy of the signed beacon block
 // object.
 func (w altairSignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return altairSignedBeaconBlock{b: copyutil.CopySignedBeaconBlockAltair(w.b)}
+	return altairSignedBeaconBlock{b: eth.CopySignedBeaconBlockAltair(w.b)}
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
@@ -336,6 +353,24 @@ func (w altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 // Version of the underlying protobuf object.
 func (w altairSignedBeaconBlock) Version() int {
 	return version.Altair
+}
+
+func (w altairSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
 }
 
 // altairBeaconBlock is the wrapper for the actual block.

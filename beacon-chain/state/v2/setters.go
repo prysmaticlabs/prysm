@@ -7,9 +7,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"google.golang.org/protobuf/proto"
 )
@@ -92,7 +92,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = copyutil.CopyBeaconBlockHeader(val)
+	b.state.LatestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
@@ -800,7 +800,7 @@ func (b *BeaconState) recomputeRoot(idx int) {
 	b.merkleLayers = layers
 }
 
-func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
+func (b *BeaconState) markFieldAsDirty(field stateTypes.FieldIndex) {
 	_, ok := b.dirtyFields[field]
 	if !ok {
 		b.dirtyFields[field] = true
@@ -810,6 +810,6 @@ func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
-func (b *BeaconState) addDirtyIndices(index fieldIndex, indices []uint64) {
+func (b *BeaconState) addDirtyIndices(index stateTypes.FieldIndex, indices []uint64) {
 	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 }

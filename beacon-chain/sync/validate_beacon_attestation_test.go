@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -19,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -35,8 +35,6 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidAttestation: true,
 	}
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	s := &Service{
 		cfg: &Config{
 			InitialSync:       &mockSync.Sync{IsSyncing: false},
@@ -45,16 +43,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			Chain:             chain,
 			OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAttestationCache: c,
+		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = s.initCaches()
-	require.NoError(t, err)
+	s.initCaches()
 
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
 	s.setBadBlock(ctx, invalidRoot)
 
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	require.NoError(t, err)
 
 	blk := testutil.NewBeaconBlock()

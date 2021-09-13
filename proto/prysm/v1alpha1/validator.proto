@@ -136,14 +136,43 @@ service BeaconNodeValidator {
         };
     }
 
+	// DEPRECATED in favor of GetBeaconBlock.
+	//
     // Retrieves the latest valid beacon block to be proposed on the beacon chain.
     //
     // The server returns a new beacon block, without proposer signature, that can be
     // proposed on the beacon chain. The block should be filled with all the necessary
     // data for proposer to sign.
     rpc GetBlock(BlockRequest) returns (BeaconBlock) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/block"
+        };
+    }
+
+	// DEPRECATED in favor of ProposeBeaconBlock.
+	//
+    // Sends the newly signed beacon block to beacon node.
+    //
+    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
+    // be included in the beacon chain. The beacon node is expected to validate and process the
+    // beacon block into its state.
+    rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+        option deprecated = true;
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/block"
+            body: "*"
+        };
+    }
+
+    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
+    //
+    // The server returns a new beacon block, without proposer signature, that can be
+    // proposed on the beacon chain. The block should be filled with all the necessary
+    // data for proposer to sign.
+    rpc GetBeaconBlock(BlockRequest) returns (GenericBeaconBlock) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha2/validator/block"
         };
     }
 
@@ -152,9 +181,9 @@ service BeaconNodeValidator {
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
     // be included in the beacon chain. The beacon node is expected to validate and process the
     // beacon block into its state.
-    rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+    rpc ProposeBeaconBlock(GenericSignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/block"
+            post: "/eth/v1alpha2/validator/block"
             body: "*"
         };
     }
@@ -228,29 +257,6 @@ service BeaconNodeValidator {
     rpc CheckDoppelGanger(DoppelGangerRequest) returns (DoppelGangerResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/doppelganger"
-        };
-    }
-
-    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
-    //
-    // The server returns a new beacon block, without proposer signature, that can be
-    // proposed on the beacon chain. The block should be filled with all the necessary
-    // data for proposer to sign. This block is versioned from Altair onwards.
-    rpc GetBlockAltair(BlockRequest) returns (BeaconBlockAltair) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/block"
-        };
-    }
-
-    // Sends the newly signed beacon block to beacon node.
-    //
-    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
-    // be included in the beacon chain. The beacon node is expected to validate and process the
-    // beacon block into its state. This block is versioned from Altair onwards.
-    rpc ProposeBlockAltair(SignedBeaconBlockAltair) returns (ProposeResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/block"
-            body: "*"
         };
     }
 
@@ -335,7 +341,7 @@ message SyncCommitteeContributionRequest {
 message SyncSubcommitteeIndexResponse {
     // The subcommittee index itself.
     // If the total validator count is not sufficient, there could be more than one index.
-    repeated uint64 indices = 1;
+    repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
 }
 
 message StreamBlocksResponse {
@@ -609,13 +615,13 @@ message Validator {
     // Epoch when the validator was exited. This field is FAR_FUTURE_EPOCH if
     // the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
-    // https://github.com/ethereum/eth2.0-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
+    // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
     uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 
     // Epoch when the validator is eligible to withdraw their funds. This field
     // is FAR_FUTURE_EPOCH if the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
-    // https://github.com/ethereum/eth2.0-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
+    // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
     uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 

@@ -3,12 +3,15 @@ package bytesutil
 
 import (
 	"encoding/binary"
-	"errors"
+	"fmt"
 	"math/bits"
 	"regexp"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 )
+
+var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
@@ -113,6 +116,15 @@ func ToBytes64(x []byte) [64]byte {
 	return y
 }
 
+// ToBytes96 is a convenience method for converting a byte slice to a fix
+// sized 96 byte array. This method will truncate the input if it is larger
+// than 96 bytes.
+func ToBytes96(x []byte) [96]byte {
+	var y [96]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBool is a convenience method for converting a byte to a bool.
 // This method will use the first bit of the 0 byte to generate the returned value.
 func ToBool(x byte) bool {
@@ -166,6 +178,20 @@ func ToLowInt64(x []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(x))
 }
 
+// SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.
+func SafeCopyRootAtIndex(input [][]byte, idx uint64) ([]byte, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	if uint64(len(input)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	item := make([]byte, 32)
+	copy(item, input[idx])
+	return item, nil
+}
+
 // SafeCopyBytes will copy and return a non-nil byte array, otherwise it returns nil.
 func SafeCopyBytes(cp []byte) []byte {
 	if cp != nil {
@@ -176,8 +202,8 @@ func SafeCopyBytes(cp []byte) []byte {
 	return nil
 }
 
-// Copy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
-func Copy2dBytes(ary [][]byte) [][]byte {
+// SafeCopy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	if ary != nil {
 		copied := make([][]byte, len(ary))
 		for i, a := range ary {
@@ -334,9 +360,20 @@ func BytesToSlotBigEndian(b []byte) types.Slot {
 }
 
 // IsHex checks whether the byte array is a hex number prefixed with '0x'.
-func IsHex(b []byte) (bool, error) {
+func IsHex(b []byte) bool {
 	if b == nil {
-		return false, nil
+		return false
 	}
-	return regexp.Match("^(0x)[0-9a-fA-F]+$", b)
+	return hexRegex.Match(b)
+}
+
+// IsHexOfLen checks whether the byte array is a hex number prefixed with '0x' and containing the required number of digits.
+func IsHexOfLen(b []byte, length uint64) bool {
+	if b == nil {
+		return false
+	}
+	matches := hexRegex.Match(b)
+	// Add 2 to account for '0x'
+	expectedLen := int(length) + 2
+	return matches && len(b) == expectedLen
 }

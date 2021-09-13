@@ -60,7 +60,7 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -85,7 +85,7 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -142,7 +142,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.

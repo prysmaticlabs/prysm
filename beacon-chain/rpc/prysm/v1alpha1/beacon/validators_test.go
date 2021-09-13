@@ -12,6 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -21,7 +22,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -57,7 +57,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
 			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
-				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -84,7 +84,7 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
-				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1308,7 +1308,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
-	headState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	headState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:            helpers.ActivationExitEpoch(0),
@@ -1347,7 +1347,7 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 		pubKey(2),
 		pubKey(3),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -1389,7 +1389,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	wanted := [][]byte{
 		bytesutil.PadTo([]byte("2"), 48),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -1407,7 +1407,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
-	headState, err := v1.InitializeFromProto(&statepb.BeaconState{
+	headState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:       0,
@@ -1449,7 +1449,7 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		pubKey(2),
 		pubKey(3),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -1478,7 +1478,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1541,7 +1541,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*statepb.PendingAttestation{{
+	atts := []*ethpb.PendingAttestation{{
 		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
@@ -1558,8 +1558,8 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	b.Block.Slot = 16
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	bRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: bRoot[:]}))
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, bRoot))
@@ -1620,7 +1620,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*statepb.PendingAttestation{{
+	atts := []*ethpb.PendingAttestation{{
 		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
@@ -1636,8 +1636,8 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	bRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: bRoot[:]}))
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, bRoot))
@@ -1678,6 +1678,71 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 }
 
+func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T) {
+	helpers.ClearCache()
+	beaconDB := dbTest.SetupDB(t)
+	params.UseMainnetConfig()
+
+	ctx := context.Background()
+	validatorCount := uint64(32)
+
+	bits := make([]byte, validatorCount)
+	for i := range bits {
+		bits[i] = 0xff
+	}
+	headState, _ := testutil.DeterministicGenesisStateAltair(t, validatorCount)
+	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
+	require.NoError(t, headState.SetCurrentParticipationBits(bits))
+	require.NoError(t, headState.SetPreviousParticipationBits(bits))
+
+	b := testutil.NewBeaconBlockAltair()
+	b.Block.Slot = 16
+	ab, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, ab))
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, headState, bRoot))
+
+	m := &mock.ChainService{State: headState}
+	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	bs := &Server{
+		BeaconDB:    beaconDB,
+		HeadFetcher: m,
+		StateGen:    stategen.New(beaconDB),
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+		},
+		CanonicalFetcher: &mock.ChainService{
+			CanonicalRoots: map[[32]byte]bool{
+				bRoot: true,
+			},
+		},
+		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	require.NoError(t, err)
+
+	wanted := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate:          1,
+		VotedEther:                       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochTargetAttestingGwei:  validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochActiveGwei:          validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochAttestingGwei:       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochTargetAttestingGwei: validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochHeadAttestingGwei:   validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+	}
+	assert.DeepEqual(t, true, res.Finalized, "Incorrect validator participation respond")
+	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
+}
+
 func TestGetValidatorPerformance_Syncing(t *testing.T) {
 	ctx := context.Background()
 
@@ -1700,9 +1765,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch+1))))
-	atts := make([]*statepb.PendingAttestation, 3)
+	atts := make([]*ethpb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &statepb.PendingAttestation{
+		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -1917,6 +1982,74 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	}
 }
 
+func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
+	helpers.ClearCache()
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	ctx := context.Background()
+	epoch := types.Epoch(1)
+	headState, _ := testutil.DeterministicGenesisStateAltair(t, 32)
+	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch+1))))
+
+	defaultBal := params.BeaconConfig().MaxEffectiveBalance
+	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
+	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
+	require.NoError(t, headState.SetBalances(balances))
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	validators := []*ethpb.Validator{
+		{
+			PublicKey:       publicKey1[:],
+			ActivationEpoch: 5,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey2[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey3[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	require.NoError(t, headState.SetValidators(validators))
+	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
+	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+	}
+	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
+		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+		InclusionSlots:                []types.Slot{0, 0},
+		InclusionDistances:            []types.Slot{0, 0},
+		CorrectlyVotedSource:          []bool{false, false},
+		CorrectlyVotedTarget:          []bool{false, false},
+		CorrectlyVotedHead:            []bool{false, false},
+		BalancesBeforeEpochTransition: []uint64{101, 102},
+		BalancesAfterEpochTransition:  []uint64{0, 0},
+		MissingValidators:             [][]byte{publicKey1[:]},
+	}
+
+	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
+	})
+	require.NoError(t, err)
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v\nReceived %v", want, res)
+	}
+}
+
 func BenchmarkListValidatorBalances(b *testing.B) {
 	b.StopTimer()
 	beaconDB := dbTest.SetupDB(b)
@@ -1959,7 +2092,7 @@ func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator
 func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &ethpb.IndividualVotesRequest{
-		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+		Epoch: core.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
 	wanted := errNoEpochInfoError
 	_, err := ds.GetIndividualVotes(context.Background(), req)
@@ -2067,11 +2200,11 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err = beaconState.AppendPreviousEpochAttestations(&statepb.PendingAttestation{
+	err = beaconState.AppendPreviousEpochAttestations(&ethpb.PendingAttestation{
 		Data: att1.Data, AggregationBits: bf, InclusionDelay: 1,
 	})
 	require.NoError(t, err)
-	err = beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{
+	err = beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{
 		Data: att2.Data, AggregationBits: bf, InclusionDelay: 1,
 	})
 	require.NoError(t, err)

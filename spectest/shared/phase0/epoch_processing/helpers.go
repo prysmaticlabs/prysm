@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 type epochOperation func(*testing.T, state.BeaconState) (state.BeaconState, error)
@@ -50,7 +49,7 @@ func RunEpochOperationTest(
 	if postSSZExists {
 		require.NoError(t, err)
 
-		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
+		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
 		require.NoError(t, err)
 		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 		require.NoError(t, err, "Failed to decompress")
@@ -62,8 +61,6 @@ func RunEpochOperationTest(
 		pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
-			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}
 	} else {

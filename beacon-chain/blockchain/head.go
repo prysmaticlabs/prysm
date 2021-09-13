@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,6 +16,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -139,9 +141,13 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot,
 				NewHeadState: newStateRoot,
-				Epoch:        helpers.SlotToEpoch(newHeadSlot),
+				Epoch:        core.SlotToEpoch(newHeadSlot),
 			},
 		})
+
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
 
 		reorgCount.Inc()
 	}
@@ -285,7 +291,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 		return errors.New("justified state can't be nil")
 	}
 
-	epoch := helpers.CurrentEpoch(justifiedState)
+	epoch := core.CurrentEpoch(justifiedState)
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
 	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
@@ -323,15 +329,15 @@ func (s *Service) notifyNewHeadEvent(
 	currentDutyDependentRoot := s.genesisRoot[:]
 
 	var previousDutyEpoch types.Epoch
-	currentDutyEpoch := helpers.SlotToEpoch(newHeadSlot)
+	currentDutyEpoch := core.SlotToEpoch(newHeadSlot)
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
-	currentDutySlot, err := helpers.StartSlot(currentDutyEpoch)
+	currentDutySlot, err := core.StartSlot(currentDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
-	previousDutySlot, err := helpers.StartSlot(previousDutyEpoch)
+	previousDutySlot, err := core.StartSlot(previousDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
@@ -353,10 +359,47 @@ func (s *Service) notifyNewHeadEvent(
 			Slot:                      newHeadSlot,
 			Block:                     newHeadRoot,
 			State:                     newHeadStateRoot,
-			EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
+			EpochTransition:           core.IsEpochEnd(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},
 	})
+	return nil
+}
+
+// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
+// attestation pool. It also filters out the attestations that is one epoch older as a
+// defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		return nil
+	}
+
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
+	}
+
+	if orphanedBlk == nil || orphanedBlk.IsNil() {
+		return errors.New("orphaned block can't be nil")
+	}
+
+	for _, a := range orphanedBlk.Block().Body().Attestations() {
+		// Is the attestation one epoch older.
+		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			continue
+		}
+		if helpers.IsAggregated(a) {
+			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+				return err
+			}
+		}
+		saveOrphanedAttCount.Inc()
+	}
+
 	return nil
 }

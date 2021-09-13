@@ -540,15 +540,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_confluentinc_confluent_kafka_go",
-        importpath = "github.com/confluentinc/confluent-kafka-go",
-        patch_args = ["-p1"],
-        patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
-        version = "v1.4.2",
-    )
-
-    go_repository(
         name = "com_github_consensys_bavard",
         importpath = "github.com/consensys/bavard",
         sum = "h1:+R8G1+Ftumd0DaveLgMIjrFPcAS4G8MsVXWXiyZL5BY=",
@@ -834,8 +825,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:R8HHtp9wrae6trZA2lgJtOhghKl16lWY4cG0l7hH8CM=",
-        version = "v0.0.0-20210719200358-90640294cb9c",
+        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
+        version = "v0.0.0-20210905181407-59cf6761a7d5",
     )
 
     go_repository(
@@ -863,12 +854,6 @@ def prysm_deps():
         importpath = "github.com/fogleman/gg",
         sum = "h1:WXb3TSNmHp2vHoCroCIB1foO/yQ36swABL8aOVeDpgg=",
         version = "v1.2.1-0.20190220221249-0403632d5b90",
-    )
-    go_repository(
-        name = "com_github_form3tech_oss_jwt_go",
-        importpath = "github.com/form3tech-oss/jwt-go",
-        sum = "h1:xdtqez379uWVJ9P3qQMX8W+F/nqsTdUvyMZB36tnacA=",
-        version = "v3.2.1+incompatible",
     )
 
     go_repository(
@@ -1105,6 +1090,13 @@ def prysm_deps():
         importpath = "github.com/golang/groupcache",
         sum = "h1:1r7pUrabqp18hOBcwBwiTsbnFeTZHV9eER/QT5JVZxY=",
         version = "v0.0.0-20200121045136-8c9f03a8e57e",
+    )
+
+    go_repository(
+        name = "com_github_golang_jwt_jwt",
+        importpath = "github.com/golang-jwt/jwt",
+        sum = "h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=",
+        version = "v3.2.2+incompatible",
     )
     go_repository(
         name = "com_github_golang_lint",
@@ -2910,8 +2902,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:9rrmgQval2GOmtMAgGLdqcCEZLraNaN3k2mY+07cx64=",
-        version = "v0.0.0-20210706153858-5cb5ce8bdbfe",
+        sum = "h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=",
+        version = "v0.0.0-20210809151128-385d8c5e3fb7",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
@@ -3025,12 +3017,6 @@ def prysm_deps():
         version = "v0.0.0-20170313163322-e2103e2c3529",
     )
 
-    go_repository(
-        name = "com_github_segmentio_kafka_go",
-        importpath = "github.com/segmentio/kafka-go",
-        sum = "h1:HtCSf6B4gN/87yc5qTl7WsxPKQIIGXLPPM1bMCPOsoY=",
-        version = "v0.2.0",
-    )
     go_repository(
         name = "com_github_sergi_go_diff",
         importpath = "github.com/sergi/go-diff",
@@ -3770,15 +3756,6 @@ def prysm_deps():
         importpath = "gopkg.in/cheggaaa/pb.v1",
         sum = "h1:Ev7yu1/f6+d+b3pi5vPdRPc6nNtP1umSfcWiEfRqv6I=",
         version = "v1.0.25",
-    )
-
-    go_repository(
-        name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
-        importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
-        patch_args = ["-p1"],
-        patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:JabkIV98VYFqYKHHzXtgGMFuRgFBNTNzBytbGByzrJI=",
-        version = "v1.4.2",
     )
     go_repository(
         name = "in_gopkg_d4l3k_messagediff_v1",

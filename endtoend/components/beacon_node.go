@@ -129,7 +129,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 	// Write stdout and stderr to log files.
 	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stdout.log", index)))
 	if err != nil {

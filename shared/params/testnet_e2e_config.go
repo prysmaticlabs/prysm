@@ -1,5 +1,7 @@
 package params
 
+const AltairE2EForkEpoch = 6
+
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
 	beaconConfig = E2ETestConfig()
@@ -24,6 +26,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 10
 	e2eConfig.SlotsPerEpoch = 6
+	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
@@ -33,6 +36,9 @@ func E2ETestConfig() *BeaconChainConfig {
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
+
+	// Altair Fork Parameters.
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]

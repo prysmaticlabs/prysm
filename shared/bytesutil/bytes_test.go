@@ -1,6 +1,7 @@
 package bytesutil_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -392,8 +393,103 @@ func TestIsHex(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 	}
 	for _, tt := range tests {
-		isHex, err := bytesutil.IsHex(tt.a)
-		require.NoError(t, err)
+		isHex := bytesutil.IsHex(tt.a)
 		assert.Equal(t, tt.b, isHex)
+	}
+}
+
+func TestIsHexOfLen(t *testing.T) {
+	tests := []struct {
+		b      []byte
+		l      uint64
+		result bool
+	}{
+		{nil, 0, false},
+		{[]byte(""), 0, false},
+		{[]byte("0x"), 2, false},
+		{[]byte("0x0"), 2, false},
+		{[]byte("foo"), 3, false},
+		{[]byte("1234567890abcDEF"), 16, false},
+		{[]byte("XYZ4567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
+		{[]byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, true},
+		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
+	}
+	for _, tt := range tests {
+		isHex := bytesutil.IsHexOfLen(tt.b, tt.l)
+		assert.Equal(t, tt.result, isHex)
+	}
+}
+
+func TestSafeCopyRootAtIndex(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   [][]byte
+		idx     uint64
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name:    "index out of range in non-empty slice",
+			input:   [][]byte{{0x1}, {0x2}},
+			idx:     2,
+			wantErr: true,
+		},
+		{
+			name:    "index out of range in empty slice",
+			input:   [][]byte{},
+			idx:     0,
+			wantErr: true,
+		},
+		{
+			name:  "nil input",
+			input: nil,
+			idx:   3,
+			want:  nil,
+		},
+		{
+			name:  "correct copy",
+			input: [][]byte{{0x1}, {0x2}},
+			idx:   1,
+			want:  bytesutil.PadTo([]byte{0x2}, 32),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := bytesutil.SafeCopyRootAtIndex(tt.input, tt.idx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SafeCopyRootAtIndex() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SafeCopyRootAtIndex() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSafeCopy2dBytes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input [][]byte
+	}{
+		{
+			name:  "nil input",
+			input: nil,
+		},
+		{
+			name:  "correct copy",
+			input: [][]byte{{0x1}, {0x2}},
+		},
+		{
+			name:  "empty",
+			input: [][]byte{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := bytesutil.SafeCopy2dBytes(tt.input); !reflect.DeepEqual(got, tt.input) {
+				t.Errorf("SafeCopy2dBytes() = %v, want %v", got, tt.input)
+			}
+		})
 	}
 }

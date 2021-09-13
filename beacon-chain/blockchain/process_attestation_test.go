@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -144,7 +144,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
-	copied, err = state.ProcessSlots(ctx, copied, 1)
+	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
 	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
@@ -251,9 +251,9 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
-	s, err := helpers.StartSlot(newCheckpoint.Epoch)
+	s, err := core.StartSlot(newCheckpoint.Epoch)
 	require.NoError(t, err)
-	baseState, err = state.ProcessSlots(ctx, baseState, s)
+	baseState, err = transition.ProcessSlots(ctx, baseState, s)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 

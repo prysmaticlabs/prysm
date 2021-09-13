@@ -2,17 +2,17 @@ package p2p
 
 import (
 	"context"
+	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const (
@@ -35,6 +35,11 @@ const (
 	// misc
 	randomSubD = 6 // random gossip target
 )
+
+var errInvalidTopic = errors.New("invalid topic format")
+
+// Specifies the fixed size context length.
+const digestLength = 4
 
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
@@ -121,29 +126,6 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	}
 }
 
-// Content addressable ID function.
-//
-// Ethereum Beacon Chain spec defines the message ID as:
-//    The `message-id` of a gossipsub message MUST be the following 20 byte value computed from the message data:
-//    If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
-//    the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,
-//    i.e. `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]`.
-//
-//    Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
-//    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
-//    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
-func msgIDFunction(pmsg *pubsub_pb.Message) string {
-	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
-	if err != nil {
-		combinedData := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pmsg.Data...)
-		h := hashutil.Hash(combinedData)
-		return string(h[:20])
-	}
-	combinedData := append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], decodedData...)
-	h := hashutil.Hash(combinedData)
-	return string(h[:20])
-}
-
 // creates a custom gossipsub parameter set.
 func pubsubGossipParam() pubsub.GossipSubParams {
 	gParams := pubsub.DefaultGossipSubParams()
@@ -183,4 +165,28 @@ func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[stri
 		}
 	}
 	return newMap
+}
+
+// Extracts the relevant fork digest from the gossip topic.
+func ExtractGossipDigest(topic string) ([4]byte, error) {
+	splitParts := strings.Split(topic, "/")
+	parts := []string{}
+	for _, p := range splitParts {
+		if p == "" {
+			continue
+		}
+		parts = append(parts, p)
+	}
+	if len(parts) < 2 {
+		return [4]byte{}, errors.Wrapf(errInvalidTopic, "it only has %d parts: %v", len(parts), parts)
+	}
+	strDigest := parts[1]
+	digest, err := hex.DecodeString(strDigest)
+	if err != nil {
+		return [4]byte{}, err
+	}
+	if len(digest) != digestLength {
+		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
+	}
+	return bytesutil.ToBytes4(digest), nil
 }

@@ -11,11 +11,12 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -41,7 +42,7 @@ const (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	transition.SkipSlotCache.Disable()
 }
 
 // testRunner abstracts E2E test configuration and running.
@@ -69,6 +70,11 @@ func (r *testRunner) run() {
 
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
+
+	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
+	g.Go(func() error {
+		return tracingSink.Start(ctx)
+	})
 
 	// ETH1 node.
 	eth1Node := components.NewEth1Node()
@@ -129,7 +135,7 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			eth1Node, bootNode, beaconNodes, validatorNodes,
+			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
 		if config.TestSlasher && slasherNodes != nil {
 			requiredComponents = append(requiredComponents, slasherNodes)
@@ -217,17 +223,27 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		for _, evaluator := range config.Evaluators {
+		wg := new(sync.WaitGroup)
+		for _, ev := range config.Evaluators {
+			// Fix reference to evaluator as it will be running
+			// in a separate goroutine.
+			evaluator := ev
 			// Only run if the policy says so.
 			if !evaluator.Policy(types.Epoch(currentEpoch)) {
 				continue
 			}
-			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+
+			// Add evaluator to our waitgroup.
+			wg.Add(1)
+
+			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				err := evaluator.Evaluation(conns...)
 				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+				wg.Done()
 			})
 		}
-
+		// Wait for all evaluators to finish their evaluation for the epoch.
+		wg.Wait()
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
 			if t.Failed() {

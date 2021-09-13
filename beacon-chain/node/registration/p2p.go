@@ -42,7 +42,7 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 }
 
 func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName)
+	fileContent, err := ioutil.ReadFile(fileName) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

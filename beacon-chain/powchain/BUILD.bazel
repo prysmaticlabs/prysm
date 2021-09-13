@@ -19,11 +19,12 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/powchain/types:go_default_library",
         "//beacon-chain/state:go_default_library",

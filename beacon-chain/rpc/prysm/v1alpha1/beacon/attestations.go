@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -80,8 +81,8 @@ func (bs *Server) ListAttestations(
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
-	for _, block := range blocks {
-		atts = append(atts, block.Block().Body().Attestations()...)
+	for _, blk := range blocks {
+		atts = append(atts, blk.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -135,8 +136,8 @@ func (bs *Server) ListIndexedAttestations(
 	}
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
-	for _, block := range blocks {
-		attsArray = append(attsArray, block.Block().Body().Attestations()...)
+	for _, b := range blocks {
+		attsArray = append(attsArray, b.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(attsArray))
@@ -151,7 +152,7 @@ func (bs *Server) ListIndexedAttestations(
 			NextPageToken:       strconv.Itoa(0),
 		}, nil
 	}
-	// We use the retrieved committees for the block root to convert all attestations
+	// We use the retrieved committees for the b root to convert all attestations
 	// into indexed form effectively.
 	mappedAttestations := mapAttestationsByTargetRoot(attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
@@ -301,7 +302,7 @@ func (bs *Server) StreamIndexedAttestations(
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot, err := helpers.StartSlot(targetEpoch)
+			startSlot, err := core.StartSlot(targetEpoch)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -385,7 +386,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 // that it was included in a block. The attestation may have expired.
 // Refer to the ethereum consensus specification for more details on how
 // attestations are processed and when they are no longer valid.
-// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(
 	_ context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {

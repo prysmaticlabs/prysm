@@ -12,7 +12,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
@@ -288,7 +287,7 @@ func (b *BeaconState) blockRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.BlockRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -314,7 +313,7 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -338,7 +337,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.StateRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -364,7 +363,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return b.safeCopyBytesAtIndex(b.state.StateRoots, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
@@ -388,7 +387,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
 }
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
@@ -416,7 +415,7 @@ func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
 		return nil
 	}
 
-	return copyutil.CopyETH1Data(b.state.Eth1Data)
+	return ethpb.CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -448,7 +447,7 @@ func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
 
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = copyutil.CopyETH1Data(b.state.Eth1DataVotes[i])
+		res[i] = ethpb.CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }
@@ -508,7 +507,7 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		res[i] = copyutil.CopyValidator(val)
+		res[i] = ethpb.CopyValidator(val)
 	}
 	return res
 }
@@ -552,7 +551,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	defer b.lock.RUnlock()
 
 	val := b.state.Validators[idx]
-	return copyutil.CopyValidator(val), nil
+	return ethpb.CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
@@ -581,7 +580,12 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+	numOfVals := len(b.state.Validators)
+
 	idx, ok := b.valMapHandler.Get(key)
+	if ok && numOfVals <= int(idx) {
+		return types.ValidatorIndex(0), false
+	}
 	return idx, ok
 }
 
@@ -737,7 +741,7 @@ func (b *BeaconState) randaoMixes() [][]byte {
 		return nil
 	}
 
-	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
+	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -764,7 +768,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
+	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -877,7 +881,7 @@ func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -902,7 +906,7 @@ func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -959,7 +963,7 @@ func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
 		return nil
 	}
 
-	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
+	return ethpb.CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
@@ -1110,41 +1114,6 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	return b.inactivityScores(), nil
 }
 
-func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
-	if input == nil {
-		return nil
-	}
-
-	dst := make([][]byte, len(input))
-	for i, r := range input {
-		tmp := make([]byte, len(r))
-		copy(tmp, r)
-		dst[i] = tmp
-	}
-	return dst
-}
-
-func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
-	if input == nil {
-		return nil, nil
-	}
-
-	if uint64(len(input)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, input[idx])
-	return root, nil
-}
-
-func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if input == nil {
-		return nil
-	}
-
-	return copyutil.CopyCheckpoint(input)
-}
-
 // MarshalSSZ marshals the underlying beacon state to bytes.
 func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
@@ -1163,7 +1132,9 @@ func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateAltair, error) {
 	return pbState, nil
 }
 
-// Version of the beacon state.
+// Version of the beacon state. This method
+// is strictly meant to be used without a lock
+// internally.
 func (b *BeaconState) Version() int {
 	return version.Altair
 }
@@ -1174,7 +1145,7 @@ func CopySyncCommittee(data *ethpb.SyncCommittee) *ethpb.SyncCommittee {
 		return nil
 	}
 	return &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.Copy2dBytes(data.Pubkeys),
+		Pubkeys:         bytesutil.SafeCopy2dBytes(data.Pubkeys),
 		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
 	}
 }

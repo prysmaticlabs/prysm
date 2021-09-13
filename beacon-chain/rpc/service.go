@@ -22,14 +22,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
@@ -37,10 +38,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -62,7 +61,7 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *statepb.BeaconState
+	canonicalStateChan   chan *ethpbv1alpha1.BeaconState
 	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
@@ -94,6 +93,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
+	SyncCommitteeObjectPool synccommittee.Pool
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
@@ -116,7 +116,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *statepb.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:  make(chan *ethpbv1alpha1.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
@@ -191,6 +191,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
@@ -200,6 +201,13 @@ func (s *Service) Start() {
 		PeerManager:      s.cfg.PeerManager,
 		Broadcaster:      s.cfg.Broadcaster,
 		V1Alpha1Server:   validatorServer,
+		StateFetcher: &statefetcher.StateProvider{
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
+		},
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -265,15 +273,16 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
-		HeadFetcher:        s.cfg.HeadFetcher,
-		VoluntaryExitsPool: s.cfg.ExitPool,
+		HeadFetcher:             s.cfg.HeadFetcher,
+		VoluntaryExitsPool:      s.cfg.ExitPool,
+		V1Alpha1ValidatorServer: validatorServer,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	prysmv2.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
+	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
+	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
 		BlockNotifier:     s.cfg.BlockNotifier,
@@ -299,11 +308,11 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		prysmv2.RegisterDebugServer(s.grpcServer, debugServer)
-		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
+		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
+	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 

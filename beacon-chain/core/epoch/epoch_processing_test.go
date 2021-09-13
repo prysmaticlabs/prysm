@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -152,7 +153,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 	}
 	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := epoch.ProcessSlashings(s)
+	newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 	require.NoError(t, err)
 	wanted := params.BeaconConfig().MaxEffectiveBalance
 	assert.Equal(t, wanted, newState.Balances()[0], "Unexpected slashed balance")
@@ -231,7 +232,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			s, err := v1.InitializeFromProto(tt.state)
 			require.NoError(t, err)
 			helpers.ClearCache()
-			newState, err := epoch.ProcessSlashings(s)
+			newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, newState.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d", original, newState.Balances()[0])
 		})
@@ -240,7 +241,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, uint64(params.BeaconConfig().SlotsPerEpoch))
-	ce := helpers.CurrentEpoch(s)
+	ce := core.CurrentEpoch(s)
 	ne := ce + 1
 	require.NoError(t, s.SetEth1DataVotes([]*ethpb.Eth1Data{}))
 	balances := s.Balances()
@@ -314,7 +315,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	currentEpoch := helpers.CurrentEpoch(beaconState)
+	currentEpoch := core.CurrentEpoch(beaconState)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
