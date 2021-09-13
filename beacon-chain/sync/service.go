@@ -127,7 +127,7 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
-	signatureChan             chan *signatureVerifier
+	signatureChan                    chan *signatureVerifier
 }
 
 // NewService initializes new regular sync service.
