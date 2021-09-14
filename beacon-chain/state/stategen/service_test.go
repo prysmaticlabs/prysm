@@ -8,7 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -18,11 +18,11 @@ func TestResume(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	service := New(beaconDB)
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	beaconState, _ := customtesting.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, root))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, root))

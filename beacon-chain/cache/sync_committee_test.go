@@ -8,13 +8,13 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	numValidators := 101
-	deterministicState, _ := testing2.DeterministicGenesisStateAltair(t, uint64(numValidators))
+	deterministicState, _ := customtesting.DeterministicGenesisStateAltair(t, uint64(numValidators))
 	pubKeys := make([][]byte, deterministicState.NumValidators())
 	for i, val := range deterministicState.Validators() {
 		pubKeys[i] = val.PublicKey
@@ -160,7 +160,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := testing2.DeterministicGenesisStateAltair(t, uint64(numValidators))
+			s, _ := customtesting.DeterministicGenesisStateAltair(t, uint64(numValidators))
 			require.NoError(t, s.SetCurrentSyncCommittee(tt.currentSyncCommittee))
 			require.NoError(t, s.SetNextSyncCommittee(tt.nextSyncCommittee))
 			cache := cache.NewSyncCommittee()
@@ -188,7 +188,7 @@ func TestSyncCommitteeCache_RootDoesNotExist(t *testing.T) {
 
 func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	c := cache.NewSyncCommittee()
-	s, _ := testing2.DeterministicGenesisStateAltair(t, 64)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, 64)
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{1}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'a'}, s))
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{2}})))

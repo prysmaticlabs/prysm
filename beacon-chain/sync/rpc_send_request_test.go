@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -43,12 +43,12 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 	})
 
 	knownBlocks := make([]*eth.SignedBeaconBlock, 0)
-	genesisBlk := testing2.NewBeaconBlock()
+	genesisBlk := customtesting.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	parentRoot := genesisBlkRoot
 	for i := 0; i < 255; i++ {
-		blk := testing2.NewBeaconBlock()
+		blk := customtesting.NewBeaconBlock()
 		blk.Block.Slot = types.Slot(i)
 		blk.Block.ParentRoot = parentRoot[:]
 		knownBlocks = append(knownBlocks, blk)
@@ -308,7 +308,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 	knownBlocks := make(map[[32]byte]*eth.SignedBeaconBlock)
 	knownRoots := make([][32]byte, 0)
 	for i := 0; i < 5; i++ {
-		blk := testing2.NewBeaconBlock()
+		blk := customtesting.NewBeaconBlock()
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		knownRoots = append(knownRoots, blkRoot)

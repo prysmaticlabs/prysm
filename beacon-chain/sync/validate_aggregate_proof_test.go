@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -36,7 +36,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(32)
-	s, _ := testing2.DeterministicGenesisState(t, validators)
+	s, _ := customtesting.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	bf := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
@@ -61,7 +61,7 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(64)
-	s, _ := testing2.DeterministicGenesisState(t, validators)
+	s, _ := customtesting.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	bf := []byte{0xff}
@@ -83,10 +83,10 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 	validators := uint64(2048)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
 	sig := privKeys[0].Sign([]byte{'A'})
-	data := testing2.HydrateAttestationData(&ethpb.AttestationData{})
+	data := customtesting.HydrateAttestationData(&ethpb.AttestationData{})
 
 	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
@@ -97,7 +97,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	att := testing2.HydrateAttestation(&ethpb.Attestation{
+	att := customtesting.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
@@ -147,13 +147,13 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, _ := testing2.DeterministicGenesisState(t, validators)
+	beaconState, _ := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -232,9 +232,9 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, _ := testing2.DeterministicGenesisState(t, validators)
+	beaconState, _ := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -297,13 +297,13 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -390,13 +390,13 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -501,12 +501,12 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -590,13 +590,13 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 

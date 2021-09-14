@@ -25,7 +25,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -60,9 +60,9 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	sb := testing2.NewBeaconBlock()
+	sb := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
 	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -122,11 +122,11 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
-	sb = testing2.NewBeaconBlock()
+	sb = customtesting.NewBeaconBlock()
 	r32, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
 
@@ -145,7 +145,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 
-	s, _ := testing2.DeterministicGenesisState(t, 256)
+	s, _ := customtesting.DeterministicGenesisState(t, 256)
 	r := &Service{
 		cfg: &Config{
 			P2P:     p1,
@@ -162,12 +162,12 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		Aggregate: &ethpb.Attestation{
 			Signature:       priv.Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
-			Data:            testing2.HydrateAttestationData(&ethpb.AttestationData{}),
+			Data:            customtesting.HydrateAttestationData(&ethpb.AttestationData{}),
 		},
 		SelectionProof: make([]byte, 96),
 	}
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -183,7 +183,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	validators := uint64(256)
 
-	_, privKeys := testing2.DeterministicGenesisState(t, validators)
+	_, privKeys := customtesting.DeterministicGenesisState(t, validators)
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
 	att := &ethpb.Attestation{
@@ -249,9 +249,9 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, validators)
 
-	sb := testing2.NewBeaconBlock()
+	sb := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
 	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -315,11 +315,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
-	sb = testing2.NewBeaconBlock()
+	sb = customtesting.NewBeaconBlock()
 	r32, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
 

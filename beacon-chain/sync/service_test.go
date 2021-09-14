@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -75,8 +75,8 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testing2.NewBeaconBlock()
-	msg.Block.ParentRoot = testing2.Random32Bytes(t)
+	msg := customtesting.NewBeaconBlock()
+	msg.Block.ParentRoot = customtesting.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
@@ -155,8 +155,8 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testing2.NewBeaconBlock()
-	msg.Block.ParentRoot = testing2.Random32Bytes(t)
+	msg := customtesting.NewBeaconBlock()
+	msg.Block.ParentRoot = customtesting.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.Digest, err = r.currentForkDigest()
 	r.cfg.BlockNotifier = chainService.BlockNotifier()
@@ -194,7 +194,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	p2p.ReceivePubSub(topic, msg)
 	// wait for message to be sent
-	testing2.WaitTimeout(wg, 2*time.Second)
+	customtesting.WaitTimeout(wg, 2*time.Second)
 }
 
 func TestSyncService_StopCleanly(t *testing.T) {

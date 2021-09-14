@@ -9,7 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -18,10 +18,10 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	ctx := context.Background()
 
 	as := &ethpb.AttesterSlashing{
-		Attestation_1: testing2.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: customtesting.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Signature: bytesutil.PadTo([]byte("hello"), 96),
 		}),
-		Attestation_2: testing2.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: customtesting.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Signature: bytesutil.PadTo([]byte("hello"), 96),
 		}),
 	}
@@ -39,7 +39,7 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	data := testing2.HydrateAttestationData(&ethpb.AttestationData{})
+	data := customtesting.HydrateAttestationData(&ethpb.AttestationData{})
 	att := &ethpb.IndexedAttestation{Data: data, Signature: make([]byte, 96)}
 	tests := []struct {
 		ss dbtypes.SlashingStatus
@@ -97,7 +97,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	data := testing2.HydrateAttestationData(&ethpb.AttestationData{})
+	data := customtesting.HydrateAttestationData(&ethpb.AttestationData{})
 
 	tests := []struct {
 		ss dbtypes.SlashingStatus

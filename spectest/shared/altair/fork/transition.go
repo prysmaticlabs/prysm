@@ -17,7 +17,7 @@ import (
 	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -36,7 +36,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
-			file, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
+			file, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
 			require.NoError(t, err)
 			config := &ForkConfig{}
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
@@ -47,7 +47,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			if config.ForkBlock == 0 {
 				for i := 0; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
-					blockFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					blockFile, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
@@ -59,7 +59,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			} else {
 				for i := 0; i <= config.ForkBlock; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
-					blockFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					blockFile, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
@@ -69,7 +69,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				}
 				for i := config.ForkBlock + 1; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
-					blockFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					blockFile, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
@@ -79,7 +79,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				}
 			}
 
-			preBeaconStateFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
+			preBeaconStateFile, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
@@ -110,7 +110,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				require.Equal(t, true, ok)
 			}
 
-			postBeaconStateFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
+			postBeaconStateFile, err := customtesting.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")

@@ -21,7 +21,7 @@ import (
 	testing3 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
+	customtesting "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	grpc "google.golang.org/grpc"
@@ -64,7 +64,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
+	valDB := customtesting.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
@@ -955,7 +955,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 
 func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	pubKey := [48]byte{'a'}
-	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
+	valDB := customtesting.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),

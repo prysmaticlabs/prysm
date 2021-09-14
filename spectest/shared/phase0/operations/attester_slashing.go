@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -23,7 +23,7 @@ func RunAttesterSlashingTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			attSlashingFile, err := testing2.BazelFileBytes(folderPath, "attester_slashing.ssz_snappy")
+			attSlashingFile, err := customtesting.BazelFileBytes(folderPath, "attester_slashing.ssz_snappy")
 			require.NoError(t, err)
 			attSlashingSSZ, err := snappy.Decode(nil /* dst */, attSlashingFile)
 			require.NoError(t, err, "Failed to decompress")

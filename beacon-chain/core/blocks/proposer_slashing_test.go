@@ -16,14 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 
-	beaconState, _ := testing2.DeterministicGenesisState(t, 20)
+	beaconState, _ := customtesting.DeterministicGenesisState(t, 20)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
@@ -43,7 +43,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	}
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -56,7 +56,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 
-	beaconState, _ := testing2.DeterministicGenesisState(t, 2)
+	beaconState, _ := customtesting.DeterministicGenesisState(t, 2)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
@@ -76,7 +76,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	}
 
 	require.NoError(t, beaconState.SetSlot(currentSlot))
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -123,7 +123,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		Slot:       currentSlot,
 	})
 	require.NoError(t, err)
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -140,11 +140,11 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 100)
 	proposerIdx := types.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
-		Header: testing2.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Header: customtesting.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
 		}),
@@ -153,7 +153,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	header2 := testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	header2 := customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
@@ -169,7 +169,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	block := testing2.NewBeaconBlock()
+	block := customtesting.NewBeaconBlock()
 	block.Block.Body.ProposerSlashings = slashings
 
 	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
@@ -188,11 +188,11 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	beaconState, privKeys := testing2.DeterministicGenesisStateAltair(t, 100)
+	beaconState, privKeys := customtesting.DeterministicGenesisStateAltair(t, 100)
 	proposerIdx := types.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
-		Header: testing2.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+		Header: customtesting.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
 		}),
@@ -201,7 +201,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	header2 := testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	header2 := customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
@@ -217,7 +217,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 	}
 
-	block := testing2.NewBeaconBlock()
+	block := customtesting.NewBeaconBlock()
 	block.Block.Body.ProposerSlashings = slashings
 
 	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
@@ -239,7 +239,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		slashing    *ethpb.ProposerSlashing
 	}
 
-	beaconState, sks := testing2.DeterministicGenesisState(t, 2)
+	beaconState, sks := customtesting.DeterministicGenesisState(t, 2)
 	currentSlot := types.Slot(0)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	rand1, err := bls.RandKey()
@@ -259,13 +259,13 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "same header, same slot as state",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					Header_1: customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          currentSlot,
 						},
 					}),
-					Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					Header_2: customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          currentSlot,
@@ -280,13 +280,13 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			name: "same header, different signatures",
 			args: args{
 				slashing: &ethpb.ProposerSlashing{
-					Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					Header_1: customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 						},
 						Signature: sig1,
 					}),
-					Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+					Header_2: customtesting.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 						},

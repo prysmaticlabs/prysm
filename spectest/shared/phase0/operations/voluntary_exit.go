@@ -11,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -22,7 +22,7 @@ func RunVoluntaryExitTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			exitFile, err := testing2.BazelFileBytes(folderPath, "voluntary_exit.ssz_snappy")
+			exitFile, err := customtesting.BazelFileBytes(folderPath, "voluntary_exit.ssz_snappy")
 			require.NoError(t, err)
 			exitSSZ, err := snappy.Decode(nil /* dst */, exitFile)
 			require.NoError(t, err, "Failed to decompress")

@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -179,7 +179,7 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 		}()
 		s.Start()
 	}()
-	testing2.WaitTimeout(wg, time.Second)
+	customtesting.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -189,8 +189,8 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	st, _ := testing2.DeterministicGenesisState(t, 10)
-	b := testing2.NewBeaconBlock()
+	st, _ := customtesting.DeterministicGenesisState(t, 10)
+	b := customtesting.NewBeaconBlock()
 	genRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
@@ -213,7 +213,7 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 		wg.Done()
 	}()
 	s.cancel()
-	testing2.WaitTimeout(wg, time.Second)
+	customtesting.WaitTimeout(wg, time.Second)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -438,7 +438,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
-	gs, _ := testing2.DeterministicGenesisState(t, 1)
+	gs, _ := customtesting.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
 		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
@@ -454,7 +454,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 
 	blockRootA := [32]byte{'a'}
 
-	emptyState, err := testing2.NewBeaconState()
+	emptyState, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
 	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, blockRootA))
@@ -622,7 +622,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testing2.NewBeaconState()
+	genState, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -646,7 +646,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testing2.NewBeaconState()
+	genState, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -670,7 +670,7 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testing2.NewBeaconState()
+	genState, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -21,7 +21,7 @@ func TestEpochBoundaryStateCache_BadRootKey(t *testing.T) {
 
 func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	e := newBoundaryStateCache()
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 	r := [32]byte{'a'}
@@ -52,7 +52,7 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	e := newBoundaryStateCache()
 	offSet := types.Slot(10)
 	for i := types.Slot(0); i < offSet.Add(maxCacheSize); i++ {
-		s, err := testing2.NewBeaconState()
+		s, err := customtesting.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, s.SetSlot(i))
 		r := [32]byte{byte(i)}

@@ -17,14 +17,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/grpc"
 )
 
 func Test_currentCommitteeIndicesFromState(t *testing.T) {
-	st, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
@@ -55,7 +55,7 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 }
 
 func Test_extractSyncSubcommittees(t *testing.T) {
-	st, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	for i := 0; i < len(syncCommittee); i++ {
@@ -108,7 +108,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 
 func TestListSyncCommittees(t *testing.T) {
 	ctx := context.Background()
-	st, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	for i := 0; i < len(syncCommittee); i++ {
@@ -151,7 +151,7 @@ func TestListSyncCommittees(t *testing.T) {
 
 func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-	st, _ := testing2.DeterministicGenesisStateAltair(t, 10)
+	st, _ := customtesting.DeterministicGenesisStateAltair(t, 10)
 
 	alphaServer := &validator.Server{
 		SyncCommitteePool: synccommittee.NewStore(),

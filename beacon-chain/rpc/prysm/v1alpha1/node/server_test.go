@@ -16,7 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/grpc"
@@ -44,7 +44,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{

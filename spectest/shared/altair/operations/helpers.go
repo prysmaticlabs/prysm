@@ -15,7 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -31,7 +31,7 @@ func RunBlockOperationTest(
 	body *ethpb.BeaconBlockBodyAltair,
 	operationFn blockOperation,
 ) {
-	preBeaconStateFile, err := testing2.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := customtesting.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
@@ -52,7 +52,7 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	b := testing2.NewBeaconBlockAltair()
+	b := customtesting.NewBeaconBlockAltair()
 	b.Block.Body = body
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)

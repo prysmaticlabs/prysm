@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -25,7 +25,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: testing2.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: customtesting.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x07},
 			}),
 			AggregatorIndex: 100,
@@ -47,7 +47,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: testing2.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: customtesting.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x03},
 				Signature:       make([]byte, 96),
 			}),

@@ -28,7 +28,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -70,7 +70,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 
 	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
-	if testing2.WaitTimeout(&wg, time.Second) {
+	if customtesting.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 }
@@ -146,10 +146,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		wg.Done()
 		return nil
 	}, p2pService.Digest)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
-	attesterSlashing, err := testing2.GenerateAttesterSlashingForValidator(
+	attesterSlashing, err := customtesting.GenerateAttesterSlashingForValidator(
 		beaconState,
 		privKeys[1],
 		1, /* validator index */
@@ -159,7 +159,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 
-	if testing2.WaitTimeout(&wg, time.Second) {
+	if customtesting.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 	as := r.cfg.SlashingPool.PendingAttesterSlashings(ctx, beaconState, false /*noLimit*/)
@@ -200,10 +200,10 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		wg.Done()
 		return nil
 	}, p2pService.Digest)
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
-	proposerSlashing, err := testing2.GenerateProposerSlashingForValidator(
+	proposerSlashing, err := customtesting.GenerateProposerSlashingForValidator(
 		beaconState,
 		privKeys[1],
 		1, /* validator index */
@@ -212,7 +212,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 
 	p2pService.ReceivePubSub(topic, proposerSlashing)
 
-	if testing2.WaitTimeout(&wg, time.Second) {
+	if customtesting.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 	ps := r.cfg.SlashingPool.PendingProposerSlashings(ctx, beaconState, false /*noLimit*/)
@@ -248,7 +248,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	r.markForChainStart()
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
-	if testing2.WaitTimeout(&wg, time.Second) {
+	if customtesting.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
 }

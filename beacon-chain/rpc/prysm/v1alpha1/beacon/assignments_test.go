@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -48,10 +48,10 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -101,11 +101,11 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 		})
 	}
 
-	blk := testing2.NewBeaconBlock().Block
+	blk := customtesting.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
@@ -176,11 +176,11 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		}
 	}
 
-	blk := testing2.NewBeaconBlock().Block
+	blk := customtesting.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
@@ -246,10 +246,10 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		validators = append(validators, val)
 	}
 
-	blk := testing2.NewBeaconBlock().Block
+	blk := customtesting.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
@@ -315,10 +315,10 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		validators = append(validators, val)
 	}
 
-	blk := testing2.NewBeaconBlock().Block
+	blk := customtesting.NewBeaconBlock().Block
 	blockRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))

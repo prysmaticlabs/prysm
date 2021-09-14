@@ -12,13 +12,13 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 100)
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	require.NoError(t, err)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(root[:])
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature.Marshal(),
@@ -44,13 +44,13 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 100)
 
 	epoch := core.CurrentEpoch(beaconState)
-	epochSignature, err := testing2.RandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := customtesting.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 
-	b := testing2.NewBeaconBlock()
+	b := customtesting.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature,
@@ -69,10 +69,10 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 }
 
 func TestRandaoSignatureSet_OK(t *testing.T) {
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := customtesting.DeterministicGenesisState(t, 100)
 
 	epoch := core.CurrentEpoch(beaconState)
-	epochSignature, err := testing2.RandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := customtesting.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 
 	block := &ethpb.BeaconBlock{

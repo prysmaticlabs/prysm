@@ -11,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -72,7 +72,7 @@ func TestGetGenesis(t *testing.T) {
 
 func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
-	fakeState, err := testing2.NewBeaconState()
+	fakeState, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	stateRoot, err := fakeState.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestGetStateFork(t *testing.T) {
 		}
 		return nil
 	}
-	fakeState, err := testing2.NewBeaconState(fillFork)
+	fakeState, err := customtesting.NewBeaconState(fillFork)
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
@@ -134,7 +134,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		}
 		return nil
 	}
-	fakeState, err := testing2.NewBeaconState(fillCheckpoints)
+	fakeState, err := customtesting.NewBeaconState(fillCheckpoints)
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{

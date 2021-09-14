@@ -12,7 +12,7 @@ import (
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
@@ -28,7 +28,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			helpers.ClearCache()
 			folderPath := path.Join(testsFolderPath, folder.Name())
 
-			preStateFile, err := testing2.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+			preStateFile, err := customtesting.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 			require.NoError(t, err)
 			preStateSSZ, err := snappy.Decode(nil /* dst */, preStateFile)
 			require.NoError(t, err, "Failed to decompress")
@@ -43,7 +43,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
-			postStateFile, err := testing2.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
+			postStateFile, err := customtesting.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
 			require.NoError(t, err)
 			postStateSSZ, err := snappy.Decode(nil /* dst */, postStateFile)
 			require.NoError(t, err, "Failed to decompress")

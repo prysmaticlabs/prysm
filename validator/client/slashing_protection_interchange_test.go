@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
@@ -120,7 +120,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					require.NoError(t, err)
 					pk, err := interchangeformat.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)
-					b := testing2.NewBeaconBlock()
+					b := customtesting.NewBeaconBlock()
 					b.Block.Slot = bSlot
 
 					var signingRoot [32]byte

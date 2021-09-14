@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -23,7 +23,7 @@ func RunShuffleTests(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			testCaseFile, err := testing2.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
+			testCaseFile, err := customtesting.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
 			require.NoError(t, err, "Could not read YAML tests directory")
 
 			testCase := &ShuffleTestCase{}

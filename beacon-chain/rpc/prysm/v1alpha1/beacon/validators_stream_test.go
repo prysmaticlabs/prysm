@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -69,7 +69,7 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 
 	is := &infostream{
@@ -119,7 +119,7 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
@@ -167,7 +167,7 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testing2.NewBeaconState()
+	s, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 
 	is := &infostream{

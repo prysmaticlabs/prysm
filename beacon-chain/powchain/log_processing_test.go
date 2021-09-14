@@ -17,7 +17,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -46,10 +46,10 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -110,9 +110,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -165,9 +165,9 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -222,9 +222,9 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -291,9 +291,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 	require.NoError(t, err)
-	_, roots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, roots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
@@ -388,9 +388,9 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
 	require.NoError(t, err)
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	depositOffset := 5
 
@@ -480,9 +480,9 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
 	require.NoError(t, err)
-	_, depositRoots, err := testing2.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := customtesting.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	depositOffset := 5
 

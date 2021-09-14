@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -86,7 +86,7 @@ func TestService_Broadcast(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.Broadcast(context.Background(), msg))
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
 }
@@ -164,7 +164,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		}),
 	}
 
-	msg := testing2.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
+	msg := customtesting.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	subnet := uint64(5)
 
 	topic := AttestationSubnetTopicFormat
@@ -200,7 +200,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastAttestation(context.Background(), subnet, msg))
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
 }
@@ -323,7 +323,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		}),
 	}
 
-	msg := testing2.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
+	msg := customtesting.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	topic := AttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
@@ -361,7 +361,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastAttestation(context.Background(), subnet, msg))
-	if testing2.WaitTimeout(&wg, 4*time.Second) {
+	if customtesting.WaitTimeout(&wg, 4*time.Second) {
 		t.Error("Failed to receive pubsub within 4s")
 	}
 }
@@ -388,7 +388,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		}),
 	}
 
-	msg := testing2.HydrateSyncCommittee(&pb.SyncCommitteeMessage{})
+	msg := customtesting.HydrateSyncCommittee(&pb.SyncCommitteeMessage{})
 	subnet := uint64(5)
 
 	topic := SyncCommitteeSubnetTopicFormat
@@ -424,7 +424,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastSyncCommitteeMessage(context.Background(), subnet, msg))
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
 }

@@ -11,7 +11,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -52,7 +52,7 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 }
 
 func TestService_HeadCurrentSyncCommitteeIndices(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -66,7 +66,7 @@ func TestService_HeadCurrentSyncCommitteeIndices(t *testing.T) {
 }
 
 func TestService_HeadNextSyncCommitteeIndices(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -80,7 +80,7 @@ func TestService_HeadNextSyncCommitteeIndices(t *testing.T) {
 }
 
 func TestService_HeadSyncCommitteePubKeys(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -95,7 +95,7 @@ func TestService_HeadSyncCommitteePubKeys(t *testing.T) {
 }
 
 func TestService_HeadSyncCommitteeDomain(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -109,7 +109,7 @@ func TestService_HeadSyncCommitteeDomain(t *testing.T) {
 }
 
 func TestService_HeadSyncContributionProofDomain(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -123,7 +123,7 @@ func TestService_HeadSyncContributionProofDomain(t *testing.T) {
 }
 
 func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -141,7 +141,7 @@ func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
 	t.Cleanup(func() {
 		syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
 	})
-	beaconState, _ := testing2.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := customtesting.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))
 	cachedState, err := c.Get(101)
 	require.ErrorContains(t, cache.ErrNotFound.Error(), err)

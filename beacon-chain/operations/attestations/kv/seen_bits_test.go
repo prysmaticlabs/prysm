@@ -5,27 +5,27 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestAttCaches_hasSeenBit(t *testing.T) {
 	c := NewAttCaches()
 
-	seenA1 := testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}})
-	seenA2 := testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11100000}})
+	seenA1 := customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}})
+	seenA2 := customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11100000}})
 	require.NoError(t, c.insertSeenBit(seenA1))
 	require.NoError(t, c.insertSeenBit(seenA2))
 	tests := []struct {
 		att  *ethpb.Attestation
 		want bool
 	}{
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000000}}), want: true},
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000001}}), want: true},
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11100000}}), want: true},
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}}), want: true},
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001000}}), want: false},
-		{att: testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110111}}), want: false},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000000}}), want: true},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000001}}), want: true},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11100000}}), want: true},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}}), want: true},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10001000}}), want: false},
+		{att: customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11110111}}), want: false},
 	}
 	for _, tt := range tests {
 		got, err := c.hasSeenBit(tt.att)
@@ -38,7 +38,7 @@ func TestAttCaches_hasSeenBit(t *testing.T) {
 
 func TestAttCaches_insertSeenBitDuplicates(t *testing.T) {
 	c := NewAttCaches()
-	att1 := testing2.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}})
+	att1 := customtesting.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10000011}})
 	r, err := hashFn(att1.Data)
 	require.NoError(t, err)
 	require.NoError(t, c.insertSeenBit(att1))

@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -44,7 +44,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 }
 
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	deposit := deposits[0]
 	domain, err := helpers.ComputeDomain(
@@ -58,7 +58,7 @@ func TestVerifyDepositSignature_ValidSig(t *testing.T) {
 }
 
 func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	deposit := deposits[0]
 	domain, err := helpers.ComputeDomain(

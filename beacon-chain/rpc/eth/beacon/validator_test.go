@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -27,7 +27,7 @@ func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
 
 	var state state.BeaconState
-	state, _ = testing2.DeterministicGenesisState(t, 8192)
+	state, _ = customtesting.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
 		s := Server{
@@ -78,7 +78,7 @@ func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 
 	var state state.BeaconState
-	state, _ = testing2.DeterministicGenesisState(t, 8192)
+	state, _ = customtesting.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
 		s := Server{
@@ -207,7 +207,7 @@ func TestListValidators_Status(t *testing.T) {
 	ctx := context.Background()
 
 	var state state.BeaconState
-	state, _ = testing2.DeterministicGenesisState(t, 8192)
+	state, _ = customtesting.DeterministicGenesisState(t, 8192)
 
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validators := []*eth.Validator{
@@ -438,7 +438,7 @@ func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
 	var state state.BeaconState
-	state, _ = testing2.DeterministicGenesisState(t, 8192)
+	state, _ = customtesting.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		s := Server{
@@ -510,7 +510,7 @@ func TestListCommittees(t *testing.T) {
 	ctx := context.Background()
 
 	var state state.BeaconState
-	state, _ = testing2.DeterministicGenesisState(t, 8192)
+	state, _ = customtesting.DeterministicGenesisState(t, 8192)
 	epoch := core.SlotToEpoch(state.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {

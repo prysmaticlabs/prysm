@@ -20,7 +20,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -35,7 +35,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
 	for i := types.Slot(1); i < 11; i++ {
-		blk := testing2.NewBeaconBlock()
+		blk := customtesting.NewBeaconBlock()
 		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, stream)
-			res := testing2.NewBeaconBlock()
+			res := customtesting.NewBeaconBlock()
 			assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, res))
 			if uint64(res.Block.Slot) != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
@@ -68,7 +68,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	err = r.beaconBlocksRootRPCHandler(context.Background(), &blkRoots, stream1)
 	assert.NoError(t, err)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -78,9 +78,9 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.DelaySend = true
 
-	blockA := testing2.NewBeaconBlock()
+	blockA := customtesting.NewBeaconBlock()
 	blockA.Block.Slot = 111
-	blockB := testing2.NewBeaconBlock()
+	blockB := customtesting.NewBeaconBlock()
 	blockB.Block.Slot = 40
 	// Set up a head state with data we expect.
 	blockARoot, err := blockA.Block.HashTreeRoot()
@@ -140,7 +140,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p1.Connect(p2)
 	require.NoError(t, r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -168,7 +168,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	require.NoError(t, err)
 	err = r.beaconBlocksRootRPCHandler(context.Background(), &p2pTypes.BeaconBlockByRootsReq{}, stream1)
 	assert.ErrorContains(t, "no block roots provided", err)
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if customtesting.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

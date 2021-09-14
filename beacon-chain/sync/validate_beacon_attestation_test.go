@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -54,7 +54,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	digest, err := s.currentForkDigest()
 	require.NoError(t, err)
 
-	blk := testing2.NewBeaconBlock()
+	blk := customtesting.NewBeaconBlock()
 	blk.Block.Slot = 1
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 
@@ -66,7 +66,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	}
 
 	validators := uint64(64)
-	savedState, keys := testing2.DeterministicGenesisState(t, validators)
+	savedState, keys := customtesting.DeterministicGenesisState(t, validators)
 	require.NoError(t, savedState.SetSlot(1))
 	require.NoError(t, db.SaveState(context.Background(), savedState, validBlockRoot))
 	chain.State = savedState

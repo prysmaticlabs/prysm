@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -35,7 +35,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -58,7 +58,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := testing2.NewBeaconBlock()
+	blk := customtesting.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 1,
 	}
 
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	// A state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
@@ -151,7 +151,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -188,7 +188,7 @@ func TestStore_IsFinalizedChildBlockAltair(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := testing2.NewBeaconState()
+	st, err := customtesting.NewBeaconState()
 	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -219,7 +219,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = testing2.NewBeaconBlock()
+		blocks[j-i] = customtesting.NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
@@ -236,7 +236,7 @@ func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte)
 	for j := startIdx; j < num+startIdx; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-startIdx] = testing2.NewBeaconBlockAltair()
+		blocks[j-startIdx] = customtesting.NewBeaconBlockAltair()
 		blocks[j-startIdx].Block.Slot = types.Slot(j + 1)
 		blocks[j-startIdx].Block.ParentRoot = parentRoot
 		var err error

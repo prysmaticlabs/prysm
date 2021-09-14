@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -32,9 +32,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, types.Epoch(8192), params.BeaconConfig().EpochsPerSlashingsVector, "EpochsPerSlashingsVector should be 8192 for these tests to pass")
 
 	genesisTime := uint64(99999)
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
 	require.NoError(t, err)
-	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
+	eth1Data, err := customtesting.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	newState, err := transition.GenesisBeaconState(context.Background(), deposits, genesisTime, eth1Data)
 	require.NoError(t, err, "Could not execute GenesisBeaconState")
@@ -91,7 +91,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(100)
+	deposits, _, err := customtesting.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
 	state1, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)

@@ -14,12 +14,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestTranslateParticipation(t *testing.T) {
-	s, _ := testing2.DeterministicGenesisStateAltair(t, 64)
+	s, _ := customtesting.DeterministicGenesisStateAltair(t, 64)
 	st, ok := s.(*stateAltair.BeaconState)
 	require.Equal(t, true, ok)
 	require.NoError(t, st.SetSlot(st.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
@@ -68,7 +68,7 @@ func TestTranslateParticipation(t *testing.T) {
 }
 
 func TestUpgradeToAltair(t *testing.T) {
-	st, _ := testing2.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := customtesting.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
 	aState, err := altair.UpgradeToAltair(context.Background(), st)
 	require.NoError(t, err)

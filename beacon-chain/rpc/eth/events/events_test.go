@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
+	customtesting "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -48,7 +48,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedBlock := testing2.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+		wantedBlock := customtesting.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
 			Block: &eth.BeaconBlock{
 				Slot: 8,
 			},
@@ -88,7 +88,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedAttV1alpha1 := testing2.HydrateAttestation(&eth.Attestation{
+		wantedAttV1alpha1 := customtesting.HydrateAttestation(&eth.Attestation{
 			Data: &eth.AttestationData{
 				Slot: 8,
 			},
@@ -123,7 +123,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		defer ctrl.Finish()
 
 		wantedAttV1alpha1 := &eth.AggregateAttestationAndProof{
-			Aggregate: testing2.HydrateAttestation(&eth.Attestation{}),
+			Aggregate: customtesting.HydrateAttestation(&eth.Attestation{}),
 		}
 		wantedAtt := migration.V1Alpha1AggregateAttAndProofToV1(wantedAttV1alpha1)
 		genericResponse, err := anypb.New(wantedAtt)
