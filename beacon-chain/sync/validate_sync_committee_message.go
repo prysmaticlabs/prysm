@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -63,7 +63,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	m, err := s.readSyncCommitteeMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
@@ -74,13 +74,13 @@ func (s *Service) validateSyncCommitteeMessage(
 		s.cfg.Chain.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
 	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
@@ -159,7 +159,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 		isValid := false
 		digest, err := s.currentForkDigest()
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 
@@ -213,13 +213,13 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// since the failure is locally derived.
 		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		rawBytes := p2ptypes.SSZBytes(m.BlockRoot)
 		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 
@@ -227,21 +227,21 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// that is on such a different fork than our chain.
 		pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 
 		// We reject a malformed signature from bytes according to the p2p specification.
 		blsSig, err := bls.SignatureFromBytes(m.Signature)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 
 		// Ignore a malformed public key from bytes according to the p2p specification.
 		pKey, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 

@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 )
@@ -80,7 +80,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		attempts := streamAttempts(ctx)
 		log.WithError(err).WithField("attempts", attempts).
 			Error("Stream broken while waiting for activation. Reconnecting...")
@@ -150,7 +150,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 					return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 				}
 				if err != nil {
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					attempts := streamAttempts(ctx)
 					log.WithError(err).WithField("attempts", attempts).
 						Error("Stream broken while waiting for activation. Reconnecting...")

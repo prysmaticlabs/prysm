@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -175,7 +175,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 			}
 			return
 		}
@@ -193,11 +193,11 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				// Debug logs for goodbye/status errors
 				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return
 				}
 				log.WithError(err).Debug("Could not decode stream message")
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return
 			}
 			if err := handle(ctx, msg, stream); err != nil {
@@ -205,7 +205,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 			}
 		} else {
 			nTyp := reflect.New(t)
@@ -216,7 +216,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				log.WithError(err).Debug("Could not decode stream message")
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return
 			}
 			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {
@@ -224,7 +224,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
 				}
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 			}
 		}
 	})

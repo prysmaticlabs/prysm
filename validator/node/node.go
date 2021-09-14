@@ -17,10 +17,11 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
+	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -30,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -64,7 +64,7 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
-	if err := tracing.Setup(
+	if err := tracing2.Setup(
 		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
@@ -370,7 +370,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backup.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
