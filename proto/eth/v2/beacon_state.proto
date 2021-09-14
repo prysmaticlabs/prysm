@@ -87,7 +87,8 @@ message BeaconStateResponseV2 {
 }
 
 message BeaconStateSSZResponseV2 {
-  bytes data = 1;
+  v2.Version version = 1;
+  bytes data = 2;
 }
 
 message BeaconStateContainer {

@@ -111,6 +111,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2Block},
 		}
+		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconBlockSSZV2}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
 		endpoint.GetResponse = &blockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
@@ -161,6 +162,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2State},
 		}
+		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
