@@ -1,4 +1,4 @@
-package progressutil
+package progress
 
 import (
 	"fmt"

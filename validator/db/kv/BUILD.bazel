@@ -22,6 +22,8 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core:go_default_library",
+        "//monitoring/progress:go_default_library",
+        "//monitoring/tracing:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/abool:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -29,9 +31,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/progressutil:go_default_library",
         "//shared/slashutil:go_default_library",
-        "//shared/traceutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

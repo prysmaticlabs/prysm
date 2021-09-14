@@ -16,9 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -47,7 +47,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
@@ -73,7 +73,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	// processing tolerance.
 	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime(),
 		earlyAttestationProcessingTolerance); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
@@ -101,18 +101,18 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 	if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	preState, err := s.cfg.Chain.AttestationPreState(ctx, att)
 	if err != nil {
 		log.WithError(err).Error("Could not to retrieve pre state")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
@@ -141,7 +141,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	valCount, err := helpers.ActiveValidatorCount(bs, core.SlotToEpoch(a.Data.Slot))
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve active validator count")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	count := helpers.SlotCommitteeCount(valCount)
@@ -153,7 +153,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	digest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not compute fork digest")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	if !strings.HasPrefix(t, fmt.Sprintf(format, digest, subnet)) {
@@ -171,7 +171,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 	committee, err := helpers.BeaconCommitteeFromState(bs, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
@@ -189,7 +189,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
 		log.WithError(err).Debug("Could not verify attestation")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 

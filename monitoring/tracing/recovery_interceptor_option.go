@@ -1,4 +1,4 @@
-package traceutil
+package tracing
 
 import (
 	"context"
