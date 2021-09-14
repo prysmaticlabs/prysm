@@ -19,6 +19,12 @@ var (
 		Hidden: true,
 	}
 
+	deprecatedCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name:   "correctly-prune-canonical-atts",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
 	deprecatedCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
 		Name:   "correctly-insert-orphaned-atts",
 		Usage:  deprecatedUsage,
@@ -29,5 +35,6 @@ var (
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedEnableActiveBalanceCache,
+	deprecatedCorrectlyPruneCanonicalAtts,
 	deprecatedCorrectlyInsertOrphanedAtts,
 }
