@@ -243,8 +243,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Block:     &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 		}, nil
@@ -259,8 +259,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	return &ethpbv2.BlockResponseV2{
 		Version: ethpbv2.Version_ALTAIR,
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+		Data: &ethpbv2.SignedBeaconBlockContainerV2{
+			Block:     &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),
 		},
 	}, nil
