@@ -29,12 +29,14 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/headers/{block_id}",
 		"/eth/v1/beacon/blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
+		"/eth/v2/beacon/blocks/{block_id}",
 		"/eth/v1/beacon/blocks/{block_id}/root",
 		"/eth/v1/beacon/blocks/{block_id}/attestations",
 		"/eth/v1/beacon/pool/attestations",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
+		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -43,6 +45,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/node/syncing",
 		"/eth/v1/node/health",
 		"/eth/v1/debug/beacon/states/{state_id}",
+		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
@@ -50,11 +53,15 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
+		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/sync_committee_contribution",
+		"/eth/v1/validator/contribution_and_proofs",
 	}
 }
 
@@ -100,6 +107,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockResponseJson{}
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconBlockSSZ}
+	case "/eth/v2/beacon/blocks/{block_id}":
+		endpoint.GetResponse = &blockV2ResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2Block},
+		}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
 		endpoint.GetResponse = &blockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
@@ -121,6 +133,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/pool/voluntary_exits":
 		endpoint.PostRequest = &signedVoluntaryExitJson{}
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
+	case "/eth/v1/beacon/pool/sync_committees":
+		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSignaturesArray},
+		}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":
@@ -140,6 +157,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/debug/beacon/states/{state_id}":
 		endpoint.GetResponse = &beaconStateResponseJson{}
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconStateSSZ}
+	case "/eth/v2/debug/beacon/states/{state_id}":
+		endpoint.GetResponse = &beaconStateV2ResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2State},
+		}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
@@ -151,7 +173,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &attesterDutiesRequestJson{}
+		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &attesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Hooks = gateway.HookCollection{
@@ -160,6 +182,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &proposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+	case "/eth/v1/validator/duties/sync/{epoch}":
+		endpoint.PostRequest = &dutiesRequestJson{}
+		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapValidatorIndicesArray},
+		}
 	case "/eth/v1/validator/blocks/{slot}":
 		endpoint.GetResponse = &produceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
@@ -175,10 +204,23 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapBeaconCommitteeSubscriptionsArray},
 		}
+	case "/eth/v1/validator/sync_committee_subscriptions":
+		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSubscriptionsArray},
+		}
 	case "/eth/v1/validator/aggregate_and_proofs":
 		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
+		}
+	case "/eth/v1/validator/sync_committee_contribution":
+		endpoint.GetResponse = &produceSyncCommitteeContributionResponseJson{}
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
+	case "/eth/v1/validator/contribution_and_proofs":
+		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedContributionAndProofsArray},
 		}
 	default:
 		return nil, errors.New("invalid path")

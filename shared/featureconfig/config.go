@@ -197,17 +197,20 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
 	}
-	if ctx.Bool(correctlyInsertOrphanedAtts.Name) {
-		logEnabled(correctlyInsertOrphanedAtts)
-		cfg.CorrectlyInsertOrphanedAtts = true
+	cfg.CorrectlyInsertOrphanedAtts = true
+	if ctx.Bool(disableCorrectlyInsertOrphanedAtts.Name) {
+		logDisabled(disableCorrectlyInsertOrphanedAtts)
+		cfg.CorrectlyInsertOrphanedAtts = false
 	}
-	if ctx.Bool(correctlyPruneCanonicalAtts.Name) {
-		logEnabled(correctlyPruneCanonicalAtts)
-		cfg.CorrectlyPruneCanonicalAtts = true
+	cfg.CorrectlyPruneCanonicalAtts = true
+	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
+		logDisabled(disableCorrectlyPruneCanonicalAtts)
+		cfg.CorrectlyPruneCanonicalAtts = false
 	}
-	if ctx.Bool(enableActiveBalanceCache.Name) {
-		logEnabled(enableActiveBalanceCache)
-		cfg.EnableActiveBalanceCache = true
+	cfg.EnableActiveBalanceCache = true
+	if ctx.Bool(disableActiveBalanceCache.Name) {
+		logDisabled(disableActiveBalanceCache)
+		cfg.EnableActiveBalanceCache = false
 	}
 	Init(cfg)
 }
