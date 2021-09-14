@@ -31,8 +31,8 @@ var exitedIndex types.ValidatorIndex
 // valExited is used to know if exitedIndex is set, since default value is 0.
 var valExited bool
 
-// churnLimit is normally 4 unless the validator set is extremely large.
-var churnLimit = uint64(4)
+// churnLimit is 8 given ChurnLimitQuotient is 32 for minimal config.
+var churnLimit = uint64(8)
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.

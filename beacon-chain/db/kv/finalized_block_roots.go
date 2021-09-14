@@ -9,7 +9,6 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -188,7 +187,7 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
-	var blk *ethpb.SignedBeaconBlock
+	var blk block.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {
@@ -206,9 +205,10 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 		if enc == nil {
 			return nil
 		}
-		blk = &ethpb.SignedBeaconBlock{}
-		return decode(ctx, enc, blk)
+		var err error
+		blk, err = unmarshalBlock(ctx, enc)
+		return err
 	})
 	traceutil.AnnotateError(span, err)
-	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
+	return blk, err
 }
