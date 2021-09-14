@@ -3479,7 +3479,7 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_wealdtech_go_bytesutil",
-        importpath = "github.com/wealdtech/go-bytes",
+        importpath = "github.com/wealdtech/go-bytesutil",
         sum = "h1:ocEg3Ke2GkZ4vQw5lp46rmO+pfqCCTgq35gqOy8JKVc=",
         version = "v1.1.1",
     )
