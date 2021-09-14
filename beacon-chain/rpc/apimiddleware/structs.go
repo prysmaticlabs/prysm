@@ -170,6 +170,12 @@ type beaconStateResponseJson struct {
 	Data *beaconStateJson `json:"data"`
 }
 
+// beaconStateV2ResponseJson is used in /v2/debug/beacon/states/{state_id} API endpoint.
+type beaconStateV2ResponseJson struct {
+	Version string                      `json:"version" enum:"true"`
+	Data    *beaconStateContainerV2Json `json:"data"`
+}
+
 // forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
 type forkChoiceHeadsResponseJson struct {
 	Data []*forkChoiceHeadJson `json:"data"`
@@ -479,6 +485,38 @@ type beaconStateJson struct {
 	FinalizedCheckpoint         *checkpointJson           `json:"finalized_checkpoint"`
 }
 
+type beaconStateV2Json struct {
+	GenesisTime                 string                 `json:"genesis_time"`
+	GenesisValidatorsRoot       string                 `json:"genesis_validators_root" hex:"true"`
+	Slot                        string                 `json:"slot"`
+	Fork                        *forkJson              `json:"fork"`
+	LatestBlockHeader           *beaconBlockHeaderJson `json:"latest_block_header"`
+	BlockRoots                  []string               `json:"block_roots" hex:"true"`
+	StateRoots                  []string               `json:"state_roots" hex:"true"`
+	HistoricalRoots             []string               `json:"historical_roots" hex:"true"`
+	Eth1Data                    *eth1DataJson          `json:"eth1_data"`
+	Eth1DataVotes               []*eth1DataJson        `json:"eth1_data_votes"`
+	Eth1DepositIndex            string                 `json:"eth1_deposit_index"`
+	Validators                  []*validatorJson       `json:"validators"`
+	Balances                    []string               `json:"balances"`
+	RandaoMixes                 []string               `json:"randao_mixes" hex:"true"`
+	Slashings                   []string               `json:"slashings"`
+	PreviousEpochParticipation  string                 `json:"previous_epoch_participation"`
+	CurrentEpochParticipation   string                 `json:"current_epoch_participation"`
+	JustificationBits           string                 `json:"justification_bits" hex:"true"`
+	PreviousJustifiedCheckpoint *checkpointJson        `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  *checkpointJson        `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint         *checkpointJson        `json:"finalized_checkpoint"`
+	InactivityScores            []string               `json:"inactivity_scores"`
+	CurrentSyncCommittee        syncCommitteeJson      `json:"current_sync_committee"`
+	NextSyncCommittee           syncCommitteeJson      `json:"next_sync_committee"`
+}
+
+type beaconStateContainerV2Json struct {
+	Phase0State *beaconStateJson   `json:"phase0State"`
+	AltairState *beaconStateV2Json `json:"altairState"`
+}
+
 type forkJson struct {
 	PreviousVersion string `json:"previous_version" hex:"true"`
 	CurrentVersion  string `json:"current_version" hex:"true"`
@@ -512,6 +550,11 @@ type committeeJson struct {
 	Index      string   `json:"index"`
 	Slot       string   `json:"slot"`
 	Validators []string `json:"validators"`
+}
+
+type syncCommitteeJson struct {
+	Pubkeys          []string `json:"pubkeys" hex:"true"`
+	PubkeyAggregates string   `json:"pubkey_aggregates" hex:"true"`
 }
 
 type syncCommitteeValidatorsJson struct {

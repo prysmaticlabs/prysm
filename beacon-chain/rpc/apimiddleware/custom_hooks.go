@@ -227,3 +227,39 @@ func serializeV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
 	}
 	return true, j, nil
 }
+
+type phase0StateResponseJson struct {
+	Version string           `json:"version"`
+	Data    *beaconStateJson `json:"data"`
+}
+
+type altairStateResponseJson struct {
+	Version string             `json:"version"`
+	Data    *beaconStateV2Json `json:"data"`
+}
+
+func serializeV2State(response interface{}) (bool, []byte, gateway.ErrorJson) {
+	respContainer, ok := response.(*beaconStateV2ResponseJson)
+	if !ok {
+		return false, nil, gateway.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+		actualRespContainer = &phase0StateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.Phase0State,
+		}
+	} else {
+		actualRespContainer = &altairStateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.AltairState,
+		}
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, gateway.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return true, j, nil
+}
