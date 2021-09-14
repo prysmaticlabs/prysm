@@ -71,9 +71,9 @@ type validator struct {
 	genesisTime                        uint64
 	highestValidSlot                   types.Slot
 	domainDataCache                    *ristretto.Cache
-	aggregatedSlotCommitteeIDCache *lru.Cache
-	ticker                         slots.Ticker
-	prevBalance                    map[[48]byte]uint64
+	aggregatedSlotCommitteeIDCache     *lru.Cache
+	ticker                             slots.Ticker
+	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
