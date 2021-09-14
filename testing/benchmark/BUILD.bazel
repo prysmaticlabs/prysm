@@ -3,8 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["pregen.go"],
-    data = ["//shared/benchutil/benchmark_files:benchmark_data"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/benchutil",
+    data = ["//testing/benchmark/benchmark_files:benchmark_data"],
+    importpath = "github.com/prysmaticlabs/prysm/testing/benchmark",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/state:go_default_library",
