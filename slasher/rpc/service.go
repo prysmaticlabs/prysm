@@ -12,8 +12,8 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
@@ -70,14 +70,14 @@ func (s *Service) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_opentracing.StreamServerInterceptor(),
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),

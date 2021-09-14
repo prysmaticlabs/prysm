@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
@@ -41,7 +41,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
-	progress := progressutil.InitializeProgressBar(
+	bar := progress.InitializeProgressBar(
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
@@ -58,13 +58,13 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
 		}
-		if err := progress.Add(1); err != nil {
+		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
 	}
 
 	// Extract the signed attestations by public key.
-	progress = progressutil.InitializeProgressBar(
+	bar = progress.InitializeProgressBar(
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
@@ -85,7 +85,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 				SignedAttestations: signedAttestations,
 			}
 		}
-		if err := progress.Add(1); err != nil {
+		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
 	}

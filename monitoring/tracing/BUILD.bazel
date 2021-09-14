@@ -2,8 +2,12 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["tracer.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/tracing",
+    srcs = [
+        "errors.go",
+        "recovery_interceptor_option.go",
+        "tracer.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/monitoring/tracing",
     visibility = ["//visibility:public"],
     deps = [
         "//shared/version:go_default_library",

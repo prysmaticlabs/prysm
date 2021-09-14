@@ -1,5 +1,5 @@
-// Package traceutil includes useful functions for opentracing annotations.
-package traceutil
+// Package tracing includes useful functions for opentracing annotations.
+package tracing
 
 import (
 	"go.opencensus.io/trace"
