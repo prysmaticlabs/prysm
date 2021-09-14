@@ -486,16 +486,16 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 
 	for i, sub := range req.Data {
-		if sub.UntilEpoch < currEpoch {
-			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch)
+		if sub.UntilEpoch <= currEpoch {
+			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch+1)
 		}
 		maxValidEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-		if sub.UntilEpoch > maxValidEpoch {
+		if sub.UntilEpoch > maxValidEpoch+1 {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
 				i,
-				maxValidEpoch,
+				maxValidEpoch+1,
 			)
 		}
 	}
