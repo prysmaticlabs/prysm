@@ -21,7 +21,7 @@ go_library(
         "//endtoend/evaluators:__pkg__",
         "//fuzz:__pkg__",
         "//shared/attestationutil:__pkg__",
-        "//shared/benchutil/benchmark_files:__subpackages__",
+        "//testing/benchmark/benchmark_files:__subpackages__",
         "//shared/depositutil:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",

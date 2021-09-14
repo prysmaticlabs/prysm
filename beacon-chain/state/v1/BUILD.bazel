@@ -33,7 +33,7 @@ go_library(
         "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
         "//shared/aggregation:__subpackages__",
-        "//shared/benchutil:__pkg__",
+        "//testing/benchmark:__pkg__",
         "//shared/depositutil:__subpackages__",
         "//shared/interop:__subpackages__",
         "//shared/testutil:__pkg__",
