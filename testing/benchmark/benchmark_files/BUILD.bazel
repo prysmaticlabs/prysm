@@ -5,6 +5,6 @@ filegroup(
     ]),
     visibility = [
         "//beacon-chain/core/transition:__pkg__",
-        "//shared/benchutil:__subpackages__",
+        "//testing/benchmark:__subpackages__",
     ],
 )

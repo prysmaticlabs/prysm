@@ -17,11 +17,11 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/testing/benchmark"
 )
 
 var (
@@ -36,13 +36,13 @@ func main() {
 	}
 
 	if !*overwrite {
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState1EpochFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.BState1EpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.BstateEpochFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.BstateEpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.FullBlockFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.FullBlockFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
 	}
@@ -66,13 +66,13 @@ func main() {
 		log.Fatalf("Could not generate 2 full epoch state: %v", err)
 	}
 	// Removing the genesis state SSZ since its 10MB large and no longer needed.
-	if err := os.Remove(path.Join(*outputDir, benchutil.GenesisFileName)); err != nil {
+	if err := os.Remove(path.Join(*outputDir, benchmark.GenesisFileName)); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func generateGenesisBeaconState() error {
-	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchutil.ValidatorCount)
+	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -80,17 +80,17 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes)
+	return fileutil.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
 }
 
 func generateMarshalledFullStateAndBlock() error {
-	benchutil.SetBenchmarkConfig()
+	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
 	}
 
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchutil.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / uint64(slotsPerEpoch),
+		NumAttestations: benchmark.AttestationsPerEpoch / uint64(slotsPerEpoch),
 	}
 
 	var atts []*ethpb.Attestation
@@ -153,7 +153,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := fileutil.WriteFile(path.Join(*outputDir, benchutil.BState1EpochFileName), beaconBytes); err != nil {
+	if err := fileutil.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
 		return err
 	}
 
@@ -168,23 +168,23 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes)
+	return fileutil.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
 }
 
 func generate2FullEpochState() error {
-	benchutil.SetBenchmarkConfig()
+	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
 	}
 
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchutil.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
+		NumAttestations: benchmark.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
@@ -203,11 +203,11 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BstateEpochFileName), beaconBytes)
+	return fileutil.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
 }
 
 func genesisBeaconState() (state.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
+	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchmark.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}
