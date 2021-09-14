@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -371,7 +371,7 @@ func (s *Service) notifyNewHeadEvent(
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
-	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+	if !features.Get().CorrectlyInsertOrphanedAtts {
 		return nil
 	}
 

@@ -5,14 +5,14 @@ import (
 	"os"
 	"path"
 
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
 func WriteBlockToDisk(block block.SignedBeaconBlock, failed bool) {
-	if !featureconfig.Get().WriteSSZStateTransitions {
+	if !features.Get().WriteSSZStateTransitions {
 		return
 	}
 

@@ -20,12 +20,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -229,7 +229,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 func (v *validator) SlasherReady(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
 	defer span.End()
-	if featureconfig.Get().SlasherProtection {
+	if features.Get().SlasherProtection {
 		err := v.protector.Status()
 		if err == nil {
 			return nil
@@ -392,7 +392,7 @@ func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 // CheckDoppelGanger checks if the current actively provided keys have
 // any duplicates active in the network.
 func (v *validator) CheckDoppelGanger(ctx context.Context) error {
-	if !featureconfig.Get().EnableDoppelGanger {
+	if !features.Get().EnableDoppelGanger {
 		return nil
 	}
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)

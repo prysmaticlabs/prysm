@@ -3,7 +3,7 @@ package fuzz
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 )
 
 // EnvBls defines an environment variable name to check whether BLS is enabled or not.
@@ -14,7 +14,7 @@ func init() {
 	if value, exists := os.LookupEnv(EnvBls); exists {
 		blsEnabled = value == "1"
 	}
-	featureconfig.Init(&featureconfig.Flags{
+	features.Init(&features.Flags{
 		SkipBLSVerify: !blsEnabled,
 	})
 }

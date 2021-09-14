@@ -21,11 +21,11 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -56,7 +56,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnablePeerScorer: true,
 	})
 	defer resetCfg()

@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -58,7 +58,7 @@ func (v *validator) preBlockSignValidations(
 		)
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
+	if features.Get().SlasherProtection && v.protector != nil {
 		blockHdr, err := blockutil.BeaconBlockHeaderFromBlockInterface(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
@@ -81,7 +81,7 @@ func (v *validator) postBlockSignUpdate(
 	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
+	if features.Get().SlasherProtection && v.protector != nil {
 		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")

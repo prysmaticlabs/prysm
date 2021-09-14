@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -267,7 +267,7 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 		return false, val, nil
 	}
 
-	if featureconfig.Get().EnableOptimizedBalanceUpdate {
+	if features.Get().EnableOptimizedBalanceUpdate {
 		validatorFunc = func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 			if val == nil {
 				return false, nil, fmt.Errorf("validator %d is nil in state", idx)

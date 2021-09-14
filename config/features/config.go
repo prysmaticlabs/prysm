@@ -17,7 +17,7 @@ The process for implementing new features using this package is as follows:
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
-package featureconfig
+package features
 
 import (
 	"sync"
@@ -65,11 +65,6 @@ type Flags struct {
 
 	// Bug fixes related flags.
 	AttestTimely                   bool   // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
-	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
-
-	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
-	// changed on disk. This feature is for advanced use cases only.
-	KeystoreImportDebounceInterval time.Duration
 
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
@@ -77,6 +72,12 @@ type Flags struct {
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
+
+	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
+	// changed on disk. This feature is for advanced use cases only.
+	KeystoreImportDebounceInterval time.Duration
+
+	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags

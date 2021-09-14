@@ -11,12 +11,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -274,7 +274,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	for {
 		select {
 		case b := <-bChannel:
-			if featureconfig.Get().AttestTimely {
+			if features.Get().AttestTimely {
 				if slot <= b.Block().Slot() {
 					return
 				}

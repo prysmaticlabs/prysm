@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -462,7 +462,7 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 	}
 
 	t.Run("peer scorer disabled", func(t *testing.T) {
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		resetCfg := features.InitWithReset(&features.Flags{
 			EnablePeerScorer: false,
 		})
 		defer resetCfg()
