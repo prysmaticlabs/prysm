@@ -65,7 +65,7 @@ message SyncCommitteeSubscription {
   // The sync committee indices to be subscribed to.
   repeated uint64 sync_committee_indices = 2;
 
-  // The final epoch that the specified validator requires the subscription for.
+  // The final epoch (exclusive value) that the specified validator requires the subscription for.
   uint64 until_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
