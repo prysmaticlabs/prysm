@@ -1,5 +1,5 @@
 # Benchmarks for Prysm State Transition
-This package contains the functionality needed for benchmarking Prysms state transitions, this includes its block processing (with and without caching) and epoch processing functions. There is also a benchmark for HashTreeRoot on a large beacon state.
+This package contains the functionality needed for benchmarking Prysm state transitions, this includes its block processing (with and without caching) and epoch processing functions. There is also a benchmark for HashTreeRoot on a large beacon state.
 
 ## Benchmark Configuration
 The following configs are in `config.go`:
@@ -11,7 +11,7 @@ Due to the sheer size of the benchmarking configurations (16384 validators), the
 
 To generate new files to use for benchmarking, run the below command in the root of Prysm.
 ```
-bazel run //tools/benchmark-files-gen -- --output-dir $PRYSMPATH/shared/benchutil/benchmark_files/ --overwrite
+bazel run //tools/benchmark-files-gen -- --output-dir $PRYSMPATH/testing/benchmark/benchmark_files/ --overwrite
 ```
 
 ## Running the benchmarks
