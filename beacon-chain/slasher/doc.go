@@ -1,4 +1,4 @@
-// Package slasher defines an optimized implementation of eth2 slashing
+// Package slasher defines an optimized implementation of Ethereum proof-of-stake slashing
 // detection, namely focused on catching "surround vote" slashable
 // offenses as explained here: https://blog.ethereum.org/2020/01/13/validated-staking-on-eth2-1-incentives/.
 //
