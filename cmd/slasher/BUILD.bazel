@@ -83,7 +83,7 @@ go_binary(
     name = "slasher",
     embed = [":go_default_library"],
     visibility = [
-        "//endtoend:__pkg__",
+        "//testing/endtoend:__pkg__",
         "//slasher:__subpackages__",
     ],
 )

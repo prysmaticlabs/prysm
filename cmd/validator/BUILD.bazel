@@ -133,7 +133,7 @@ go_binary(
     embed = [":go_default_library"],
     pure = "off",  # Enabled unless there is a valid reason to include cgo dep.
     visibility = [
-        "//endtoend:__pkg__",
+        "//testing/endtoend:__pkg__",
         "//validator:__subpackages__",
     ],
 )

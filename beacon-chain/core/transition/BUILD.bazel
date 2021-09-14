@@ -15,7 +15,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/transition",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//endtoend:__pkg__",
+        "//testing/endtoend:__pkg__",
         "//fuzz:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/testutil:__pkg__",
