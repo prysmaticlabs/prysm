@@ -1,4 +1,4 @@
-package benchutil
+package benchmark
 
 import (
 	"testing"
