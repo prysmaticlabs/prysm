@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 )
@@ -179,7 +179,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 		}
 	}
 
-	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	return nil
 }
 

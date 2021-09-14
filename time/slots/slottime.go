@@ -1,11 +1,11 @@
-package slotutil
+package slots
 
 import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 // SlotStartTime returns the start time in terms of its unix epoch
@@ -19,10 +19,10 @@ func SlotStartTime(genesis uint64, slot types.Slot) time.Time {
 // SlotsSinceGenesis returns the number of slots since
 // the provided genesis time.
 func SlotsSinceGenesis(genesis time.Time) types.Slot {
-	if genesis.After(timeutils.Now()) { // Genesis has not occurred yet.
+	if genesis.After(prysmTime.Now()) { // Genesis has not occurred yet.
 		return 0
 	}
-	return types.Slot(uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot(uint64(prysmTime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // EpochsSinceGenesis returns the number of slots since

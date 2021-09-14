@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	grpc "google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -333,7 +333,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.genesisTime = uint64(timeutils.Now().Unix())
+	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	m.validatorClient.EXPECT().GetDuties(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
@@ -363,7 +363,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(1)
 	defer wg.Wait()
 
-	validator.genesisTime = uint64(timeutils.Now().Unix())
+	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	validatorIndex := types.ValidatorIndex(5)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [48]byte{}

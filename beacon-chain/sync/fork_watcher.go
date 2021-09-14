@@ -7,13 +7,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Is a background routine that observes for new incoming forks. Depending on the epoch
 // it will be in charge of subscribing/unsubscribing the relevant topics at the fork boundaries.
 func (s *Service) forkWatcher() {
-	slotTicker := slotutil.NewSlotTicker(s.cfg.Chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	slotTicker := slots.NewSlotTicker(s.cfg.Chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		// In the event of a node restart, we will still end up subscribing to the correct

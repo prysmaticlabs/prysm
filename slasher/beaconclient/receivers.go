@@ -8,7 +8,7 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -149,7 +149,7 @@ func (s *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	halfSlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	halfSlot := slots.DivideSlotBy(2 /* 1/2 slot duration */)
 	ticker := time.NewTicker(halfSlot)
 	defer ticker.Stop()
 	for {

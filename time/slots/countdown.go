@@ -1,4 +1,4 @@
-package slotutil
+package slots
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +29,7 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 	}
 	secondTimerActivated := false
 	for {
-		currentTime := timeutils.Now()
+		currentTime := prysmTime.Now()
 		if currentTime.After(genesisTime) {
 			log.WithFields(logFields).Info("Chain genesis time reached")
 			return

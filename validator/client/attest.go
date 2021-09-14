@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -257,10 +257,10 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 		return
 	}
 
-	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
-	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
+	startTime := slots.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	wait := timeutils.Until(finalTime)
+	wait := prysmTime.Until(finalTime)
 	if wait <= 0 {
 		return
 	}

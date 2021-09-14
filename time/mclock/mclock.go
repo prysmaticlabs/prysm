@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package mclockutil is a wrapper for a monotonic clock source.
-package mclockutil
+package mclock
 
 import (
 	"time"

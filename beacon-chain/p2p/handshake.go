@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -104,7 +104,7 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 				if conn.Stat().Direction == network.DirInbound {
 					_, err := s.peers.ChainState(remotePeer)
 					peerExists := err == nil
-					currentTime := timeutils.Now()
+					currentTime := prysmTime.Now()
 
 					// Wait for peer to initiate handshake
 					time.Sleep(timeForStatus)
