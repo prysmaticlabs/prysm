@@ -8,7 +8,7 @@ go_library(
         "service.go",
         "simple_server.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/prometheus",
+    importpath = "github.com/prysmaticlabs/prysm/monitoring/prometheus",
     visibility = ["//visibility:public"],
     deps = [
         "//shared:go_default_library",
