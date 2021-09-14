@@ -18,6 +18,7 @@ go_library(
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "//runtime/version:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/event:go_default_library",
@@ -31,7 +32,6 @@ go_library(
         "//shared/rand:go_default_library",
         "//shared/timeutils:go_default_library",
         "//shared/traceutil:go_default_library",
-        "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/accounts/wallet:go_default_library",

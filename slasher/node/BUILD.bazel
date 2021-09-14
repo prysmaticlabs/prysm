@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//cmd/slasher/flags:go_default_library",
         "//runtime/prereqs:go_default_library",
+        "//runtime/version:go_default_library",
         "//shared:go_default_library",
         "//shared/backuputil:go_default_library",
         "//shared/cmd:go_default_library",
@@ -23,7 +24,6 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/tracing:go_default_library",
-        "//shared/version:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/db/kv:go_default_library",
