@@ -32,15 +32,15 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	return nil
 }
 
-// https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with an 'index' field.
+// Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
 func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
-	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
+	if _, ok := endpoint.PostRequest.(*dutiesRequestJson); ok {
 		indices := make([]string, 0)
 		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &attesterDutiesRequestJson{Index: indices}
+		j := &dutiesRequestJson{Index: indices}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -86,6 +86,24 @@ func wrapBeaconCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.Res
 	return nil
 }
 
+// https://ethereum.github.io/beacon-APIs/#/Validator/prepareSyncCommitteeSubnets expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSyncCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSubscriptionRequestJson); ok {
+		data := make([]*syncCommitteeSubscriptionJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitSyncCommitteeSubscriptionRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
 // https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolSyncCommitteeSignatures expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSyncCommitteeSignaturesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
@@ -95,6 +113,24 @@ func wrapSyncCommitteeSignaturesArray(endpoint gateway.Endpoint, _ http.Response
 			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
 		j := &submitSyncCommitteeSignaturesRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
+// https://ethereum.github.io/beacon-APIs/#/Validator/publishContributionAndProofs expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSignedContributionAndProofsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitContributionAndProofsRequestJson); ok {
+		data := make([]*signedContributionAndProofJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitContributionAndProofsRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")

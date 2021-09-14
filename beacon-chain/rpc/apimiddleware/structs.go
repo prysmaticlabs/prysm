@@ -190,8 +190,8 @@ type specResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-// attesterDutiesRequestJson is used in /validator/duties/attester/{epoch} API endpoint.
-type attesterDutiesRequestJson struct {
+// dutiesRequestJson is used in several duties-related API endpoints.
+type dutiesRequestJson struct {
 	Index []string `json:"index"`
 }
 
@@ -205,6 +205,11 @@ type attesterDutiesResponseJson struct {
 type proposerDutiesResponseJson struct {
 	DependentRoot string              `json:"dependent_root" hex:"true"`
 	Data          []*proposerDutyJson `json:"data"`
+}
+
+// syncCommitteeDutiesResponseJson is used in /validator/duties/sync/{epoch} API endpoint.
+type syncCommitteeDutiesResponseJson struct {
+	Data []*syncCommitteeDuty `json:"data"`
 }
 
 // produceBlockResponseJson is used in /validator/blocks/{slot} API endpoint.
@@ -222,12 +227,12 @@ type aggregateAttestationResponseJson struct {
 	Data *attestationJson `json:"data"`
 }
 
-// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/beacon_committee_subscriptions
+// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/beacon_committee_subscriptions API endpoint.
 type submitBeaconCommitteeSubscriptionsRequestJson struct {
 	Data []*beaconCommitteeSubscribeJson `json:"data"`
 }
 
-// beaconCommitteeSubscribeJson is used in /validator/beacon_committee_subscriptions
+// beaconCommitteeSubscribeJson is used in /validator/beacon_committee_subscriptions API endpoint.
 type beaconCommitteeSubscribeJson struct {
 	ValidatorIndex   string `json:"validator_index"`
 	CommitteeIndex   string `json:"committee_index"`
@@ -236,9 +241,26 @@ type beaconCommitteeSubscribeJson struct {
 	IsAggregator     bool   `json:"is_aggregator"`
 }
 
+// submitBeaconCommitteeSubscriptionsRequestJson is used in /validator/sync_committee_subscriptions API endpoint.
+type submitSyncCommitteeSubscriptionRequestJson struct {
+	Data []*syncCommitteeSubscriptionJson `json:"data"`
+}
+
+// syncCommitteeSubscriptionJson is used in /validator/sync_committee_subscriptions API endpoint.
+type syncCommitteeSubscriptionJson struct {
+	ValidatorIndex       string   `json:"validator_index"`
+	SyncCommitteeIndices []string `json:"sync_committee_indices"`
+	UntilEpoch           string   `json:"until_epoch"`
+}
+
 // submitAggregateAndProofsRequestJson is used in /validator/aggregate_and_proofs API endpoint.
 type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
+}
+
+// submitContributionAndProofsRequestJson is used in /validator/contribution_and_proofs API endpoint.
+type submitContributionAndProofsRequestJson struct {
+	Data []*signedContributionAndProofJson `json:"data"`
 }
 
 //----------------
@@ -531,6 +553,12 @@ type proposerDutyJson struct {
 	Slot           string `json:"slot"`
 }
 
+type syncCommitteeDuty struct {
+	Pubkey                        string   `json:"pubkey" hex:"true"`
+	ValidatorIndex                string   `json:"validator_index"`
+	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
+}
+
 type signedAggregateAttestationAndProofJson struct {
 	Message   *aggregateAttestationAndProofJson `json:"message"`
 	Signature string                            `json:"signature" hex:"true"`
@@ -540,6 +568,25 @@ type aggregateAttestationAndProofJson struct {
 	AggregatorIndex string           `json:"aggregator_index"`
 	Aggregate       *attestationJson `json:"aggregate"`
 	SelectionProof  string           `json:"selection_proof" hex:"true"`
+}
+
+type signedContributionAndProofJson struct {
+	Message   *contributionAndProofJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
+}
+
+type contributionAndProofJson struct {
+	AggregatorIndex string                         `json:"aggregator_index"`
+	Contribution    *syncCommitteeContributionJson `json:"contribution"`
+	SelectionProof  string                         `json:"selection_proof" hex:"true"`
+}
+
+type syncCommitteeContributionJson struct {
+	Slot              string `json:"slot"`
+	BeaconBlockRoot   string `json:"beacon_block_root" hex:"true"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
+	AggregationBits   string `json:"aggregation_bits" hex:"true"`
+	Signature         string `json:"signature" hex:"true"`
 }
 
 //----------------
@@ -569,7 +616,6 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-// TODO: Documentation
 // ---------------
 // Events.
 // ---------------
