@@ -53,11 +53,14 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
+		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/contribution_and_proofs",
 	}
 }
 
@@ -169,7 +172,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &attesterDutiesRequestJson{}
+		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &attesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Hooks = gateway.HookCollection{
@@ -178,6 +181,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &proposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+	case "/eth/v1/validator/duties/sync/{epoch}":
+		endpoint.PostRequest = &dutiesRequestJson{}
+		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapValidatorIndicesArray},
+		}
 	case "/eth/v1/validator/blocks/{slot}":
 		endpoint.GetResponse = &produceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
@@ -193,10 +203,20 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapBeaconCommitteeSubscriptionsArray},
 		}
+	case "/eth/v1/validator/sync_committee_subscriptions":
+		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSubscriptionsArray},
+		}
 	case "/eth/v1/validator/aggregate_and_proofs":
 		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
+		}
+	case "/eth/v1/validator/contribution_and_proofs":
+		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedContributionAndProofsArray},
 		}
 	default:
 		return nil, errors.New("invalid path")

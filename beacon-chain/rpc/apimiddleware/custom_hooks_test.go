@@ -57,7 +57,7 @@ func TestWrapAttestationArray(t *testing.T) {
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
-			PostRequest: &attesterDutiesRequestJson{},
+			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
 		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
@@ -70,7 +70,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 		errJson := wrapValidatorIndicesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
-		wrappedIndices := &attesterDutiesRequestJson{}
+		wrappedIndices := &dutiesRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
 		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
 		assert.Equal(t, "1", wrappedIndices.Index[0])
@@ -164,6 +164,59 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 }
 
+func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
+		}
+		unwrappedSubs := []*syncCommitteeSubscriptionJson{
+			{
+				ValidatorIndex:       "1",
+				SyncCommitteeIndices: []string{"1", "2"},
+				UntilEpoch:           "1",
+			},
+			{
+				ValidatorIndex:       "2",
+				SyncCommitteeIndices: []string{"3", "4"},
+				UntilEpoch:           "2",
+			},
+		}
+		unwrappedSubsJson, err := json.Marshal(unwrappedSubs)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedSubsJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrappedSubs := &submitSyncCommitteeSubscriptionRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
+		require.Equal(t, 2, len(wrappedSubs.Data), "wrong number of wrapped items")
+		assert.Equal(t, "1", wrappedSubs.Data[0].ValidatorIndex)
+		require.Equal(t, 2, len(wrappedSubs.Data[0].SyncCommitteeIndices), "wrong number of committee indices")
+		assert.Equal(t, "1", wrappedSubs.Data[0].SyncCommitteeIndices[0])
+		assert.Equal(t, "2", wrappedSubs.Data[0].SyncCommitteeIndices[1])
+		assert.Equal(t, "1", wrappedSubs.Data[0].UntilEpoch)
+	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
+}
+
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
@@ -204,6 +257,73 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
 		errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
+}
+
+func TestWrapSignedContributionAndProofsArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitContributionAndProofsRequestJson{},
+		}
+		unwrapped := []*signedContributionAndProofJson{
+			{
+				Message: &contributionAndProofJson{
+					AggregatorIndex: "1",
+					Contribution: &syncCommitteeContributionJson{
+						Slot:              "1",
+						BeaconBlockRoot:   "root",
+						SubcommitteeIndex: "1",
+						AggregationBits:   "bits",
+						Signature:         "sig",
+					},
+					SelectionProof: "proof",
+				},
+				Signature: "sig",
+			},
+			{
+				Message:   &contributionAndProofJson{},
+				Signature: "sig",
+			},
+		}
+		unwrappedJson, err := json.Marshal(unwrapped)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrapped := &submitContributionAndProofsRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrapped))
+		require.Equal(t, 2, len(wrapped.Data), "wrong number of wrapped items")
+		assert.Equal(t, "sig", wrapped.Data[0].Signature)
+		require.NotNil(t, wrapped.Data[0].Message)
+		msg := wrapped.Data[0].Message
+		assert.Equal(t, "1", msg.AggregatorIndex)
+		assert.Equal(t, "proof", msg.SelectionProof)
+		require.NotNil(t, msg.Contribution)
+		assert.Equal(t, "1", msg.Contribution.Slot)
+		assert.Equal(t, "root", msg.Contribution.BeaconBlockRoot)
+		assert.Equal(t, "1", msg.Contribution.SubcommitteeIndex)
+		assert.Equal(t, "bits", msg.Contribution.AggregationBits)
+		assert.Equal(t, "sig", msg.Contribution.Signature)
+	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitContributionAndProofsRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
