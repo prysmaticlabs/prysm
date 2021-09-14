@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -28,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -82,7 +82,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
+	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)

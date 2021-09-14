@@ -13,6 +13,7 @@ go_library(
     ],
     deps = [
         "//cmd/slasher/flags:go_default_library",
+        "//runtime/prereqs:go_default_library",
         "//shared:go_default_library",
         "//shared/backuputil:go_default_library",
         "//shared/cmd:go_default_library",
@@ -20,7 +21,6 @@ go_library(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/prereq:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/tracing:go_default_library",
         "//shared/version:go_default_library",
