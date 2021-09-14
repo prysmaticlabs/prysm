@@ -39,11 +39,11 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
+        "//cache/lru:go_default_library",
         "//config/features:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
-        "//shared/lru:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
