@@ -1,6 +1,6 @@
 package features
 
-import "github.com/urfave/cli"
+import "github.com/urfave/cli/v2"
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
