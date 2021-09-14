@@ -538,7 +538,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
 
-				phase0Block, ok := blk.Data.Block.(*ethpbv2.BeaconBlockContainerV2_Phase0Block)
+				phase0Block, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
@@ -655,7 +655,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				altairBlock, ok := blk.Data.Block.(*ethpbv2.BeaconBlockContainerV2_AltairBlock)
+				altairBlock, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")

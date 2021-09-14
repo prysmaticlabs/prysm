@@ -332,7 +332,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 
 func TestPrepareGraffiti(t *testing.T) {
 	endpoint := gateway.Endpoint{
-		PostRequest: &beaconBlockContainerJson{
+		PostRequest: &signedBeaconBlockContainerJson{
 			Message: &beaconBlockJson{
 				Body: &beaconBlockBodyJson{},
 			},
@@ -340,35 +340,35 @@ func TestPrepareGraffiti(t *testing.T) {
 	}
 
 	t.Run("32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 
 	t.Run("less_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = "foo"
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = "foo"
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 
 	t.Run("more_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 }
@@ -402,7 +402,7 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
-			Data: &beaconBlockContainerV2Json{
+			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: &beaconBlockJson{},
 				AltairBlock: nil,
 				Signature:   "sig",
@@ -418,7 +418,7 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
-			Data: &beaconBlockContainerV2Json{
+			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{},
 				Signature:   "sig",
@@ -474,6 +474,47 @@ func TestSerializeV2State(t *testing.T) {
 
 	t.Run("incorrect response type", func(t *testing.T) {
 		ok, j, errJson := serializeV2State(&types.Empty{})
+		require.Equal(t, false, ok)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+}
+
+func TestSerializeProduceV2Block(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &beaconBlockContainerV2Json{
+				Phase0Block: &beaconBlockJson{},
+				AltairBlock: nil,
+			},
+		}
+		ok, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &phase0ProduceBlockResponseJson{}))
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &beaconBlockContainerV2Json{
+				Phase0Block: nil,
+				AltairBlock: &beaconBlockAltairJson{},
+			},
+		}
+		ok, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &altairProduceBlockResponseJson{}))
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		response := &types.Empty{}
+		ok, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, false, ok)
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
