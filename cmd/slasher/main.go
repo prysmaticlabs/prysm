@@ -10,10 +10,10 @@ import (
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"

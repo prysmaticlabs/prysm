@@ -14,12 +14,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
