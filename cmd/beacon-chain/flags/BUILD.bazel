@@ -12,8 +12,8 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
-        "//testing/endtoend:__subpackages__",
         "//shared/gateway:__pkg__",
+        "//testing/endtoend:__subpackages__",
     ],
     deps = [
         "//shared/cmd:go_default_library",
