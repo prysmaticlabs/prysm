@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 )
 
 var (
