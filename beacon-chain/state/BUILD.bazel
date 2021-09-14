@@ -16,7 +16,7 @@ go_library(
         "//shared/depositutil:__subpackages__",
         "//shared/testutil:__pkg__",
         "//slasher/rpc:__subpackages__",
-        "//spectest:__subpackages__",
+        "//testing/spectest:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/exploredb:__pkg__",
         "//tools/pcli:__pkg__",
