@@ -38,7 +38,7 @@ go_library(
         "//shared/interop:__subpackages__",
         "//shared/testutil:__pkg__",
         "//slasher/rpc:__subpackages__",
-        "//spectest:__subpackages__",
+        "//testing/spectest:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
     ],
