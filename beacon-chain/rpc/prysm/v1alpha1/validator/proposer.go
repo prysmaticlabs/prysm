@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -32,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -698,11 +698,11 @@ func (vs *Server) canonicalEth1Data(
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trie.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
 	defer span.End()
 
-	var depositTrie *trieutil.SparseMerkleTrie
+	var depositTrie *trie.SparseMerkleTrie
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
@@ -729,7 +729,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 // rebuilds our deposit trie by recreating it from all processed deposits till
 // specified eth1 block height.
-func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trie.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.rebuildDepositTrie")
 	defer span.End()
 
@@ -742,7 +742,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 		}
 		trieItems = append(trieItems, depHash[:])
 	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -756,7 +756,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 }
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
-func (vs *Server) validateDepositTrie(trie *trieutil.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}
@@ -841,7 +841,7 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestatio
 	return nil
 }
 
-func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
+func constructMerkleProof(trie *trie.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)

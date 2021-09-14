@@ -1,5 +1,5 @@
-// Package trieutil defines utilities for sparse merkle tries for Ethereum consensus.
-package trieutil
+// Package trie defines utilities for sparse merkle tries for Ethereum consensus.
+package trie
 
 import (
 	"bytes"

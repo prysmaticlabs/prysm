@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // UpdateGenesisEth1Data updates eth1 data for genesis state.
@@ -27,15 +27,15 @@ func UpdateGenesisEth1Data(state state.BeaconState, deposits []*ethpb.Deposit, e
 		}
 		leaves = append(leaves, hash[:])
 	}
-	var trie *trieutil.SparseMerkleTrie
+	var trie *trie.SparseMerkleTrie
 	var err error
 	if len(leaves) > 0 {
-		trie, err = trieutil.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
+		trie, err = trie.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+		trie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, err
 		}

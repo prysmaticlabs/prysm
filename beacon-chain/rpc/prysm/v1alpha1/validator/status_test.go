@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,7 +33,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -239,7 +239,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -326,7 +326,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -383,7 +383,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -441,7 +441,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -524,7 +524,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	dep := deposits[0]
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -638,7 +638,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(currentSlot))
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -728,7 +728,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -891,7 +891,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	deposit.Data.Signature = deposit.Data.Signature[1:]
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)

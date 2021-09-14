@@ -5,9 +5,9 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
@@ -70,7 +70,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
 	if len(elements) == 0 {
-		zerohash := trieutil.ZeroHashes[depth]
+		zerohash := trie.ZeroHashes[depth]
 		layers[len(layers)-1] = []*[32]byte{&zerohash}
 		return layers
 	}
@@ -85,7 +85,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := 0; i < int(depth); i++ {
 		oddNodeLength := len(layers[i])%2 == 1
 		if oddNodeLength {
-			zerohash := trieutil.ZeroHashes[i]
+			zerohash := trie.ZeroHashes[i]
 			layers[i] = append(layers[i], &zerohash)
 		}
 		updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
@@ -205,7 +205,7 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte,
 	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	for idx >= len(layers[0]) {
-		zerohash := trieutil.ZeroHashes[0]
+		zerohash := trie.ZeroHashes[0]
 		layers[0] = append(layers[0], &zerohash)
 	}
 	layers[0][idx] = &item
@@ -218,7 +218,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 
 		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
-			neighbor = trieutil.ZeroHashes[i]
+			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
