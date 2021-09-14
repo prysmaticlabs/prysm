@@ -37,11 +37,13 @@ func (s *Service) verifierRoutine() {
 		case sig := <-s.signatureChan:
 			verifierBatch = append(verifierBatch, sig)
 			if len(verifierBatch) >= verifierLimit {
-				verifierBatch = verifyBatch(verifierBatch)
+				verifyBatch(verifierBatch)
+				verifierBatch = []*signatureVerifier{}
 			}
 		case <-ticker.C:
 			if len(verifierBatch) > 0 {
-				verifierBatch = verifyBatch(verifierBatch)
+				verifyBatch(verifierBatch)
+				verifierBatch = []*signatureVerifier{}
 			}
 		}
 	}
@@ -76,7 +78,10 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 	return pubsub.ValidationAccept
 }
 
-func verifyBatch(verifierBatch []*signatureVerifier) []*signatureVerifier {
+func verifyBatch(verifierBatch []*signatureVerifier) {
+	if verifierBatch == nil || len(verifierBatch) == 0 {
+		return
+	}
 	aggSet := verifierBatch[0].set
 	verificationErr := error(nil)
 
@@ -93,6 +98,4 @@ func verifyBatch(verifierBatch []*signatureVerifier) []*signatureVerifier {
 	for i := 0; i < len(verifierBatch); i++ {
 		verifierBatch[i].resChan <- verificationErr
 	}
-	verifierBatch = []*signatureVerifier{}
-	return verifierBatch
 }
