@@ -1,6 +1,6 @@
-// Package benchutil contains useful helpers
+// Package benchmark contains useful helpers
 // for pregenerating filled data structures such as blocks/states for benchmarks.
-package benchutil
+package benchmark
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ var BstateEpochFileName = fmt.Sprintf("bstateEpochs-%dAtts-%dVals.ssz", Attestat
 var FullBlockFileName = fmt.Sprintf("fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 func filePath(path string) string {
-	return fmt.Sprintf("shared/benchutil/benchmark_files/%s", path)
+	return fmt.Sprintf("testing/benchmark/benchmark_files/%s", path)
 }
 
 // PreGenState1Epoch unmarshals the pre-generated beacon state after 1 epoch of block processing and returns it.
