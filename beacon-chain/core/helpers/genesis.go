@@ -27,21 +27,21 @@ func UpdateGenesisEth1Data(state state.BeaconState, deposits []*ethpb.Deposit, e
 		}
 		leaves = append(leaves, hash[:])
 	}
-	var trie *trie.SparseMerkleTrie
+	var tr *trie.SparseMerkleTrie
 	var err error
 	if len(leaves) > 0 {
-		trie, err = trie.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
+		tr, err = trie.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		trie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+		tr, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	depositRoot := trie.HashTreeRoot()
+	depositRoot := tr.HashTreeRoot()
 	eth1Data.DepositRoot = depositRoot[:]
 	err = state.SetEth1Data(eth1Data)
 	if err != nil {
