@@ -317,14 +317,14 @@ type beaconBlockBodyJson struct {
 }
 
 type signedBeaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0Block"`
-	AltairBlock *beaconBlockAltairJson `json:"altairBlock"`
+	Phase0Block *beaconBlockJson       `json:"phase0_block"`
+	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
 type beaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0Block"`
-	AltairBlock *beaconBlockAltairJson `json:"altairBlock"`
+	Phase0Block *beaconBlockJson       `json:"phase0_block"`
+	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
 }
 
 type signedBeaconBlockAltairContainerJson struct {
@@ -527,8 +527,8 @@ type beaconStateV2Json struct {
 }
 
 type beaconStateContainerV2Json struct {
-	Phase0State *beaconStateJson   `json:"phase0State"`
-	AltairState *beaconStateV2Json `json:"altairState"`
+	Phase0State *beaconStateJson   `json:"phase0_state"`
+	AltairState *beaconStateV2Json `json:"altair_state"`
 }
 
 type forkJson struct {
