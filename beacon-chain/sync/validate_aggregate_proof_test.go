@@ -18,11 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -99,13 +99,13 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 
 	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source: &ethpb.Checkpoint{Root: bytes.PadTo([]byte("hello-world"), 32)},
+			Target: &ethpb.Checkpoint{Root: bytes.PadTo([]byte("hello-world"), 32)},
 		},
 	})
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  bytesutil.PadTo([]byte{'A'}, 96),
+		SelectionProof:  bytes.PadTo([]byte{'A'}, 96),
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
@@ -163,8 +163,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 		Signature:       make([]byte, 96),
@@ -245,8 +245,8 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 		Signature:       make([]byte, 96),
@@ -312,7 +312,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,
@@ -405,7 +405,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,
@@ -515,7 +515,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,
@@ -605,7 +605,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 1, Root: root[:]},
 		},
 		AggregationBits: aggBits,

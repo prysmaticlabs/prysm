@@ -10,8 +10,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -188,5 +188,5 @@ func ExtractGossipDigest(topic string) ([4]byte, error) {
 	if len(digest) != digestLength {
 		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
 	}
-	return bytesutil.ToBytes4(digest), nil
+	return bytes.ToBytes4(digest), nil
 }

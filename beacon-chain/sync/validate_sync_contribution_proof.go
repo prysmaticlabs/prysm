@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -265,8 +265,8 @@ func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIn
 	s.seenSyncContributionLock.RLock()
 	defer s.seenSyncContributionLock.RUnlock()
 
-	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
+	b := append(bytes.Bytes32(uint64(aggregatorIndex)), bytes.Bytes32(uint64(slot))...)
+	b = append(b, bytes.Bytes32(uint64(subComIdx))...)
 	_, seen := s.seenSyncContributionCache.Get(string(b))
 	return seen
 }
@@ -275,8 +275,8 @@ func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIn
 func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) {
 	s.seenSyncContributionLock.Lock()
 	defer s.seenSyncContributionLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
+	b := append(bytes.Bytes32(uint64(aggregatorIndex)), bytes.Bytes32(uint64(slot))...)
+	b = append(b, bytes.Bytes32(uint64(subComIdx))...)
 	s.seenSyncContributionCache.Add(string(b), true)
 }
 

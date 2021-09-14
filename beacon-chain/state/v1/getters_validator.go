@@ -9,8 +9,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -171,7 +171,7 @@ func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if b.state.Validators[idx] == nil {
 		return [48]byte{}
 	}
-	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+	return bytes.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
 // NumValidators returns the size of the validator registry.

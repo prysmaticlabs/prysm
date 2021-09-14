@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -51,7 +51,7 @@ func (dhd *deprecatedHistoryData) isEmpty() bool {
 }
 
 func emptyHistoryData() *deprecatedHistoryData {
-	h := &deprecatedHistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytesutil.PadTo([]byte{}, 32)}
+	h := &deprecatedHistoryData{Source: params.BeaconConfig().FarFutureEpoch, SigningRoot: bytes.PadTo([]byte{}, 32)}
 	return h
 }
 
@@ -78,7 +78,7 @@ func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Co
 	if err := dh.assertSize(); err != nil {
 		return 0, err
 	}
-	return types.Epoch(bytesutil.FromBytes8(dh[:latestEpochWrittenSize])), nil
+	return types.Epoch(bytes.FromBytes8(dh[:latestEpochWrittenSize])), nil
 }
 
 func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
@@ -88,7 +88,7 @@ func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
-	copy(dh[:latestEpochWrittenSize], bytesutil.EpochToBytesLittleEndian(latestEpochWritten))
+	copy(dh[:latestEpochWrittenSize], bytes.EpochToBytesLittleEndian(latestEpochWritten))
 	return dh, nil
 }
 
@@ -103,7 +103,7 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 		return nil, nil
 	}
 	history := &deprecatedHistoryData{}
-	history.Source = types.Epoch(bytesutil.FromBytes8(dh[cursor : cursor+sourceSize]))
+	history.Source = types.Epoch(bytes.FromBytes8(dh[cursor : cursor+sourceSize]))
 	sr := make([]byte, 32)
 	copy(sr, dh[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
@@ -126,7 +126,7 @@ func (dh deprecatedEncodedAttestingHistory) setTargetData(
 		ext := make([]byte, uint64(cursor+historySize)-uint64(len(dh)))
 		dh = append(dh, ext...)
 	}
-	copy(dh[cursor:cursor+sourceSize], bytesutil.EpochToBytesLittleEndian(historyData.Source))
+	copy(dh[cursor:cursor+sourceSize], bytes.EpochToBytesLittleEndian(historyData.Source))
 	copy(dh[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
 
 	return dh, nil

@@ -20,10 +20,10 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -798,7 +798,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 					t.Errorf("Block slot is out of range: %d is not within [%d, %d)",
 						blk.Block.Slot, req.StartSlot, req.StartSlot.Add(req.Count*req.Step))
 				}
-				if prevRoot != [32]byte{} && bytesutil.ToBytes32(blk.Block.ParentRoot) != prevRoot {
+				if prevRoot != [32]byte{} && bytes.ToBytes32(blk.Block.ParentRoot) != prevRoot {
 					t.Errorf("non linear chain received, expected %#x but got %#x", prevRoot, blk.Block.ParentRoot)
 				}
 			}
@@ -833,7 +833,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 					t.Errorf("Block slot is out of range: %d is not within [%d, %d)",
 						blk.Block.Slot, req.StartSlot, req.StartSlot.Add(req.Count*req.Step))
 				}
-				if prevRoot != [32]byte{} && bytesutil.ToBytes32(blk.Block.ParentRoot) != prevRoot {
+				if prevRoot != [32]byte{} && bytes.ToBytes32(blk.Block.ParentRoot) != prevRoot {
 					t.Errorf("non linear chain received, expected %#x but got %#x", prevRoot, blk.Block.ParentRoot)
 				}
 			}
@@ -874,7 +874,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 					t.Errorf("Block slot is out of range: %d is not within [%d, 64)",
 						blk.Block.Slot, req.StartSlot)
 				}
-				if prevRoot != [32]byte{} && bytesutil.ToBytes32(blk.Block.ParentRoot) != prevRoot {
+				if prevRoot != [32]byte{} && bytes.ToBytes32(blk.Block.ParentRoot) != prevRoot {
 					t.Errorf("non linear chain received, expected %#x but got %#x", prevRoot, blk.Block.ParentRoot)
 				}
 			}
@@ -916,7 +916,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 					t.Errorf("Block slot is out of range: %d is not within [%d, 64)",
 						blk.Block.Slot, req.StartSlot)
 				}
-				if prevRoot != [32]byte{} && bytesutil.ToBytes32(blk.Block.ParentRoot) != prevRoot {
+				if prevRoot != [32]byte{} && bytes.ToBytes32(blk.Block.ParentRoot) != prevRoot {
 					t.Errorf("non linear chain received, expected %#x but got %#x", prevRoot, blk.Block.ParentRoot)
 				}
 			}

@@ -5,8 +5,8 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -41,7 +41,7 @@ func migrateArchivedIndex(ctx context.Context, db *bolt.DB) error {
 			if err := decode(context.TODO(), b, blk); err != nil {
 				return err
 			}
-			if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.SlotToBytesBigEndian(blk.Block.Slot), v); err != nil {
+			if err := tx.Bucket(stateSlotIndicesBucket).Put(bytes.SlotToBytesBigEndian(blk.Block.Slot), v); err != nil {
 				return err
 			}
 			if blk.Block.Slot > highest {

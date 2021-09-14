@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -20,7 +20,7 @@ func MockSlashingProtectionJSON(
 	proposalHistories []kv.ProposalHistoryForPubkey,
 ) (*format.EIPSlashingProtectionFormat, error) {
 	standardProtectionFormat := &format.EIPSlashingProtectionFormat{}
-	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
+	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytes.PadTo([]byte{32}, 32))
 	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 	for i := 0; i < len(publicKeys); i++ {
 		data := &format.ProtectionData{

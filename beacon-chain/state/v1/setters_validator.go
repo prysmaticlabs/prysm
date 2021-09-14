@@ -4,8 +4,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // SetValidators for the beacon state. Updates the entire
@@ -195,7 +195,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
-	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
+	b.valMapHandler.Set(bytes.ToBytes48(val.PublicKey), valIdx)
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})

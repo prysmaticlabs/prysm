@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -263,8 +263,8 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 }
 
 func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) string {
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
-	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
+	b := append(bytes.Bytes32(uint64(slot)), bytes.Bytes32(uint64(valIndex))...)
+	b = append(b, bytes.Bytes32(subCommitteeIndex)...)
 	return string(b)
 }
 

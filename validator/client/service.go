@@ -13,9 +13,9 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
@@ -258,7 +258,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
 	for _, key := range validatingKeys {
 		log.WithField(
-			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+			"publicKey", fmt.Sprintf("%#x", bytes.Trunc(key[:])),
 		).Info("Validating for public key")
 	}
 }

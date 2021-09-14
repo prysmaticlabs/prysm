@@ -7,9 +7,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -194,7 +194,7 @@ func BeaconProposerIndex(state state.ReadOnlyBeaconState) (types.ValidatorIndex,
 			return 0, err
 		}
 		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytes.ToBytes32(r))
 			if err != nil {
 				return 0, errors.Wrap(err, "could not interface with committee cache")
 			}
@@ -215,7 +215,7 @@ func BeaconProposerIndex(state state.ReadOnlyBeaconState) (types.ValidatorIndex,
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
+	seedWithSlot := append(seed[:], bytes.Bytes8(uint64(state.Slot()))...)
 	seedWithSlotHash := hashutil.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(state, e)
@@ -261,7 +261,7 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []types
 		if uint64(candidateIndex) >= uint64(bState.NumValidators()) {
 			return 0, errors.New("active index out of range")
 		}
-		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		b := append(seed[:], bytes.Bytes8(i/32)...)
 		randomByte := hashFunc(b)[i%32]
 		v, err := bState.ValidatorAtIndexReadOnly(candidateIndex)
 		if err != nil {

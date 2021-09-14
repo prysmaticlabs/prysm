@@ -7,9 +7,9 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -121,15 +121,15 @@ func TestGetStateFork(t *testing.T) {
 func TestGetFinalityCheckpoints(t *testing.T) {
 	fillCheckpoints := func(state *ethpb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &ethpb.Checkpoint{
-			Root:  bytesutil.PadTo([]byte("previous"), 32),
+			Root:  bytes.PadTo([]byte("previous"), 32),
 			Epoch: 113,
 		}
 		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{
-			Root:  bytesutil.PadTo([]byte("current"), 32),
+			Root:  bytes.PadTo([]byte("current"), 32),
 			Epoch: 123,
 		}
 		state.FinalizedCheckpoint = &ethpb.Checkpoint{
-			Root:  bytesutil.PadTo([]byte("finalized"), 32),
+			Root:  bytes.PadTo([]byte("finalized"), 32),
 			Epoch: 103,
 		}
 		return nil

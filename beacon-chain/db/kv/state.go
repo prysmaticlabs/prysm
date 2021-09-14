@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -73,7 +73,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 			return nil
 		}
 		// get the validator entries of the genesis state
-		valEntries, valErr := s.validatorEntries(ctx, bytesutil.ToBytes32(genesisBlockRoot))
+		valEntries, valErr := s.validatorEntries(ctx, bytes.ToBytes32(genesisBlockRoot))
 		if valErr != nil {
 			return valErr
 		}
@@ -596,7 +596,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			key := bytesutil.BytesToSlotBigEndian(s)
+			key := bytes.BytesToSlotBigEndian(s)
 			if root == nil {
 				continue
 			}
@@ -613,7 +613,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 	var st state.ReadOnlyBeaconState
 	var err error
 	if best != nil {
-		st, err = s.State(ctx, bytesutil.ToBytes32(best))
+		st, err = s.State(ctx, bytes.ToBytes32(best))
 		if err != nil {
 			return nil, err
 		}
@@ -642,7 +642,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 	}
 
 	indices := [][]byte{
-		bytesutil.SlotToBytesBigEndian(slot),
+		bytes.SlotToBytesBigEndian(slot),
 	}
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
@@ -679,14 +679,14 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 				return ctx.Err()
 			}
 
-			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
-			slot := bytesutil.BytesToSlotBigEndian(k)
+			finalizedChkpt := bytes.ToBytes32(f.Root) == bytes.ToBytes32(v)
+			slot := bytes.BytesToSlotBigEndian(k)
 			mod := slot % slotsPerArchivedPoint
 			nonFinalized := slot > finalizedSlot
 
 			// The following conditions cover 1, 2, 3 and 4 above.
 			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized {
-				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
+				deletedRoots = append(deletedRoots, bytes.ToBytes32(v))
 			}
 			return nil
 		})

@@ -6,8 +6,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -17,7 +17,7 @@ import (
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
-	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytes.PadTo([]byte{'A'}, 32)}
 	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
 		Slot:                  64,
@@ -41,7 +41,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 		t.Error("incorrectly cached state")
 	}
 
-	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytes.PadTo([]byte{'B'}, 32)}
 	st2, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot: 128,
 	})

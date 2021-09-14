@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,7 +38,7 @@ func ProcessPreGenesisDeposits(
 func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposits []*ethpb.Deposit) (state.BeaconState, error) {
 	for _, deposit := range deposits {
 		pubkey := deposit.Data.PublicKey
-		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
+		index, ok := beaconState.ValidatorIndexByPubkey(bytes.ToBytes48(pubkey))
 		// In the event of the pubkey not existing, we continue processing the other
 		// deposits.
 		if !ok {
@@ -90,7 +90,7 @@ func ProcessDeposits(
 		}
 		beaconState, _, err = ProcessDeposit(beaconState, deposit, batchVerified)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytes.Trunc(deposit.Data.PublicKey))
 		}
 	}
 	return beaconState, nil
@@ -159,14 +159,14 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 		if deposit == nil || deposit.Data == nil {
 			return nil, newValidator, err
 		}
-		return nil, newValidator, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		return nil, newValidator, errors.Wrapf(err, "could not verify deposit from %#x", bytes.Trunc(deposit.Data.PublicKey))
 	}
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
 		return nil, newValidator, err
 	}
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+	index, ok := beaconState.ValidatorIndexByPubkey(bytes.ToBytes48(pubKey))
 	if !ok {
 		if verifySignature {
 			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)

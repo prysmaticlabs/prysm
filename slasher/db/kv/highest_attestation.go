@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -117,7 +117,7 @@ func (s *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hig
 }
 
 func highestAttSetkeyBytes(ValidatorIndex uint64) []byte {
-	return bytesutil.Uint64ToBytesBigEndian(highestAttSetkey(ValidatorIndex))
+	return bytes.Uint64ToBytesBigEndian(highestAttSetkey(ValidatorIndex))
 }
 
 // divide validators by id into 1k-ish buckets (0-1000,1001-1999, etc).

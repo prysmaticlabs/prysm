@@ -15,13 +15,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -72,7 +72,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,
@@ -189,7 +189,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: r32[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: r32[:]},
 		},
 		AggregationBits: aggBits,
@@ -262,7 +262,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytes.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AggregationBits: aggBits,

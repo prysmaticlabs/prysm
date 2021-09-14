@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -134,7 +134,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 
 func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (metadata.Metadata, error) {
 	if len(digest) == 0 {
-		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		mdFunc, ok := types.MetaDataMap[bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {
 			return nil, errors.New("no metadata type exists for the genesis fork version.")
 		}
@@ -149,7 +149,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 		if err != nil {
 			return nil, err
 		}
-		if rDigest == bytesutil.ToBytes4(digest) {
+		if rDigest == bytes.ToBytes4(digest) {
 			return mdFunc(), nil
 		}
 	}

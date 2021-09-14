@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,15 +18,15 @@ func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 	enc := make([]byte, 0, 96)
 	if eth1Data != nil {
 		if len(eth1Data.DepositRoot) > 0 {
-			depRoot := bytesutil.ToBytes32(eth1Data.DepositRoot)
+			depRoot := bytes.ToBytes32(eth1Data.DepositRoot)
 			enc = append(enc, depRoot[:]...)
 		}
 		eth1DataCountBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-		eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
+		eth1CountRoot := bytes.ToBytes32(eth1DataCountBuf)
 		enc = append(enc, eth1CountRoot[:]...)
 		if len(eth1Data.BlockHash) > 0 {
-			blockHash := bytesutil.ToBytes32(eth1Data.BlockHash)
+			blockHash := bytes.ToBytes32(eth1Data.BlockHash)
 			enc = append(enc, blockHash[:]...)
 		}
 	}
@@ -44,15 +44,15 @@ func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([
 		fieldRoots[i] = make([]byte, 32)
 	}
 	if len(eth1Data.DepositRoot) > 0 {
-		depRoot := bytesutil.ToBytes32(eth1Data.DepositRoot)
+		depRoot := bytes.ToBytes32(eth1Data.DepositRoot)
 		fieldRoots[0] = depRoot[:]
 	}
 	eth1DataCountBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-	eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
+	eth1CountRoot := bytes.ToBytes32(eth1DataCountBuf)
 	fieldRoots[1] = eth1CountRoot[:]
 	if len(eth1Data.BlockHash) > 0 {
-		blockHash := bytesutil.ToBytes32(eth1Data.BlockHash)
+		blockHash := bytes.ToBytes32(eth1Data.BlockHash)
 		fieldRoots[2] = blockHash[:]
 	}
 	root, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))

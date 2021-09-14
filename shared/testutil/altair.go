@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -200,15 +200,15 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 
 	var pubKeys [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+		pubKeys = append(pubKeys, bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	st.NextSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		Pubkeys:         bytes.SafeCopy2dBytes(pubKeys),
+		AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
 	return stateAltair.InitializeFromProto(st)

@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
@@ -110,7 +110,7 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 	lock.Lock()
 	pubKeys := make([][48]byte, numValidatorKeys)
 	for i := uint64(0); i < numValidatorKeys; i++ {
-		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
+		publicKey := bytes.ToBytes48(publicKeys[i].Marshal())
 		pubKeys[i] = publicKey
 		secretKeysCache[publicKey] = secretKeys[i]
 	}
@@ -131,7 +131,7 @@ func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
 	for i, pubKey := range orderedPublicKeys {
-		names[i] = petnames.DeterministicName(bytesutil.FromBytes48(pubKey), "-")
+		names[i] = petnames.DeterministicName(bytes.FromBytes48(pubKey), "-")
 	}
 	lock.RUnlock()
 	return names, nil
@@ -146,7 +146,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	orderedPublicKeys = make([][48]byte, count)
 	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
 	for i, publicKey := range km.accountsStore.PublicKeys {
-		publicKey48 := bytesutil.ToBytes48(publicKey)
+		publicKey48 := bytes.ToBytes48(publicKey)
 		orderedPublicKeys[i] = publicKey48
 		secretKey, err := bls.SecretKeyFromBytes(km.accountsStore.PrivateKeys[i])
 		if err != nil {
@@ -193,7 +193,7 @@ func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 
 		log.WithFields(logrus.Fields{
 			"name":      accountName,
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
+			"publicKey": fmt.Sprintf("%#x", bytes.Trunc(deletedPublicKey)),
 		}).Info("Successfully deleted validator account")
 		err = km.initializeKeysCachesFromKeystore()
 		if err != nil {
@@ -230,7 +230,7 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 		if !ok {
 			return nil, errors.New("Could not fetch private key")
 		}
-		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
+		privKeys[i] = bytes.ToBytes32(seckey.Marshal())
 	}
 	return privKeys, nil
 }
@@ -245,7 +245,7 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 		return nil, errors.New("nil public key in request")
 	}
 	lock.RLock()
-	secretKey, ok := secretKeysCache[bytesutil.ToBytes48(publicKey)]
+	secretKey, ok := secretKeysCache[bytes.ToBytes48(publicKey)]
 	lock.RUnlock()
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")

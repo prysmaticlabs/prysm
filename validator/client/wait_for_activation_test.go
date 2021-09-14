@@ -9,9 +9,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	slotutilmock "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -395,8 +395,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil /* err */).AnyTimes()
 
-	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
-	activeKey := bytesutil.ToBytes48([]byte("active"))
+	inactiveKey := bytes.ToBytes48([]byte("inactive"))
+	activeKey := bytes.ToBytes48([]byte("active"))
 	km := remote.NewMock()
 	km.PublicKeys = [][48]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)

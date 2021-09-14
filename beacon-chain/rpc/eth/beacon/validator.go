@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -204,7 +204,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			var valIndex types.ValidatorIndex
 			if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
 				var ok bool
-				valIndex, ok = state.ValidatorIndexByPubkey(bytesutil.ToBytes48(validatorId))
+				valIndex, ok = state.ValidatorIndexByPubkey(bytes.ToBytes48(validatorId))
 				if !ok {
 					// Ignore well-formed yet unknown public keys.
 					continue

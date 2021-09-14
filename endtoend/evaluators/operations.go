@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
@@ -16,7 +17,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"golang.org/x/exp/rand"
@@ -159,7 +159,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		slot := blk.Block().Slot()
 		graffitiInBlock := blk.Block().Body().Graffiti()
 		for _, graffiti := range helpers.Graffiti {
-			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), graffitiInBlock) {
+			if bytes.Equal(bytes.PadTo([]byte(graffiti), 32), graffitiInBlock) {
 				e = true
 				break
 			}

@@ -33,9 +33,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
@@ -361,7 +361,7 @@ func (s *Service) LatestBlockHeight() *big.Int {
 
 // LatestBlockHash in the ETH1.0 chain.
 func (s *Service) LatestBlockHash() common.Hash {
-	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
+	return bytes.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
@@ -373,7 +373,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
-	count := bytesutil.FromBytes8(countByte)
+	count := bytes.FromBytes8(countByte)
 	deposits := s.cfg.DepositCache.AllDeposits(s.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
@@ -605,7 +605,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if err != nil {
 		return err
 	}
-	rt := bytesutil.ToBytes32(chkPt.Root)
+	rt := bytes.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
 		fState, err := s.cfg.StateGen.StateByRoot(ctx, rt)
 		if err != nil {
@@ -622,7 +622,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
 		for _, c := range ctrs[currIndex:] {
-			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytes.ToBytes32(c.DepositRoot))
 		}
 	}
 	return nil

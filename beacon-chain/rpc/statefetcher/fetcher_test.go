@@ -12,9 +12,9 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -54,7 +54,7 @@ func TestGetState(t *testing.T) {
 
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
-		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
+		b.Block.StateRoot = bytes.PadTo([]byte("foo"), 32)
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestGetState(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 		stateGen := stategen.NewMockService()
-		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
+		stateGen.StatesByRoot[bytes.ToBytes32(stateId)] = state
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
@@ -241,7 +241,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("finalized", func(t *testing.T) {
 		db := testDB.SetupDB(t)
-		genesis := bytesutil.ToBytes32([]byte("genesis"))
+		genesis := bytes.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]
@@ -272,7 +272,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("justified", func(t *testing.T) {
 		db := testDB.SetupDB(t)
-		genesis := bytesutil.ToBytes32([]byte("genesis"))
+		genesis := bytes.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]
@@ -326,7 +326,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("slot", func(t *testing.T) {
 		db := testDB.SetupDB(t)
-		genesis := bytesutil.ToBytes32([]byte("genesis"))
+		genesis := bytes.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]

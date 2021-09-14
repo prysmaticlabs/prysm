@@ -13,8 +13,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -232,7 +232,7 @@ func (s *Service) processBlock(
 	}
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
-	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
+	parentRoot := bytes.ToBytes32(blk.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 	}
@@ -262,7 +262,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
+	parentRoot := bytes.ToBytes32(firstBlock.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("%w: %#x", errParentDoesNotExist, firstBlock.Block().ParentRoot())
 	}

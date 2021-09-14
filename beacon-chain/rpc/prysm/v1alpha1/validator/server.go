@@ -24,8 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -114,7 +114,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
-	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
+	index, ok := st.ValidatorIndexByPubkey(bytes.ToBytes48(req.PublicKey))
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
@@ -129,7 +129,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 		return nil, err
 	}
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
+	dv, err := helpers.Domain(fork, request.Epoch, bytes.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
 		return nil, err
 	}

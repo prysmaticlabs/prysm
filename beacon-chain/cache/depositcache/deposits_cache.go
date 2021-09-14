@@ -15,9 +15,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -186,7 +186,7 @@ func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, block
 	if heightIdx == 0 {
 		return 0, [32]byte{}
 	}
-	return uint64(heightIdx), bytesutil.ToBytes32(dc.deposits[heightIdx-1].DepositRoot)
+	return uint64(heightIdx), bytes.ToBytes32(dc.deposits[heightIdx-1].DepositRoot)
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains

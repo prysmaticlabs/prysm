@@ -22,11 +22,11 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -58,7 +58,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
-	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
+	msg.Signature = bytes.PadTo([]byte("fake"), 96)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -388,7 +388,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := bytes.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := testutil.NewBeaconBlock()
@@ -494,7 +494,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := bytes.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := testutil.NewBeaconBlock()
@@ -535,7 +535,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := bytes.ToBytes32(b)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	sk, err := bls.SecretKeyFromBytes(b32[:])

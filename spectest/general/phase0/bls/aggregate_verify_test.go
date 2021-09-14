@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -46,7 +46,7 @@ func testAggregateVerify(t *testing.T) {
 				msgBytes, err := hex.DecodeString(msg[2:])
 				require.NoError(t, err)
 				require.Equal(t, 32, len(msgBytes))
-				msgs = append(msgs, bytesutil.ToBytes32(msgBytes))
+				msgs = append(msgs, bytes.ToBytes32(msgBytes))
 			}
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])
 			require.NoError(t, err)

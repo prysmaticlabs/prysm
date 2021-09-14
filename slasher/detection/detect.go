@@ -5,10 +5,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -197,7 +197,7 @@ func (s *Service) mapResultsToAtts(ctx context.Context, results []*types.Detecti
 }
 
 func resultHash(result *types.DetectionResult) [32]byte {
-	resultBytes := append(bytesutil.Bytes8(uint64(result.SlashableEpoch)), result.SigBytes[:]...)
+	resultBytes := append(bytes.Bytes8(uint64(result.SlashableEpoch)), result.SigBytes[:]...)
 	return hashutil.Hash(resultBytes)
 }
 

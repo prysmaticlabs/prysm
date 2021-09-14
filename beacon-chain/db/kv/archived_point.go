@@ -4,7 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -17,7 +17,7 @@ func (s *Store) LastArchivedSlot(ctx context.Context) (types.Slot, error) {
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		b, _ := bkt.Cursor().Last()
-		index = bytesutil.BytesToSlotBigEndian(b)
+		index = bytes.BytesToSlotBigEndian(b)
 		return nil
 	})
 
@@ -38,7 +38,7 @@ func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 		panic(err)
 	}
 
-	return bytesutil.ToBytes32(blockRoot)
+	return bytes.ToBytes32(blockRoot)
 }
 
 // ArchivedPointRoot returns the block root of an archived point from the DB.
@@ -50,13 +50,13 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 	var blockRoot []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSlotIndicesBucket)
-		blockRoot = bucket.Get(bytesutil.SlotToBytesBigEndian(slot))
+		blockRoot = bucket.Get(bytes.SlotToBytesBigEndian(slot))
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)
 	}
 
-	return bytesutil.ToBytes32(blockRoot)
+	return bytes.ToBytes32(blockRoot)
 }
 
 // HasArchivedPoint returns true if an archived point exists in DB.
@@ -66,7 +66,7 @@ func (s *Store) HasArchivedPoint(ctx context.Context, slot types.Slot) bool {
 	var exists bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(stateSlotIndicesBucket)
-		exists = iBucket.Get(bytesutil.SlotToBytesBigEndian(slot)) != nil
+		exists = iBucket.Get(bytes.SlotToBytesBigEndian(slot)) != nil
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err)

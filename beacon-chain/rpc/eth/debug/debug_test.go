@@ -7,9 +7,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -131,10 +131,10 @@ func TestListForkChoiceHeads(t *testing.T) {
 		Root [32]byte
 	}{{
 		Slot: 0,
-		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
+		Root: bytes.ToBytes32(bytes.PadTo([]byte("foo"), 32)),
 	}, {
 		Slot: 1,
-		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
+		Root: bytes.ToBytes32(bytes.PadTo([]byte("bar"), 32)),
 	}}
 
 	server := &Server{

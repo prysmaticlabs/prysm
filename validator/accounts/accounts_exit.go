@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -157,7 +157,7 @@ func interact(
 		for i, pk := range filteredPubKeys {
 			pubKeyBytes := pk.Marshal()
 			rawPubKeys[i] = pubKeyBytes
-			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytes.Trunc(pubKeyBytes))
 		}
 		allAccountStr := strings.Join(formattedPubKeys, ", ")
 		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
@@ -222,7 +222,7 @@ func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string
 	for i, pk := range validatingKeys {
 		raw[i] = make([]byte, len(pk))
 		copy(raw[i], pk[:])
-		formatted[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
+		formatted[i] = fmt.Sprintf("%#x", bytes.Trunc(pk[:]))
 	}
 	return
 }

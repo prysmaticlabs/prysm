@@ -13,10 +13,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
@@ -384,7 +384,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
+		pubKeys[i] = bytes.ToBytes48(key)
 	}
 	km := &mockRemoteKeymanager{
 		publicKeys: pubKeys,
@@ -486,7 +486,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
+		pubKeys[i] = bytes.ToBytes48(key)
 		pks[i] = key
 	}
 

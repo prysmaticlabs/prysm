@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
@@ -62,8 +62,8 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 						for epoch := uint64(1); epoch < numEpochs; epoch++ {
 							source := epoch - 1
 							target := epoch
-							sourceEpoch := bytesutil.Uint64ToBytesBigEndian(source)
-							targetEpoch := bytesutil.Uint64ToBytesBigEndian(target)
+							sourceEpoch := bytes.Uint64ToBytesBigEndian(source)
+							targetEpoch := bytes.Uint64ToBytesBigEndian(target)
 							if err := sourceEpochsBucket.Put(sourceEpoch, targetEpoch); err != nil {
 								return err
 							}
@@ -85,16 +85,16 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 
 						// Verify we have (source epoch, target epoch) pairs.
 						for sourceEpoch := uint64(0); sourceEpoch < numEpochs-1; sourceEpoch++ {
-							sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
+							sourceEpochBytes := bytes.Uint64ToBytesBigEndian(sourceEpoch)
 							targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-							targetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
+							targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
 							require.Equal(t, sourceEpoch+1, targetEpoch)
 						}
 						// Verify we have (target epoch, source epoch) pairs.
 						for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
-							targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+							targetEpochBytes := bytes.Uint64ToBytesBigEndian(targetEpoch)
 							sourceEpochBytes := targetEpochsBucket.Get(targetEpochBytes)
-							sourceEpoch := bytesutil.BytesToUint64BigEndian(sourceEpochBytes)
+							sourceEpoch := bytes.BytesToUint64BigEndian(sourceEpochBytes)
 							require.Equal(t, targetEpoch-1, sourceEpoch)
 						}
 					}

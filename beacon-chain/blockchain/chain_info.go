@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -239,7 +239,7 @@ func (s *Service) GenesisValidatorRoot() [32]byte {
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+	return bytes.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.

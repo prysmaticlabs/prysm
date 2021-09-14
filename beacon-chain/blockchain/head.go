@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -42,7 +42,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// ensure head gets its best justified info.
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(ctx, bytes.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
 			return err
 		}
 	}
@@ -52,7 +52,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	j := s.justifiedCheckpt
 	// To get head before the first justified epoch, the fork choice will start with genesis root
 	// instead of zero hashes.
-	headStartRoot := bytesutil.ToBytes32(j.Root)
+	headStartRoot := bytes.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
 		headStartRoot = s.genesisRoot
 	}
@@ -66,7 +66,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 		if err != nil {
 			return err
 		}
-		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytes.ToBytes32(f.Root))
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if headRoot == bytesutil.ToBytes32(r) {
+	if headRoot == bytes.ToBytes32(r) {
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
 	newStateRoot := newHeadBlock.Block().StateRoot()
-	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
+	if bytes.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytes.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
@@ -145,7 +145,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+		if err := s.saveOrphanedAtts(ctx, bytes.ToBytes32(r)); err != nil {
 			return err
 		}
 
@@ -257,7 +257,7 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 // This returns the genesis validator root of the head state.
 // This is a lock free version.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+	return bytes.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // Returns true if head state exists.

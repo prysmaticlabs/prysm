@@ -1,7 +1,7 @@
 package eth
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -10,9 +10,9 @@ func CopyETH1Data(data *Eth1Data) *Eth1Data {
 		return nil
 	}
 	return &Eth1Data{
-		DepositRoot:  bytesutil.SafeCopyBytes(data.DepositRoot),
+		DepositRoot:  bytes.SafeCopyBytes(data.DepositRoot),
 		DepositCount: data.DepositCount,
-		BlockHash:    bytesutil.SafeCopyBytes(data.BlockHash),
+		BlockHash:    bytes.SafeCopyBytes(data.BlockHash),
 	}
 }
 
@@ -36,7 +36,7 @@ func CopyPendingAttestation(att *PendingAttestation) *PendingAttestation {
 	}
 	data := CopyAttestationData(att.Data)
 	return &PendingAttestation{
-		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
+		AggregationBits: bytes.SafeCopyBytes(att.AggregationBits),
 		Data:            data,
 		InclusionDelay:  att.InclusionDelay,
 		ProposerIndex:   att.ProposerIndex,
@@ -49,9 +49,9 @@ func CopyAttestation(att *Attestation) *Attestation {
 		return nil
 	}
 	return &Attestation{
-		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
+		AggregationBits: bytes.SafeCopyBytes(att.AggregationBits),
 		Data:            CopyAttestationData(att.Data),
-		Signature:       bytesutil.SafeCopyBytes(att.Signature),
+		Signature:       bytes.SafeCopyBytes(att.Signature),
 	}
 }
 
@@ -63,7 +63,7 @@ func CopyAttestationData(attData *AttestationData) *AttestationData {
 	return &AttestationData{
 		Slot:            attData.Slot,
 		CommitteeIndex:  attData.CommitteeIndex,
-		BeaconBlockRoot: bytesutil.SafeCopyBytes(attData.BeaconBlockRoot),
+		BeaconBlockRoot: bytes.SafeCopyBytes(attData.BeaconBlockRoot),
 		Source:          CopyCheckpoint(attData.Source),
 		Target:          CopyCheckpoint(attData.Target),
 	}
@@ -76,7 +76,7 @@ func CopyCheckpoint(cp *Checkpoint) *Checkpoint {
 	}
 	return &Checkpoint{
 		Epoch: cp.Epoch,
-		Root:  bytesutil.SafeCopyBytes(cp.Root),
+		Root:  bytes.SafeCopyBytes(cp.Root),
 	}
 }
 
@@ -87,7 +87,7 @@ func CopySignedBeaconBlock(sigBlock *SignedBeaconBlock) *SignedBeaconBlock {
 	}
 	return &SignedBeaconBlock{
 		Block:     CopyBeaconBlock(sigBlock.Block),
-		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+		Signature: bytes.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
@@ -99,8 +99,8 @@ func CopyBeaconBlock(block *BeaconBlock) *BeaconBlock {
 	return &BeaconBlock{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
-		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
-		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		ParentRoot:    bytes.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytes.SafeCopyBytes(block.StateRoot),
 		Body:          CopyBeaconBlockBody(block.Body),
 	}
 }
@@ -111,9 +111,9 @@ func CopyBeaconBlockBody(body *BeaconBlockBody) *BeaconBlockBody {
 		return nil
 	}
 	return &BeaconBlockBody{
-		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		RandaoReveal:      bytes.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
-		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		Graffiti:          bytes.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
 		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
 		Attestations:      CopyAttestations(body.Attestations),
@@ -129,7 +129,7 @@ func CopySignedBeaconBlockAltair(sigBlock *SignedBeaconBlockAltair) *SignedBeaco
 	}
 	return &SignedBeaconBlockAltair{
 		Block:     CopyBeaconBlockAltair(sigBlock.Block),
-		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+		Signature: bytes.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
@@ -141,8 +141,8 @@ func CopyBeaconBlockAltair(block *BeaconBlockAltair) *BeaconBlockAltair {
 	return &BeaconBlockAltair{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
-		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
-		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		ParentRoot:    bytes.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytes.SafeCopyBytes(block.StateRoot),
 		Body:          CopyBeaconBlockBodyAltair(block.Body),
 	}
 }
@@ -153,9 +153,9 @@ func CopyBeaconBlockBodyAltair(body *BeaconBlockBodyAltair) *BeaconBlockBodyAlta
 		return nil
 	}
 	return &BeaconBlockBodyAltair{
-		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		RandaoReveal:      bytes.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
-		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		Graffiti:          bytes.SafeCopyBytes(body.Graffiti),
 		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
 		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
 		Attestations:      CopyAttestations(body.Attestations),
@@ -195,7 +195,7 @@ func CopySignedBeaconBlockHeader(header *SignedBeaconBlockHeader) *SignedBeaconB
 	}
 	return &SignedBeaconBlockHeader{
 		Header:    CopyBeaconBlockHeader(header.Header),
-		Signature: bytesutil.SafeCopyBytes(header.Signature),
+		Signature: bytes.SafeCopyBytes(header.Signature),
 	}
 }
 
@@ -204,9 +204,9 @@ func CopyBeaconBlockHeader(header *BeaconBlockHeader) *BeaconBlockHeader {
 	if header == nil {
 		return nil
 	}
-	parentRoot := bytesutil.SafeCopyBytes(header.ParentRoot)
-	stateRoot := bytesutil.SafeCopyBytes(header.StateRoot)
-	bodyRoot := bytesutil.SafeCopyBytes(header.BodyRoot)
+	parentRoot := bytes.SafeCopyBytes(header.ParentRoot)
+	stateRoot := bytes.SafeCopyBytes(header.StateRoot)
+	bodyRoot := bytes.SafeCopyBytes(header.BodyRoot)
 	return &BeaconBlockHeader{
 		Slot:          header.Slot,
 		ProposerIndex: header.ProposerIndex,
@@ -243,7 +243,7 @@ func CopyIndexedAttestation(indexedAtt *IndexedAttestation) *IndexedAttestation 
 	return &IndexedAttestation{
 		AttestingIndices: indices,
 		Data:             CopyAttestationData(indexedAtt.Data),
-		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
+		Signature:        bytes.SafeCopyBytes(indexedAtt.Signature),
 	}
 }
 
@@ -277,7 +277,7 @@ func CopyDeposit(deposit *Deposit) *Deposit {
 		return nil
 	}
 	return &Deposit{
-		Proof: bytesutil.SafeCopy2dBytes(deposit.Proof),
+		Proof: bytes.SafeCopy2dBytes(deposit.Proof),
 		Data:  CopyDepositData(deposit.Data),
 	}
 }
@@ -288,10 +288,10 @@ func CopyDepositData(depData *Deposit_Data) *Deposit_Data {
 		return nil
 	}
 	return &Deposit_Data{
-		PublicKey:             bytesutil.SafeCopyBytes(depData.PublicKey),
-		WithdrawalCredentials: bytesutil.SafeCopyBytes(depData.WithdrawalCredentials),
+		PublicKey:             bytes.SafeCopyBytes(depData.PublicKey),
+		WithdrawalCredentials: bytes.SafeCopyBytes(depData.WithdrawalCredentials),
 		Amount:                depData.Amount,
-		Signature:             bytesutil.SafeCopyBytes(depData.Signature),
+		Signature:             bytes.SafeCopyBytes(depData.Signature),
 	}
 }
 
@@ -317,7 +317,7 @@ func CopySignedVoluntaryExit(exit *SignedVoluntaryExit) *SignedVoluntaryExit {
 			Epoch:          exit.Exit.Epoch,
 			ValidatorIndex: exit.Exit.ValidatorIndex,
 		},
-		Signature: bytesutil.SafeCopyBytes(exit.Signature),
+		Signature: bytes.SafeCopyBytes(exit.Signature),
 	}
 }
 
@@ -346,9 +346,9 @@ func CopySyncCommitteeMessage(s *SyncCommitteeMessage) *SyncCommitteeMessage {
 	}
 	return &SyncCommitteeMessage{
 		Slot:           s.Slot,
-		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
+		BlockRoot:      bytes.SafeCopyBytes(s.BlockRoot),
 		ValidatorIndex: s.ValidatorIndex,
-		Signature:      bytesutil.SafeCopyBytes(s.Signature),
+		Signature:      bytes.SafeCopyBytes(s.Signature),
 	}
 }
 
@@ -359,10 +359,10 @@ func CopySyncCommitteeContribution(c *SyncCommitteeContribution) *SyncCommitteeC
 	}
 	return &SyncCommitteeContribution{
 		Slot:              c.Slot,
-		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
+		BlockRoot:         bytes.SafeCopyBytes(c.BlockRoot),
 		SubcommitteeIndex: c.SubcommitteeIndex,
-		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
-		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+		AggregationBits:   bytes.SafeCopyBytes(c.AggregationBits),
+		Signature:         bytes.SafeCopyBytes(c.Signature),
 	}
 }
 
@@ -372,7 +372,7 @@ func CopySyncAggregate(a *SyncAggregate) *SyncAggregate {
 		return nil
 	}
 	return &SyncAggregate{
-		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
-		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
+		SyncCommitteeBits:      bytes.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytes.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }

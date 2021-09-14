@@ -12,9 +12,9 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
@@ -34,7 +34,7 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
 		Pubkeys:         wantedCommittee,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}))
 
 	t.Run("OK", func(t *testing.T) {
@@ -44,10 +44,10 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 		require.DeepEqual(t, wantedCommittee, committee.Pubkeys)
 	})
 	t.Run("validator in committee not found in state", func(t *testing.T) {
-		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		wantedCommittee[0] = bytes.PadTo([]byte("fakepubkey"), 48)
 		require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
 			Pubkeys:         wantedCommittee,
-			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+			AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 		}))
 		_, _, err := currentCommitteeIndicesFromState(st)
 		require.ErrorContains(t, "index not found for pubkey", err)
@@ -63,7 +63,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
 		Pubkeys:         syncCommittee,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}))
 
 	commSize := params.BeaconConfig().SyncCommitteeSize
@@ -94,10 +94,10 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 		}
 	})
 	t.Run("validator in subcommittee not found in state", func(t *testing.T) {
-		syncCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		syncCommittee[0] = bytes.PadTo([]byte("fakepubkey"), 48)
 		require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
 			Pubkeys:         syncCommittee,
-			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+			AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 		}))
 		committee, err := st.CurrentSyncCommittee()
 		require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestListSyncCommittees(t *testing.T) {
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
 		Pubkeys:         syncCommittee,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytes.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}))
 	stRoot, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)

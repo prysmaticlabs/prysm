@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -101,7 +101,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			log.WithFields(
 				logrus.Fields{
 					"slot": aState.Slot(),
-					"root": hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
+					"root": hex.EncodeToString(bytes.Trunc(aRoot[:])),
 				}).Info("Saved state in DB")
 		}
 	}

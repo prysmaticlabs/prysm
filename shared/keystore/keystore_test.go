@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -54,7 +54,7 @@ func TestStoreAndGetKeys(t *testing.T) {
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
 	b := []byte("hi")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := bytes.ToBytes32(b)
 	password := "test"
 
 	pk, err := bls.SecretKeyFromBytes(b32[:])

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -27,7 +27,7 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		return nil
 	}
 
-	r := bytesutil.ToBytes32(s.cfg.WeakSubjectivityCheckpt.Root)
+	r := bytes.ToBytes32(s.cfg.WeakSubjectivityCheckpt.Root)
 	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.cfg.WeakSubjectivityCheckpt.Epoch)
 	// Save initial sync cached blocks to DB.
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {

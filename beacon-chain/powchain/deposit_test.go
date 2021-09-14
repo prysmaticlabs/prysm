@@ -8,9 +8,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -82,7 +82,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	deposits[0].Data.PublicKey = bytesutil.PadTo([]byte("junk"), 48)
+	deposits[0].Data.PublicKey = bytes.PadTo([]byte("junk"), 48)
 
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
@@ -187,8 +187,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
-			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
-			Signature:             bytesutil.PadTo([]byte("test"), 96),
+			WithdrawalCredentials: bytes.PadTo([]byte("testing"), 32),
+			Signature:             bytes.PadTo([]byte("test"), 96),
 		},
 	}
 

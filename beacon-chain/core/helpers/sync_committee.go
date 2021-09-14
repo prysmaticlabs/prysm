@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +30,7 @@ func IsCurrentPeriodSyncCommittee(
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytes.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -43,7 +43,7 @@ func IsCurrentPeriodSyncCommittee(
 
 		// Fill in the cache on miss.
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytes.ToBytes32(root), st); err != nil {
 				log.Errorf("Could not fill sync committee cache on miss: %v", err)
 			}
 		}()
@@ -67,7 +67,7 @@ func IsNextPeriodSyncCommittee(
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytes.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -94,7 +94,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytes.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -107,7 +107,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 		// Fill in the cache on miss.
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytes.ToBytes32(root), st); err != nil {
 				log.Errorf("Could not fill sync committee cache on miss: %v", err)
 			}
 		}()
@@ -128,7 +128,7 @@ func NextPeriodSyncSubcommitteeIndices(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytes.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {

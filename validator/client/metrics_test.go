@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -21,9 +21,9 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 	}
 
 	pubKeyBytes := [][48]byte{
-		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
-		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
-		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),
+		bytes.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
+		bytes.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
+		bytes.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),
 	}
 
 	v.startBalances[pubKeyBytes[0]] = uint64(32100000000)
@@ -33,9 +33,9 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 	responses := []*ethpb.ValidatorPerformanceResponse{
 		{
 			PublicKeys: [][]byte{
-				bytesutil.FromBytes48(pubKeyBytes[0]),
-				bytesutil.FromBytes48(pubKeyBytes[1]),
-				bytesutil.FromBytes48(pubKeyBytes[2]),
+				bytes.FromBytes48(pubKeyBytes[0]),
+				bytes.FromBytes48(pubKeyBytes[1]),
+				bytes.FromBytes48(pubKeyBytes[2]),
 			},
 			InclusionSlots:       []types.Slot{types.Slot(^uint64(0)), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
 			InclusionDistances:   []types.Slot{0, 5, 2},
@@ -45,9 +45,9 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		},
 		{
 			PublicKeys: [][]byte{
-				bytesutil.FromBytes48(pubKeyBytes[0]),
-				bytesutil.FromBytes48(pubKeyBytes[1]),
-				bytesutil.FromBytes48(pubKeyBytes[2]),
+				bytes.FromBytes48(pubKeyBytes[0]),
+				bytes.FromBytes48(pubKeyBytes[1]),
+				bytes.FromBytes48(pubKeyBytes[2]),
 			},
 			InclusionSlots:       []types.Slot{33, 34, 35},
 			InclusionDistances:   []types.Slot{1, 2, 3},
@@ -57,9 +57,9 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		},
 		{
 			PublicKeys: [][]byte{
-				bytesutil.FromBytes48(pubKeyBytes[0]),
-				bytesutil.FromBytes48(pubKeyBytes[1]),
-				bytesutil.FromBytes48(pubKeyBytes[2]),
+				bytes.FromBytes48(pubKeyBytes[0]),
+				bytes.FromBytes48(pubKeyBytes[1]),
+				bytes.FromBytes48(pubKeyBytes[2]),
 			},
 			InclusionSlots:       []types.Slot{65, types.Slot(^uint64(0)), 67},
 			InclusionDistances:   []types.Slot{1, 0, 2},

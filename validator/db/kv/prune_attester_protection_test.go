@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
@@ -42,7 +42,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 	numKeys := uint64(2048)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
-		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
+		pks = append(pks, bytes.ToBytes48(bytes.ToBytes(i, 48)))
 	}
 	validatorDB := setupDB(t, pks)
 
@@ -91,7 +91,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	numKeys := uint64(8)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
-		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
+		pks = append(pks, bytes.ToBytes48(bytes.ToBytes(i, 48)))
 	}
 	validatorDB := setupDB(b, pks)
 
@@ -130,8 +130,8 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 		}
 		for sourceEpoch := types.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
 			targetEpoch := sourceEpoch + 1
-			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
+			targetEpochBytes := bytes.EpochToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytes.EpochToBytesBigEndian(sourceEpoch)
 			// Save (source epoch, target epoch) pairs.
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 				return err
@@ -164,8 +164,8 @@ func checkAttestingHistoryAfterPruning(
 		sourceEpochsBkt := pkBkt.Bucket(attestationSourceEpochsBucket)
 		for sourceEpoch := startEpoch; sourceEpoch < numEpochs; sourceEpoch++ {
 			targetEpoch := sourceEpoch + 1
-			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
+			targetEpochBytes := bytes.EpochToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytes.EpochToBytesBigEndian(sourceEpoch)
 
 			storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
 			signingRoot := signingRootsBkt.Get(targetEpochBytes)

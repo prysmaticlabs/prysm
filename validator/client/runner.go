@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -205,7 +205,7 @@ func run(ctx context.Context, v iface.Validator) {
 						case iface.RoleSyncCommitteeAggregator:
 							v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
 						case iface.RoleUnknown:
-							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
+							log.WithField("pubKey", fmt.Sprintf("%#x", bytes.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}

@@ -10,8 +10,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -84,8 +84,8 @@ func CreateForkDigest(
 func Fork(
 	targetEpoch types.Epoch,
 ) (*ethpb.Fork, error) {
-	currentForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
-	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	currentForkVersion := bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	previousForkVersion := bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	forkEpoch := types.Epoch(0)

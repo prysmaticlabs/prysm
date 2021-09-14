@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -98,7 +98,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 		buf[seedSize] = round
 		hash := hashfunc(buf[:pivotViewSize])
 		hash8 := hash[:8]
-		hash8Int := bytesutil.FromBytes8(hash8)
+		hash8Int := bytes.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - uint64(index)) % indexCount
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
@@ -182,7 +182,7 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 	for {
 		buf[seedSize] = r
 		ph := hashfunc(buf[:pivotViewSize])
-		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
+		pivot := bytes.FromBytes8(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
 		source := hashfunc(buf)

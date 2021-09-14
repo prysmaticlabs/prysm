@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -148,16 +148,16 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
-	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
-	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBeaconProposer:              bytes.ToBytes4(bytes.Bytes4(0)),
+	DomainBeaconAttester:              bytes.ToBytes4(bytes.Bytes4(1)),
+	DomainRandao:                      bytes.ToBytes4(bytes.Bytes4(2)),
+	DomainDeposit:                     bytes.ToBytes4(bytes.Bytes4(3)),
+	DomainVoluntaryExit:               bytes.ToBytes4(bytes.Bytes4(4)),
+	DomainSelectionProof:              bytes.ToBytes4(bytes.Bytes4(5)),
+	DomainAggregateAndProof:           bytes.ToBytes4(bytes.Bytes4(6)),
+	DomainSyncCommittee:               bytes.ToBytes4(bytes.Bytes4(7)),
+	DomainSyncCommitteeSelectionProof: bytes.ToBytes4(bytes.Bytes4(8)),
+	DomainContributionAndProof:        bytes.ToBytes4(bytes.Bytes4(9)),
 
 	// Prysm constants.
 	GweiPerEth:                  1000000000,

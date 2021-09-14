@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"google.golang.org/grpc/codes"
@@ -65,7 +65,7 @@ func (bs *Server) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		index, ok := requestedState.ValidatorIndexByPubkey(bytes.ToBytes48(pubKey))
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
 		}

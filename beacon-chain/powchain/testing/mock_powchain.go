@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -64,7 +64,7 @@ func (m *POWChain) BlockExists(_ context.Context, hash common.Hash) (bool, *big.
 	// Reverse the map of heights by hash.
 	heightsByHash := make(map[[32]byte]int, len(m.HashesByHeight))
 	for k, v := range m.HashesByHeight {
-		h := bytesutil.ToBytes32(v)
+		h := bytes.ToBytes32(v)
 		heightsByHash[h] = k
 	}
 	val, ok := heightsByHash[hash]
@@ -81,7 +81,7 @@ func (m *POWChain) BlockHashByHeight(_ context.Context, height *big.Int) (common
 	if !ok {
 		return [32]byte{}, fmt.Errorf("could not fetch hash for height: %v", height)
 	}
-	return bytesutil.ToBytes32(val), nil
+	return bytes.ToBytes32(val), nil
 }
 
 // BlockTimeByHeight --
@@ -106,7 +106,7 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 // DepositRoot --
 func (m *POWChain) DepositRoot() [32]byte {
 	root := []byte("depositroot")
-	return bytesutil.ToBytes32(root)
+	return bytes.ToBytes32(root)
 }
 
 // ChainStartDeposits --

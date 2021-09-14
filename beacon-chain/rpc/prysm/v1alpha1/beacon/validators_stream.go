@@ -23,8 +23,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -194,11 +194,11 @@ func (is *infostream) handleAddValidatorKeys(reqPubKeys [][]byte) error {
 	// Create existence map to ensure we don't duplicate keys.
 	pubKeysMap := make(map[[48]byte]bool, len(is.pubKeys))
 	for _, pubKey := range is.pubKeys {
-		pubKeysMap[bytesutil.ToBytes48(pubKey)] = true
+		pubKeysMap[bytes.ToBytes48(pubKey)] = true
 	}
 	addedPubKeys := make([][]byte, 0, len(reqPubKeys))
 	for _, pubKey := range reqPubKeys {
-		if _, exists := pubKeysMap[bytesutil.ToBytes48(pubKey)]; !exists {
+		if _, exists := pubKeysMap[bytes.ToBytes48(pubKey)]; !exists {
 			is.pubKeys = append(is.pubKeys, pubKey)
 			addedPubKeys = append(addedPubKeys, pubKey)
 		}
@@ -224,11 +224,11 @@ func (is *infostream) handleRemoveValidatorKeys(reqPubKeys [][]byte) {
 	// Create existence map to track what we have to delete.
 	pubKeysMap := make(map[[48]byte]bool, len(reqPubKeys))
 	for _, pubKey := range reqPubKeys {
-		pubKeysMap[bytesutil.ToBytes48(pubKey)] = true
+		pubKeysMap[bytes.ToBytes48(pubKey)] = true
 	}
 	max := len(is.pubKeys)
 	for i := 0; i < max; i++ {
-		if _, exists := pubKeysMap[bytesutil.ToBytes48(is.pubKeys[i])]; exists {
+		if _, exists := pubKeysMap[bytes.ToBytes48(is.pubKeys[i])]; exists {
 			copy(is.pubKeys[i:], is.pubKeys[i+1:])
 			is.pubKeys = is.pubKeys[:len(is.pubKeys)-1]
 			i--
@@ -274,7 +274,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 
 	res := make([]*ethpb.ValidatorInfo, 0, len(pubKeys))
 	for _, pubKey := range pubKeys {
-		i, e := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		i, e := headState.ValidatorIndexByPubkey(bytes.ToBytes48(pubKey))
 		if !e {
 			return nil, errors.New("could not find public key")
 		}
@@ -313,7 +313,7 @@ func (is *infostream) generateValidatorInfo(
 
 	// Index
 	var ok bool
-	info.Index, ok = headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+	info.Index, ok = headState.ValidatorIndexByPubkey(bytes.ToBytes48(pubKey))
 	if !ok {
 		// We don't know of this validator; it's either a pending deposit or totally unknown.
 		return is.generatePendingValidatorInfo(info)
@@ -379,7 +379,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 	pendingValidatorsMap := make(map[[48]byte]int)
 	for i, info := range res {
 		if info.Status == ethpb.ValidatorStatus_PENDING {
-			pendingValidatorsMap[bytesutil.ToBytes48(info.PublicKey)] = i
+			pendingValidatorsMap[bytes.ToBytes48(info.PublicKey)] = i
 		}
 	}
 	if len(pendingValidatorsMap) == 0 {

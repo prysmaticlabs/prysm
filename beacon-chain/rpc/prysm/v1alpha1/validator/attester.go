@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -86,7 +86,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get historical head root: %v", err)
 		}
-		headState, err = vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(headRoot))
+		headState, err = vs.StateGen.StateByRoot(ctx, bytes.ToBytes32(headRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get historical head state: %v", err)
 		}
@@ -122,7 +122,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
 		}
-		if bytesutil.ToBytes32(targetRoot) == params.BeaconConfig().ZeroHash {
+		if bytes.ToBytes32(targetRoot) == params.BeaconConfig().ZeroHash {
 			targetRoot = headRoot
 		}
 	}

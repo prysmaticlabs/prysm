@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/wealdtech/go-bytesutil"
 )
 

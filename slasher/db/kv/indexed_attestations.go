@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -31,7 +31,7 @@ func (s *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch ty
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
-	key := bytesutil.Bytes8(uint64(targetEpoch))
+	key := bytes.Bytes8(uint64(targetEpoch))
 	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, enc = c.Next() {
@@ -174,7 +174,7 @@ func (s *Store) PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochA
 	return s.update(func(tx *bolt.Tx) error {
 		attBucket := tx.Bucket(historicIndexedAttestationsBucket)
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		max := bytesutil.Bytes8(uint64(pruneFromEpoch))
+		max := bytes.Bytes8(uint64(pruneFromEpoch))
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := attBucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
@@ -196,7 +196,7 @@ func (s *Store) LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint6
 		if k == nil {
 			return nil
 		}
-		lt = bytesutil.FromBytes8(k[:8])
+		lt = bytes.FromBytes8(k[:8])
 		return nil
 	})
 	return lt, err

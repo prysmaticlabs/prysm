@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"go.opencensus.io/trace"
@@ -97,7 +97,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	// We assume trusted attestation in this function has verified signature.
 
 	// Update forkchoice store with the new attestation for updating weight.
-	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytes.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 
 	return nil
 }

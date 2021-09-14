@@ -10,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -38,7 +38,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
@@ -55,7 +55,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 		}
 	}
 	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
-	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
+	headRoot := bytes.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
 	summary := &ethpbalpha.StateSummary{
 		Root: headRoot[:],
 		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block.Block.Slot,
@@ -82,7 +82,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = i
-		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
@@ -99,7 +99,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 			Block: &ethpbalpha.BeaconBlockContainer_AltairBlock{AltairBlock: b}, BlockRoot: root[:]}
 	}
 	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
-	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
+	headRoot := bytes.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
 	summary := &ethpbalpha.StateSummary{
 		Root: headRoot[:],
 		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock.Block.Slot,
@@ -120,11 +120,11 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 	bs := &Server{
@@ -225,19 +225,19 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 	b4 := testutil.NewBeaconBlock()
 	b4.Block.Slot = 31
-	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b4.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b4)))
 	b5 := testutil.NewBeaconBlock()
 	b5.Block.Slot = 28
-	b5.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b5.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b5)))
 
 	tests := []struct {
@@ -337,11 +337,11 @@ func TestServer_GetBlock(t *testing.T) {
 
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 	bs := &Server{
@@ -406,7 +406,7 @@ func TestServer_GetBlock(t *testing.T) {
 		},
 		{
 			name:    "non-existent root",
-			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			blockID: bytes.PadTo([]byte("hi there"), 32),
 			wantErr: true,
 		},
 		{
@@ -446,11 +446,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 
 		b2 := testutil.NewBeaconBlock()
 		b2.Block.Slot = 30
-		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 		b3 := testutil.NewBeaconBlock()
 		b3.Block.Slot = 30
-		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+		b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 		bs := &Server{
@@ -515,7 +515,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			},
 			{
 				name:    "non-existent root",
-				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				blockID: bytes.PadTo([]byte("hi there"), 32),
 				wantErr: true,
 			},
 			{
@@ -557,13 +557,13 @@ func TestServer_GetBlockV2(t *testing.T) {
 
 		b2 := testutil.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
-		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 		signedBlk, err := wrapper.WrappedAltairSignedBeaconBlock(b2)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
 		b3 := testutil.NewBeaconBlockAltair()
 		b3.Block.Slot = 30
-		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+		b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 		signedBlk, err = wrapper.WrappedAltairSignedBeaconBlock(b2)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
@@ -632,7 +632,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			},
 			{
 				name:    "non-existent root",
-				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				blockID: bytes.PadTo([]byte("hi there"), 32),
 				wantErr: true,
 			},
 			{
@@ -675,7 +675,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 
 	bs := &Server{
@@ -710,7 +710,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 
 		b2 := testutil.NewBeaconBlock()
 		b2.Block.Slot = 30
-		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 
 		bs := &Server{
@@ -744,7 +744,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 
 		b2 := testutil.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
-		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 		signedBlk, err := wrapper.WrappedAltairSignedBeaconBlock(b2)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
@@ -782,11 +782,11 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	headBlock := blkContainers[len(blkContainers)-1]
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte{1}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	b3.Block.ParentRoot = bytes.PadTo([]byte{4}, 32)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 	bs := &Server{
@@ -845,7 +845,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		},
 		{
 			name:    "non-existent root",
-			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			blockID: bytes.PadTo([]byte("hi there"), 32),
 			wantErr: true,
 		},
 		{
@@ -937,7 +937,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		},
 		{
 			name:    "non-existent root",
-			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			blockID: bytes.PadTo([]byte("hi there"), 32),
 			wantErr: true,
 		},
 		{

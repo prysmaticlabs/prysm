@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
@@ -64,7 +64,7 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 
 	require.Equal(t, numAccounts-1, len(store.PublicKeys))
 	require.Equal(t, numAccounts-1, len(store.PrivateKeys))
-	require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+	require.LogsContain(t, hook, fmt.Sprintf("%#x", bytes.Trunc(accountPubKey[:])))
 	require.LogsContain(t, hook, "Successfully deleted validator account")
 }
 
@@ -84,7 +84,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
-		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
+		pubKey := bytes.ToBytes48(privKey.PublicKey().Marshal())
 		wantedPubKeys = append(wantedPubKeys, pubKey)
 		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
 		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKey.Marshal())
@@ -117,8 +117,8 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
 		privKeyData := privKey.Marshal()
-		pubKey := bytesutil.ToBytes48(privKey.PublicKey().Marshal())
-		wantedPrivateKeys[i] = bytesutil.ToBytes32(privKeyData)
+		pubKey := bytes.ToBytes48(privKey.PublicKey().Marshal())
+		wantedPrivateKeys[i] = bytes.ToBytes32(privKeyData)
 		dr.accountsStore.PublicKeys = append(dr.accountsStore.PublicKeys, pubKey[:])
 		dr.accountsStore.PrivateKeys = append(dr.accountsStore.PrivateKeys, privKeyData)
 	}

@@ -11,8 +11,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/progressutil:go_default_library",
         "//shared/slashutil:go_default_library",

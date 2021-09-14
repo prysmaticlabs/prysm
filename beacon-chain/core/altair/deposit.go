@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // ProcessDeposits processes validator deposits for beacon state Altair.
@@ -27,7 +27,7 @@ func ProcessDeposits(
 		}
 		beaconState, err = ProcessDeposit(ctx, beaconState, deposit, batchVerified)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytes.Trunc(deposit.Data.PublicKey))
 		}
 	}
 	return beaconState, nil

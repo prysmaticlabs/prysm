@@ -15,9 +15,9 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"google.golang.org/grpc"
@@ -240,7 +240,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
 	for i := range resp.ValidatingPublicKeys {
-		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
+		pubKeys[i] = bytes.ToBytes48(resp.ValidatingPublicKeys[i])
 	}
 	return pubKeys, nil
 }

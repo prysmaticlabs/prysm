@@ -16,11 +16,11 @@ go_library(
         "//validator/client:__pkg__",
     ],
     deps = [
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/metadata:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -37,7 +37,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

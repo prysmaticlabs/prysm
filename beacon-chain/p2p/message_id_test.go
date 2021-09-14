@@ -9,7 +9,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestMsgID_HashesCorrectly(t *testing.T) {
-	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
+	genesisValidatorsRoot := bytes.PadTo([]byte{'A'}, 32)
 	d, err := p2putils.CreateForkDigest(time.Now(), genesisValidatorsRoot)
 	assert.NoError(t, err)
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
@@ -36,12 +36,12 @@ func TestMsgID_HashesCorrectly(t *testing.T) {
 }
 
 func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
-	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
+	genesisValidatorsRoot := bytes.PadTo([]byte{'A'}, 32)
 	d, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
 	topicLen := uint64(len(tpc))
-	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
+	topicLenBytes := bytes.Uint64ToBytesLittleEndian(topicLen)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
 	// Create object to hash

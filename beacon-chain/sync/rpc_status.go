@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -307,10 +307,10 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
-	if !s.cfg.DB.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+	if !s.cfg.DB.IsFinalizedBlock(ctx, bytes.ToBytes32(msg.FinalizedRoot)) {
 		return p2ptypes.ErrInvalidFinalizedRoot
 	}
-	blk, err := s.cfg.DB.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
+	blk, err := s.cfg.DB.Block(ctx, bytes.ToBytes32(msg.FinalizedRoot))
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
@@ -326,7 +326,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return p2ptypes.ErrGeneric
 	}
 	if startSlot > blk.Block().Slot() {
-		childBlock, err := s.cfg.DB.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
+		childBlock, err := s.cfg.DB.FinalizedChildBlock(ctx, bytes.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
 			return p2ptypes.ErrGeneric
 		}

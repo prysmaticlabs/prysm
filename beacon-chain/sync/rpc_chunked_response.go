@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -113,7 +113,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 
 func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (block.SignedBeaconBlock, error) {
 	if len(digest) == 0 {
-		bFunc, ok := types.BlockMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		bFunc, ok := types.BlockMap[bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {
 			return nil, errors.New("no block type exists for the genesis fork version.")
 		}
@@ -128,7 +128,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 		if err != nil {
 			return nil, err
 		}
-		if rDigest == bytesutil.ToBytes4(digest) {
+		if rDigest == bytes.ToBytes4(digest) {
 			return blkFunc()
 		}
 	}

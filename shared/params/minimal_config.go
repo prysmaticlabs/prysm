@@ -4,7 +4,7 @@ import (
 	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // UseMinimalConfig for beacon chain services.
@@ -74,11 +74,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxVoluntaryExits = 16
 
 	// Signature domains
-	minimalConfig.DomainBeaconProposer = bytesutil.ToBytes4(bytesutil.Bytes4(0))
-	minimalConfig.DomainBeaconAttester = bytesutil.ToBytes4(bytesutil.Bytes4(1))
-	minimalConfig.DomainRandao = bytesutil.ToBytes4(bytesutil.Bytes4(2))
-	minimalConfig.DomainDeposit = bytesutil.ToBytes4(bytesutil.Bytes4(3))
-	minimalConfig.DomainVoluntaryExit = bytesutil.ToBytes4(bytesutil.Bytes4(4))
+	minimalConfig.DomainBeaconProposer = bytes.ToBytes4(bytes.Bytes4(0))
+	minimalConfig.DomainBeaconAttester = bytes.ToBytes4(bytes.Bytes4(1))
+	minimalConfig.DomainRandao = bytes.ToBytes4(bytes.Bytes4(2))
+	minimalConfig.DomainDeposit = bytes.ToBytes4(bytes.Bytes4(3))
+	minimalConfig.DomainVoluntaryExit = bytes.ToBytes4(bytes.Bytes4(4))
 	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
 
 	minimalConfig.DepositContractTreeDepth = 32

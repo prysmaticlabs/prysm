@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 var (
@@ -87,7 +87,7 @@ func main() {
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
-			parentRoot: bytesutil.ToBytes32(b.Block().ParentRoot()),
+			parentRoot: bytes.ToBytes32(b.Block().ParentRoot()),
 			dothNode:   &dotN,
 		}
 		m[r] = n

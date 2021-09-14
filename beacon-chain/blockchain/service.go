@@ -29,9 +29,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -110,7 +110,7 @@ func (s *Service) Start() {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
 
-	r := bytesutil.ToBytes32(cp.Root)
+	r := bytes.ToBytes32(cp.Root)
 	// Before the first finalized epoch, in the current epoch,
 	// the finalized root is defined as zero hashes instead of genesis root hash.
 	// We want to use genesis root to retrieve for state.
@@ -165,7 +165,7 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
+		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytes.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
 		s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
@@ -398,7 +398,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
+	finalizedRoot := s.ensureRootNotZeros(bytes.ToBytes32(finalized.Root))
 	var finalizedState state.BeaconState
 
 	finalizedState, err = s.cfg.StateGen.Resume(ctx)
@@ -458,7 +458,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
 func (s *Service) resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint *ethpb.Checkpoint) {
-	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytes.ToBytes32(finalizedCheckpoint.Root))
 	s.cfg.ForkChoiceStore = store
 }
 

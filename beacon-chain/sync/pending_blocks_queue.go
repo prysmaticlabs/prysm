@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -90,7 +90,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			inPendingQueue := s.seenPendingBlocks[bytes.ToBytes32(b.Block().ParentRoot())]
 			s.pendingQueueLock.RUnlock()
 
 			blkRoot, err := b.Block().HashTreeRoot()
@@ -99,7 +99,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
-			parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentIsBad := s.hasBadBlock(bytes.ToBytes32(b.Block().ParentRoot()))
 			blockIsBad := s.hasBadBlock(blkRoot)
 			// Check if parent is a bad block.
 			if parentIsBad || blockIsBad {
@@ -118,7 +118,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			inDB := s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			inDB := s.cfg.DB.HasBlock(ctx, bytes.ToBytes32(b.Block().ParentRoot()))
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in DB, not in pending cache
@@ -126,9 +126,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			if !inPendingQueue && !inDB && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
-					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
+					"parentRoot":  hex.EncodeToString(bytes.Trunc(b.Block().ParentRoot())),
 				}).Debug("Requesting parent block")
-				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block().ParentRoot()))
+				parentRoots = append(parentRoots, bytes.ToBytes32(b.Block().ParentRoot()))
 
 				span.End()
 				continue
@@ -174,7 +174,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			log.WithFields(logrus.Fields{
 				"slot":      slot,
-				"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
+				"blockRoot": hex.EncodeToString(bytes.Trunc(blkRoot[:])),
 			}).Debug("Processed pending block and cleared it in cache")
 
 			span.End()
@@ -264,7 +264,7 @@ func (s *Service) validatePendingSlots() error {
 		for _, b := range blks {
 			epoch := core.SlotToEpoch(slot)
 			// remove all descendant blocks of old blocks
-			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
+			if oldBlockRoots[bytes.ToBytes32(b.Block().ParentRoot())] {
 				root, err := b.Block().HashTreeRoot()
 				if err != nil {
 					return err
@@ -386,11 +386,11 @@ func (s *Service) addPendingBlockToCache(b block.SignedBeaconBlock) error {
 // This converts input string to slot.
 func cacheKeyToSlot(s string) types.Slot {
 	b := []byte(s)
-	return bytesutil.BytesToSlotBigEndian(b)
+	return bytes.BytesToSlotBigEndian(b)
 }
 
 // This converts input slot to a key to be used for slotToPendingBlocks cache.
 func slotToCacheKey(s types.Slot) string {
-	b := bytesutil.SlotToBytesBigEndian(s)
+	b := bytes.SlotToBytesBigEndian(s)
 	return string(b)
 }

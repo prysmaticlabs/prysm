@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -46,7 +46,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
+	genValRoot := bytes.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},

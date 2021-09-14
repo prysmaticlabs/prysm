@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -619,7 +619,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlot := append(seed[:], bytes.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)

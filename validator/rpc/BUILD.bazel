@@ -79,10 +79,10 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//cmd/validator/flags:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",

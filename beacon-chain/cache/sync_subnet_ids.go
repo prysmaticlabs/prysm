@@ -6,7 +6,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -126,6 +126,6 @@ func (s *syncSubnetIDs) EmptyAllCaches() {
 // build a key composed of both the pubkey and epoch here. The epoch
 // here would be the 1st epoch of the sync committee period.
 func keyBuilder(pubkey []byte, epoch types.Epoch) string {
-	epochBytes := bytesutil.Bytes8(uint64(epoch))
+	epochBytes := bytes.Bytes8(uint64(epoch))
 	return string(append(pubkey, epochBytes...))
 }

@@ -12,9 +12,9 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -105,7 +105,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: bytes.PadTo([]byte("A"), 96),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +113,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: bytes.PadTo([]byte("B"), 96),
 			},
 		},
 	}
@@ -131,7 +131,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"validator with key %#x is not slashable",
-		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
+		bytes.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
 	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, b.Block.Body.ProposerSlashings, v.SlashValidator)
 	assert.ErrorContains(t, want, err)
@@ -146,7 +146,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+			StateRoot:     bytes.PadTo([]byte("A"), 32),
 		}),
 	}
 	var err error
@@ -156,7 +156,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	header2 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+			StateRoot:     bytes.PadTo([]byte("B"), 32),
 		},
 	})
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
@@ -194,7 +194,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+			StateRoot:     bytes.PadTo([]byte("A"), 32),
 		}),
 	}
 	var err error
@@ -204,7 +204,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	header2 := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+			StateRoot:     bytes.PadTo([]byte("B"), 32),
 		},
 	})
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
@@ -305,18 +305,18 @@ func TestVerifyProposerSlashing(t *testing.T) {
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte("foo"), 32),
+							StateRoot:     bytes.PadTo([]byte{}, 32),
+							BodyRoot:      bytes.PadTo([]byte{}, 32),
+							ParentRoot:    bytes.PadTo([]byte("foo"), 32),
 						},
 					},
 					Header_2: &ethpb.SignedBeaconBlockHeader{
 						Header: &ethpb.BeaconBlockHeader{
 							ProposerIndex: 1,
 							Slot:          65,
-							StateRoot:     bytesutil.PadTo([]byte{}, 32),
-							BodyRoot:      bytesutil.PadTo([]byte{}, 32),
-							ParentRoot:    bytesutil.PadTo([]byte("bar"), 32),
+							StateRoot:     bytes.PadTo([]byte{}, 32),
+							BodyRoot:      bytes.PadTo([]byte{}, 32),
+							ParentRoot:    bytes.PadTo([]byte("bar"), 32),
 						},
 					},
 				},

@@ -3,8 +3,8 @@ package helpers
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -28,7 +28,7 @@ func Seed(state state.ReadOnlyBeaconState, epoch types.Epoch, domain [bls.Domain
 	if err != nil {
 		return [32]byte{}, err
 	}
-	seed := append(domain[:], bytesutil.Bytes8(uint64(epoch))...)
+	seed := append(domain[:], bytes.Bytes8(uint64(epoch))...)
 	seed = append(seed, randaoMix...)
 
 	seed32 := hashutil.Hash(seed)

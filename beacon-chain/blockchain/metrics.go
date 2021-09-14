@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
@@ -131,7 +131,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheck
 	beaconHeadSlot.Set(float64(headSlot))
 	if finalizedCheckpoint != nil {
 		headFinalizedEpoch.Set(float64(finalizedCheckpoint.Epoch))
-		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCheckpoint.Root)))
+		headFinalizedRoot.Set(float64(bytes.ToLowInt64(finalizedCheckpoint.Root)))
 	}
 }
 
@@ -210,15 +210,15 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 
 	// Last justified slot
 	beaconCurrentJustifiedEpoch.Set(float64(postState.CurrentJustifiedCheckpoint().Epoch))
-	beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(postState.CurrentJustifiedCheckpoint().Root)))
+	beaconCurrentJustifiedRoot.Set(float64(bytes.ToLowInt64(postState.CurrentJustifiedCheckpoint().Root)))
 
 	// Last previous justified slot
 	beaconPrevJustifiedEpoch.Set(float64(postState.PreviousJustifiedCheckpoint().Epoch))
-	beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(postState.PreviousJustifiedCheckpoint().Root)))
+	beaconPrevJustifiedRoot.Set(float64(bytes.ToLowInt64(postState.PreviousJustifiedCheckpoint().Root)))
 
 	// Last finalized slot
 	beaconFinalizedEpoch.Set(float64(postState.FinalizedCheckpointEpoch()))
-	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(postState.FinalizedCheckpoint().Root)))
+	beaconFinalizedRoot.Set(float64(bytes.ToLowInt64(postState.FinalizedCheckpoint().Root)))
 	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
 
 	var b *precompute.Balance

@@ -15,9 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -82,9 +82,9 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 	// Check that the block being voted on isn't invalid.
-	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
+	if s.hasBadBlock(bytes.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
+		s.hasBadBlock(bytes.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
+		s.hasBadBlock(bytes.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
 		return pubsub.ValidationReject
 	}
 
@@ -195,7 +195,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
 	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
-	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
+	blockRoot := bytes.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(satt)
@@ -208,7 +208,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
 	s.seenAggregatedAttestationLock.RLock()
 	defer s.seenAggregatedAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
+	b := append(bytes.Bytes32(uint64(epoch)), bytes.Bytes32(uint64(aggregatorIndex))...)
 	_, seen := s.seenAggregatedAttestationCache.Get(string(b))
 	return seen
 }
@@ -217,7 +217,7 @@ func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex
 func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
 	s.seenAggregatedAttestationLock.Lock()
 	defer s.seenAggregatedAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
+	b := append(bytes.Bytes32(uint64(epoch)), bytes.Bytes32(uint64(aggregatorIndex))...)
 	s.seenAggregatedAttestationCache.Add(string(b), true)
 }
 

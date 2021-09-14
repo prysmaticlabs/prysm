@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -118,7 +118,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					if encExistingAttRecord == nil {
 						continue
 					}
-					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
+					existingSigningRoot := bytes.ToBytes32(attRecordsKey[:signingRootSize])
 					if existingSigningRoot != attToProcess.SigningRoot {
 						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 						if err != nil {
@@ -308,7 +308,7 @@ func (s *Store) CheckDoubleBlockProposals(
 			if len(encExistingProposalWrapper) < signingRootSize {
 				continue
 			}
-			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:signingRootSize])
+			existingSigningRoot := bytes.ToBytes32(encExistingProposalWrapper[:signingRootSize])
 			if existingSigningRoot != proposal.SigningRoot {
 				existingProposalWrapper, err := decodeProposalRecord(encExistingProposalWrapper)
 				if err != nil {
@@ -503,7 +503,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: decodedAtt,
-		SigningRoot:        bytesutil.ToBytes32(signingRoot),
+		SigningRoot:        bytes.ToBytes32(signingRoot),
 	}, nil
 }
 
@@ -536,7 +536,7 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: decodedBlkHdr,
-		SigningRoot:             bytesutil.ToBytes32(signingRoot),
+		SigningRoot:             bytes.ToBytes32(signingRoot),
 	}, nil
 }
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
 )
@@ -76,16 +76,16 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					for targetEpoch := uint64(1); targetEpoch <= numEpochs; targetEpoch++ {
 						var sr [32]byte
 						copy(sr[:], fmt.Sprintf("%d", targetEpoch))
-						targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+						targetEpochBytes := bytes.Uint64ToBytesBigEndian(targetEpoch)
 						migratedSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 						require.DeepEqual(t, sr[:], migratedSigningRoot)
 					}
 
 					// Verify we have (source epoch, target epoch) pairs for epochs 0 to 50 correctly.
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs; sourceEpoch++ {
-						sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
+						sourceEpochBytes := bytes.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-						targetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
+						targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
 						require.Equal(t, sourceEpoch+1, targetEpoch)
 					}
 					return nil
@@ -162,16 +162,16 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					for targetEpoch := uint64(1); targetEpoch <= numEpochs+1; targetEpoch++ {
 						var sr [32]byte
 						copy(sr[:], fmt.Sprintf("%d", targetEpoch))
-						targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+						targetEpochBytes := bytes.Uint64ToBytesBigEndian(targetEpoch)
 						migratedSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 						require.DeepEqual(t, sr[:], migratedSigningRoot)
 					}
 
 					// Verify we have (source epoch, target epoch) pairs for epochs 0 to 50 correctly.
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs+1; sourceEpoch++ {
-						sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
+						sourceEpochBytes := bytes.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-						targetEpoch := bytesutil.BytesToUint64BigEndian(targetEpochBytes)
+						targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
 						require.Equal(t, sourceEpoch+1, targetEpoch)
 					}
 					return nil
@@ -249,8 +249,8 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						// The highest epoch we write is 50.
 						highestEpoch := uint64(50)
 						for i := uint64(1); i <= highestEpoch; i++ {
-							source := bytesutil.Uint64ToBytesBigEndian(i - 1)
-							target := bytesutil.Uint64ToBytesBigEndian(i)
+							source := bytes.Uint64ToBytesBigEndian(i - 1)
+							target := bytes.Uint64ToBytesBigEndian(i)
 							if err := sourceEpochsBucket.Put(source, target); err != nil {
 								return err
 							}

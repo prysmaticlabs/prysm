@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	bolt "go.etcd.io/bbolt"
@@ -53,7 +53,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 			}
 
 			bucket := tx.Bucket(validatorsMinMaxSpanBucketNew)
-			if err := bucket.Put(bytesutil.Bytes8(uint64(epoch)), epochStore.Bytes()); err != nil {
+			if err := bucket.Put(bytes.Bytes8(uint64(epoch)), epochStore.Bytes()); err != nil {
 				return err
 			}
 			epochSpansCacheEvictions.Inc()
@@ -82,7 +82,7 @@ func (s *Store) EpochSpans(_ context.Context, epoch types.Epoch, fromCache bool)
 		if b == nil {
 			return nil
 		}
-		spans := b.Get(bytesutil.Bytes8(uint64(epoch)))
+		spans := b.Get(bytes.Bytes8(uint64(epoch)))
 		copiedSpans = make([]byte, len(spans))
 		copy(copiedSpans, spans)
 		return nil
@@ -118,7 +118,7 @@ func (s *Store) SaveEpochSpans(ctx context.Context, epoch types.Epoch, es *slash
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(uint64(epoch)), es.Bytes())
+		return b.Put(bytes.Bytes8(uint64(epoch)), es.Bytes())
 	})
 }
 

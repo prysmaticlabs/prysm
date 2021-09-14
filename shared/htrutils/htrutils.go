@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -18,7 +18,7 @@ import (
 func Uint64Root(val uint64) [32]byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, val)
-	root := bytesutil.ToBytes32(buf)
+	root := bytes.ToBytes32(buf)
 	return root
 }
 
@@ -28,13 +28,13 @@ func Uint64Root(val uint64) [32]byte {
 func ForkRoot(fork *ethpb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	if fork != nil {
-		prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)
+		prevRoot := bytes.ToBytes32(fork.PreviousVersion)
 		fieldRoots[0] = prevRoot[:]
-		currRoot := bytesutil.ToBytes32(fork.CurrentVersion)
+		currRoot := bytes.ToBytes32(fork.CurrentVersion)
 		fieldRoots[1] = currRoot[:]
 		forkEpochBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(forkEpochBuf, uint64(fork.Epoch))
-		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
+		epochRoot := bytes.ToBytes32(forkEpochBuf)
 		fieldRoots[2] = epochRoot[:]
 	}
 	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
@@ -48,9 +48,9 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 	if checkpoint != nil {
 		epochBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(epochBuf, uint64(checkpoint.Epoch))
-		epochRoot := bytesutil.ToBytes32(epochBuf)
+		epochRoot := bytes.ToBytes32(epochBuf)
 		fieldRoots[0] = epochRoot[:]
-		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)
+		ckpRoot := bytes.ToBytes32(checkpoint.Root)
 		fieldRoots[1] = ckpRoot[:]
 	}
 	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))

@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -48,7 +48,7 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 	t.Run("verified", func(t *testing.T) {
 		pubkeys := make([]bls.PublicKey, 0, 100)
 		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := bytesutil.ToBytes32([]byte("hello"))
+		msg := bytes.ToBytes32([]byte("hello"))
 		for i := 0; i < 100; i++ {
 			priv, err := bls.RandKey()
 			require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 		}
 		aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
 		require.NoError(t, err)
-		assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)), "Signature not suppose to verify")
+		assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, bytes.ToBytes32(msg)), "Signature not suppose to verify")
 	})
 }
 

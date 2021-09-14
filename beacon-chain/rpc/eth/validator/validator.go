@@ -17,11 +17,11 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -190,7 +190,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 
 	committeePubkeys := make(map[[48]byte][]uint64)
 	for j, pubkey := range committee.Pubkeys {
-		pubkey48 := bytesutil.ToBytes48(pubkey)
+		pubkey48 := bytes.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
 	}
 	duties := make([]*ethpbv2.SyncCommitteeDuty, len(req.Index))

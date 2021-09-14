@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	bolt "go.etcd.io/bbolt"
@@ -165,7 +165,7 @@ func (s *Store) GetLatestEpochDetected(ctx context.Context) (types.Epoch, error)
 			epoch = 0
 			return nil
 		}
-		epoch = types.Epoch(bytesutil.FromBytes8(enc))
+		epoch = types.Epoch(bytes.FromBytes8(enc))
 		return nil
 	})
 	return epoch, err
@@ -177,7 +177,7 @@ func (s *Store) SetLatestEpochDetected(ctx context.Context, epoch types.Epoch) e
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(uint64(epoch)))
+		err := b.Put([]byte(latestEpochKey), bytes.Bytes8(uint64(epoch)))
 		return err
 	})
 }

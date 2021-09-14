@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -108,17 +108,17 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte
 		return sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsList []byte) error {
 			targetEpochs := make([]types.Epoch, 0)
 			for i := 0; i < len(targetEpochsList); i += 8 {
-				epoch := bytesutil.BytesToEpochBigEndian(targetEpochsList[i : i+8])
+				epoch := bytes.BytesToEpochBigEndian(targetEpochsList[i : i+8])
 				targetEpochs = append(targetEpochs, epoch)
 			}
-			sourceEpoch := bytesutil.BytesToEpochBigEndian(sourceBytes)
+			sourceEpoch := bytes.BytesToEpochBigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
 				record := &AttestationRecord{
 					PubKey: pubKey,
 					Source: sourceEpoch,
 					Target: targetEpoch,
 				}
-				signingRoot := signingRootsBucket.Get(bytesutil.EpochToBytesBigEndian(targetEpoch))
+				signingRoot := signingRootsBucket.Get(bytes.EpochToBytesBigEndian(targetEpoch))
 				if signingRoot != nil {
 					copy(record.SigningRoot[:], signingRoot)
 				}
@@ -151,7 +151,7 @@ func (s *Store) CheckSlashableAttestation(
 		// First we check for double votes.
 		signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 		if signingRootsBucket != nil {
-			targetEpochBytes := bytesutil.EpochToBytesBigEndian(att.Data.Target.Epoch)
+			targetEpochBytes := bytes.EpochToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
 			if existingSigningRoot != nil {
 				var existing [32]byte
@@ -197,7 +197,7 @@ func (s *Store) checkSurroundedVote(
 ) (SlashingKind, error) {
 	c := targetEpochsBucket.Cursor()
 	for k, v := c.Last(); k != nil; k, v = c.Prev() {
-		existingTargetEpoch := bytesutil.BytesToEpochBigEndian(k)
+		existingTargetEpoch := bytes.BytesToEpochBigEndian(k)
 		if existingTargetEpoch <= att.Data.Target.Epoch {
 			break
 		}
@@ -205,7 +205,7 @@ func (s *Store) checkSurroundedVote(
 		// There can be multiple source epochs attested per target epoch.
 		attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
 		for i := 0; i < len(v); i += 8 {
-			sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
+			sourceEpoch := bytes.BytesToEpochBigEndian(v[i : i+8])
 			attestedSourceEpochs = append(attestedSourceEpochs, sourceEpoch)
 		}
 
@@ -237,7 +237,7 @@ func (s *Store) checkSurroundingVote(
 ) (SlashingKind, error) {
 	c := sourceEpochsBucket.Cursor()
 	for k, v := c.Last(); k != nil; k, v = c.Prev() {
-		existingSourceEpoch := bytesutil.BytesToEpochBigEndian(k)
+		existingSourceEpoch := bytes.BytesToEpochBigEndian(k)
 		if existingSourceEpoch <= att.Data.Source.Epoch {
 			break
 		}
@@ -245,7 +245,7 @@ func (s *Store) checkSurroundingVote(
 		// There can be multiple target epochs attested per source epoch.
 		attestedTargetEpochs := make([]types.Epoch, 0, len(v)/8)
 		for i := 0; i < len(v); i += 8 {
-			targetEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
+			targetEpoch := bytes.BytesToEpochBigEndian(v[i : i+8])
 			attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
 		}
 
@@ -414,8 +414,8 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create public key bucket")
 			}
-			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(att.Source)
-			targetEpochBytes := bytesutil.EpochToBytesBigEndian(att.Target)
+			sourceEpochBytes := bytes.EpochToBytesBigEndian(att.Source)
+			targetEpochBytes := bytes.EpochToBytesBigEndian(att.Target)
 
 			signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
 			if err != nil {
@@ -462,11 +462,11 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			lowestSignedSourceBytes := lowestSourceBucket.Get(att.PubKey[:])
 			var lowestSignedSourceEpoch types.Epoch
 			if len(lowestSignedSourceBytes) >= 8 {
-				lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
+				lowestSignedSourceEpoch = bytes.BytesToEpochBigEndian(lowestSignedSourceBytes)
 			}
 			if len(lowestSignedSourceBytes) == 0 || att.Source < lowestSignedSourceEpoch {
 				if err := lowestSourceBucket.Put(
-					att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Source),
+					att.PubKey[:], bytes.EpochToBytesBigEndian(att.Source),
 				); err != nil {
 					return err
 				}
@@ -476,11 +476,11 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			lowestSignedTargetBytes := lowestTargetBucket.Get(att.PubKey[:])
 			var lowestSignedTargetEpoch types.Epoch
 			if len(lowestSignedTargetBytes) >= 8 {
-				lowestSignedTargetEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedTargetBytes)
+				lowestSignedTargetEpoch = bytes.BytesToEpochBigEndian(lowestSignedTargetBytes)
 			}
 			if len(lowestSignedTargetBytes) == 0 || att.Target < lowestSignedTargetEpoch {
 				if err := lowestTargetBucket.Put(
-					att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Target),
+					att.PubKey[:], bytes.EpochToBytesBigEndian(att.Target),
 				); err != nil {
 					return err
 				}
@@ -524,7 +524,7 @@ func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [48]byte, t
 		if signingRootsBucket == nil {
 			return nil
 		}
-		sr := signingRootsBucket.Get(bytesutil.EpochToBytesBigEndian(target))
+		sr := signingRootsBucket.Get(bytes.EpochToBytesBigEndian(target))
 		copy(signingRoot[:], sr)
 		return nil
 	})
@@ -543,12 +543,12 @@ func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte)
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
 		lowestSignedSourceBytes := bucket.Get(publicKey[:])
-		// 8 because bytesutil.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytes.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
 		if len(lowestSignedSourceBytes) < 8 {
 			return nil
 		}
 		exists = true
-		lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
+		lowestSignedSourceEpoch = bytes.BytesToEpochBigEndian(lowestSignedSourceBytes)
 		return nil
 	})
 	return lowestSignedSourceEpoch, exists, err
@@ -566,12 +566,12 @@ func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte)
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedTargetBucket)
 		lowestSignedTargetBytes := bucket.Get(publicKey[:])
-		// 8 because bytesutil.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytes.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
 		if len(lowestSignedTargetBytes) < 8 {
 			return nil
 		}
 		exists = true
-		lowestSignedTargetEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedTargetBytes)
+		lowestSignedTargetEpoch = bytes.BytesToEpochBigEndian(lowestSignedTargetBytes)
 		return nil
 	})
 	return lowestSignedTargetEpoch, exists, err

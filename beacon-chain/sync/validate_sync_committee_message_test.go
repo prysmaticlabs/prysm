@@ -22,8 +22,8 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -327,7 +327,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+					PublicKey:                   bytes.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				// Set Topic and Subnet
@@ -381,7 +381,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+					PublicKey:                   bytes.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()

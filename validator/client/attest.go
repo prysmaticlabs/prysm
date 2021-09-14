@@ -11,10 +11,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -55,7 +55,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytes.Trunc(pubKey[:]))).WithField("slot", slot)
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
@@ -191,7 +191,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
+	return nil, fmt.Errorf("pubkey %#x not in duties", bytes.Trunc(pubKey[:]))
 }
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.

@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
@@ -32,17 +32,17 @@ func Test_deleteValueForIndices(t *testing.T) {
 		{
 			name:          "empty input, root does not exist",
 			inputIndices:  map[string][]byte{},
-			root:          bytesutil.PadTo([]byte("not found"), 32),
+			root:          bytes.PadTo([]byte("not found"), 32),
 			outputIndices: map[string][]byte{},
 		},
 		{
 			name: "non empty input, root does not exist",
 			inputIndices: map[string][]byte{
-				"blocks": bytesutil.PadTo([]byte{0xde, 0xad, 0xbe, 0xef}, 64),
+				"blocks": bytes.PadTo([]byte{0xde, 0xad, 0xbe, 0xef}, 64),
 			},
-			root: bytesutil.PadTo([]byte("not found"), 32),
+			root: bytes.PadTo([]byte("not found"), 32),
 			outputIndices: map[string][]byte{
-				"blocks": bytesutil.PadTo([]byte{0xde, 0xad, 0xbe, 0xef}, 64),
+				"blocks": bytes.PadTo([]byte{0xde, 0xad, 0xbe, 0xef}, 64),
 			},
 		},
 		{

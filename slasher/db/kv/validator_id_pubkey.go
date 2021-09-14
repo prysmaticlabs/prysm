@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -18,7 +18,7 @@ func (s *Store) ValidatorPubKey(ctx context.Context, validatorIndex types.Valida
 	var pk []byte
 	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsPublicKeysBucket)
-		pk = b.Get(bytesutil.Bytes4(uint64(validatorIndex)))
+		pk = b.Get(bytes.Bytes4(uint64(validatorIndex)))
 		return nil
 	})
 	return pk, err
@@ -30,7 +30,7 @@ func (s *Store) SavePubKey(ctx context.Context, validatorIndex types.ValidatorIn
 	defer span.End()
 	err := s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsPublicKeysBucket)
-		key := bytesutil.Bytes4(uint64(validatorIndex))
+		key := bytes.Bytes4(uint64(validatorIndex))
 		if err := bucket.Put(key, pubKey); err != nil {
 			return errors.Wrap(err, "failed to add validator public key to slasher s.")
 		}
@@ -45,7 +45,7 @@ func (s *Store) DeletePubKey(ctx context.Context, validatorIndex types.Validator
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsPublicKeysBucket)
-		key := bytesutil.Bytes4(uint64(validatorIndex))
+		key := bytes.Bytes4(uint64(validatorIndex))
 		if err := bucket.Delete(key); err != nil {
 			return errors.Wrap(err, "failed to delete public key from validators public key bucket")
 		}

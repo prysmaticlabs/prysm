@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
@@ -104,7 +104,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
 		bar := initializeProgressBar(
 			len(proposalHistory.Proposals),
-			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
+			fmt.Sprintf("Importing proposals for validator public key %#x", bytes.Trunc(pubKey[:])),
 		)
 		for _, proposal := range proposalHistory.Proposals {
 			if err := bar.Add(1); err != nil {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -17,7 +17,7 @@ import (
 func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	root := bytesutil.ToBytes32([]byte{'A'})
+	root := bytes.ToBytes32([]byte{'A'})
 	cp := &ethpb.Checkpoint{
 		Epoch: 10,
 		Root:  root[:],
@@ -37,7 +37,7 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	genesis := bytes.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
 	blk := testutil.NewBeaconBlock()

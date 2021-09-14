@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -330,7 +330,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlot := append(seed[:], bytes.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)
@@ -341,7 +341,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlot := append(seed[:], bytes.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := computeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
 		require.NoError(t, err)
@@ -427,11 +427,11 @@ func TestDomain_OK(t *testing.T) {
 		domainType [4]byte
 		result     []byte
 	}{
-		{epoch: 1, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
-		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
-		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(947067381421703173, 32)},
-		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(9369798235163459588, 32)},
-		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(9369798235163459589, 32)},
+		{epoch: 1, domainType: bytes.ToBytes4(bytes.Bytes4(4)), result: bytes.ToBytes(947067381421703172, 32)},
+		{epoch: 2, domainType: bytes.ToBytes4(bytes.Bytes4(4)), result: bytes.ToBytes(947067381421703172, 32)},
+		{epoch: 2, domainType: bytes.ToBytes4(bytes.Bytes4(5)), result: bytes.ToBytes(947067381421703173, 32)},
+		{epoch: 3, domainType: bytes.ToBytes4(bytes.Bytes4(4)), result: bytes.ToBytes(9369798235163459588, 32)},
+		{epoch: 3, domainType: bytes.ToBytes4(bytes.Bytes4(5)), result: bytes.ToBytes(9369798235163459589, 32)},
 	}
 	for _, tt := range tests {
 		domain, err := Domain(state.Fork, tt.epoch, tt.domainType, nil)
@@ -603,7 +603,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 }
 
 func TestComputeProposerIndex(t *testing.T) {
-	seed := bytesutil.ToBytes32([]byte("seed"))
+	seed := bytes.ToBytes32([]byte("seed"))
 	type args struct {
 		validators []*ethpb.Validator
 		indices    []types.ValidatorIndex
@@ -781,7 +781,7 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 		if uint64(candidateIndex) >= uint64(len(validators)) {
 			return 0, errors.New("active index out of range")
 		}
-		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		b := append(seed[:], bytes.Bytes8(i/32)...)
 		randomByte := hashFunc(b)[i%32]
 		v := validators[candidateIndex]
 		var effectiveBal uint64

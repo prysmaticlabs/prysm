@@ -6,8 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -199,13 +199,13 @@ func BenchmarkInsertTrie_Optimized(b *testing.B) {
 	numDeposits := 16000
 	items := make([][]byte, numDeposits)
 	for i := 0; i < numDeposits; i++ {
-		someRoot := bytesutil.ToBytes32([]byte(strconv.Itoa(i)))
+		someRoot := bytes.ToBytes32([]byte(strconv.Itoa(i)))
 		items[i] = someRoot[:]
 	}
 	tr, err := GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(b, err)
 
-	someItem := bytesutil.ToBytes32([]byte("hello-world"))
+	someItem := bytes.ToBytes32([]byte("hello-world"))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		tr.Insert(someItem[:], i%numDeposits)

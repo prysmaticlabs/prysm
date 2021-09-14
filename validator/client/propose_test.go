@@ -10,11 +10,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -813,7 +813,7 @@ func TestSignBlock(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	secretKey, err := bls.SecretKeyFromBytes(bytes.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
 	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
@@ -846,7 +846,7 @@ func TestSignAltairBlock(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	secretKey, err := bls.SecretKeyFromBytes(bytes.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
 	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)

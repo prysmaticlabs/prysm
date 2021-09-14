@@ -5,9 +5,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -234,5 +234,5 @@ func ComputeForkDigest(version, genesisValidatorsRoot []byte) ([4]byte, error) {
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return bytesutil.ToBytes4(dataRoot[:]), nil
+	return bytes.ToBytes4(dataRoot[:]), nil
 }

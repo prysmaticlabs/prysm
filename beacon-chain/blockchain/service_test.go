@@ -24,10 +24,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -121,7 +121,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
-	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
+	require.NoError(t, cfg.StateGen.SaveState(ctx, bytes.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
 	chainService, err := NewService(ctx, cfg)
 	require.NoError(t, err, "Unable to setup chain service")
@@ -225,7 +225,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 	r, err := bc.HeadRoot(ctx)
 	require.NoError(t, err)
-	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
+	if bytes.ToBytes32(r) == params.BeaconConfig().ZeroHash {
 		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
 	}
 }
@@ -271,7 +271,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := testutil.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot
-	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headBlock.Block.ParentRoot = bytes.PadTo(genesisRoot[:], 32)
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
@@ -312,7 +312,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := testutil.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot
-	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headBlock.Block.ParentRoot = bytes.PadTo(genesisRoot[:], 32)
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))

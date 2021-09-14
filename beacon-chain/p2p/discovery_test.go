@@ -29,10 +29,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -65,7 +65,7 @@ func TestCreateListener(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
@@ -140,7 +140,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 			UDPPort: 0,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestHostIsResolved(t *testing.T) {
 			HostDNS: exampleHost,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 	}
 	ip, key := createAddrAndPrivKey(t)
 	list, err := s.createListener(ip, key)
@@ -361,7 +361,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now(),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -382,7 +382,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now(),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -404,7 +404,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-5 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -435,7 +435,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-5 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -465,7 +465,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-6 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: bytes.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)

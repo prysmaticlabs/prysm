@@ -8,8 +8,8 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -131,7 +131,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// Eth1DepositIndex root.
 	eth1DepositIndexBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eth1DepositIndexBuf, state.Eth1DepositIndex)
-	eth1DepositBuf := bytesutil.ToBytes32(eth1DepositIndexBuf)
+	eth1DepositBuf := bytes.ToBytes32(eth1DepositIndexBuf)
 	fieldRoots[10] = eth1DepositBuf[:]
 
 	// Validators slice root.
@@ -177,7 +177,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[16] = currAttsRoot[:]
 
 	// JustificationBits root.
-	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)
+	justifiedBitsRoot := bytes.ToBytes32(state.JustificationBits)
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.

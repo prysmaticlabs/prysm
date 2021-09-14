@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -151,7 +151,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		nextAssignment := &ethpb.DutiesResponse_Duty{
 			PublicKey: pubKey,
 		}
-		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		idx, ok := s.ValidatorIndexByPubkey(bytes.ToBytes48(pubKey))
 		if ok {
 			s := assignmentStatus(s, idx)
 

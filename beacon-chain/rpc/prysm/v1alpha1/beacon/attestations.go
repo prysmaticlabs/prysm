@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -46,7 +46,7 @@ func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethp
 		return attsMap
 	}
 	for _, att := range atts {
-		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
+		attsMap[bytes.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytes.ToBytes32(att.Data.Target.Root)], att)
 	}
 	return attsMap
 }
@@ -356,7 +356,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 				if len(aggAtts) == 0 {
 					continue
 				}
-				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+				targetRoot := bytes.ToBytes32(atts[0].Data.Target.Root)
 				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
 				attsByRoot[root] = make([]*ethpb.Attestation, 0)
 			}

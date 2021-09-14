@@ -20,9 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -394,8 +394,8 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 // ChainHeads mocks ChainHeads and always return nil.
 func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
 	return [][32]byte{
-			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
-			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
+			bytes.ToBytes32(bytes.PadTo([]byte("foo"), 32)),
+			bytes.ToBytes32(bytes.PadTo([]byte("bar"), 32)),
 		},
 		[]types.Slot{0, 1}
 }

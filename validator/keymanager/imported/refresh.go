@@ -8,9 +8,9 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -113,7 +113,7 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 			return errors.Wrap(err, "could not initialize private key")
 		}
 		pubKeyBytes := privKey.PublicKey().Marshal()
-		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
+		pubKeys[i] = bytes.ToBytes48(pubKeyBytes)
 	}
 	km.accountsStore = newAccountsStore
 	if err := km.initializeKeysCachesFromKeystore(); err != nil {

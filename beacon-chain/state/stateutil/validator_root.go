@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,8 +17,8 @@ import (
 func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	var fieldRoots [][32]byte
 	if validator != nil {
-		pubkey := bytesutil.ToBytes48(validator.PublicKey)
-		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
+		pubkey := bytes.ToBytes48(validator.PublicKey)
+		withdrawCreds := bytes.ToBytes32(validator.WithdrawalCredentials)
 		effectiveBalanceBuf := [32]byte{}
 		binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)
 		// Slashed.
@@ -97,9 +97,9 @@ func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	}
 
 	enc := make([]byte, 122)
-	pubkey := bytesutil.ToBytes48(validator.PublicKey)
+	pubkey := bytes.ToBytes48(validator.PublicKey)
 	copy(enc[0:48], pubkey[:])
-	withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
+	withdrawCreds := bytes.ToBytes32(validator.WithdrawalCredentials)
 	copy(enc[48:80], withdrawCreds[:])
 	effectiveBalanceBuf := [32]byte{}
 	binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)

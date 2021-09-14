@@ -4,8 +4,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -151,7 +151,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
+	return bytes.SafeCopy2dBytes(b.state.HistoricalRoots)
 }
 
 // balancesLength returns the length of the balances slice.

@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -43,7 +43,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
-	root1, root2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
+	root1, root2 := bytes.ToBytes32([]byte("foo")), bytes.ToBytes32([]byte("bar"))
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		BlockRoots: [][]byte{
 			root1[:],
@@ -318,7 +318,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 
 	// Ensure reference is properly accounted for.
 	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
+		assert.NotEqual(t, bytes.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
 }

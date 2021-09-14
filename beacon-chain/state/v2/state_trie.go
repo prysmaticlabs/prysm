@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -207,7 +207,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return bytes.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This
@@ -242,7 +242,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	case genesisTime:
 		return htrutils.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
-		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
+		return bytes.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return htrutils.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:
@@ -319,7 +319,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	case currentEpochParticipationBits:
 		return participationBitsRoot(b.state.CurrentEpochParticipation)
 	case justificationBits:
-		return bytesutil.ToBytes32(b.state.JustificationBits), nil
+		return bytes.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:

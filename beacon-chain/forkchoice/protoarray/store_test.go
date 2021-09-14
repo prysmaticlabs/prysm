@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -509,10 +509,10 @@ func TestStore_AncestorRoot(t *testing.T) {
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'c'}, 1)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'a'})
+	assert.Equal(t, bytes.ToBytes32(r), [32]byte{'a'})
 	r, err = f.AncestorRoot(ctx, [32]byte{'c'}, 2)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'b'})
+	assert.Equal(t, bytes.ToBytes32(r), [32]byte{'b'})
 }
 
 func TestStore_AncestorRootOutOfBound(t *testing.T) {

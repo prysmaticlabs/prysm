@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -340,7 +340,7 @@ func TestPrepareGraffiti(t *testing.T) {
 	}
 
 	t.Run("32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
+		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytes.PadTo([]byte("foo"), 32))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
@@ -362,7 +362,7 @@ func TestPrepareGraffiti(t *testing.T) {
 	})
 
 	t.Run("more_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
+		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytes.PadTo([]byte("foo"), 33))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(

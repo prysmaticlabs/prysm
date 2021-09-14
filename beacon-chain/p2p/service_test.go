@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -306,7 +306,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
 	gt := timeutils.Now()
-	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
+	gvr := bytes.PadTo([]byte("genesis validator root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())

@@ -5,10 +5,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -21,17 +21,17 @@ var (
 	committeeIndex   = types.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
-	parentRoot       = bytesutil.PadTo([]byte("parentroot"), 32)
-	stateRoot        = bytesutil.PadTo([]byte("stateroot"), 32)
-	signature        = bytesutil.PadTo([]byte("signature"), 96)
-	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 96)
-	depositRoot      = bytesutil.PadTo([]byte("depositroot"), 32)
-	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
-	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), 32)
-	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
-	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
-	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
-	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
+	parentRoot       = bytes.PadTo([]byte("parentroot"), 32)
+	stateRoot        = bytes.PadTo([]byte("stateroot"), 32)
+	signature        = bytes.PadTo([]byte("signature"), 96)
+	randaoReveal     = bytes.PadTo([]byte("randaoreveal"), 96)
+	depositRoot      = bytes.PadTo([]byte("depositroot"), 32)
+	blockHash        = bytes.PadTo([]byte("blockhash"), 32)
+	beaconBlockRoot  = bytes.PadTo([]byte("beaconblockroot"), 32)
+	sourceRoot       = bytes.PadTo([]byte("sourceroot"), 32)
+	targetRoot       = bytes.PadTo([]byte("targetroot"), 32)
+	bodyRoot         = bytes.PadTo([]byte("bodyroot"), 32)
+	selectionProof   = bytes.PadTo([]byte("selectionproof"), 96)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 

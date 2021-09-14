@@ -13,8 +13,8 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
@@ -126,7 +126,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
 		pubKeyStrings[i] = fmt.Sprintf(
-			"%d | %s | %#x", i, au.BrightGreen(name), au.BrightMagenta(bytesutil.Trunc(pk[:])),
+			"%d | %s | %#x", i, au.BrightGreen(name), au.BrightMagenta(bytes.Trunc(pk[:])),
 		)
 	}
 	templates := &promptui.SelectTemplates{

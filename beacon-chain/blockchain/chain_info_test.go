@@ -10,9 +10,9 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -42,7 +42,7 @@ func TestHeadRoot_Nil(t *testing.T) {
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
+	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytes.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
 	c.finalizedCheckpt = cp
 
@@ -64,8 +64,8 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	c := setupBeaconChain(t, beaconDB)
-	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
-	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
+	assert.Equal(t, params.BeaconConfig().ZeroHash, bytes.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
+	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytes.PadTo([]byte("foo"), 32)}
 	c.justifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
 }
@@ -84,9 +84,9 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
-	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
+	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytes.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
+	assert.Equal(t, params.BeaconConfig().ZeroHash, bytes.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	c.prevJustifiedCheckpt = cp
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
@@ -115,7 +115,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	c.head = &head{root: [32]byte{'A'}}
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, [32]byte{'A'}, bytesutil.ToBytes32(r))
+	assert.Equal(t, [32]byte{'A'}, bytes.ToBytes32(r))
 }
 
 func TestHeadRoot_UseDB(t *testing.T) {
@@ -130,7 +130,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, br, bytesutil.ToBytes32(r))
+	assert.Equal(t, br, bytes.ToBytes32(r))
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
@@ -308,7 +308,7 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	v, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), bytesutil.ToBytes48(v.PublicKey))
+	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), bytes.ToBytes48(v.PublicKey))
 	require.Equal(t, true, e)
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
@@ -324,5 +324,5 @@ func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
 	v, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	require.Equal(t, bytesutil.ToBytes48(v.PublicKey), p)
+	require.Equal(t, bytes.ToBytes48(v.PublicKey), p)
 }

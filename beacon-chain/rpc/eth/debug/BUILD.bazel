@@ -32,9 +32,9 @@ go_test(
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

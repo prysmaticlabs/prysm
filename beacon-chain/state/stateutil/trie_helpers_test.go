@@ -6,8 +6,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,7 +22,7 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {
-		roots = append(roots, bytesutil.ToBytes32(rt))
+		roots = append(roots, bytes.ToBytes32(rt))
 	}
 	layers := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 	newRoot := *layers[len(layers)-1][0]
@@ -53,7 +53,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {
-		roots = append(roots, bytesutil.ToBytes32(rt))
+		roots = append(roots, bytes.ToBytes32(rt))
 	}
 	layers := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 

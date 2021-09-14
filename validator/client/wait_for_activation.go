@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -76,7 +76,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 	}
 
 	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+		PublicKeys: bytes.FromBytes48Array(validatingKeys),
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {

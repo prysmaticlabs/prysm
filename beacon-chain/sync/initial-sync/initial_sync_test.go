@@ -21,10 +21,10 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -232,7 +232,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 		FinalizedEpoch: datum.finalizedEpoch,
-		HeadRoot:       bytesutil.PadTo([]byte("head_root"), 32),
+		HeadRoot:       bytes.PadTo([]byte("head_root"), 32),
 		HeadSlot:       datum.headSlot,
 	})
 

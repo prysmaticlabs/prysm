@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -111,9 +111,9 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := testutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	h := &ethpb.BeaconBlockHeader{
-		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
-		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
-		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+		StateRoot:  bytes.PadTo([]byte{'a'}, 32),
+		ParentRoot: bytes.PadTo([]byte{'b'}, 32),
+		BodyRoot:   bytes.PadTo([]byte{'c'}, 32),
 	}
 	require.NoError(t, bs.SetLatestBlockHeader(h))
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -134,7 +134,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 
 	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
 	for i, pk := range pubKeys {
-		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+		pubkeysAs48ByteType[i] = bytes.ToBytes48(pk)
 	}
 
 	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
@@ -231,7 +231,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		pubKeys[i] = bytes.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 
@@ -269,7 +269,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		pubKeys[i] = bytes.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 
@@ -335,7 +335,7 @@ func TestStreamDuties_OK(t *testing.T) {
 
 	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
 	for i, pk := range pubKeys {
-		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+		pubkeysAs48ByteType[i] = bytes.ToBytes48(pk)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -392,7 +392,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 
 	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
 	for i, pk := range pubKeys {
-		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+		pubkeysAs48ByteType[i] = bytes.ToBytes48(pk)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -491,7 +491,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		pubKeys[i] = bytes.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 

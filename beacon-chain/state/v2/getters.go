@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 )
@@ -287,7 +287,7 @@ func (b *BeaconState) blockRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
+	return bytes.SafeCopy2dBytes(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -313,7 +313,7 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
+	return bytes.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -337,7 +337,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
+	return bytes.SafeCopy2dBytes(b.state.StateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -363,7 +363,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
+	return bytes.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
@@ -387,7 +387,7 @@ func (b *BeaconState) historicalRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
+	return bytes.SafeCopy2dBytes(b.state.HistoricalRoots)
 }
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
@@ -604,7 +604,7 @@ func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if b.state.Validators[idx] == nil {
 		return [48]byte{}
 	}
-	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+	return bytes.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
 // NumValidators returns the size of the validator registry.
@@ -741,7 +741,7 @@ func (b *BeaconState) randaoMixes() [][]byte {
 		return nil
 	}
 
-	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
+	return bytes.SafeCopy2dBytes(b.state.RandaoMixes)
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -768,7 +768,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
+	return bytes.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -1145,7 +1145,7 @@ func CopySyncCommittee(data *ethpb.SyncCommittee) *ethpb.SyncCommittee {
 		return nil
 	}
 	return &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.SafeCopy2dBytes(data.Pubkeys),
-		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
+		Pubkeys:         bytes.SafeCopy2dBytes(data.Pubkeys),
+		AggregatePubkey: bytes.SafeCopyBytes(data.AggregatePubkey),
 	}
 }

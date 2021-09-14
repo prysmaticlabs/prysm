@@ -20,12 +20,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -89,7 +89,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 
 	parentRoot := [32]byte{1, 2, 3}
 	signedBlock := testutil.NewBeaconBlock()
-	signedBlock.Block.ParentRoot = bytesutil.PadTo(parentRoot[:], 32)
+	signedBlock.Block.ParentRoot = bytes.PadTo(parentRoot[:], 32)
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
 	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -122,9 +122,9 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 			{
 				Signature: make([]byte, 96),
 				Data: &ethpb.AttestationData{
-					Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-					Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+					Target:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte("root"), 32)},
+					Source:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte("root"), 32)},
+					BeaconBlockRoot: bytes.PadTo([]byte("root"), 32),
 					Slot:            i,
 				},
 				AggregationBits: bitfield.Bitlist{0b11},
@@ -179,7 +179,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 										Slot: 3,
 									},
 									AggregationBits: bitfield.Bitlist{0b11},
-									Signature:       bytesutil.PadTo([]byte("sig"), 96),
+									Signature:       bytes.PadTo([]byte("sig"), 96),
 								},
 							},
 						},
@@ -205,7 +205,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 									Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
 								},
 								AggregationBits: bitfield.Bitlist{0b11},
-								Signature:       bytesutil.PadTo([]byte("sig"), 96),
+								Signature:       bytes.PadTo([]byte("sig"), 96),
 							},
 						},
 					},
@@ -232,7 +232,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 										Slot: 4,
 									},
 									AggregationBits: bitfield.Bitlist{0b11},
-									Signature:       bytesutil.PadTo([]byte("sig"), 96),
+									Signature:       bytes.PadTo([]byte("sig"), 96),
 								},
 							},
 						},
@@ -374,7 +374,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+								BeaconBlockRoot: bytes.PadTo([]byte("root"), 32),
 								Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 								Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 								Slot:            i,
@@ -428,12 +428,12 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
 			{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-					Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
-					Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+					BeaconBlockRoot: bytes.PadTo([]byte("root"), 32),
+					Target:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte("root"), 32)},
+					Source:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte("root"), 32)},
 					Slot:            i,
 				},
-				Signature:       bytesutil.PadTo([]byte("root"), 96),
+				Signature:       bytes.PadTo([]byte("root"), 96),
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
@@ -461,8 +461,8 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	count := types.Slot(100)
 	atts := make([]*ethpb.Attestation, count)
-	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
-	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	targetRoot1 := bytes.ToBytes32([]byte("root1"))
+	targetRoot2 := bytes.ToBytes32([]byte("root2"))
 
 	for i := types.Slot(0); i < count; i++ {
 		var targetRoot [32]byte
@@ -494,8 +494,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
-	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
-	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	targetRoot1 := bytes.ToBytes32([]byte("root"))
+	targetRoot2 := bytes.ToBytes32([]byte("root2"))
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
@@ -576,9 +576,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])))
+	require.NoError(t, db.SaveState(ctx, state, bytes.ToBytes32(targetRoot1[:])))
 	require.NoError(t, state.SetSlot(state.Slot()+1))
-	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])))
+	require.NoError(t, db.SaveState(ctx, state, bytes.ToBytes32(targetRoot2[:])))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -603,7 +603,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 
-	blockRoot := bytesutil.ToBytes32([]byte("root"))
+	blockRoot := bytes.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	epoch := types.Epoch(50)
@@ -669,7 +669,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)),
 	})
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
+	require.NoError(t, db.SaveState(ctx, state, bytes.ToBytes32([]byte("root"))))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,
@@ -700,32 +700,32 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 		{
 			Data: &ethpb.AttestationData{
 				Slot:            1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte{1}, 32),
-				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{1}, 32)},
-				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{1}, 32)},
+				BeaconBlockRoot: bytes.PadTo([]byte{1}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{1}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{1}, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0b1101},
-			Signature:       bytesutil.PadTo([]byte{1}, 96),
+			Signature:       bytes.PadTo([]byte{1}, 96),
 		},
 		{
 			Data: &ethpb.AttestationData{
 				Slot:            2,
-				BeaconBlockRoot: bytesutil.PadTo([]byte{2}, 32),
-				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{2}, 32)},
-				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{2}, 32)},
+				BeaconBlockRoot: bytes.PadTo([]byte{2}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{2}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{2}, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0b1101},
-			Signature:       bytesutil.PadTo([]byte{2}, 96),
+			Signature:       bytes.PadTo([]byte{2}, 96),
 		},
 		{
 			Data: &ethpb.AttestationData{
 				Slot:            3,
-				BeaconBlockRoot: bytesutil.PadTo([]byte{3}, 32),
-				Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{3}, 32)},
-				Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{3}, 32)},
+				BeaconBlockRoot: bytes.PadTo([]byte{3}, 32),
+				Source:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{3}, 32)},
+				Target:          &ethpb.Checkpoint{Root: bytes.PadTo([]byte{3}, 32)},
 			},
 			AggregationBits: bitfield.Bitlist{0b1101},
-			Signature:       bytesutil.PadTo([]byte{3}, 96),
+			Signature:       bytes.PadTo([]byte{3}, 96),
 		},
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -895,7 +895,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 			}
 			attExample := &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+					BeaconBlockRoot: bytes.PadTo([]byte("root"), 32),
 					Slot:            i,
 					Source: &ethpb.Checkpoint{
 						Epoch: 0,
@@ -945,7 +945,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	// Next up we convert the test attestations to indexed form.
 	attsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 	for _, dataRootAtts := range atts {
-		targetRoot := bytesutil.ToBytes32(dataRootAtts[0].Data.Target.Root)
+		targetRoot := bytes.ToBytes32(dataRootAtts[0].Data.Target.Root)
 		attsByTarget[targetRoot] = append(attsByTarget[targetRoot], dataRootAtts...)
 	}
 

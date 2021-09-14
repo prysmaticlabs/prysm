@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -348,7 +348,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
 				StartTime:             timeutils.Now(),
-				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
+				GenesisValidatorsRoot: bytes.PadTo([]byte("genesis"), 32),
 			},
 		})
 	}

@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -110,7 +110,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	atts, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+	tRoot := bytes.ToBytes32(atts[0].Data.Target.Root)
 	copied := genesisState.Copy()
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)

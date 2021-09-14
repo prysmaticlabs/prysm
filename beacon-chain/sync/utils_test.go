@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -25,7 +25,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 		slot := types.Slot(randFunc())
 		newBlk := wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}})
 		blks = append(blks, newBlk)
-		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
+		root := bytes.ToBytes32(bytes.Bytes32(uint64(slot)))
 		roots = append(roots, root)
 	}
 
@@ -38,8 +38,8 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 		if b.Block().Slot() < previousSlot {
 			t.Errorf("Block list is not sorted as %d is smaller than previousSlot %d", b.Block().Slot(), previousSlot)
 		}
-		if bytesutil.FromBytes8(newRoots[i][:]) != uint64(b.Block().Slot()) {
-			t.Errorf("root doesn't match stored slot in block: wanted %d but got %d", b.Block().Slot(), bytesutil.FromBytes8(newRoots[i][:]))
+		if bytes.FromBytes8(newRoots[i][:]) != uint64(b.Block().Slot()) {
+			t.Errorf("root doesn't match stored slot in block: wanted %d but got %d", b.Block().Slot(), bytes.FromBytes8(newRoots[i][:]))
 		}
 		previousSlot = b.Block().Slot()
 	}
@@ -61,7 +61,7 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		blks = append(blks, wrapper.WrappedPhase0SignedBeaconBlock(newBlk), wrapper.WrappedPhase0SignedBeaconBlock(newBlk))
 
 		// append twice
-		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
+		root := bytes.ToBytes32(bytes.Bytes32(uint64(slot)))
 		roots = append(roots, root, root)
 	}
 

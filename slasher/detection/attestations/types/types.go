@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // DetectionKind defines an enum type that
@@ -39,7 +39,7 @@ type DetectionResult struct {
 
 // Marshal the result into bytes, used for removing duplicates.
 func (r *DetectionResult) Marshal() []byte {
-	numBytes := bytesutil.ToBytes(uint64(r.SlashableEpoch), 8)
+	numBytes := bytes.ToBytes(uint64(r.SlashableEpoch), 8)
 	var resultBytes []byte
 	resultBytes = append(resultBytes, uint8(r.Kind))
 	resultBytes = append(resultBytes, r.SigBytes[:]...)

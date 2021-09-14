@@ -10,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -162,7 +162,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockConta
 
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytes.Trunc(root[:]))).Debugf(
 			"Block proposal received via RPC")
 		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
@@ -339,7 +339,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
-			block, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
+			block, err := bs.BeaconDB.Block(ctx, bytes.ToBytes32(req.BlockId))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
@@ -445,7 +445,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 		}
 	case "finalized":
 		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
-		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+		finalizedRoot := bytes.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
 			return nil, errors.New("could not get finalized block from db")
@@ -457,7 +457,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 		}
 	default:
 		if len(blockId) == 32 {
-			blk, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
+			blk, err = bs.BeaconDB.Block(ctx, bytes.ToBytes32(blockId))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve block")
 			}

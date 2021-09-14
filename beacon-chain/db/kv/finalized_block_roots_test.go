@@ -5,17 +5,17 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+var genesisBlockRoot = bytes.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 
 func TestStore_IsFinalizedBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -81,10 +81,10 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
 	blocks1 := append(
-		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
-		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...,
+		makeBlocks(t, slotsPerEpoch*1, 1, bytes.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
+		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytes.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...,
 	)
-	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
+	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytes.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
 
 	db := setupDB(t)
 	ctx := context.Background()
@@ -103,12 +103,12 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	// A state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
+	require.NoError(t, db.SaveState(ctx, st, bytes.ToBytes32(checkpoint1.Root)))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint1))
 	// All blocks in blocks0 and blocks1 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks1...) {
 		root := sszRootOrDie(t, block)
-		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytes.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
 	}
 
 	// Second checkpoint
@@ -117,17 +117,17 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 2,
 	}
 	// A state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)))
+	require.NoError(t, db.SaveState(ctx, st, bytes.ToBytes32(checkpoint2.Root)))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint2))
 	// All blocks in blocks0 and blocks2 should be finalized and canonical.
 	for i, block := range append(blocks0, blocks2...) {
 		root := sszRootOrDie(t, block)
-		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytes.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
 	}
 	// All blocks in blocks1 should be finalized and canonical, except blocks1[0].
 	for i, block := range blocks1 {
 		root := sszRootOrDie(t, block)
-		if db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)) == (i == 0) {
+		if db.IsFinalizedBlock(ctx, bytes.ToBytes32(root)) == (i == 0) {
 			t.Errorf("Expected db.IsFinalizedBlock(ctx, blocks1[%d]) to be %v", i, i != 0)
 		}
 	}

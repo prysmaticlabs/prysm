@@ -28,13 +28,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -461,7 +461,7 @@ func TestProduceBlock(t *testing.T) {
 	}
 	randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	graffiti := bytes.ToBytes32([]byte("eth2"))
 	req := &ethpbv1.ProduceBlockRequest{
 		Slot:         1,
 		RandaoReveal: randaoReveal,
@@ -551,7 +551,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
-		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+		graffiti := bytes.ToBytes32([]byte("eth2"))
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         1,
 			RandaoReveal: randaoReveal,
@@ -684,7 +684,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
-		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+		graffiti := bytes.ToBytes32([]byte("eth2"))
 
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         1,
@@ -801,8 +801,8 @@ func TestProduceAttestationData(t *testing.T) {
 
 func TestGetAggregateAttestation(t *testing.T) {
 	ctx := context.Background()
-	root1 := bytesutil.PadTo([]byte("root1"), 32)
-	sig1 := bytesutil.PadTo([]byte("sig1"), 96)
+	root1 := bytes.PadTo([]byte("root1"), 32)
+	sig1 := bytes.PadTo([]byte("sig1"), 96)
 	attSlot1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -820,8 +820,8 @@ func TestGetAggregateAttestation(t *testing.T) {
 		},
 		Signature: sig1,
 	}
-	root2_1 := bytesutil.PadTo([]byte("root2_1"), 32)
-	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), 96)
+	root2_1 := bytes.PadTo([]byte("root2_1"), 32)
+	sig2_1 := bytes.PadTo([]byte("sig2_1"), 96)
 	attSlot2_1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -839,8 +839,8 @@ func TestGetAggregateAttestation(t *testing.T) {
 		},
 		Signature: sig2_1,
 	}
-	root2_2 := bytesutil.PadTo([]byte("root2_2"), 32)
-	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), 96)
+	root2_2 := bytes.PadTo([]byte("root2_2"), 32)
+	sig2_2 := bytes.PadTo([]byte("sig2_2"), 96)
 	attSlot2_2 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -888,7 +888,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 	t.Run("No matching attestation", func(t *testing.T) {
 		req := &ethpbv1.AggregateAttestationRequest{
-			AttestationDataRoot: bytesutil.PadTo([]byte("foo"), 32),
+			AttestationDataRoot: bytes.PadTo([]byte("foo"), 32),
 			Slot:                2,
 		}
 		_, err := vs.GetAggregateAttestation(ctx, req)
@@ -898,8 +898,8 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *testing.T) {
 	ctx := context.Background()
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), 96)
+	root := bytes.PadTo([]byte("root"), 32)
+	sig := bytes.PadTo([]byte("sig"), 96)
 	att1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -1237,9 +1237,9 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	c := params.BeaconNetworkConfig()
 	c.MaximumGossipClockDisparity = time.Hour
 	params.OverrideBeaconNetworkConfig(c)
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), 96)
-	proof := bytesutil.PadTo([]byte("proof"), 96)
+	root := bytes.PadTo([]byte("root"), 32)
+	sig := bytes.PadTo([]byte("sig"), 96)
+	proof := bytes.PadTo([]byte("proof"), 96)
 	att := &ethpbv1.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbv1.AttestationData{
@@ -1513,7 +1513,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 
 func TestProduceSyncCommitteeContribution(t *testing.T) {
 	ctx := context.Background()
-	root := bytesutil.PadTo([]byte("root"), 32)
+	root := bytes.PadTo([]byte("root"), 32)
 	sig := bls.NewAggregateSignature().Marshal()
 	messsage := &ethpbalpha.SyncCommitteeMessage{
 		Slot:           0,
@@ -1552,8 +1552,8 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 func TestSubmitContributionAndProofs(t *testing.T) {
 	ctx := context.Background()
 	sig := bls.NewAggregateSignature().Marshal()
-	root := bytesutil.PadTo([]byte("root"), 32)
-	proof := bytesutil.PadTo([]byte("proof"), 96)
+	root := bytes.PadTo([]byte("root"), 32)
+	proof := bytes.PadTo([]byte("proof"), 96)
 	aggBits := bitfield.NewBitvector128()
 	aggBits.SetBitAt(0, true)
 	v1Server := &v1alpha1validator.Server{

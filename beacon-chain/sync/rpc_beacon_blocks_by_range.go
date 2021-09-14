@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -220,7 +220,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, err
 		}
 		parentValid := *prevRoot != [32]byte{}
-		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block().ParentRoot())
+		isLinear := *prevRoot == bytes.ToBytes32(b.Block().ParentRoot())
 		isSingular := step == 1
 		slotDiff, err := b.Block().Slot().SafeSubSlot(startSlot)
 		if err != nil {

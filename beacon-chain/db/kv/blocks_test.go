@@ -7,9 +7,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -25,12 +25,12 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	// First we save a previous block to ensure the cache max size is reached.
 	prevBlock := testutil.NewBeaconBlock()
 	prevBlock.Block.Slot = slot - 1
-	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	prevBlock.Block.ParentRoot = bytes.PadTo([]byte{1, 2, 3}, 32)
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(prevBlock)))
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = slot
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	block.Block.ParentRoot = bytes.PadTo([]byte{1, 2, 3}, 32)
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
@@ -50,7 +50,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 20
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	block.Block.ParentRoot = bytes.PadTo([]byte{1, 2, 3}, 32)
 
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 		if i%2 == 0 {
 			r, err := totalBlocks[i].Block().HashTreeRoot()
@@ -87,13 +87,13 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytes.PadTo([]byte("parent"), 32)))
 	require.NoError(t, err)
 	assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
 	// We delete all even indexed blocks.
 	require.NoError(t, db.deleteBlocks(ctx, blockRoots))
 	// When we retrieve the data, only the odd indexed blocks should remain.
-	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytes.PadTo([]byte("parent"), 32)))
 	require.NoError(t, err)
 	sort.Slice(retrieved, func(i, j int) bool {
 		return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
@@ -111,7 +111,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i) + 1
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	genesisBlock := testutil.NewBeaconBlock()
-	genesisBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	genesisBlock.Block.ParentRoot = bytes.PadTo([]byte{1, 2, 3}, 32)
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
@@ -167,7 +167,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	ctx := context.Background()
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 20
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	block.Block.ParentRoot = bytes.PadTo([]byte{1, 2, 3}, 32)
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
@@ -187,19 +187,19 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	b4 := testutil.NewBeaconBlock()
 	b4.Block.Slot = 4
-	b4.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+	b4.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 	b5 := testutil.NewBeaconBlock()
 	b5.Block.Slot = 5
-	b5.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
+	b5.Block.ParentRoot = bytes.PadTo([]byte("parent2"), 32)
 	b6 := testutil.NewBeaconBlock()
 	b6.Block.Slot = 6
-	b6.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
+	b6.Block.ParentRoot = bytes.PadTo([]byte("parent2"), 32)
 	b7 := testutil.NewBeaconBlock()
 	b7.Block.Slot = 7
-	b7.Block.ParentRoot = bytesutil.PadTo([]byte("parent3"), 32)
+	b7.Block.ParentRoot = bytes.PadTo([]byte("parent3"), 32)
 	b8 := testutil.NewBeaconBlock()
 	b8.Block.Slot = 8
-	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
+	b8.Block.ParentRoot = bytes.PadTo([]byte("parent4"), 32)
 	blocks := []block.SignedBeaconBlock{
 		wrapper.WrappedPhase0SignedBeaconBlock(b4),
 		wrapper.WrappedPhase0SignedBeaconBlock(b5),
@@ -215,12 +215,12 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		expectedNumBlocks int
 	}{
 		{
-			filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)),
+			filter:            filters.NewFilter().SetParentRoot(bytes.PadTo([]byte("parent2"), 32)),
 			expectedNumBlocks: 2,
 		},
 		{
 			// No block meets the criteria below.
-			filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte{3, 4, 5}, 32)),
+			filter:            filters.NewFilter().SetParentRoot(bytes.PadTo([]byte{3, 4, 5}, 32)),
 			expectedNumBlocks: 0,
 		},
 		{
@@ -259,7 +259,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 		{
 			// Composite filter criteria.
 			filter: filters.NewFilter().
-				SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)).
+				SetParentRoot(bytes.PadTo([]byte("parent2"), 32)).
 				SetStartSlot(6).
 				SetEndSlot(8),
 			expectedNumBlocks: 1,
@@ -300,7 +300,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	ctx := context.Background()
@@ -317,7 +317,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	for i := types.Slot(0); i < slots; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	ctx := context.Background()
@@ -338,7 +338,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		b.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	const step = 2
@@ -419,7 +419,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
-		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
 		b[i] = wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	}
@@ -440,7 +440,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	b := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
-		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		blk.Block.ParentRoot = bytes.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
 		b[i] = wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	}
@@ -468,11 +468,11 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 100
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
+	b2.Block.ParentRoot = bytes.PadTo([]byte("parent1"), 32)
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 100
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
+	b3.Block.ParentRoot = bytes.PadTo([]byte("parent2"), 32)
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 	r1, err := b1.Block.HashTreeRoot()

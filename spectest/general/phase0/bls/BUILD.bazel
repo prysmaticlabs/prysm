@@ -31,9 +31,9 @@ go_test(
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
+        "//encoding/bytes:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bls/common:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//spectest/utils:go_default_library",

@@ -16,8 +16,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -210,7 +210,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
 	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
+		bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
 		{0, 0, 0, 1}: 1,
 	}
 	nextForkEpoch := types.Epoch(1)
@@ -265,11 +265,11 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 
 	bCfg := params.BeaconConfig()
 	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
+	bCfg.ForkVersionSchedule[bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
 	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytes.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
 	forkEntry, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)

@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -47,7 +47,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
-			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
+			PublicKey:             bytes.PadTo([]byte{1, 2, 3}, 48),
 			WithdrawalCredentials: make([]byte, 32),
 			Signature:             make([]byte, 96),
 		},
@@ -119,7 +119,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			Signature:             make([]byte, 96),
 		},
 	}
-	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytes.ToBytes(3, 32))
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()

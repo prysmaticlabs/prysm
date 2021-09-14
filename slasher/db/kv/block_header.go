@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -124,7 +124,7 @@ func (s *Store) PruneBlockHistory(ctx context.Context, currentEpoch, pruningEpoc
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= pruneTillSlot; k, _ = c.Next() {
+		for k, _ := c.First(); k != nil && bytes.FromBytes8(k[:8]) <= pruneTillSlot; k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
 				return errors.Wrap(err, "failed to delete the block header from historical bucket")
 			}

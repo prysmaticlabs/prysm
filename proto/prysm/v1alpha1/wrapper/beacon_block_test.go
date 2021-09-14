@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -308,8 +308,8 @@ func TestAltairBeaconBlockBody_Proto(t *testing.T) {
 }
 
 func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
-	root := bytesutil.PadTo([]byte("root"), 32)
-	signature := bytesutil.PadTo([]byte("sig"), 96)
+	root := bytes.PadTo([]byte("root"), 32)
+	signature := bytes.PadTo([]byte("sig"), 96)
 	body := &ethpb.BeaconBlockBody{}
 	body = testutil.HydrateBeaconBlockBody(body)
 	bodyRoot, err := body.HashTreeRoot()
@@ -337,8 +337,8 @@ func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Header(t *testing.T) {
-	root := bytesutil.PadTo([]byte("root"), 32)
-	signature := bytesutil.PadTo([]byte("sig"), 96)
+	root := bytes.PadTo([]byte("root"), 32)
+	signature := bytes.PadTo([]byte("sig"), 96)
 	body := &ethpb.BeaconBlockBodyAltair{}
 	body = testutil.HydrateBeaconBlockBodyAltair(body)
 	bodyRoot, err := body.HashTreeRoot()

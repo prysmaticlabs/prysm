@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -58,7 +58,7 @@ func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [48]byte, 
 		if valBucket == nil {
 			return nil
 		}
-		signingRootBytes := valBucket.Get(bytesutil.SlotToBytesBigEndian(slot))
+		signingRootBytes := valBucket.Get(bytes.SlotToBytesBigEndian(slot))
 		if signingRootBytes == nil {
 			return nil
 		}
@@ -82,7 +82,7 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [48]byte
 			return nil
 		}
 		return valBucket.ForEach(func(slotKey, signingRootBytes []byte) error {
-			slot := bytesutil.BytesToSlotBigEndian(slotKey)
+			slot := bytes.BytesToSlotBigEndian(slotKey)
 			sr := make([]byte, 32)
 			copy(sr, signingRootBytes)
 			proposals = append(proposals, &Proposal{
@@ -114,10 +114,10 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte,
 		lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
 		var lowestSignedProposalSlot types.Slot
 		if len(lowestSignedProposalBytes) >= 8 {
-			lowestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(lowestSignedProposalBytes)
+			lowestSignedProposalSlot = bytes.BytesToSlotBigEndian(lowestSignedProposalBytes)
 		}
 		if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
-			if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+			if err := lowestSignedBkt.Put(pubKey[:], bytes.SlotToBytesBigEndian(slot)); err != nil {
 				return err
 			}
 		}
@@ -127,15 +127,15 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte,
 		highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
 		var highestSignedProposalSlot types.Slot
 		if len(highestSignedProposalBytes) >= 8 {
-			highestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(highestSignedProposalBytes)
+			highestSignedProposalSlot = bytes.BytesToSlotBigEndian(highestSignedProposalBytes)
 		}
 		if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
-			if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+			if err := highestSignedBkt.Put(pubKey[:], bytes.SlotToBytesBigEndian(slot)); err != nil {
 				return err
 			}
 		}
 
-		if err := valBucket.Put(bytesutil.SlotToBytesBigEndian(slot), signingRoot); err != nil {
+		if err := valBucket.Put(bytes.SlotToBytesBigEndian(slot), signingRoot); err != nil {
 			return err
 		}
 		return pruneProposalHistoryBySlot(valBucket, slot)
@@ -155,12 +155,12 @@ func (s *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte) (t
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := bucket.Get(publicKey[:])
-		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytes.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
 		if len(lowestSignedProposalBytes) < 8 {
 			return nil
 		}
 		exists = true
-		lowestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(lowestSignedProposalBytes)
+		lowestSignedProposalSlot = bytes.BytesToSlotBigEndian(lowestSignedProposalBytes)
 		return nil
 	})
 	return lowestSignedProposalSlot, exists, err
@@ -178,12 +178,12 @@ func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := bucket.Get(publicKey[:])
-		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytes.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
 		if len(highestSignedProposalBytes) < 8 {
 			return nil
 		}
 		exists = true
-		highestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(highestSignedProposalBytes)
+		highestSignedProposalSlot = bytes.BytesToSlotBigEndian(highestSignedProposalBytes)
 		return nil
 	})
 	return highestSignedProposalSlot, exists, err
@@ -192,7 +192,7 @@ func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (
 func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) error {
 	c := valBucket.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.First() {
-		slot := bytesutil.BytesToSlotBigEndian(k)
+		slot := bytes.BytesToSlotBigEndian(k)
 		epoch := core.SlotToEpoch(slot)
 		newestEpoch := core.SlotToEpoch(newestSlot)
 		// Only delete epochs that are older than the weak subjectivity period.

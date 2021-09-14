@@ -15,8 +15,8 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -87,7 +87,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 	// Check if parent is a bad block and then reject the block.
-	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if s.hasBadBlock(bytes.ToBytes32(blk.Block().ParentRoot())) {
 		s.setBadBlock(ctx, blockRoot)
 		e := fmt.Errorf("received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block().ParentRoot())
 		log.WithError(e).WithField("blockSlot", blk.Block().Slot()).Debug("Rejected block")
@@ -142,7 +142,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.DB.HasBlock(ctx, bytes.ToBytes32(blk.Block().ParentRoot())) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -181,19 +181,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.Chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.Chain.VerifyBlkDescendant(ctx, bytes.ToBytes32(blk.Block().ParentRoot())); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 
-	hasStateSummaryDB := s.cfg.DB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	hasStateSummaryDB := s.cfg.DB.HasStateSummary(ctx, bytes.ToBytes32(blk.Block().ParentRoot()))
 	if !hasStateSummaryDB {
-		_, err := s.cfg.StateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+		_, err := s.cfg.StateGen.RecoverStateSummary(ctx, bytes.ToBytes32(blk.Block().ParentRoot()))
 		if err != nil {
 			return err
 		}
 	}
-	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytes.ToBytes32(blk.Block().ParentRoot()))
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx types.ValidatorIndex) bool {
 	s.seenBlockLock.RLock()
 	defer s.seenBlockLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIdx))...)
+	b := append(bytes.Bytes32(uint64(slot)), bytes.Bytes32(uint64(proposerIdx))...)
 	_, seen := s.seenBlockCache.Get(string(b))
 	return seen
 }
@@ -248,7 +248,7 @@ func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx types.Valid
 func (s *Service) setSeenBlockIndexSlot(slot types.Slot, proposerIdx types.ValidatorIndex) {
 	s.seenBlockLock.Lock()
 	defer s.seenBlockLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIdx))...)
+	b := append(bytes.Bytes32(uint64(slot)), bytes.Bytes32(uint64(proposerIdx))...)
 	s.seenBlockCache.Add(string(b), true)
 }
 

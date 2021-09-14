@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -48,7 +48,7 @@ func TestSetLatestEpochWritten(t *testing.T) {
 	lew, err := ha.setLatestEpochWritten(ctx, 2828282828)
 	require.NoError(t, err)
 	bytes := lew[:latestEpochWrittenSize]
-	assert.Equal(t, uint64(2828282828), bytesutil.FromBytes8(bytes))
+	assert.Equal(t, uint64(2828282828), bytes.FromBytes8(bytes))
 }
 
 func TestGetTargetData(t *testing.T) {
@@ -115,7 +115,7 @@ func TestSetTargetData(t *testing.T) {
 				require.NoError(t, err)
 				td, err := enc.getTargetData(ctx, tt.target)
 				require.NoError(t, err)
-				require.DeepEqual(t, bytesutil.PadTo(tt.signingRoot, 32), td.SigningRoot)
+				require.DeepEqual(t, bytes.PadTo(tt.signingRoot, 32), td.SigningRoot)
 				require.Equal(t, tt.source, td.Source)
 				return
 			}

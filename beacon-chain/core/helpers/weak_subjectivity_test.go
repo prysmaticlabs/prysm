@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -93,19 +93,19 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 					Slot:      42 * params.BeaconConfig().SlotsPerEpoch,
-					StateRoot: bytesutil.PadTo([]byte("stateroot1"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot1"), 32),
 				})
 				require.NoError(t, err)
 				return beaconState
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
 				return &ethpb.WeakSubjectivityCheckpoint{
-					StateRoot: bytesutil.PadTo([]byte("stateroot2"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot2"), 32),
 					Epoch:     42,
 				}
 			},
 			wantedErr: fmt.Sprintf("state (%#x) and checkpoint (%#x) roots do not match",
-				bytesutil.PadTo([]byte("stateroot1"), 32), bytesutil.PadTo([]byte("stateroot2"), 32)),
+				bytes.PadTo([]byte("stateroot1"), 32), bytes.PadTo([]byte("stateroot2"), 32)),
 		},
 		{
 			name: "state and checkpoint epochs do not match",
@@ -114,14 +114,14 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 					Slot:      42 * params.BeaconConfig().SlotsPerEpoch,
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 				})
 				require.NoError(t, err)
 				return beaconState
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
 				return &ethpb.WeakSubjectivityCheckpoint{
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 					Epoch:     43,
 				}
 			},
@@ -134,14 +134,14 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 					Slot:      42 * params.BeaconConfig().SlotsPerEpoch,
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 				})
 				require.NoError(t, err)
 				return beaconState
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
 				return &ethpb.WeakSubjectivityCheckpoint{
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 					Epoch:     42,
 				}
 			},
@@ -155,14 +155,14 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 					Slot:      42 * params.BeaconConfig().SlotsPerEpoch,
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 				})
 				require.NoError(t, err)
 				return beaconState
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
 				return &ethpb.WeakSubjectivityCheckpoint{
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 					Epoch:     42,
 				}
 			},
@@ -176,14 +176,14 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 					Slot:      42 * params.BeaconConfig().SlotsPerEpoch,
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 				})
 				require.NoError(t, err)
 				return beaconState
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
 				return &ethpb.WeakSubjectivityCheckpoint{
-					StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
+					StateRoot: bytes.PadTo([]byte("stateroot"), 32),
 					Epoch:     42,
 				}
 			},

@@ -6,8 +6,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -35,16 +35,16 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 		bh *ethpb.SignedBeaconBlockHeader
 	}{
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
 		},
 	}
 
@@ -67,13 +67,13 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		bh *ethpb.SignedBeaconBlockHeader
 	}{
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
 	}
 	for _, tt := range tests {
@@ -103,16 +103,16 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 		bh *ethpb.SignedBeaconBlockHeader
 	}{
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 4th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 4th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
 		},
 	}
 	for _, tt := range tests {
@@ -138,19 +138,19 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 		bh *ethpb.SignedBeaconBlockHeader
 	}{
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 2nd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 3rd"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 4th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 4th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytesutil.PadTo([]byte("let me in 5th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch*3 + 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: bytes.PadTo([]byte("let me in 5th"), 96), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch*3 + 1, ProposerIndex: 0}},
 		},
 	}
 

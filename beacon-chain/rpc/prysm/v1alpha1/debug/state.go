@@ -3,8 +3,8 @@ package debug
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -40,7 +40,7 @@ func (ds *Server) GetBeaconState(
 			Encoded: encoded,
 		}, nil
 	case *pbrpc.BeaconStateRequest_BlockRoot:
-		st, err := ds.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
+		st, err := ds.StateGen.StateByRoot(ctx, bytes.ToBytes32(q.BlockRoot))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}

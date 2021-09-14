@@ -3,8 +3,8 @@
 package blocks
 
 import (
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -14,7 +14,7 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: zeroHash,
-			StateRoot:  bytesutil.PadTo(stateRoot, 32),
+			StateRoot:  bytes.PadTo(stateRoot, 32),
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{

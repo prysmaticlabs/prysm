@@ -20,10 +20,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -309,7 +309,7 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool
 	var validatorActivated bool
 	for _, status := range statuses {
 		fields := logrus.Fields{
-			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+			"pubKey": fmt.Sprintf("%#x", bytes.Trunc(status.publicKey)),
 			"status": status.status.Status.String(),
 		}
 		if status.index != nonexistentIndex {
@@ -360,7 +360,7 @@ func logActiveValidatorStatus(statuses []*validatorStatus) {
 			continue
 		}
 		log.WithFields(logrus.Fields{
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
+			"publicKey": fmt.Sprintf("%#x", bytes.Trunc(s.publicKey)),
 			"index":     s.index,
 		}).Info("Validator activated")
 	}
@@ -514,7 +514,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 			filteredKeys = append(filteredKeys, pubKey)
 		} else {
 			log.WithField(
-				"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
+				"publicKey", fmt.Sprintf("%#x", bytes.Trunc(pubKey[:])),
 			).Warn("Not including slashable public key from slashing protection import " +
 				"in request to update validator duties")
 		}
@@ -523,7 +523,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 
 	req := &ethpb.DutiesRequest{
 		Epoch:      types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch),
-		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
+		PublicKeys: bytes.FromBytes48Array(filteredKeys),
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
@@ -556,7 +556,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range res.CurrentEpochDuties {
-		pk := bytesutil.ToBytes48(duty.PublicKey)
+		pk := bytes.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -590,7 +590,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytes.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -635,7 +635,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		if duty.AttesterSlot == slot {
 			roles = append(roles, iface.RoleAttester)
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytes.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -661,7 +661,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 			}
 		}
 		if inSyncCommittee {
-			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytes.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is a sync committee aggregator")
 			}
@@ -835,7 +835,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 			continue
 		}
 
-		validatorKey := fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey))
+		validatorKey := fmt.Sprintf("%#x", bytes.Trunc(duty.PublicKey))
 		attesterIndex := duty.AttesterSlot - slotOffset
 		if attesterIndex >= params.BeaconConfig().SlotsPerEpoch {
 			log.WithField("duty", duty).Warn("Invalid attester slot")
@@ -878,7 +878,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // This constructs a validator subscribed key, it's used to track
 // which subnet has already been pending requested.
 func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [64]byte {
-	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...))
+	return bytes.ToBytes64(append(bytes.Bytes32(uint64(slot)), bytes.Bytes32(uint64(committeeID))...))
 }
 
 // This tracks all validators' voting status.

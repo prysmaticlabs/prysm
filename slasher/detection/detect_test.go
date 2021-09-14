@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -38,7 +38,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 13, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -62,7 +62,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 10, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -86,7 +86,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 5, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{4, 8},
@@ -95,7 +95,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
+					Signature: bytes.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -119,7 +119,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 10, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{4, 8},
@@ -128,7 +128,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 9, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
+					Signature: bytes.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -152,7 +152,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -222,7 +222,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -232,7 +232,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			slashingsFound: 1,
 		},
@@ -246,7 +246,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{3},
@@ -255,7 +255,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 						BeaconBlockRoot: make([]byte, 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
+					Signature: bytes.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -265,7 +265,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 4}, 96),
+				Signature: bytes.PadTo([]byte{1, 4}, 96),
 			},
 			slashingsFound: 2,
 		},
@@ -277,9 +277,9 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Data: &ethpb.AttestationData{
 						Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 						Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
-						BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
+						BeaconBlockRoot: bytes.PadTo([]byte("good block root"), 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -287,7 +287,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					Source:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
-					BeaconBlockRoot: bytesutil.PadTo([]byte("bad block root"), 32),
+					BeaconBlockRoot: bytes.PadTo([]byte("bad block root"), 32),
 				},
 				Signature: make([]byte, 96),
 			},
@@ -301,9 +301,9 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Data: &ethpb.AttestationData{
 						Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 						Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
-						BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
+						BeaconBlockRoot: bytes.PadTo([]byte("good block root"), 32),
 					},
-					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+					Signature: bytes.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -311,7 +311,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 					Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
-					BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
+					BeaconBlockRoot: bytes.PadTo([]byte("good block root"), 32),
 				},
 				Signature: make([]byte, 96),
 			},
@@ -375,7 +375,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
 				ValidatorIndex:     1,
@@ -397,7 +397,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
 				ValidatorIndex:     1,
@@ -419,7 +419,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 2, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
 				ValidatorIndex:     1,
@@ -441,7 +441,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 8, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
 				ValidatorIndex:     1,
@@ -463,7 +463,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 6, Root: make([]byte, 32)},
 					BeaconBlockRoot: make([]byte, 32),
 				},
-				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
+				Signature: bytes.PadTo([]byte{1, 2}, 96),
 			},
 			expected: &slashpb.HighestAttestation{
 				ValidatorIndex:     1,

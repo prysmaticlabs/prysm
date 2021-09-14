@@ -22,9 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -155,7 +155,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating attester slashing")
-	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.cfg.DB.SaveState(ctx, beaconState, bytes.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 

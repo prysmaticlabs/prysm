@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -37,7 +37,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (st
 		return nil, err
 	}
 
-	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytes.ToBytes32(b.ParentRoot()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
@@ -63,7 +63,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
-	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+	parentRoot := bytes.ToBytes32(b.ParentRoot())
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
@@ -71,7 +71,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyBlkDescendant(ctx, bytes.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
 	defer span.End()
-	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	fRoot := s.ensureRootNotZeros(bytes.ToBytes32(s.finalizedCheckpt.Root))
 	finalizedBlkSigned, err := s.cfg.BeaconDB.Block(ctx, fRoot)
 	if err != nil {
 		return err
@@ -107,13 +107,13 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 		return errors.Wrap(err, "could not get finalized block root")
 	}
 	if bFinalizedRoot == nil {
-		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
+		return fmt.Errorf("no finalized block known for block %#x", bytes.Trunc(root[:]))
 	}
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(fRoot[:]))
+			bytes.Trunc(root[:]), finalizedBlk.Slot(), bytes.Trunc(bFinalizedRoot),
+			bytes.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -145,7 +145,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return true, nil
 	}
 	var newJustifiedBlockSigned block.SignedBeaconBlock
-	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	justifiedRoot := s.ensureRootNotZeros(bytes.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
@@ -168,7 +168,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, nil
 	}
 	var justifiedBlockSigned block.SignedBeaconBlock
-	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	cachedJustifiedRoot := s.ensureRootNotZeros(bytes.ToBytes32(s.justifiedCheckpt.Root))
 	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
@@ -208,7 +208,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		if err := s.cacheJustifiedStateBalances(ctx, bytes.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
 			return err
 		}
 	}
@@ -222,7 +222,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
 	s.prevJustifiedCheckpt = s.justifiedCheckpt
 	s.justifiedCheckpt = cp
-	if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+	if err := s.cacheJustifiedStateBalances(ctx, bytes.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
 		return err
 	}
 
@@ -248,7 +248,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		s.finalizedCheckpt = cp
 	}
 
-	fRoot := bytesutil.ToBytes32(cp.Root)
+	fRoot := bytes.ToBytes32(cp.Root)
 	if err := s.cfg.StateGen.MigrateToCold(ctx, fRoot); err != nil {
 		return errors.Wrap(err, "could not migrate to cold")
 	}
@@ -272,7 +272,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
 
-	r := bytesutil.ToBytes32(root)
+	r := bytes.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
 	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
@@ -326,7 +326,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return r[:], nil
 	}
 
-	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
+	return s.ancestorByDB(ctx, bytes.ToBytes32(b.ParentRoot()), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
@@ -349,7 +349,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 	if !attestationutil.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+			return s.cacheJustifiedStateBalances(ctx, bytes.ToBytes32(s.justifiedCheckpt.Root))
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
@@ -357,14 +357,14 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 		if err != nil {
 			return err
 		}
-		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+		justifiedRoot := s.ensureRootNotZeros(bytes.ToBytes32(s.justifiedCheckpt.Root))
 		anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedSlot)
 		if err != nil {
 			return err
 		}
 		if !bytes.Equal(anc, s.finalizedCheckpt.Root) {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+			if err := s.cacheJustifiedStateBalances(ctx, bytes.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
 				return err
 			}
 		}
@@ -379,7 +379,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 	pendingNodes := make([]block.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
+	parentRoot := bytes.ToBytes32(blk.ParentRoot())
 	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
 	fSlot, err := core.StartSlot(s.finalizedCheckpt.Epoch)
@@ -397,7 +397,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 		pendingNodes = append(pendingNodes, b.Block())
 		copiedRoot := parentRoot
 		pendingRoots = append(pendingRoots, copiedRoot)
-		parentRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
+		parentRoot = bytes.ToBytes32(b.Block().ParentRoot())
 		slot = b.Block().Slot()
 		higherThanFinalized = slot > fSlot
 	}
@@ -408,7 +408,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 		b := pendingNodes[i]
 		r := pendingRoots[i]
 		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), bytesutil.ToBytes32(b.Body().Graffiti()),
+			b.Slot(), r, bytes.ToBytes32(b.ParentRoot()), bytes.ToBytes32(b.Body().Graffiti()),
 			jCheckpoint.Epoch,
 			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")

@@ -6,8 +6,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -32,15 +32,15 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 		ok  bool
 	}{
 		{
-			key: bytesutil.ToBytes48([]byte("zero")),
+			key: bytes.ToBytes48([]byte("zero")),
 			val: 0,
 			ok:  true,
 		}, {
-			key: bytesutil.ToBytes48([]byte("one")),
+			key: bytes.ToBytes48([]byte("one")),
 			val: 1,
 			ok:  true,
 		}, {
-			key: bytesutil.ToBytes48([]byte("no")),
+			key: bytes.ToBytes48([]byte("no")),
 			val: 0,
 			ok:  false,
 		},

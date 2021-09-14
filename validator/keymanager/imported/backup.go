@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -24,7 +24,7 @@ func (km *Keymanager) ExtractKeystores(
 	keystores := make([]*keymanager.Keystore, len(publicKeys))
 	for i, pk := range publicKeys {
 		pubKeyBytes := pk.Marshal()
-		secretKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeyBytes)]
+		secretKey, ok := secretKeysCache[bytes.ToBytes48(pubKeyBytes)]
 		if !ok {
 			return nil, fmt.Errorf(
 				"secret key for public key %#x not found in cache",

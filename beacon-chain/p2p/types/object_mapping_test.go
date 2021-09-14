@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -44,7 +44,7 @@ func TestInitializeDataMaps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.action()
-			_, ok := BlockMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+			_, ok := BlockMap[bytes.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 			assert.Equal(t, tt.exists, ok)
 		})
 	}

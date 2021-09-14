@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -179,7 +179,7 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
 	b.ForkVersionSchedule = map[[4]byte]types.Epoch{}
 	// Set Genesis fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
+	b.ForkVersionSchedule[bytes.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
+	b.ForkVersionSchedule[bytes.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 }

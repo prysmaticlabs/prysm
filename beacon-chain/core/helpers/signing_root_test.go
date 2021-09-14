@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -20,7 +20,7 @@ import (
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
 	emptyBlock := testutil.NewBeaconBlock()
-	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
+	_, err := helpers.ComputeSigningRoot(emptyBlock, bytes.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
 	assert.NoError(t, err, "Could not compute signing root of block")
 }
 

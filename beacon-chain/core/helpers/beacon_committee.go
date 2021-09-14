@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -340,7 +340,7 @@ func UpdateProposerIndicesInCache(state state.ReadOnlyBeaconState) error {
 		return nil
 	}
 	// Skip cache update if the key already exists
-	exists, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(r))
+	exists, err := proposerIndicesCache.HasProposerIndices(bytes.ToBytes32(r))
 	if err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func UpdateProposerIndicesInCache(state state.ReadOnlyBeaconState) error {
 		return err
 	}
 	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
-		BlockRoot:       bytesutil.ToBytes32(r),
+		BlockRoot:       bytes.ToBytes32(r),
 		ProposerIndices: proposerIndices,
 	})
 }
@@ -426,7 +426,7 @@ func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []
 		return nil, err
 	}
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+i)...)
+		seedWithSlot := append(seed[:], bytes.Bytes8(uint64(slot)+i)...)
 		seedWithSlotHash := hashFunc(seedWithSlot)
 		index, err := ComputeProposerIndex(state, activeIndices, seedWithSlotHash)
 		if err != nil {

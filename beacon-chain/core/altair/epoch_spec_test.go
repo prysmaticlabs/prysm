@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -23,9 +23,9 @@ import (
 func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	h := &ethpb.BeaconBlockHeader{
-		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
-		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
-		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+		StateRoot:  bytes.PadTo([]byte{'a'}, 32),
+		ParentRoot: bytes.PadTo([]byte{'b'}, 32),
+		BodyRoot:   bytes.PadTo([]byte{'c'}, 32),
 	}
 	require.NoError(t, s.SetLatestBlockHeader(h))
 	postState, err := altair.ProcessSyncCommitteeUpdates(context.Background(), s)
