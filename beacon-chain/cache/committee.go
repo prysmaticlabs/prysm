@@ -10,10 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var (
@@ -154,8 +154,8 @@ func (c *CommitteeCache) HasEntry(seed string) bool {
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.ShuffledIndices))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
+	start := slice.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := slice.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 	return start, end
 }
 

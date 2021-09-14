@@ -5,13 +5,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
@@ -107,7 +107,7 @@ func (s *Service) detectDoubleVote(
 		}
 
 		// If there are no shared indices, there is no validator to slash.
-		if !sliceutil.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
+		if !slice.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
 			continue
 		}
 
@@ -144,7 +144,7 @@ func (s *Service) detectSurroundVotes(
 			continue
 		}
 		// If there are no shared indices, there is no validator to slash.
-		if !sliceutil.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
+		if !slice.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
 			continue
 		}
 

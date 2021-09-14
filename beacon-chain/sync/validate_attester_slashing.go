@@ -6,8 +6,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -61,7 +61,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
 func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bool {
-	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
+	slashableIndices := slice.IntersectionUint64(indices1, indices2)
 
 	s.seenAttesterSlashingLock.RLock()
 	defer s.seenAttesterSlashingLock.RUnlock()
@@ -78,7 +78,7 @@ func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bo
 
 // Set attester slashing indices in attester slashing cache.
 func (s *Service) setAttesterSlashingIndicesSeen(indices1, indices2 []uint64) {
-	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
+	slashableIndices := slice.IntersectionUint64(indices1, indices2)
 
 	s.seenAttesterSlashingLock.Lock()
 	defer s.seenAttesterSlashingLock.Unlock()

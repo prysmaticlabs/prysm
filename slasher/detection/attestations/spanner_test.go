@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -253,7 +253,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 
 			var want []*slashertypes.DetectionResult
 			if tt.slashCount > 0 {
-				for _, indice := range sliceutil.IntersectionUint64(tt.att.AttestingIndices, tt.incomingAtt.AttestingIndices) {
+				for _, indice := range slice.IntersectionUint64(tt.att.AttestingIndices, tt.incomingAtt.AttestingIndices) {
 					want = append(want, &slashertypes.DetectionResult{
 						ValidatorIndex: indice,
 						Kind:           slashertypes.DoubleVote,
