@@ -270,6 +270,11 @@ type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
 }
 
+// produceSyncCommitteeContributionResponseJson is used in /validator/sync_committee_contribution API endpoint.
+type produceSyncCommitteeContributionResponseJson struct {
+	Data *syncCommitteeContributionJson `json:"data"`
+}
+
 // submitContributionAndProofsRequestJson is used in /validator/contribution_and_proofs API endpoint.
 type submitContributionAndProofsRequestJson struct {
 	Data []*signedContributionAndProofJson `json:"data"`
