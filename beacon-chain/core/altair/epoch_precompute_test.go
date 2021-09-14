@@ -350,7 +350,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
 	_, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
 	_, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, []*precompute.Validator{})
-	require.ErrorContains(t, "validator registries not the same length as beaconState's validator registries", err)
+	require.ErrorContains(t, "validator registries not the same length as state's validator registries", err)
 }
 
 func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
