@@ -10,19 +10,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestServer_GetBeaconState(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	st, err := testutil.NewBeaconState()
+	st, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	slot := types.Slot(100)
 	require.NoError(t, st.SetSlot(slot))
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block.Slot = slot
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()

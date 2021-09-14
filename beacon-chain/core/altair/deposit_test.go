@@ -11,16 +11,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	// Same validator created 3 valid deposits within the same block
-	dep, _, err := testutil.DeterministicDepositsAndKeysSameValidator(3)
+	dep, _, err := testing2.DeterministicDepositsAndKeysSameValidator(3)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := testing2.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 	registry := []*ethpb.Validator{
 		{
@@ -75,9 +75,9 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 }
 
 func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := testing2.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := testing2.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 
 	registry := []*ethpb.Validator{
@@ -160,9 +160,9 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	// Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := testing2.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := testing2.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 
 	registry := []*ethpb.Validator{
@@ -197,10 +197,10 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := testing2.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	trie, _, err := testing2.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
 	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{

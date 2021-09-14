@@ -22,8 +22,8 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/hashutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

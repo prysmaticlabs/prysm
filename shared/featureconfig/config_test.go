@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/urfave/cli/v2"
 )
 

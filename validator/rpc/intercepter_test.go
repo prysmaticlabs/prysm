@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

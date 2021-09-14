@@ -18,9 +18,9 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestPingRPCHandler_ReceivesPing(t *testing.T) {
@@ -70,7 +70,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if testing2.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -137,7 +137,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 
 	assert.NoError(t, r.sendPingRequest(context.Background(), p2.BHost.ID()))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if testing2.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -198,7 +198,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
 	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if testing2.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

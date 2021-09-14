@@ -15,9 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestServer_StreamAltairBlocksVerified_ContextCanceled(t *testing.T) {
@@ -73,12 +73,12 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	ctx := context.Background()
-	beaconState, privs := testutil.DeterministicGenesisStateAltair(t, 64)
+	beaconState, privs := testing2.DeterministicGenesisStateAltair(t, 64)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := testutil.GenerateFullBlockAltair(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	b, err := testing2.GenerateFullBlockAltair(beaconState, privs, testing2.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
@@ -115,12 +115,12 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	beaconState, privs := testutil.DeterministicGenesisStateAltair(t, 32)
+	beaconState, privs := testing2.DeterministicGenesisStateAltair(t, 32)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := testutil.GenerateFullBlockAltair(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	b, err := testing2.GenerateFullBlockAltair(beaconState, privs, testing2.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)

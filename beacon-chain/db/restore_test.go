@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -25,12 +25,12 @@ func TestRestore(t *testing.T) {
 
 	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
 	require.NoError(t, err)
-	head := testutil.NewBeaconBlock()
+	head := testing2.NewBeaconBlock()
 	head.Block.Slot = 5000
 	require.NoError(t, backupDb.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	st, err := testutil.NewBeaconState()
+	st, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, backupDb.SaveState(ctx, st, root))
 	require.NoError(t, backupDb.SaveHeadBlockRoot(ctx, root))

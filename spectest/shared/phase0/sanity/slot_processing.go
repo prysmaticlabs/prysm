@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -28,7 +28,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
+			preBeaconStateFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
@@ -37,13 +37,13 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			beaconState, err := v1.InitializeFromProto(base)
 			require.NoError(t, err)
 
-			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
+			file, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
 			require.NoError(t, err)
 			fileStr := string(file)
 			slotsCount, err := strconv.Atoi(fileStr[:len(fileStr)-5])
 			require.NoError(t, err)
 
-			postBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
+			postBeaconStateFile, err := testing2.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")

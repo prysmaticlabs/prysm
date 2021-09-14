@@ -27,10 +27,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -163,7 +163,7 @@ func TestGetIdentity(t *testing.T) {
 func TestSyncStatus(t *testing.T) {
 	currentSlot := new(types.Slot)
 	*currentSlot = 110
-	state, err := testutil.NewBeaconState()
+	state, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	err = state.SetSlot(100)
 	require.NoError(t, err)

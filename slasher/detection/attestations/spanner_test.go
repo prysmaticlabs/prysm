@@ -9,11 +9,11 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func indexedAttestation(source, target types.Epoch, indices []uint64) *ethpb.IndexedAttestation {

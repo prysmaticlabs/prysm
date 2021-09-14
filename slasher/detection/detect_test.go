@@ -10,14 +10,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
 	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {

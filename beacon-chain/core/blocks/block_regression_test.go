@@ -11,14 +11,14 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 5500)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
@@ -40,7 +40,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	root1 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
 	att1 := &ethpb.IndexedAttestation{
-		Data:             testutil.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
+		Data:             testing2.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
 		AttestingIndices: setA,
 		Signature:        make([]byte, 96),
 	}
@@ -58,7 +58,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
-		Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
+		Data: testing2.HydrateAttestationData(&ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Root: root2[:]},
 		}),
 		AttestingIndices: setB,
@@ -84,7 +84,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			AttesterSlashings: slashings,

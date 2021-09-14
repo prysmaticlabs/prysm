@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 

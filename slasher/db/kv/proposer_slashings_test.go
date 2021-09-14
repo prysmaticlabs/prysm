@@ -7,9 +7,9 @@ import (
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -18,12 +18,12 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{
-		Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 1,
 			},
 		}),
-		Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 1,
 			},
@@ -51,12 +51,12 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
 					},
@@ -66,12 +66,12 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		{
 			ss: types.Included,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
 					},
@@ -81,12 +81,12 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		{
 			ss: types.Reverted,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
 					},
@@ -128,12 +128,12 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1,
 					},
@@ -143,12 +143,12 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 2,
 					},
@@ -158,12 +158,12 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 		{
 			ss: types.Active,
 			ps: &ethpb.ProposerSlashing{
-				Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
 					},
 				}),
-				Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+				Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 3,
 					},
@@ -199,36 +199,36 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 
 	ps := []*ethpb.ProposerSlashing{
 		{
-			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
 				},
 			}),
-			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
 				},
 			}),
 		},
 		{
-			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 2,
 				},
 			}),
-			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 2,
 				},
 			}),
 		},
 		{
-			Header_1: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 				},
 			}),
-			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 				},

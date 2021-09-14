@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 // RunParticipationFlagUpdatesTests executes "epoch_processing/participation_flag_updates" tests.

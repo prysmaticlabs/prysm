@@ -10,26 +10,26 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
 	transition.SkipSlotCache.Enable()
 	defer transition.SkipSlotCache.Disable()
-	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
+	bState, privs := testing2.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 	require.NoError(t, err)
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
-	blkCfg := testutil.DefaultBlockGenConfig()
+	blkCfg := testing2.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
+	blk, err := testing2.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
 	executedState, err := transition.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
@@ -42,20 +42,20 @@ func TestSkipSlotCache_OK(t *testing.T) {
 }
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
-	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
+	bState, privs := testing2.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 	require.NoError(t, err)
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
-	blkCfg := testutil.DefaultBlockGenConfig()
+	blkCfg := testing2.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
 
 	transition.SkipSlotCache.Disable()
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
+	blk, err := testing2.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
 	executedState, err := transition.ExecuteStateTransition(context.Background(), originalState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
@@ -65,10 +65,10 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	// Create two shallow but different forks
 	var s1, s0 state.BeaconState
 	{
-		blk, err := testutil.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		blk, err := testing2.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 1")
-		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
+		signature, err := testing2.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
 		s1, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))
@@ -76,10 +76,10 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	{
-		blk, err := testutil.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		blk, err := testing2.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 2")
-		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
+		signature, err := testing2.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
 		s0, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wrapper.WrappedPhase0SignedBeaconBlock(blk))

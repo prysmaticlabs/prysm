@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestDebounce_NoEvents(t *testing.T) {
@@ -29,7 +29,7 @@ func TestDebounce_NoEvents(t *testing.T) {
 		})
 		wg.Done()
 	}()
-	if testutil.WaitTimeout(wg, interval*2) {
+	if testing2.WaitTimeout(wg, interval*2) {
 		t.Fatalf("Test should have exited by now, timed out")
 	}
 	assert.Equal(t, 0, timesHandled, "Wrong number of handled calls")
@@ -65,7 +65,7 @@ func TestDebounce_CtxClosing(t *testing.T) {
 		})
 		wg.Done()
 	}()
-	if testutil.WaitTimeout(wg, interval*2) {
+	if testing2.WaitTimeout(wg, interval*2) {
 		t.Fatalf("Test should have exited by now, timed out")
 	}
 	assert.Equal(t, 0, timesHandled, "Wrong number of handled calls")

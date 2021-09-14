@@ -17,12 +17,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestServer_IsSlashableAttestation(t *testing.T) {
@@ -33,7 +33,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	nClient := mock.NewMockNodeClient(ctrl)
 	ctx := context.Background()
 
-	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
+	_, keys, err := testing2.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	wantedValidators1 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
@@ -110,7 +110,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	nClient := mock.NewMockNodeClient(ctrl)
 	ctx := context.Background()
 
-	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
+	_, keys, err := testing2.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	wantedValidators1 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
@@ -186,7 +186,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	nClient := mock.NewMockNodeClient(ctrl)
 	ctx := context.Background()
 
-	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
+	_, keys, err := testing2.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	wantedValidators := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
@@ -204,7 +204,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		GenesisValidatorsRoot: bytesutil.PadTo([]byte("I am genesis"), 32),
 	}
 	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil).AnyTimes()
-	savedBlock := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	savedBlock := testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 1,
@@ -261,7 +261,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	nClient := mock.NewMockNodeClient(ctrl)
 	ctx := context.Background()
 
-	_, keys, err := testutil.DeterministicDepositsAndKeys(4)
+	_, keys, err := testing2.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	wantedValidators := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{

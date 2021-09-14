@@ -15,10 +15,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -40,7 +40,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db),
 	}
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, headState.SetRandaoMixes(mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db),
 	}
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -208,7 +208,7 @@ func setupActiveValidators(t *testing.T, count int) state.BeaconState {
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	if err := s.SetValidators(validators); err != nil {
 		t.Error(err)

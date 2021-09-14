@@ -51,6 +51,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/params:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

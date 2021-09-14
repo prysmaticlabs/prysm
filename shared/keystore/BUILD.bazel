@@ -34,8 +34,8 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",
     ],
 )

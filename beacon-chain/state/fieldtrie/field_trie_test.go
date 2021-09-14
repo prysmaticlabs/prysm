@@ -9,13 +9,13 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestFieldTrie_NewTrie(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 40)
+	newState, _ := testing2.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
 	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -28,7 +28,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, _ := testing2.DeterministicGenesisState(t, 32)
 	// 10 represents the enum value of validators
 	trie, err := fieldtrie.NewFieldTrie(11, stateTypes.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, _ := testing2.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
 	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)

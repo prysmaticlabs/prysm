@@ -23,9 +23,9 @@ go_test(
     ],
     deps = [
         ":go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/db/types:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

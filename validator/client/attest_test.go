@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	grpc "google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -460,7 +460,7 @@ func TestSignAttestation(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: attesterDomain}, nil)
 	ctx := context.Background()
-	att := testutil.NewAttestation()
+	att := testing2.NewAttestation()
 	att.Data.Source.Epoch = 100
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999

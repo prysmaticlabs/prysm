@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSignVerify(t *testing.T) {

@@ -3,7 +3,7 @@ package logutil
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 var urltests = []struct {

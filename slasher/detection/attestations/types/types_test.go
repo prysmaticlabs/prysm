@@ -3,8 +3,8 @@ package types_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSpan_Marshal_Unmarshal(t *testing.T) {

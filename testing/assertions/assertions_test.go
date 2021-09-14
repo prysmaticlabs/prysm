@@ -8,9 +8,9 @@ import (
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/assertions"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/timestamppb"

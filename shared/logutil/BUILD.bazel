@@ -25,5 +25,5 @@ go_test(
         "stream_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
+    deps = ["//testing/require:go_default_library"],
 )

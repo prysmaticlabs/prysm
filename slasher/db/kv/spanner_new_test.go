@@ -7,9 +7,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 type spansTestStruct struct {

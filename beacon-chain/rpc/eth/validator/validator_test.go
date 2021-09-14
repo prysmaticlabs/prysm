@@ -36,19 +36,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
 	ctx := context.Background()
-	genesis := sharedtestutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := sharedtestutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
@@ -203,11 +203,11 @@ func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
 
 func TestGetProposerDuties(t *testing.T) {
 	ctx := context.Background()
-	genesis := sharedtestutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := sharedtestutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
@@ -325,7 +325,7 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 func TestGetSyncCommitteeDuties(t *testing.T) {
 	ctx := context.Background()
 	numVals := uint64(10)
-	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, numVals)
+	st, _ := testing2.DeterministicGenesisStateAltair(t, numVals)
 	vals := st.Validators()
 	committee := &ethpbalpha.SyncCommittee{}
 	for _, v := range vals {
@@ -403,7 +403,7 @@ func TestProduceBlock(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := sharedtestutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -432,7 +432,7 @@ func TestProduceBlock(t *testing.T) {
 
 	proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := sharedtestutil.GenerateProposerSlashingForValidator(
+		proposerSlashing, err := testing2.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
 			i, /* validator index */
@@ -445,7 +445,7 @@ func TestProduceBlock(t *testing.T) {
 
 	attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := sharedtestutil.GenerateAttesterSlashingForValidator(
+		attesterSlashing, err := testing2.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
@@ -459,7 +459,7 @@ func TestProduceBlock(t *testing.T) {
 	v1Server := &Server{
 		V1Alpha1Server: v1Alpha1Server,
 	}
-	randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := testing2.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
 	req := &ethpbv1.ProduceBlockRequest{
@@ -493,7 +493,7 @@ func TestProduceBlockV2(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
-		beaconState, privKeys := sharedtestutil.DeterministicGenesisState(t, 64)
+		beaconState, privKeys := testing2.DeterministicGenesisState(t, 64)
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
@@ -522,7 +522,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-			proposerSlashing, err := sharedtestutil.GenerateProposerSlashingForValidator(
+			proposerSlashing, err := testing2.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
 				i, /* validator index */
@@ -535,7 +535,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-			attesterSlashing, err := sharedtestutil.GenerateAttesterSlashingForValidator(
+			attesterSlashing, err := testing2.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
@@ -549,7 +549,7 @@ func TestProduceBlockV2(t *testing.T) {
 		v1Server := &Server{
 			V1Alpha1Server: v1Alpha1Server,
 		}
-		randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
+		randaoReveal, err := testing2.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 		req := &ethpbv1.ProduceBlockRequest{
@@ -591,7 +591,7 @@ func TestProduceBlockV2(t *testing.T) {
 		bc.AltairForkEpoch = types.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
-		beaconState, privKeys := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+		beaconState, privKeys := testing2.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
@@ -599,7 +599,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
-		genesisBlock := sharedtestutil.NewBeaconBlockAltair()
+		genesisBlock := testing2.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
 		wrappedAltairBlock, err := wrapper.WrappedAltairSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
@@ -627,7 +627,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-			proposerSlashing, err := sharedtestutil.GenerateProposerSlashingForValidator(
+			proposerSlashing, err := testing2.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
 				i, /* validator index */
@@ -640,7 +640,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-			attesterSlashing, err := sharedtestutil.GenerateAttesterSlashingForValidator(
+			attesterSlashing, err := testing2.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
@@ -682,7 +682,7 @@ func TestProduceBlockV2(t *testing.T) {
 		v1Server := &Server{
 			V1Alpha1Server: v1Alpha1Server,
 		}
-		randaoReveal, err := sharedtestutil.RandaoReveal(beaconState, 0, privKeys)
+		randaoReveal, err := testing2.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
@@ -724,11 +724,11 @@ func TestProduceBlockV2(t *testing.T) {
 }
 
 func TestProduceAttestationData(t *testing.T) {
-	block := sharedtestutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
-	targetBlock := sharedtestutil.NewBeaconBlock()
+	targetBlock := testing2.NewBeaconBlock()
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
-	justifiedBlock := sharedtestutil.NewBeaconBlock()
+	justifiedBlock := testing2.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
@@ -737,7 +737,7 @@ func TestProduceAttestationData(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	beaconState, err := sharedtestutil.NewBeaconState()
+	beaconState, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
@@ -953,11 +953,11 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 
 func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	ctx := context.Background()
-	genesis := sharedtestutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := sharedtestutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
@@ -1094,12 +1094,12 @@ func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
 
 func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	ctx := context.Background()
-	genesis := sharedtestutil.NewBeaconBlock()
-	deposits, _, err := sharedtestutil.DeterministicDepositsAndKeys(64)
+	genesis := testing2.NewBeaconBlock()
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(64)
 	require.NoError(t, err)
-	eth1Data, err := sharedtestutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := sharedtestutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := testing2.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

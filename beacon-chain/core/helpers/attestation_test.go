@@ -13,15 +13,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("aggregator", func(t *testing.T) {
-		beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+		beaconState, privKeys := testing2.DeterministicGenesisState(t, 100)
 		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
 		require.NoError(t, err)
 		sig := privKeys[0].Sign([]byte{'A'})
@@ -33,7 +33,7 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("not aggregator", func(t *testing.T) {
 		params.UseMinimalConfig()
 		defer params.UseMainnetConfig()
-		beaconState, privKeys := testutil.DeterministicGenesisState(t, 2048)
+		beaconState, privKeys := testing2.DeterministicGenesisState(t, 2048)
 
 		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
 		require.NoError(t, err)

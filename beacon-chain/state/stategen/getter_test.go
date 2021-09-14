@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStateByRoot_ColdState(t *testing.T) {
@@ -24,12 +24,12 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	service.finalizedInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block.Slot = 1
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(1))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -45,9 +45,9 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(10))
-	blk := testutil.NewBeaconBlock()
+	blk := testing2.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: blkRoot[:]}))
@@ -63,13 +63,13 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := testutil.NewBeaconBlock()
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	blk := testing2.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
 	targetSlot := types.Slot(10)
-	targetBlock := testutil.NewBeaconBlock()
+	targetBlock := testing2.NewBeaconBlock()
 	targetBlock.Block.Slot = 11
 	targetBlock.Block.ParentRoot = blkRoot[:]
 	targetBlock.Block.ProposerIndex = 8
@@ -88,7 +88,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
@@ -104,10 +104,10 @@ func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	targetSlot := types.Slot(10)
 	require.NoError(t, beaconState.SetSlot(targetSlot))
-	blk := testutil.NewBeaconBlock()
+	blk := testing2.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
@@ -122,7 +122,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
@@ -140,13 +140,13 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := testutil.NewBeaconBlock()
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	blk := testing2.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
 	targetSlot := types.Slot(10)
-	targetBlk := testutil.NewBeaconBlock()
+	targetBlk := testing2.NewBeaconBlock()
 	targetBlk.Block.Slot = 11
 	targetBlk.Block.ParentRoot = blkRoot[:]
 	targetRoot, err := targetBlk.Block.HashTreeRoot()
@@ -167,7 +167,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
-	beaconState, pks := testutil.DeterministicGenesisState(t, 32)
+	beaconState, pks := testing2.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -177,7 +177,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-	b, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
+	b, err := testing2.GenerateFullBlock(beaconState, pks, testing2.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	bRoot, err := b.Block.HashTreeRoot()
@@ -200,7 +200,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -221,7 +221,7 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
 	service.hotStateCache.put(r, beaconState)
 
@@ -236,7 +236,7 @@ func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -260,13 +260,13 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	gBlk := testutil.NewBeaconBlock()
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	gBlk := testing2.NewBeaconBlock()
 	gBlkRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(gBlkRoot, beaconState))
 
-	blk := testutil.NewBeaconBlock()
+	blk := testing2.NewBeaconBlock()
 	blk.Block.Slot = 11
 	blk.Block.ProposerIndex = 8
 	blk.Block.ParentRoot = gBlkRoot[:]
@@ -286,13 +286,13 @@ func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	gBlk := testutil.NewBeaconBlock()
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	gBlk := testing2.NewBeaconBlock()
 	gBlkRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(gBlkRoot, beaconState))
 
-	blk := testutil.NewBeaconBlock()
+	blk := testing2.NewBeaconBlock()
 	blk.Block.Slot = 11
 	blk.Block.ProposerIndex = 8
 	blk.Block.ParentRoot = gBlkRoot[:]
@@ -311,8 +311,8 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	b := testutil.NewBeaconBlock()
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -329,7 +329,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	genesis, keys := testing2.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	stateRoot, err := genesis.HashTreeRoot(ctx)
@@ -340,7 +340,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
 
-	b1, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	b1, err := testing2.GenerateFullBlock(genesis, keys, testing2.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 	r1, err := b1.Block.HashTreeRoot()
@@ -357,7 +357,7 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+	genesis, keys := testing2.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	stateRoot, err := genesis.HashTreeRoot(ctx)
@@ -368,7 +368,7 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot))
 
-	b1, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	b1, err := testing2.GenerateFullBlock(genesis, keys, testing2.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 	r1, err := b1.Block.HashTreeRoot()
@@ -389,27 +389,27 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	b0 := testutil.NewBeaconBlock()
+	b0 := testing2.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1 := testutil.NewBeaconBlock()
+	b1 := testing2.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2 := testutil.NewBeaconBlock()
+	b2 := testing2.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b3 := testutil.NewBeaconBlock()
+	b3 := testing2.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	b1State, err := testutil.NewBeaconState()
+	b1State, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, b1State.SetSlot(1))
 
@@ -429,27 +429,27 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	b0 := testutil.NewBeaconBlock()
+	b0 := testing2.NewBeaconBlock()
 	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1 := testutil.NewBeaconBlock()
+	b1 := testing2.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2 := testutil.NewBeaconBlock()
+	b2 := testing2.NewBeaconBlock()
 	b2.Block.Slot = 2
 	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b3 := testutil.NewBeaconBlock()
+	b3 := testing2.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	b1State, err := testutil.NewBeaconState()
+	b1State, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, b1State.SetSlot(1))
 
@@ -468,7 +468,7 @@ func TestState_HasState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
@@ -476,7 +476,7 @@ func TestState_HasState(t *testing.T) {
 	service.hotStateCache.put(rHit1, s)
 	require.NoError(t, service.epochBoundaryStateCache.put(rHit2, s))
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	rHit3, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveState(ctx, s, rHit3))
@@ -500,7 +500,7 @@ func TestState_HasStateInCache(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}

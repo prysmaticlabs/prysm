@@ -23,7 +23,7 @@ go_test(
     srcs = ["scrapers_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],

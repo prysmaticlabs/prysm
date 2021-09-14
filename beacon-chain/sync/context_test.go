@@ -12,8 +12,8 @@ import (
 	swarm "github.com/libp2p/go-libp2p-swarm"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestContextWrite_NoWrites(t *testing.T) {
@@ -33,7 +33,7 @@ func TestContextWrite_NoWrites(t *testing.T) {
 
 	// Nothing will be written to the stream
 	assert.NoError(t, writeContextToStream(nil, strm, nil))
-	if testutil.WaitTimeout(wg, 1*time.Second) {
+	if testing2.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -68,7 +68,7 @@ func TestContextRead_NoReads(t *testing.T) {
 	n, err := strm.Write(wantedData)
 	assert.NoError(t, err)
 	assert.Equal(t, len(wantedData), n)
-	if testutil.WaitTimeout(wg, 1*time.Second) {
+	if testing2.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }

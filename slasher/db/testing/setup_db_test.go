@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	slasherDB "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestClearDB(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 // RunRegistryUpdatesTests executes "epoch_processing/registry_updates" tests.

@@ -9,9 +9,9 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestAggregate(t *testing.T) {
@@ -23,7 +23,7 @@ func testAggregate(t *testing.T) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := testing2.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &AggregateTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))

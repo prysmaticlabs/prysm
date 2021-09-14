@@ -27,7 +27,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
     ],
 )

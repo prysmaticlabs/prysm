@@ -11,9 +11,9 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/require:go_default_library",
         "//spectest/utils:go_default_library",
+        "//testing:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
     ],
 )

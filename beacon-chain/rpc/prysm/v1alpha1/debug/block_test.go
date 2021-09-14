@@ -14,16 +14,16 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestServer_GetBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	blockRoot, err := b.Block.HashTreeRoot()
@@ -58,7 +58,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
-	s, _ := testutil.DeterministicGenesisState(t, 2048)
+	s, _ := testing2.DeterministicGenesisState(t, 2048)
 	tr := [32]byte{'a'}
 	require.NoError(t, bs.StateGen.SaveState(ctx, tr, s))
 	c, err := helpers.BeaconCommitteeFromState(s, 1, 0)
@@ -74,7 +74,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		Signature:       make([]byte, 96),
 	}
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))

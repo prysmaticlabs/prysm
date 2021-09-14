@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
