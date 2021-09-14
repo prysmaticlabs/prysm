@@ -270,7 +270,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 			percentNet := (newBalance - prevBalance) / prevBalance
 			percentSinceStart := (newBalance - startBalance) / startBalance
 
-			log := log.WithFields(logrus.Fields{
+			previousEpochSummaryFields := logrus.Fields{
 				"pubKey":                  truncatedKey,
 				"epoch":                   prevEpoch,
 				"correctlyVotedSource":    resp.CorrectlyVotedSource[i],
@@ -281,17 +281,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 				"newBalance":              newBalance,
 				"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
 				"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
-			})
+			}
 
 			// These fields are deprecated after Altair.
 			if core.SlotToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-				log = log.WithFields(logrus.Fields{
-					"inclusionSlot":     resp.InclusionSlots[i],
-					"inclusionDistance": resp.InclusionDistances[i],
-				})
+				previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
+				previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[i]
 			}
 
-			log.Info("Previous epoch voting summary")
+			log.WithFields(previousEpochSummaryFields).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 				if resp.CorrectlyVotedSource[i] {
