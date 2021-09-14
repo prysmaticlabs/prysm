@@ -29,7 +29,7 @@ go_library(
         "//shared/testutil:__pkg__",
         "//shared/testutil/altair:__pkg__",
         "//slasher:__subpackages__",
-        "//spectest:__subpackages__",
+        "//testing/spectest:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
     ],

@@ -1101,8 +1101,6 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := sharedtestutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
-	// Set state to epoch 1.
-	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
@@ -1215,7 +1213,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 				{
 					ValidatorIndex:       0,
 					SyncCommitteeIndices: []uint64{},
-					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1,
+					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 2,
 				},
 			},
 		}
