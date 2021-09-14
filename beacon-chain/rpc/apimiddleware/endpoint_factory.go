@@ -45,6 +45,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/node/syncing",
 		"/eth/v1/node/health",
 		"/eth/v1/debug/beacon/states/{state_id}",
+		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
@@ -59,6 +60,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
+		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/contribution_and_proofs",
 	}
 }
@@ -155,6 +157,11 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/debug/beacon/states/{state_id}":
 		endpoint.GetResponse = &beaconStateResponseJson{}
 		endpoint.CustomHandlers = []gateway.CustomHandler{handleGetBeaconStateSSZ}
+	case "/eth/v2/debug/beacon/states/{state_id}":
+		endpoint.GetResponse = &beaconStateV2ResponseJson{}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeV2State},
+		}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
@@ -207,6 +214,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSignedAggregateAndProofArray},
 		}
+	case "/eth/v1/validator/sync_committee_contribution":
+		endpoint.GetResponse = &produceSyncCommitteeContributionResponseJson{}
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
 	case "/eth/v1/validator/contribution_and_proofs":
 		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
 		endpoint.Hooks = gateway.HookCollection{
