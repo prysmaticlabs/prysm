@@ -10,6 +10,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/common",
     visibility = [
         "//shared/bls:__subpackages__",
-        "//spectest:__subpackages__",
+        "//testing/spectest:__subpackages__",
     ],
 )
