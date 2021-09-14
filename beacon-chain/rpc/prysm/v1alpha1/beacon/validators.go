@@ -762,6 +762,7 @@ func (bs *Server) GetValidatorPerformance(
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
+	inactivityScores := make([]uint64, 0, responseCap)
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {
@@ -791,19 +792,21 @@ func (bs *Server) GetValidatorPerformance(
 		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
+		inactivityScores = append(inactivityScores, summary.InactivityScore)
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    pubKeys,
-		InclusionSlots:                inclusionSlots,
-		InclusionDistances:            inclusionDistances,
 		CorrectlyVotedSource:          correctlyVotedSource,
-		CorrectlyVotedTarget:          correctlyVotedTarget,
+		CorrectlyVotedTarget:          correctlyVotedTarget, // In altair, when this is true then the attestation was definitely included.
 		CorrectlyVotedHead:            correctlyVotedHead,
 		CurrentEffectiveBalances:      effectiveBalances,
 		BalancesBeforeEpochTransition: beforeTransitionBalances,
 		BalancesAfterEpochTransition:  afterTransitionBalances,
 		MissingValidators:             missingValidators,
+		InclusionSlots:                inclusionSlots,     // Only populated in phase0
+		InclusionDistances:            inclusionDistances, // Only populated in phase 0
+		InactivityScores:              inactivityScores,   // Only populated in Altair
 	}, nil
 }
 
