@@ -674,12 +674,32 @@ func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
+type blockSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *blockSSZResponseV2Json) SSZData() string {
+	return ssz.Data
+}
+
 // beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
 type beaconStateSSZResponseJson struct {
 	Data string `json:"data"`
 }
 
 func (ssz *beaconStateSSZResponseJson) SSZData() string {
+	return ssz.Data
+}
+
+// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
+type beaconStateSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
 	return ssz.Data
 }
 
