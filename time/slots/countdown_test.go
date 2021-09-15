@@ -1,4 +1,4 @@
-package slotutil
+package slots
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,7 +27,7 @@ func TestCountdownToGenesis(t *testing.T) {
 		genesisReached := "Chain genesis time reached"
 		CountdownToGenesis(
 			context.Background(),
-			timeutils.Now().Add(2*time.Second),
+			prysmTime.Now().Add(2*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
 			[32]byte{},
 		)
@@ -45,7 +45,7 @@ func TestCountdownToGenesis(t *testing.T) {
 		}()
 		CountdownToGenesis(
 			ctx,
-			timeutils.Now().Add(5*time.Second),
+			prysmTime.Now().Add(5*time.Second),
 			params.BeaconConfig().MinGenesisActiveValidatorCount,
 			[32]byte{},
 		)

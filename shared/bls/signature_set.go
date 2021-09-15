@@ -30,3 +30,27 @@ func (s *SignatureSet) Join(set *SignatureSet) *SignatureSet {
 func (s *SignatureSet) Verify() (bool, error) {
 	return VerifyMultipleSignatures(s.Signatures, s.Messages, s.PublicKeys)
 }
+
+// Copy the attached signature set and return it
+// to the caller.
+func (s *SignatureSet) Copy() *SignatureSet {
+	signatures := make([][]byte, len(s.Signatures))
+	pubkeys := make([]PublicKey, len(s.PublicKeys))
+	messages := make([][32]byte, len(s.Messages))
+	for i := range s.Signatures {
+		sig := make([]byte, len(s.Signatures[i]))
+		copy(sig, s.Signatures[i])
+		signatures[i] = sig
+	}
+	for i := range s.PublicKeys {
+		pubkeys[i] = s.PublicKeys[i].Copy()
+	}
+	for i := range s.Messages {
+		copy(messages[i][:], s.Messages[i][:])
+	}
+	return &SignatureSet{
+		Signatures: signatures,
+		PublicKeys: pubkeys,
+		Messages:   messages,
+	}
+}

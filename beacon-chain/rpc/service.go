@@ -38,10 +38,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -369,7 +369,7 @@ func (s *Service) validatorUnaryConnectionInterceptor(
 }
 
 func (s *Service) logNewClientConnection(ctx context.Context) {
-	if featureconfig.Get().DisableGRPCConnectionLogs {
+	if features.Get().DisableGRPCConnectionLogs {
 		return
 	}
 	if clientInfo, ok := peer.FromContext(ctx); ok {

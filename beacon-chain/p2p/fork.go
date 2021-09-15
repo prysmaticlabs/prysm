@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -90,7 +90,7 @@ func addForkEntry(
 	}
 	currentSlot := core.SlotsSince(genesisTime)
 	currentEpoch := core.SlotToEpoch(currentSlot)
-	if timeutils.Now().Before(genesisTime) {
+	if prysmTime.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}
 	nextForkVersion, nextForkEpoch, err := p2putils.NextForkData(currentEpoch)

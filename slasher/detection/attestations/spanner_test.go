@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -915,7 +915,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 }
 
 func TestSpanDetector_UpdateMinSpansCheckCacheSize(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	resetCfg := features.InitWithReset(&features.Flags{DisableLookback: true})
 	defer resetCfg()
 
 	att := &ethpb.IndexedAttestation{

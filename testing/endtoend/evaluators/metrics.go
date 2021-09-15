@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -120,7 +120,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		timeSlot := slotutil.SlotsSinceGenesis(genesisResp.GenesisTime.AsTime())
+		timeSlot := slots.SlotsSinceGenesis(genesisResp.GenesisTime.AsTime())
 		if uint64(chainHead.HeadSlot) != uint64(timeSlot) {
 			return fmt.Errorf("expected metrics slot to equal chain head slot, expected %d, received %d", chainHead.HeadSlot, timeSlot)
 		}

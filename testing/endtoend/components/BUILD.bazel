@@ -17,10 +17,10 @@ go_library(
     deps = [
         "//cmd/beacon-chain/flags:go_default_library",
         "//cmd/validator/flags:go_default_library",
+        "//config/features:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//testing/endtoend/helpers:go_default_library",

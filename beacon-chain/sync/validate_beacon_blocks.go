@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -28,7 +28,7 @@ import (
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
 func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	receivedTime := timeutils.Now()
+	receivedTime := prysmTime.Now()
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.P2P.PeerID() {
@@ -276,7 +276,7 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error 
 	if err != nil {
 		return err
 	}
-	ms := timeutils.Now().Sub(startTime) / time.Millisecond
+	ms := prysmTime.Now().Sub(startTime) / time.Millisecond
 	arrivalBlockPropagationHistogram.Observe(float64(ms))
 
 	return nil

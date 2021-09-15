@@ -17,7 +17,7 @@ The process for implementing new features using this package is as follows:
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
-package featureconfig
+package features
 
 import (
 	"sync"
@@ -51,6 +51,7 @@ type Flags struct {
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
+	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -64,12 +65,7 @@ type Flags struct {
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
-	AttestTimely                   bool   // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
-	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
-
-	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
-	// changed on disk. This feature is for advanced use cases only.
-	KeystoreImportDebounceInterval time.Duration
+	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
@@ -77,6 +73,12 @@ type Flags struct {
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
+
+	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
+	// changed on disk. This feature is for advanced use cases only.
+	KeystoreImportDebounceInterval time.Duration
+
+	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -211,6 +213,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableActiveBalanceCache.Name) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
+	}
+	if ctx.Bool(enableBatchGossipVerification.Name) {
+		logEnabled(enableBatchGossipVerification)
+		cfg.EnableBatchVerification = true
 	}
 	Init(cfg)
 }

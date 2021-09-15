@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 var (
@@ -54,7 +54,7 @@ func GenerateGenesisStateFromDepositData(
 	}
 	root := trie.HashTreeRoot()
 	if genesisTime == 0 {
-		genesisTime = uint64(timeutils.Now().Unix())
+		genesisTime = uint64(time.Now().Unix())
 	}
 	beaconState, err := coreState.GenesisBeaconState(ctx, deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],

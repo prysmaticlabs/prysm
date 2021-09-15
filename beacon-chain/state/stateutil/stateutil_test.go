@@ -3,11 +3,11 @@ package stateutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 )
 
 func TestMain(m *testing.M) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableSSZCache: true})
+	resetCfg := features.InitWithReset(&features.Flags{EnableSSZCache: true})
 	defer resetCfg()
 	m.Run()
 }

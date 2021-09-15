@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -25,7 +25,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		// feature flag is not enabled
 		// - migration is complete, don't migrate the DB but warn that this will work as if the flag is enabled.
 		// - migration is not complete, don't migrate the DB.
-		if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		if !features.Get().EnableHistoricalSpaceRepresentation {
 			b := mb.Get(migrationStateValidatorsKey)
 			if bytes.Equal(b, migrationCompleted) {
 				log.Warning("migration of historical states already completed. The node will work as if --enable-historical-state-representation=true.")

@@ -1,4 +1,4 @@
-package slotutil
+package slots
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -21,14 +21,14 @@ func TestSlotsSinceGenesis(t *testing.T) {
 		{
 			name: "pre-genesis",
 			args: args{
-				genesis: timeutils.Now().Add(1 * time.Hour), // 1 hour in the future
+				genesis: prysmTime.Now().Add(1 * time.Hour), // 1 hour in the future
 			},
 			want: 0,
 		},
 		{
 			name: "post-genesis",
 			args: args{
-				genesis: timeutils.Now().Add(-5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis: prysmTime.Now().Add(-5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			want: 5,
 		},

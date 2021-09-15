@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -21,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -72,7 +72,7 @@ func New(cliCtx *cli.Context) (*SlasherNode, error) {
 		cmd.Init(cmdConfig)
 	}
 
-	featureconfig.ConfigureSlasher(cliCtx)
+	features.ConfigureSlasher(cliCtx)
 	cmd.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 

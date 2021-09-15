@@ -17,6 +17,7 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -26,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -95,7 +95,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	featureconfig.ConfigureValidator(cliCtx)
+	features.ConfigureValidator(cliCtx)
 	cmd.ConfigureValidator(cliCtx)
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
@@ -251,7 +251,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
+	if features.Get().SlasherProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
@@ -340,7 +340,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
+	if features.Get().SlasherProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
