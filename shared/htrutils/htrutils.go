@@ -6,9 +6,9 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -37,7 +37,7 @@ func ForkRoot(fork *ethpb.Fork) ([32]byte, error) {
 		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
 		fieldRoots[2] = epochRoot[:]
 	}
-	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return BitwiseMerkleize(hash.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
@@ -60,7 +60,7 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 // a list of [32]byte historical block roots according to the Ethereum
 // Simple Serialize specification.
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
-	result, err := BitwiseMerkleize(hashutil.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
+	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -89,5 +89,5 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
 	}
-	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
+	return BitwiseMerkleize(hash.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }

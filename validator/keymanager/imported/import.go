@@ -9,7 +9,7 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
