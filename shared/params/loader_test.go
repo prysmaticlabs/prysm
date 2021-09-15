@@ -207,15 +207,6 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 	}
 }
 
-// configFilePath sets the proper config and returns the relevant
-// config file path from eth2-spec-tests directory.
-func configFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/consensus_spec")
-	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "configs", config+".yaml")
-	return configFilePath
-}
-
 // presetsFilePath sets the proper preset and returns the relevant
 // preset file path from eth2-spec-tests directory.
 func presetsFilePath(t *testing.T, config string) string {

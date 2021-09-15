@@ -496,6 +496,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 	return inRangeVotes, nil
 }
 
+//nolint:deadcode
 func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
 	var voteCount []eth1DataAggregatedVote
 	for _, singleVote := range votes {
