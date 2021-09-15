@@ -10,8 +10,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -327,7 +327,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 }
 
 func writeWalletPasswordToDisk(walletDir, password string) error {
-	if !featureconfig.Get().WriteWalletPasswordOnWebOnboarding {
+	if !features.Get().WriteWalletPasswordOnWebOnboarding {
 		return nil
 	}
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)

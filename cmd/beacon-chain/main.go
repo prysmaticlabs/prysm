@@ -14,14 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -114,7 +114,7 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
-	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.BeaconChainFlags...))
+	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
 func main() {

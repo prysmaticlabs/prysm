@@ -17,11 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -115,7 +115,7 @@ func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconStat
 	}
 	prevBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
@@ -181,7 +181,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	// The block must have a higher slot than parent state.
 	if state.Slot() >= slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, err
 	}
 
@@ -215,14 +215,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 	defer func() {
 		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
 		}
 	}()
 
 	for state.Slot() < slot {
 		if ctx.Err() != nil {
-			traceutil.AnnotateError(span, ctx.Err())
+			tracing.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
 				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
@@ -233,7 +233,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 		state, err = ProcessSlot(ctx, state)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
@@ -241,13 +241,13 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			case version.Phase0:
 				state, err = ProcessEpochPrecompute(ctx, state)
 				if err != nil {
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
 			case version.Altair:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
 			default:
@@ -255,14 +255,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
 		if CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return nil, err
 			}
 		}
@@ -271,7 +271,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	if highestSlot < state.Slot() {
 		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
 			log.WithError(err).Error("Failed to put skip slot cache value")
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 		}
 	}
 

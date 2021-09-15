@@ -9,9 +9,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 var _ Scorer = (*BlockProviderScorer)(nil)
@@ -155,7 +155,7 @@ func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
 	if len(t) == 1 {
 		peerData.BlockProviderUpdated = t[0]
 	} else {
-		peerData.BlockProviderUpdated = timeutils.Now()
+		peerData.BlockProviderUpdated = prysmTime.Now()
 	}
 }
 
@@ -291,7 +291,7 @@ func (s *BlockProviderScorer) mapScoresAndPeers(
 func (s *BlockProviderScorer) FormatScorePretty(pid peer.ID) string {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	if !featureconfig.Get().EnablePeerScorer {
+	if !features.Get().EnablePeerScorer {
 		return "disabled"
 	}
 	score := s.score(pid)

@@ -7,13 +7,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	stateutil "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func init() {
-	featureconfig.Init(&featureconfig.Flags{
+	features.Init(&features.Flags{
 		EnableSSZCache: false,
 	})
 }

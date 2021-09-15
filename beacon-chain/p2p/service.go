@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -46,7 +46,7 @@ var _ shared.Service = (*Service)(nil)
 var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
-var refreshRate = slotutil.DivideSlotBy(2)
+var refreshRate = slots.DivideSlotBy(2)
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5

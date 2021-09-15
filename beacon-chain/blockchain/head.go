@@ -13,12 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -131,7 +131,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
-		absoluteSlotDifference := slotutil.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
+		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
@@ -371,7 +371,7 @@ func (s *Service) notifyNewHeadEvent(
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
-	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+	if !features.Get().CorrectlyInsertOrphanedAtts {
 		return nil
 	}
 

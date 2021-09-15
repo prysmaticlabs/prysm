@@ -12,7 +12,7 @@ go_library(
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/timeutils:go_default_library",
+        "//time:go_default_library",
         "//validator/client/iface:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

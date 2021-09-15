@@ -18,8 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -48,8 +48,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		return status.Error(codes.Unavailable, "genesis time is not set")
 	}
 	var currentEpoch types.Epoch
-	if genesisTime.Before(timeutils.Now()) {
-		currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
+	if genesisTime.Before(prysmTime.Now()) {
+		currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 	}
 	req.Epoch = currentEpoch
 	res, err := vs.duties(stream.Context(), req)
@@ -66,7 +66,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	defer stateSub.Unsubscribe()
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	epochTicker := slotutil.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	epochTicker := slots.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
@@ -82,7 +82,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		case ev := <-stateChannel:
 			// If a reorg occurred, we recompute duties for the connected validator clients
 			// and send another response over the server stream right away.
-			currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
+			currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 			if ev.Type == statefeed.Reorg {
 				data, ok := ev.Data.(*ethpbv1.EventChainReorg)
 				if !ok {
@@ -235,7 +235,7 @@ func (vs *Server) AssignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorS
 	}
 
 	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
-	if ok && expTime.After(timeutils.Now()) {
+	if ok && expTime.After(prysmTime.Now()) {
 		return
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
@@ -284,7 +284,7 @@ func registerSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
 	currPeriod := core.SyncCommitteePeriod(currEpoch)
 	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)
-	if ok && expTime.After(timeutils.Now()) {
+	if ok && expTime.After(prysmTime.Now()) {
 		return
 	}
 	firstValidEpoch, err := startEpoch.SafeSub(params.BeaconConfig().SyncCommitteeSubnetCount)

@@ -8,13 +8,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -149,13 +149,13 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
 	defer span.End()
 
-	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
+	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	twoThird := oneThird + oneThird
 	delay := twoThird
 
-	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	startTime := slots.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	wait := timeutils.Until(finalTime)
+	wait := prysmTime.Until(finalTime)
 	if wait <= 0 {
 		return
 	}
@@ -163,7 +163,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 	defer t.Stop()
 	select {
 	case <-ctx.Done():
-		traceutil.AnnotateError(span, ctx.Err())
+		tracing.AnnotateError(span, ctx.Err())
 		return
 	case <-t.C:
 		return

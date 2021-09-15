@@ -2,10 +2,10 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -50,7 +50,7 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 //   }
 //   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
+	strategy := AttestationAggregationStrategy(features.Get().AttestationAggregationStrategy)
 	switch strategy {
 	case "", NaiveAggregation:
 		return NaiveAttestationAggregation(atts)

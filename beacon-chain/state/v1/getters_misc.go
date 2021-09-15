@@ -4,10 +4,10 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -170,7 +170,7 @@ func (b *BeaconState) balancesLength() int {
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of Ethereum.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
+	if features.Get().EnableSSZCache {
 		return cachedHasher.arraysRoot(vals, length, fieldName)
 	}
 	return nocachedHasher.arraysRoot(vals, length, fieldName)

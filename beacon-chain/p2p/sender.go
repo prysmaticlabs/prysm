@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -38,7 +38,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 
 	stream, err := s.host.NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, err
 	}
 	// do not encode anything if we are sending a metadata request
@@ -48,7 +48,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 			return nil, errors.Errorf("%T does not support the ssz marshaller interface", message)
 		}
 		if _, err := s.Encoding().EncodeWithMaxLength(stream, castedMsg); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			_err := stream.Reset()
 			_ = _err
 			return nil, err
@@ -57,7 +57,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 
 	// Close stream for writing.
 	if err := stream.CloseWrite(); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		_err := stream.Reset()
 		_ = _err
 		return nil, err

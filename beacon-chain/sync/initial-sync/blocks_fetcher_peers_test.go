@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
@@ -324,29 +324,29 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 		},
@@ -356,25 +356,25 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 		},
@@ -384,15 +384,15 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 			},
 			peersOut: []peerData{},
