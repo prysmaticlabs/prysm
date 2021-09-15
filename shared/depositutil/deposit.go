@@ -5,9 +5,9 @@ package depositutil
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -79,7 +79,7 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
 func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return nil
 	}
 	ddCopy := ethpb.CopyDepositData(dd)

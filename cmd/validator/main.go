@@ -16,11 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	slashingprotectioncommands "github.com/prysmaticlabs/prysm/cmd/validator/slashing-protection"
 	walletcommands "github.com/prysmaticlabs/prysm/cmd/validator/wallet"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/tos"
@@ -103,7 +103,7 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
-	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.ValidatorFlags...))
+	appFlags = cmd.WrapFlags(append(appFlags, features.ValidatorFlags...))
 }
 
 func main() {

@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -22,7 +22,7 @@ import (
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 	})
 	defer resetCfg()
@@ -233,21 +233,21 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			}
 		}
 		t.Run(fmt.Sprintf("%s/%s", tt.name, NaiveAggregation), func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(NaiveAggregation),
 			})
 			defer resetCfg()
 			runner()
 		})
 		t.Run(fmt.Sprintf("%s/%s", tt.name, MaxCoverAggregation), func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
 			})
 			defer resetCfg()
 			runner()
 		})
 		t.Run(fmt.Sprintf("%s/%s", tt.name, OptMaxCoverAggregation), func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 			})
 			defer resetCfg()
@@ -256,7 +256,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	}
 
 	t.Run("invalid strategy", func(t *testing.T) {
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		resetCfg := features.InitWithReset(&features.Flags{
 			AttestationAggregationStrategy: "foobar",
 		})
 		defer resetCfg()
@@ -267,7 +267,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	t.Run("broken attestation bitset", func(t *testing.T) {
 		wantErr := "bitlist cannot be nil or empty: invalid max_cover problem"
 		t.Run(string(MaxCoverAggregation), func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
 			})
 			defer resetCfg()
@@ -279,7 +279,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			assert.ErrorContains(t, wantErr, err)
 		})
 		t.Run(string(OptMaxCoverAggregation), func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 			})
 			defer resetCfg()
@@ -296,7 +296,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		// The first item cannot be aggregated, and should be pushed down the list,
 		// by two swaps with aggregated items (aggregation is done in-place, so the very same
 		// underlying array is used for storing both aggregated and non-aggregated items).
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		resetCfg := features.InitWithReset(&features.Flags{
 			AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 		})
 		defer resetCfg()

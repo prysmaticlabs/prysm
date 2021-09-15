@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -82,7 +82,7 @@ func (s *Service) Start() {
 		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
-	if genesis.After(timeutils.Now()) {
+	if genesis.After(prysmTime.Now()) {
 		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
 		return

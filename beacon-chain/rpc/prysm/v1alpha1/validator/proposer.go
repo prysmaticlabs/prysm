@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -28,7 +29,6 @@ import (
 	synccontribution "github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -213,7 +213,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get head state %v", err)
 	}
 
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
