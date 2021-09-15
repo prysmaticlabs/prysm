@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -494,40 +493,6 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 	}
 
 	return inRangeVotes, nil
-}
-
-//nolint:deadcode
-func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
-	var voteCount []eth1DataAggregatedVote
-	for _, singleVote := range votes {
-		newVote := true
-		for i, aggregatedVote := range voteCount {
-			aggregatedData := aggregatedVote.data
-			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
-				voteCount[i].votes++
-				newVote = false
-				break
-			}
-		}
-
-		if newVote {
-			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
-		}
-	}
-	if len(voteCount) == 0 {
-		return eth1DataAggregatedVote{}
-	}
-	currentVote := voteCount[0]
-	for _, aggregatedVote := range voteCount[1:] {
-		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
-		if aggregatedVote.votes > currentVote.votes ||
-			(aggregatedVote.votes == currentVote.votes &&
-				aggregatedVote.data.blockHeight.Cmp(currentVote.data.blockHeight) == 1) {
-			currentVote = aggregatedVote
-		}
-	}
-
-	return currentVote
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
