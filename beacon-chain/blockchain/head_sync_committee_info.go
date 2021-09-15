@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -110,6 +112,9 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	var headState state.BeaconState
 	var err error
+	lock := mputil.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
+	lock.Lock()
+	defer lock.Unlock()
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
 	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
