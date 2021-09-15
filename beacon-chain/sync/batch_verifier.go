@@ -6,8 +6,8 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -66,12 +66,12 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 		verified, err := set.Verify()
 		if err != nil {
 			log.WithError(err).Debugf("Could not verify %s", message)
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 		if !verified {
 			log.Debugf("Verification of %s failed", message)
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 	}

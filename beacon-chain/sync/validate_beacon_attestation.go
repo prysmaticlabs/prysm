@@ -16,11 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -189,7 +188,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 		return pubsub.ValidationReject
 	}
 
-	if featureconfig.Get().EnableBatchVerification {
+	if features.Get().EnableBatchVerification {
 		set, err := blocks.AttestationSignatureSet(ctx, bs, []*eth.Attestation{a})
 		if err != nil {
 			log.WithError(err).Debug("Could not create attestation signature set.")
