@@ -1433,8 +1433,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:LEw2KkKciJEr3eKDLzdZ/rjzSR6Y+BS6xKxdA78Bq6s=",
-        version = "v0.0.0-20210130185500-57372fb27371",
+        sum = "h1:7V5qCWTKJ0T/9KjYo2dBFaIDEb2dvy3onu9nqOIIFDc=",
+        version = "v0.0.0-20210902234237-7763804ee078",
     )
 
     go_repository(
@@ -3015,6 +3015,12 @@ def prysm_deps():
         importpath = "github.com/sean-/seed",
         sum = "h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=",
         version = "v0.0.0-20170313163322-e2103e2c3529",
+    )
+    go_repository(
+        name = "com_github_segmentio_kafka_go",
+        importpath = "github.com/segmentio/kafka-go",
+        sum = "h1:HtCSf6B4gN/87yc5qTl7WsxPKQIIGXLPPM1bMCPOsoY=",
+        version = "v0.2.0",
     )
 
     go_repository(
