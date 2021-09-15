@@ -11,7 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -191,7 +191,7 @@ func (s *Server) checkUserSignup(ctx context.Context) {
 func (s *Server) createTokenString() (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
-	expirationTime := timeutils.Now().Add(tokenExpiryLength)
+	expirationTime := prysmTime.Now().Add(tokenExpiryLength)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
 	})

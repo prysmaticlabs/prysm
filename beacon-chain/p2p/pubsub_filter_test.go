@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/stretchr/testify/require"
 )
 
@@ -347,7 +347,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 		n = notifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
-				StartTime:             timeutils.Now(),
+				StartTime:             prysmTime.Now(),
 				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
 			},
 		})

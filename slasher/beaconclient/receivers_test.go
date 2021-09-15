@@ -9,9 +9,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -109,7 +109,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		nil,
 	).Do(func() {
 		// Let a slot pass for the ticker.
-		time.Sleep(slotutil.DivideSlotBy(1))
+		time.Sleep(slots.DivideSlotBy(1))
 		cancel()
 	})
 
