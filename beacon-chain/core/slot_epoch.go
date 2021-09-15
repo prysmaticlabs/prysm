@@ -10,8 +10,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -133,7 +133,7 @@ func VerifySlotTime(genesisTime uint64, slot types.Slot, timeTolerance time.Dura
 		return err
 	}
 
-	currentTime := timeutils.Now()
+	currentTime := prysmTime.Now()
 	diff := slotTime.Sub(currentTime)
 
 	if diff > timeTolerance {
@@ -163,7 +163,7 @@ func SlotsSince(time time.Time) types.Slot {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) types.Slot {
-	now := timeutils.Now().Unix()
+	now := prysmTime.Now().Unix()
 	genesis := int64(genesisTimeSec)
 	if now < genesis {
 		return 0

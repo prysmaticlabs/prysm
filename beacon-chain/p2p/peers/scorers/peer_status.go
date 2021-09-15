@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 var _ Scorer = (*PeerStatusScorer)(nil)
@@ -112,7 +112,7 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, val
 
 	peerData := s.store.PeerDataGetOrCreate(pid)
 	peerData.ChainState = chainState
-	peerData.ChainStateLastUpdated = timeutils.Now()
+	peerData.ChainStateLastUpdated = time.Now()
 	peerData.ChainStateValidationError = validationError
 
 	// Update maximum known head slot (scores will be calculated with respect to that maximum value).

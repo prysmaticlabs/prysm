@@ -538,7 +538,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
 
-				phase0Block, ok := blk.Data.Block.(*ethpbv2.BeaconBlockContainerV2_Phase0Block)
+				phase0Block, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
@@ -655,7 +655,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				altairBlock, ok := blk.Data.Block.(*ethpbv2.BeaconBlockContainerV2_AltairBlock)
+				altairBlock, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")
@@ -875,99 +875,201 @@ func TestServer_GetBlockRoot(t *testing.T) {
 }
 
 func TestServer_ListBlockAttestations(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-	ctx := context.Background()
+	t.Run("Phase 0", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
-	headBlock := blkContainers[len(blkContainers)-1]
-	bs := &Server{
-		BeaconDB: beaconDB,
-		ChainInfoFetcher: &mock.ChainService{
-			DB:                  beaconDB,
-			Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
-			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-		},
-	}
+		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               wrapper.WrappedPhase0SignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block),
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
-	root, err := genBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
+		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
 
-	tests := []struct {
-		name    string
-		blockID []byte
-		want    *ethpbalpha.SignedBeaconBlock
-		wantErr bool
-	}{
-		{
-			name:    "slot",
-			blockID: []byte("30"),
-			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "bad formatting",
-			blockID: []byte("3bad0"),
-			wantErr: true,
-		},
-		{
-			name:    "head",
-			blockID: []byte("head"),
-			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "finalized",
-			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "genesis",
-			blockID: []byte("genesis"),
-			want:    genBlk,
-		},
-		{
-			name:    "genesis root",
-			blockID: root[:],
-			want:    genBlk,
-		},
-		{
-			name:    "root",
-			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "non-existent root",
-			blockID: bytesutil.PadTo([]byte("hi there"), 32),
-			wantErr: true,
-		},
-		{
-			name:    "slot",
-			blockID: []byte("40"),
-			want:    blkContainers[40].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "no block",
-			blockID: []byte("105"),
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			block, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
-				BlockId: tt.blockID,
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    *ethpbalpha.SignedBeaconBlock
+			wantErr bool
+		}{
+			{
+				name:    "slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    genBlk,
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    genBlk,
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "slot",
+				blockID: []byte("40"),
+				want:    blkContainers[40].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				blk, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
+					BlockId: tt.blockID,
+				})
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+
+				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
+				require.NoError(t, err)
+
+				if !reflect.DeepEqual(blk.Data, v1Block.Block.Body.Attestations) {
+					t.Error("Expected attestations to equal")
+				}
 			})
-			if tt.wantErr {
-				require.NotEqual(t, err, nil)
-				return
-			}
-			require.NoError(t, err)
+		}
+	})
 
-			v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
-			require.NoError(t, err)
+	t.Run("Altair", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
 
-			if !reflect.DeepEqual(block.Data, v1Block.Block.Body.Attestations) {
-				t.Error("Expected attestations to equal")
-			}
-		})
-	}
+		_, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+		blk, err := wrapper.WrappedAltairSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock)
+		require.NoError(t, err)
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               blk,
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
+
+		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    *ethpbalpha.SignedBeaconBlockAltair
+			wantErr bool
+		}{
+			{
+				name:    "slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock,
+			},
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    genBlk,
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    genBlk,
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock,
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "slot",
+				blockID: []byte("40"),
+				want:    blkContainers[40].Block.(*ethpbalpha.BeaconBlockContainer_AltairBlock).AltairBlock,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				blk, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
+					BlockId: tt.blockID,
+				})
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+
+				v1Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
+				require.NoError(t, err)
+
+				if !reflect.DeepEqual(blk.Data, v1Block.Body.Attestations) {
+					t.Error("Expected attestations to equal")
+				}
+			})
+		}
+	})
 }

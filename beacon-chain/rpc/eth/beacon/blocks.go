@@ -243,8 +243,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Block:     &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 		}, nil
@@ -259,8 +259,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	return &ethpbv2.BlockResponseV2{
 		Version: ethpbv2.Version_ALTAIR,
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+		Data: &ethpbv2.SignedBeaconBlockContainerV2{
+			Block:     &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),
 		},
 	}, nil
@@ -390,28 +390,29 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockAttestations")
 	defer span.End()
 
-	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
-	}
+	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
 	}
-	if rBlk == nil || rBlk.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
+	if phase0Blk != nil {
+		v1Blk, err := migration.SignedBeaconBlock(blk)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv1.BlockAttestationsResponse{
+			Data: v1Blk.Block.Body.Attestations,
+		}, nil
 	}
-
-	blk, err := rBlk.PbPhase0Block()
+	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
 	}
-
-	v1Block, err := migration.V1Alpha1ToV1SignedBlock(blk)
+	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	return &ethpbv1.BlockAttestationsResponse{
-		Data: v1Block.Block.Body.Attestations,
+		Data: v2Blk.Body.Attestations,
 	}, nil
 }
 

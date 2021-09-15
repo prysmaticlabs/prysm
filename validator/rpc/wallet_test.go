@@ -10,10 +10,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
+	"github.com/prysmaticlabs/prysm/config/features"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -135,12 +135,12 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
 
 	// This defer will be the last to execute in this func.
-	resetCfgFalse := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfgFalse := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: false,
 	})
 	defer resetCfgFalse()
 
-	resetCfgTrue := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfgTrue := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
 	defer resetCfgTrue()
@@ -325,7 +325,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 
 func Test_writeWalletPasswordToDisk(t *testing.T) {
 	walletDir := setupWalletDir(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: false,
 	})
 	defer resetCfg()
@@ -335,7 +335,7 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	// Expected a silent failure if the feature flag is not enabled.
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
 	assert.Equal(t, false, fileutil.FileExists(passwordFilePath))
-	resetCfg = featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg = features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
 	defer resetCfg()

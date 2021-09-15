@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
@@ -155,7 +155,7 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time, clockDis
 	// so the upper bounds is set to now + clockDisparity(SECONDS_PER_SLOT * 2).
 	// But when sending an attestation, it should not be in future slot.
 	// so the upper bounds is set to now + clockDisparity(MAXIMUM_GOSSIP_CLOCK_DISPARITY).
-	upperBounds := timeutils.Now().Add(clockDisparity)
+	upperBounds := prysmTime.Now().Add(clockDisparity)
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
@@ -184,7 +184,7 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time, clockDis
 // VerifyCheckpointEpoch is within current epoch and previous epoch
 // with respect to current time. Returns true if it's within, false if it's not.
 func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
-	now := uint64(timeutils.Now().Unix())
+	now := uint64(prysmTime.Now().Unix())
 	genesisTime := uint64(genesis.Unix())
 	currentSlot := types.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := core.SlotToEpoch(currentSlot)

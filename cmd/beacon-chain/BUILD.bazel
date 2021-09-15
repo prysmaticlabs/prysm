@@ -18,11 +18,11 @@ go_library(
         "//beacon-chain/node:go_default_library",
         "//cmd/beacon-chain/db:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//config/features:go_default_library",
+        "//monitoring/journald:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
-        "//shared/journald:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/maxprocs:go_default_library",
         "//shared/tos:go_default_library",
@@ -143,7 +143,7 @@ go_test(
     embed = [":go_default_library"],
     visibility = ["//beacon-chain:__pkg__"],
     deps = [
-        "//shared/featureconfig:go_default_library",
+        "//config/features:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
 )

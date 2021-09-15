@@ -14,7 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -114,7 +114,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 		log.Warn("Genesis time received, now available to process attestations")
 	}
 
-	st := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-s.ctx.Done():

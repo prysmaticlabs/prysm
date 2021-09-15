@@ -78,13 +78,13 @@ type blockHeaderResponseJson struct {
 
 // blockResponseJson is used in /beacon/blocks/{block_id} API endpoint.
 type blockResponseJson struct {
-	Data *beaconBlockContainerJson `json:"data"`
+	Data *signedBeaconBlockContainerJson `json:"data"`
 }
 
 // blockV2ResponseJson is used in /v2/beacon/blocks/{block_id} API endpoint.
 type blockV2ResponseJson struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *beaconBlockContainerV2Json `json:"data"`
+	Version string                            `json:"version" enum:"true"`
+	Data    *signedBeaconBlockContainerV2Json `json:"data"`
 }
 
 // blockRootResponseJson is used in /beacon/blocks/{block_id}/root API endpoint.
@@ -223,6 +223,12 @@ type produceBlockResponseJson struct {
 	Data *beaconBlockJson `json:"data"`
 }
 
+// produceBlockResponseV2Json is used in /v2/validator/blocks/{slot} API endpoint.
+type produceBlockResponseV2Json struct {
+	Version string                      `json:"version"`
+	Data    *beaconBlockContainerV2Json `json:"data"`
+}
+
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
 type produceAttestationDataResponseJson struct {
 	Data *attestationDataJson `json:"data"`
@@ -264,6 +270,11 @@ type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
 }
 
+// produceSyncCommitteeContributionResponseJson is used in /validator/sync_committee_contribution API endpoint.
+type produceSyncCommitteeContributionResponseJson struct {
+	Data *syncCommitteeContributionJson `json:"data"`
+}
+
 // submitContributionAndProofsRequestJson is used in /validator/contribution_and_proofs API endpoint.
 type submitContributionAndProofsRequestJson struct {
 	Data []*signedContributionAndProofJson `json:"data"`
@@ -282,9 +293,13 @@ type blockRootContainerJson struct {
 	Root string `json:"root" hex:"true"`
 }
 
-type beaconBlockContainerJson struct {
+type signedBeaconBlockContainerJson struct {
 	Message   *beaconBlockJson `json:"message"`
 	Signature string           `json:"signature" hex:"true"`
+}
+
+type beaconBlockContainerJson struct {
+	Message *beaconBlockJson `json:"message"`
 }
 
 type beaconBlockJson struct {
@@ -306,15 +321,24 @@ type beaconBlockBodyJson struct {
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 }
 
-type beaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0Block"`
-	AltairBlock *beaconBlockAltairJson `json:"altairBlock"`
+type signedBeaconBlockContainerV2Json struct {
+	Phase0Block *beaconBlockJson       `json:"phase0_block"`
+	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
-type beaconBlockAltairContainerJson struct {
+type beaconBlockContainerV2Json struct {
+	Phase0Block *beaconBlockJson       `json:"phase0_block"`
+	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
+}
+
+type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
+}
+
+type beaconBlockAltairContainerJson struct {
+	Message *beaconBlockAltairJson `json:"message"`
 }
 
 type beaconBlockAltairJson struct {
@@ -508,8 +532,8 @@ type beaconStateV2Json struct {
 }
 
 type beaconStateContainerV2Json struct {
-	Phase0State *beaconStateJson   `json:"phase0State"`
-	AltairState *beaconStateV2Json `json:"altairState"`
+	Phase0State *beaconStateJson   `json:"phase0_state"`
+	AltairState *beaconStateV2Json `json:"altair_state"`
 }
 
 type forkJson struct {

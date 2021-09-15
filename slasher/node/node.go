@@ -14,16 +14,16 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
+	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
-	"github.com/prysmaticlabs/prysm/shared/prometheus"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -52,7 +52,7 @@ type SlasherNode struct {
 // New creates a new node instance, sets up configuration options,
 // and registers every required service.
 func New(cliCtx *cli.Context) (*SlasherNode, error) {
-	if err := tracing.Setup(
+	if err := tracing2.Setup(
 		"slasher", // Service name.
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
@@ -72,7 +72,7 @@ func New(cliCtx *cli.Context) (*SlasherNode, error) {
 		cmd.Init(cmdConfig)
 	}
 
-	featureconfig.ConfigureSlasher(cliCtx)
+	features.ConfigureSlasher(cliCtx)
 	cmd.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
@@ -165,7 +165,7 @@ func (n *SlasherNode) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(n.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backup.BackupHandler(n.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
