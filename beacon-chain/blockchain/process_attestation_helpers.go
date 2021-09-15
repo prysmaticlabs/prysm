@@ -42,10 +42,10 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, err
 	}
-			baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-			}
+	baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+	}
 
 	// Sharing the same state across caches is perfectly fine here, the fetching
 	// of attestation prestate is by far the most accessed state fetching pattern in
