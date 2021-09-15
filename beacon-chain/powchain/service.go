@@ -41,8 +41,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -704,7 +704,7 @@ func (s *Service) handleETH1FollowDistance() {
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := timeutils.Now().Add(-5 * time.Minute)
+	fiveMinutesTimeout := prysmTime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("eth1 client is not syncing")
@@ -1061,7 +1061,7 @@ func dedupEndpoints(endpoints []string) []string {
 // Checks if the provided timestamp is beyond the prescribed bound from
 // the current wall clock time.
 func eth1HeadIsBehind(timestamp uint64) bool {
-	timeout := timeutils.Now().Add(-eth1Threshold)
+	timeout := prysmTime.Now().Add(-eth1Threshold)
 	// check that web3 client is syncing
 	return time.Unix(int64(timestamp), 0).Before(timeout)
 }

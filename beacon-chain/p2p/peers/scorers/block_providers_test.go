@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 func TestScorers_BlockProvider_Score(t *testing.T) {
@@ -57,7 +57,7 @@ func TestScorers_BlockProvider_Score(t *testing.T) {
 				batchWeight := scorer.Params().ProcessedBatchWeight
 				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
 				assert.Equal(t, roundScore(batchWeight*3), scorer.Score("peer1"), "Unexpected score")
-				scorer.Touch("peer1", timeutils.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+				scorer.Touch("peer1", time.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
 			},
 			check: func(scorer *scorers.BlockProviderScorer) {
 				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")

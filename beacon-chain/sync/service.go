@@ -35,8 +35,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 var _ shared.Service = (*Service)(nil)
@@ -56,7 +56,7 @@ var (
 	// Seconds in one epoch.
 	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 	// time to allow processing early blocks.
-	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
+	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	errWrongMessage                     = errors.New("wrong pubsub message")
@@ -239,8 +239,8 @@ func (s *Service) registerHandlers() {
 				s.registerRPCHandlers()
 				// Wait for chainstart in separate routine.
 				go func() {
-					if startTime.After(timeutils.Now()) {
-						time.Sleep(timeutils.Until(startTime))
+					if startTime.After(prysmTime.Now()) {
+						time.Sleep(prysmTime.Until(startTime))
 					}
 					log.WithField("starttime", startTime).Debug("Chain started in sync service")
 					s.markForChainStart()

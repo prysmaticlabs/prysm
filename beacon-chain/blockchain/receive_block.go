@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 	"go.opencensus.io/trace"
 )
 
@@ -33,7 +33,7 @@ type BlockReceiver interface {
 func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
-	receivedTime := timeutils.Now()
+	receivedTime := time.Now()
 	blockCopy := block.Copy()
 
 	// Apply state transition on the new block.

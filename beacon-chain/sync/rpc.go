@@ -15,7 +15,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 	"go.opencensus.io/trace"
 )
 
@@ -150,7 +150,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		}
 		s.rateLimiter.addRawStream(stream)
 
-		if err := stream.SetReadDeadline(timeutils.Now().Add(ttfbTimeout)); err != nil {
+		if err := stream.SetReadDeadline(time.Now().Add(ttfbTimeout)); err != nil {
 			log.WithError(err).Debug("Could not set stream read deadline")
 			return
 		}

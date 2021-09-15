@@ -1,5 +1,5 @@
 // Package timeutils is a wrapper around the go standard time library.
-package timeutils
+package time
 
 import (
 	"time"

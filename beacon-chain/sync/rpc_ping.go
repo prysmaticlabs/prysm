@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -86,7 +86,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	currentTime := timeutils.Now()
+	currentTime := time.Now()
 	defer closeStream(stream, log)
 
 	code, errMsg, err := ReadStatusCode(stream, s.cfg.P2P.Encoding())
@@ -94,7 +94,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	// Records the latency of the ping request for that peer.
-	s.cfg.P2P.Host().Peerstore().RecordLatency(id, timeutils.Now().Sub(currentTime))
+	s.cfg.P2P.Host().Peerstore().RecordLatency(id, time.Now().Sub(currentTime))
 
 	if code != 0 {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())

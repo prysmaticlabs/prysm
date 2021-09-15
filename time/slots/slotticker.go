@@ -1,11 +1,11 @@
 // Package slotutil includes ticker and timer-related functions for Ethereum consensus.
-package slotutil
+package slots
 
 import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 // The Ticker interface defines a type which can expose a
@@ -48,7 +48,7 @@ func NewSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
+	ticker.start(genesisTime, secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
 	return ticker
 }
 
@@ -65,7 +65,7 @@ func NewSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime.Add(offset), secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
+	ticker.start(genesisTime.Add(offset), secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
 	return ticker
 }
 

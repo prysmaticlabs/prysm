@@ -1,4 +1,4 @@
-package slotutil
+package slots
 
 import (
 	"testing"
