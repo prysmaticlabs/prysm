@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/gofmt
         with:
           path: ./
-      
+
       - name: GoImports checker
         id: goimports
         uses: Jerome1337/goimports-action@v1.0.2
@@ -35,6 +35,12 @@ jobs:
         uses: securego/gosec@master
         with:
           args: '-exclude-dir=shared/bls/herumi ./...'
+
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          args: --print-issued-lines --sort-results --disable-all -E deadcode --skip-dirs=validator/testing --skip-files=validator/web/site_data.go
+
   build:
     name: Build
     runs-on: ubuntu-latest
