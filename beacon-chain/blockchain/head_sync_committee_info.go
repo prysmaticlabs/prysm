@@ -112,9 +112,9 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	var headState state.BeaconState
 	var err error
-	lock := mputil.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
-	lock.Lock()
-	defer lock.Unlock()
+	mLock := mputil.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
+	mLock.Lock()
+	defer mLock.Unlock()
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
 	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
