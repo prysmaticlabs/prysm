@@ -501,15 +501,15 @@ type beaconStateV2Json struct {
 	Balances                    []string               `json:"balances"`
 	RandaoMixes                 []string               `json:"randao_mixes" hex:"true"`
 	Slashings                   []string               `json:"slashings"`
-	PreviousEpochParticipation  string                 `json:"previous_epoch_participation"`
-	CurrentEpochParticipation   string                 `json:"current_epoch_participation"`
+	PreviousEpochParticipation  EpochParticipation     `json:"previous_epoch_participation"`
+	CurrentEpochParticipation   EpochParticipation     `json:"current_epoch_participation"`
 	JustificationBits           string                 `json:"justification_bits" hex:"true"`
 	PreviousJustifiedCheckpoint *checkpointJson        `json:"previous_justified_checkpoint"`
 	CurrentJustifiedCheckpoint  *checkpointJson        `json:"current_justified_checkpoint"`
 	FinalizedCheckpoint         *checkpointJson        `json:"finalized_checkpoint"`
 	InactivityScores            []string               `json:"inactivity_scores"`
-	CurrentSyncCommittee        syncCommitteeJson      `json:"current_sync_committee"`
-	NextSyncCommittee           syncCommitteeJson      `json:"next_sync_committee"`
+	CurrentSyncCommittee        *syncCommitteeJson     `json:"current_sync_committee"`
+	NextSyncCommittee           *syncCommitteeJson     `json:"next_sync_committee"`
 }
 
 type beaconStateContainerV2Json struct {
