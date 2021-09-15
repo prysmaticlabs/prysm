@@ -92,7 +92,7 @@ message BeaconStateSSZResponseV2 {
 
 message BeaconStateContainer {
   oneof state {
-    v1.BeaconState phase0State = 1;
-    BeaconStateV2 altairState = 2;
+    v1.BeaconState phase0_state = 1;
+    BeaconStateV2 altair_state = 2;
   }
 }

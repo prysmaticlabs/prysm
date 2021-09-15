@@ -10,8 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -257,7 +257,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 		lookbackEpoch = 0
 	}
 	untilEpoch := lookbackEpoch
-	if featureconfig.Get().DisableLookback {
+	if features.Get().DisableLookback {
 		untilEpoch = 0
 	}
 	var err error

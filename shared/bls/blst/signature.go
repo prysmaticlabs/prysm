@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	blst "github.com/supranational/blst/bindings/go"
@@ -28,7 +28,7 @@ type Signature struct {
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (common.Signature, error) {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
 	if len(sig) != params.BeaconConfig().BLSSignatureLength {
@@ -56,7 +56,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 // In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return true
 	}
 	// Signature and PKs are assumed to have been validated upon decompression!
@@ -81,7 +81,7 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //
 // Deprecated: Use FastAggregateVerify or use this method in spectests only.
 func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return true
 	}
 	size := len(pubKeys)
@@ -112,7 +112,7 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 // In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return true
 	}
 	if len(pubKeys) == 0 {
@@ -133,7 +133,7 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 //        return True
 //    return bls.FastAggregateVerify(pubkeys, message, signature)
 func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return true
 	}
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
@@ -161,7 +161,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	if len(sigs) == 0 {
 		return nil
 	}
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return sigs[0]
 	}
 
@@ -199,7 +199,7 @@ func Aggregate(sigs []common.Signature) common.Signature {
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
 func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return true, nil
 	}
 	if len(sigs) == 0 || len(pubKeys) == 0 {
@@ -242,7 +242,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
 

@@ -8,9 +8,9 @@ import (
 	"io"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -99,7 +99,7 @@ type FullAccessDatabase interface {
 // Database represents a full access database with the proper DB helper functions.
 type Database interface {
 	io.Closer
-	backuputil.BackupExporter
+	backup.BackupExporter
 	FullAccessDatabase
 	DatabasePath() string
 	ClearDB() error

@@ -10,12 +10,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // Prepare attestations for fork choice three times per slot.
-var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
+var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.

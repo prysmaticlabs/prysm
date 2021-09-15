@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,7 +56,7 @@ func (s *Service) maintainPeerStatuses() {
 					// Peer has vanished; nothing to do.
 					return
 				}
-				if timeutils.Now().After(lastUpdated.Add(interval)) {
+				if prysmTime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Debug("Could not revalidate peer")
 						s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(id)
@@ -286,7 +286,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	}
 	genesis := s.cfg.Chain.GenesisTime()
 	finalizedEpoch := s.cfg.Chain.FinalizedCheckpt().Epoch
-	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
+	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := types.Epoch(0)

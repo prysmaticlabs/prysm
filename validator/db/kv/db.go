@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -162,7 +162,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		}
 	}
 
-	if featureconfig.Get().EnableSlashingProtectionPruning {
+	if features.Get().EnableSlashingProtectionPruning {
 		// Prune attesting records older than the current weak subjectivity period.
 		if err := kv.PruneAttestations(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not prune old attestations from DB")

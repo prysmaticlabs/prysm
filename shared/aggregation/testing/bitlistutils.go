@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 // BitlistWithAllBitsSet creates list of bitlists with all bits set.
@@ -44,7 +44,7 @@ func Bitlists64WithSingleBitSet(n, length uint64) []*bitfield.Bitlist64 {
 
 // BitlistsWithMultipleBitSet creates list of bitlists with random n bits set.
 func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfield.Bitlist {
-	seed := timeutils.Now().UnixNano()
+	seed := time.Now().UnixNano()
 	t.Logf("bitlistsWithMultipleBitSet random seed: %v", seed)
 	rand.Seed(seed)
 	lists := make([]bitfield.Bitlist, n)
@@ -61,7 +61,7 @@ func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfiel
 
 // Bitlists64WithMultipleBitSet creates list of bitlists with random n bits set.
 func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitfield.Bitlist64 {
-	seed := timeutils.Now().UnixNano()
+	seed := time.Now().UnixNano()
 	t.Logf("Bitlists64WithMultipleBitSet random seed: %v", seed)
 	rand.Seed(seed)
 	lists := make([]*bitfield.Bitlist64, n)

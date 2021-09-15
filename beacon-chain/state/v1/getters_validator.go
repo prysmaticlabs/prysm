@@ -9,9 +9,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -372,7 +372,7 @@ func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb
 // a list of validator structs according to the Ethereum
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
+	if features.Get().EnableSSZCache {
 		return cachedHasher.validatorRegistryRoot(vals)
 	}
 	return nocachedHasher.validatorRegistryRoot(vals)
