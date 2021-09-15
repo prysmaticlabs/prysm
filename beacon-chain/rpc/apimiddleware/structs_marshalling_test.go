@@ -31,4 +31,9 @@ func TestUnmarshalEpochParticipation(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "epoch participation length must be at least 2", err)
 	})
+	t.Run("null value", func(t *testing.T) {
+		ep := EpochParticipation{}
+		require.NoError(t, ep.UnmarshalJSON([]byte("null")))
+		assert.DeepEqual(t, EpochParticipation([]string{}), ep)
+	})
 }

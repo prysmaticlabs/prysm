@@ -11,6 +11,9 @@ import (
 type EpochParticipation []string
 
 func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	if len(b) < 2 {
 		return errors.New("epoch participation length must be at least 2")
 	}
