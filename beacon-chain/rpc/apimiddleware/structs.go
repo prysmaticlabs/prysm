@@ -572,8 +572,8 @@ type committeeJson struct {
 }
 
 type syncCommitteeJson struct {
-	Pubkeys          []string `json:"pubkeys" hex:"true"`
-	PubkeyAggregates string   `json:"pubkey_aggregates" hex:"true"`
+	Pubkeys         []string `json:"pubkeys" hex:"true"`
+	AggregatePubkey string   `json:"aggregate_pubkey" hex:"true"`
 }
 
 type syncCommitteeValidatorsJson struct {
