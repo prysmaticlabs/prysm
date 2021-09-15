@@ -8,7 +8,7 @@ go_library(
         "filter_flags.go",
         "flags.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/featureconfig",
+    importpath = "github.com/prysmaticlabs/prysm/config/features",
     visibility = ["//visibility:public"],
     deps = [
         "//shared/params:go_default_library",

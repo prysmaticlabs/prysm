@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -175,7 +175,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
-	if !featureconfig.Get().DisableBroadcastSlashings {
+	if !features.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
@@ -227,7 +227,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
-	if !featureconfig.Get().DisableBroadcastSlashings {
+	if !features.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}

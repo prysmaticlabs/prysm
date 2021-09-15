@@ -13,13 +13,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -523,7 +523,7 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 }
 
 func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{AttestTimely: true})
+	resetCfg := features.InitWithReset(&features.Flags{AttestTimely: true})
 	defer resetCfg()
 
 	currentTime := uint64(time.Now().Unix())

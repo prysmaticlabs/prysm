@@ -38,13 +38,13 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
@@ -87,7 +87,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
-	featureconfig.ConfigureBeaconChain(cliCtx)
+	features.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	configureChainConfig(cliCtx)

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
@@ -65,10 +65,10 @@ func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) 
 
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: false,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
@@ -117,10 +117,10 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 }
 
 func TestPreBlockSignValidation(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
@@ -139,10 +139,10 @@ func TestPreBlockSignValidation(t *testing.T) {
 }
 
 func TestPostBlockSignUpdate(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()

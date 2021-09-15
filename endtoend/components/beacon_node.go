@@ -13,11 +13,11 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	cmdshared "github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -126,7 +126,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50))
 	}
-	args = append(args, featureconfig.E2EBeaconChainFlags...)
+	args = append(args, features.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */

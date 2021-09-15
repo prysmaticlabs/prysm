@@ -10,12 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -243,7 +243,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	if !featureconfig.Get().UpdateHeadTimely {
+	if !features.Get().UpdateHeadTimely {
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = cp
 	}

@@ -1,4 +1,4 @@
-package featureconfig
+package features
 
 import "github.com/urfave/cli/v2"
 
