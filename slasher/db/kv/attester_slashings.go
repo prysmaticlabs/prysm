@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -62,7 +62,7 @@ func (s *Store) AttesterSlashings(ctx context.Context, status slashertypes.Slash
 func (s *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.deleteAttesterSlashing")
 	defer span.End()
-	root, err := hashutil.HashProto(attesterSlashing)
+	root, err := hash.HashProto(attesterSlashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
@@ -85,7 +85,7 @@ func (s *Store) HasAttesterSlashing(ctx context.Context, slashing *ethpb.Atteste
 	defer span.End()
 	var status slashertypes.SlashingStatus
 	var found bool
-	root, err := hashutil.HashProto(slashing)
+	root, err := hash.HashProto(slashing)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
@@ -110,7 +110,7 @@ func (s *Store) SaveAttesterSlashing(ctx context.Context, status slashertypes.Sl
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	root, err := hashutil.HashProto(slashing)
+	root, err := hash.HashProto(slashing)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (s *Store) SaveAttesterSlashings(ctx context.Context, status slashertypes.S
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		root, err := hashutil.HashProto(slashing)
+		root, err := hash.HashProto(slashing)
 		if err != nil {
 			return err
 		}
