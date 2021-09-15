@@ -8,8 +8,8 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -27,7 +27,7 @@ type PublicKey struct {
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
 	if len(pubKey) != params.BeaconConfig().BLSPubkeyLength {
@@ -54,7 +54,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
 	if pubs == nil || len(pubs) == 0 {
@@ -95,7 +95,7 @@ func (p *PublicKey) IsInfinite() bool {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
-	if featureconfig.Get().SkipBLSVerify {
+	if features.Get().SkipBLSVerify {
 		return p
 	}
 

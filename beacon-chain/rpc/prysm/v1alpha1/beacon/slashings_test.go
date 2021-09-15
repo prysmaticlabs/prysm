@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/protobuf/proto"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -78,7 +78,7 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 }
 
 func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableBroadcastSlashings: true})
+	resetCfg := features.InitWithReset(&features.Flags{DisableBroadcastSlashings: true})
 	defer resetCfg()
 	ctx := context.Background()
 	st, privs := testutil.DeterministicGenesisState(t, 64)
@@ -123,7 +123,7 @@ func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
 }
 
 func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableBroadcastSlashings: true})
+	resetCfg := features.InitWithReset(&features.Flags{DisableBroadcastSlashings: true})
 	defer resetCfg()
 	ctx := context.Background()
 	// We mark the validators at index 5, 6 as already slashed.

@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -44,7 +44,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		if featureconfig.Get().EnableNextSlotStateCache {
+		if features.Get().EnableNextSlotStateCache {
 			baseState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)

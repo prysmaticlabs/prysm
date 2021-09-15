@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
+	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -43,7 +43,7 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 	// If we did a single transaction for all public keys, resource use might be too high,
 	// and if we do a single one per key, the migration will take too long.
 	batchedKeys := batchPublicKeys(publicKeyBytes, publicKeyMigrationBatchSize)
-	bar := progressutil.InitializeProgressBar(
+	bar := progress.InitializeProgressBar(
 		len(batchedKeys), "Adding optimizations for validator slashing protection",
 	)
 	for _, batch := range batchedKeys {

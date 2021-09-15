@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/mclockutil"
+	"github.com/prysmaticlabs/prysm/time/mclock"
 )
 
 // waitQuotient is divided against the max backoff time, in order to have N requests based on the full
@@ -120,7 +120,7 @@ type resubscribeSub struct {
 	err                  chan error
 	unsub                chan struct{}
 	unsubOnce            sync.Once
-	lastTry              mclockutil.AbsTime
+	lastTry              mclock.AbsTime
 	waitTime, backoffMax time.Duration
 }
 
@@ -155,7 +155,7 @@ func (s *resubscribeSub) subscribe() Subscription {
 	var sub Subscription
 retry:
 	for {
-		s.lastTry = mclockutil.Now()
+		s.lastTry = mclock.Now()
 		ctx, cancel := context.WithCancel(context.TODO())
 		go func() {
 			rsub, err := s.fn(ctx)
@@ -194,7 +194,7 @@ func (s *resubscribeSub) waitForError(sub Subscription) bool {
 }
 
 func (s *resubscribeSub) backoffWait() bool {
-	if time.Duration(mclockutil.Now()-s.lastTry) > s.backoffMax {
+	if time.Duration(mclock.Now()-s.lastTry) > s.backoffMax {
 		s.waitTime = s.backoffMax / waitQuotient
 	} else {
 		s.waitTime *= 2

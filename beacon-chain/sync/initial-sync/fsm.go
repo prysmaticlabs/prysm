@@ -10,7 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 const (
@@ -79,7 +79,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot types.Slot) *stateMach
 		start:   startSlot,
 		state:   stateNew,
 		blocks:  []block.SignedBeaconBlock{},
-		updated: timeutils.Now(),
+		updated: prysmTime.Now(),
 	}
 	smm.recalculateMachineAttribs()
 	return smm.machines[startSlot]
@@ -158,7 +158,7 @@ func (m *stateMachine) setState(name stateID) {
 		return
 	}
 	m.state = name
-	m.updated = timeutils.Now()
+	m.updated = prysmTime.Now()
 }
 
 // trigger invokes the event handler on a given state machine.

@@ -21,7 +21,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["bls_test.go"],
+    srcs = [
+        "bls_test.go",
+        "signature_set_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bls/common:go_default_library",

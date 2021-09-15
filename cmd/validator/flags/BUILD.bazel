@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/cmd/validator/flags",
     visibility = [
         "//cmd/validator:__subpackages__",
-        "//endtoend:__subpackages__",
+        "//testing/endtoend:__subpackages__",
         "//validator:__subpackages__",
     ],
     deps = [
