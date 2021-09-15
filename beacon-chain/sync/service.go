@@ -127,6 +127,7 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	signatureChan                    chan *signatureVerifier
 }
 
 // NewService initializes new regular sync service.
@@ -145,9 +146,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		subHandler:           newSubTopicHandler(),
 		rateLimiter:          rLimiter,
+		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
 
 	go r.registerHandlers()
+	go r.verifierRoutine()
 
 	return r
 }

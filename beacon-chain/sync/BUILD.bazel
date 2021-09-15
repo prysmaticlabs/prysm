@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "batch_verifier.go",
         "context.go",
         "deadlines.go",
         "decode_pubsub.go",
@@ -122,6 +123,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "batch_verifier_test.go",
         "context_test.go",
         "decode_pubsub_test.go",
         "error_test.go",

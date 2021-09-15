@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -231,18 +232,30 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 			return pubsub.ValidationReject
 		}
 
-		// We reject a malformed signature from bytes according to the p2p specification.
-		blsSig, err := bls.SignatureFromBytes(m.Signature)
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
-
 		// Ignore a malformed public key from bytes according to the p2p specification.
 		pKey, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
+		}
+
+		// Batch verify message signature before unmarshalling
+		// the signature to a G2 point if batch verification is
+		// enabled.
+		if features.Get().EnableBatchVerification {
+			set := &bls.SignatureSet{
+				Messages:   [][32]byte{sigRoot},
+				PublicKeys: []bls.PublicKey{pKey},
+				Signatures: [][]byte{m.Signature},
+			}
+			return s.validateWithBatchVerifier(ctx, "sync committee message", set)
+		}
+
+		// We reject a malformed signature from bytes according to the p2p specification.
+		blsSig, err := bls.SignatureFromBytes(m.Signature)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject
 		}
 
 		verified := blsSig.Verify(pKey, sigRoot[:])
