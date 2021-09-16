@@ -12,8 +12,8 @@ import (
 	joonix "github.com/joonix/log"
 	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
 )
 

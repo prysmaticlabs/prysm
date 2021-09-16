@@ -85,7 +85,7 @@ go_fuzz_test(
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
-        "//shared/rand:go_default_library",
+        "//crypto/rand:go_default_library",
     ] + COMMON_DEPS,
 )
 
@@ -189,7 +189,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//config/features:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/rand:go_default_library",
+        "//crypto/rand:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_libp2p_go_libp2p_core//host:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
