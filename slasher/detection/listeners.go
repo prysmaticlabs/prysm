@@ -9,8 +9,8 @@ package detection
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/container/block"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
@@ -26,7 +26,7 @@ func (s *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Signe
 	for {
 		select {
 		case signedBlock := <-ch:
-			signedBlkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
+			signedBlkHdr, err := block.SignedBeaconBlockHeaderFromBlock(signedBlock)
 			if err != nil {
 				log.WithError(err).Error("Could not get block header from block")
 				continue

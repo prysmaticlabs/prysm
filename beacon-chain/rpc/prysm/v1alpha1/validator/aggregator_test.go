@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -217,7 +217,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		return nil, err
 	}

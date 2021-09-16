@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,7 +42,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestation.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
@@ -64,7 +64,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestation.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
@@ -229,7 +229,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		require.NoError(t, err)
-		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestation.ConvertToIndexed(context.Background(), attestation, committee)
 		require.NoError(t, err)
 		assert.DeepEqual(t, wanted, ia, "Convert attestation to indexed attestation didn't result as wanted")
 	}

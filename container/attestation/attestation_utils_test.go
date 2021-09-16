@@ -1,4 +1,4 @@
-package attestationutil_test
+package attestation_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -51,7 +51,7 @@ func TestAttestingIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
+			got, err := attestation.AttestingIndices(tt.args.bf, tt.args.committee)
 			if tt.err == "" {
 				require.NoError(t, err)
 				assert.DeepEqual(t, tt.want, got)
@@ -144,7 +144,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := attestationutil.IsValidAttestationIndices(context.Background(), tt.att)
+			err := attestation.IsValidAttestationIndices(context.Background(), tt.att)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -160,7 +160,7 @@ func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := attestationutil.AttestingIndices(bf, committee)
+		_, err := attestation.AttestingIndices(bf, committee)
 		require.NoError(b, err)
 	}
 }
@@ -179,7 +179,7 @@ func BenchmarkIsValidAttestationIndices(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := attestationutil.IsValidAttestationIndices(context.Background(), att); err != nil {
+		if err := attestation.IsValidAttestationIndices(context.Background(), att); err != nil {
 			require.NoError(b, err)
 		}
 	}
@@ -313,7 +313,7 @@ func TestAttDataIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.equal, attestationutil.AttDataIsEqual(tt.attData1, tt.attData2))
+			assert.Equal(t, tt.equal, attestation.AttDataIsEqual(tt.attData1, tt.attData2))
 		})
 	}
 }
@@ -365,7 +365,7 @@ func TestCheckPtIsEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.equal, attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2))
+			assert.Equal(t, tt.equal, attestation.CheckPointIsEqual(tt.checkPt1, tt.checkPt2))
 		})
 	}
 }
@@ -401,14 +401,14 @@ func BenchmarkAttDataIsEqual(b *testing.B) {
 	b.Run("fast", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
+			assert.Equal(b, true, attestation.AttDataIsEqual(attData1, attData2))
 		}
 	})
 
 	b.Run("proto.Equal", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			assert.Equal(b, true, attestationutil.AttDataIsEqual(attData1, attData2))
+			assert.Equal(b, true, attestation.AttDataIsEqual(attData1, attData2))
 		}
 	})
 }

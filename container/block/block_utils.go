@@ -1,4 +1,4 @@
-package blockutil
+package block
 
 import (
 	"github.com/pkg/errors"

@@ -5,11 +5,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -208,7 +208,7 @@ func isDoublePropose(incomingBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlo
 }
 
 func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
-	return !attestationutil.AttDataIsEqual(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
+	return !attestation.AttDataIsEqual(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
 }
 
 // UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator.

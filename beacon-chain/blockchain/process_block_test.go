@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -790,7 +790,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		}
 
 		require.NoError(t, service.finalizedImpliesNewJustified(ctx, beaconState))
-		assert.Equal(t, true, attestationutil.CheckPointIsEqual(test.want, service.justifiedCheckpt), "Did not get wanted check point")
+		assert.Equal(t, true, attestation.CheckPointIsEqual(test.want, service.justifiedCheckpt), "Did not get wanted check point")
 	}
 }
 

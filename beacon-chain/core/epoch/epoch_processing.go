@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -469,7 +469,7 @@ func UnslashedAttestingIndices(state state.ReadOnlyBeaconState, atts []*ethpb.Pe
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			return nil, err
 		}

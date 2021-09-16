@@ -6,7 +6,7 @@ go_library(
         "double_votes.go",
         "surround_votes.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/slashutil",
+    importpath = "github.com/prysmaticlabs/prysm/container/slashing",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",

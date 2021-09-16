@@ -12,10 +12,10 @@ go_library(
     deps = [
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//container/attestation:go_default_library",
         "//crypto/bls:go_default_library",
         "//monitoring/tracing:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/attestationutil:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/beaconclient:go_default_library",

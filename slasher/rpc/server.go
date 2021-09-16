@@ -8,10 +8,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/container/attestation"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
@@ -89,7 +89,7 @@ func (s *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedA
 		return nil, status.Error(codes.InvalidArgument, "nil signature provided")
 	}
 
-	err := attestationutil.IsValidAttestationIndices(ctx, req)
+	err := attestation.IsValidAttestationIndices(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (s *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedA
 		pubkeys = append(pubkeys, pk)
 	}
 
-	err = attestationutil.VerifyIndexedAttestationSig(ctx, req, pubkeys, domain)
+	err = attestation.VerifyIndexedAttestationSig(ctx, req, pubkeys, domain)
 	if err != nil {
 		log.WithError(err).Error("failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "could not verify indexed attestation signature: %v: %v", req, err)
