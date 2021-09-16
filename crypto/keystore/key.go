@@ -159,15 +159,15 @@ func storeNewRandomKey(ks keyStore, password string) error {
 	return ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, password)
 }
 
-func writeKeyFile(file string, content []byte) error {
+func writeKeyFile(fname string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	if err := file.MkdirAll(filepath.Dir(file)); err != nil {
+	if err := file.MkdirAll(filepath.Dir(fname)); err != nil {
 		return err
 	}
 	// Atomic write: create a temporary hidden file first
 	// then move it into place. TempFile assigns mode 0600.
-	f, err := ioutil.TempFile(filepath.Dir(file), "."+filepath.Base(file)+".tmp")
+	f, err := ioutil.TempFile(filepath.Dir(fname), "."+filepath.Base(fname)+".tmp")
 	if err != nil {
 		return err
 	}
@@ -185,5 +185,5 @@ func writeKeyFile(file string, content []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return os.Rename(f.Name(), file)
+	return os.Rename(f.Name(), fname)
 }
