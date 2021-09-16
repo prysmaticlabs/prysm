@@ -7,9 +7,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -99,7 +99,7 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 		return
 	}
 
-	depRoot, err := hashutil.HashProto(d)
+	depRoot, err := hash.HashProto(d)
 	if err != nil {
 		log.Errorf("Could not remove deposit %v", err)
 		return
@@ -110,7 +110,7 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 
 	idx := -1
 	for i, ctnr := range dc.pendingDeposits {
-		hash, err := hashutil.HashProto(ctnr.Deposit)
+		hash, err := hash.HashProto(ctnr.Deposit)
 		if err != nil {
 			log.Errorf("Could not hash deposit %v", err)
 			continue

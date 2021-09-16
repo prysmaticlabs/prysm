@@ -3,7 +3,7 @@ package htrutils_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -17,7 +17,7 @@ func TestGetDepth(t *testing.T) {
 }
 
 func TestMerkleizeCountGreaterThanLimit(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -34,7 +34,7 @@ func TestMerkleizeCountGreaterThanLimit(t *testing.T) {
 }
 
 func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(0)
 	limit := uint64(0)
 	chunks := [][]byte{{}}
@@ -47,7 +47,7 @@ func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
 }
 
 func TestMerkleizeNormalPath(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(3)
 	chunks := [][]byte{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}}
@@ -60,7 +60,7 @@ func TestMerkleizeNormalPath(t *testing.T) {
 }
 
 func TestConstructProofCountGreaterThanLimit(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -77,7 +77,7 @@ func TestConstructProofCountGreaterThanLimit(t *testing.T) {
 }
 
 func TestConstructProofIndexGreaterThanEqualToLimit(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(1)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -94,7 +94,7 @@ func TestConstructProofIndexGreaterThanEqualToLimit(t *testing.T) {
 }
 
 func TestConstructProofNormalPath(t *testing.T) {
-	hashFn := htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := htrutils.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(3)
 	chunks := [][]byte{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}}

@@ -20,10 +20,10 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//beacon-chain/core:go_default_library",
+        "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/fileutil:go_default_library",
-        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/cache:go_default_library",
         "//slasher/db/types:go_default_library",

@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
@@ -72,7 +72,7 @@ func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
 		newRoot, err := stateutil.Eth1DataRootWithHasher(hasher, input)
 		if err != nil {
@@ -110,7 +110,7 @@ func handlePendingAttestation(val []*ethpb.PendingAttestation, indices []uint64,
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.PendingAttestation) error {
 		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
 		if err != nil {

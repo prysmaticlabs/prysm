@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -58,7 +58,7 @@ func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator)
 // Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)
@@ -135,7 +135,7 @@ func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
 		newRoot, err := ValidatorRootWithHasher(hasher, input)
 		if err != nil {
