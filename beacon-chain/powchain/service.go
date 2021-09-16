@@ -36,10 +36,10 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/authorization"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -133,10 +133,10 @@ type Service struct {
 	cfg                     *Web3ServiceConfig
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	headTicker       *time.Ticker
-	httpEndpoints    []network.Endpoint
-	currHttpEndpoint network.Endpoint
-	httpLogger       bind.ContractFilterer
+	headTicker              *time.Ticker
+	httpEndpoints           []network.Endpoint
+	currHttpEndpoint        network.Endpoint
+	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
