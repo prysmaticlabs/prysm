@@ -23,8 +23,8 @@ go_library(
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
+        "//runtime/version:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/version:go_default_library",
         "//time:go_default_library",
         "@com_github_ethereum_go_ethereum//common/math:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
