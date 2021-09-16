@@ -41,7 +41,7 @@ func TestGateway_Customized(t *testing.T) {
 
 	g := New(
 		context.Background(),
-		[]PbMux{},
+		[]*PbMux{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
@@ -77,7 +77,7 @@ func TestGateway_StartStop(t *testing.T) {
 
 	g := New(
 		ctx.Context,
-		[]PbMux{},
+		[]*PbMux{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
@@ -108,7 +108,7 @@ func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 
 	g := New(
 		ctx.Context,
-		[]PbMux{},
+		[]*PbMux{},
 		/* muxHandler */ nil,
 		selfAddress,
 		gatewayAddress,
