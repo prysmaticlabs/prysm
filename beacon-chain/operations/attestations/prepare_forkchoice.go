@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	attaggregation "github.com/prysmaticlabs/prysm/container/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )

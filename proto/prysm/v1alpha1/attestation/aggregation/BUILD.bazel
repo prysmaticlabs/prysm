@@ -6,7 +6,7 @@ go_library(
         "aggregation.go",
         "maxcover.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/container/attestation/aggregation",
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_pkg_errors//:go_default_library",
@@ -23,7 +23,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//container/attestation/aggregation/testing:go_default_library",
+        "//proto/prysm/v1alpha1/attestation/aggregation/testing:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

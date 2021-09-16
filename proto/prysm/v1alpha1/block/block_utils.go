@@ -3,7 +3,6 @@ package block
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
@@ -29,7 +28,7 @@ func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.Si
 }
 
 // SignedBeaconBlockHeaderFromBlockInterface function to retrieve signed block header from block.
-func SignedBeaconBlockHeaderFromBlockInterface(sb block.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+func SignedBeaconBlockHeaderFromBlockInterface(sb SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	b := sb.Block()
 	if b.IsNil() || b.Body().IsNil() {
 		return nil, errors.New("nil block")
@@ -65,7 +64,7 @@ func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHea
 }
 
 // BeaconBlockHeaderFromBlockInterface function to retrieve block header from block.
-func BeaconBlockHeaderFromBlockInterface(block block.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+func BeaconBlockHeaderFromBlockInterface(block BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
 	if block.Body().IsNil() {
 		return nil, errors.New("nil block body")
 	}

@@ -26,7 +26,6 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//cache/lru:go_default_library",
         "//config/features:go_default_library",
-        "//container/block:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/hash:go_default_library",
         "//crypto/rand:go_default_library",
