@@ -25,6 +25,7 @@ go_library(
         "//fuzz:__pkg__",
     ],
     deps = [
+        "//async:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core:go_default_library",
@@ -55,7 +56,6 @@ go_library(
         "//runtime/version:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//time:go_default_library",
         "//time/slots:go_default_library",

@@ -74,6 +74,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//async/event:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -88,7 +89,6 @@ go_test(
         "//monitoring/clientstats:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/event:go_default_library",
         "//shared/httputils:go_default_library",
         "//shared/httputils/authorizationmethod:go_default_library",
         "//shared/params:go_default_library",

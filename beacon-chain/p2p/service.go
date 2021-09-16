@@ -22,6 +22,7 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -31,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -231,15 +231,15 @@ func (s *Service) Start() {
 	s.RefreshENR()
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	runutil.RunEvery(s.ctx, refreshRate, func() {
+	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
+	async.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
-	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
+	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
 			"inbound":     len(s.peers.InboundConnected()),
 			"outbound":    len(s.peers.OutboundConnected()),

@@ -32,6 +32,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
@@ -40,7 +41,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -119,7 +119,7 @@ func main() {
 
 	// Update metrics once per slot.
 	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot)
-	runutil.RunEvery(context.Background(), slotDuration*time.Second, func() {
+	async.RunEvery(context.Background(), slotDuration*time.Second, func() {
 		updateMetrics(listener)
 	})
 

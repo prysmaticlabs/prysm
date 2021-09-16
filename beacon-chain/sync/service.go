@@ -15,6 +15,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -32,9 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -173,7 +173,7 @@ func (s *Service) Start() {
 	}
 
 	// Update sync metrics.
-	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
+	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
 }
 
 // Stop the regular sync service.
