@@ -2,7 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 )
 
 // BeaconEndpointFactory creates endpoints used for running beacon chain API calls through the API Middleware.

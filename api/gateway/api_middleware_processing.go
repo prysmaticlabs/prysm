@@ -15,7 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/wealdtech/go-bytesutil"
 )
 
@@ -159,7 +159,7 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
 			}
 		} else {
@@ -193,7 +193,7 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.Header) {
 	// Include custom error in the error JSON.
 	if responseHeader != nil {
-		customError, ok := responseHeader["Grpc-Metadata-"+grpcutils.CustomErrorMetadataKey]
+		customError, ok := responseHeader["Grpc-Metadata-"+grpc.CustomErrorMetadataKey]
 		if ok {
 			// Assume header has only one value and read the 0 index.
 			if err := json.Unmarshal([]byte(customError[0]), errJson); err != nil {
