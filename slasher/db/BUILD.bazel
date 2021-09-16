@@ -15,10 +15,10 @@ go_library(
         "//slasher:__subpackages__",
     ],
     deps = [
+        "//runtime/tos:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/promptutil:go_default_library",
-        "//shared/tos:go_default_library",
         "//slasher/db/iface:go_default_library",
         "//slasher/db/kv:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

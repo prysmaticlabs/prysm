@@ -10,7 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/eth1exporter",
     visibility = ["//visibility:private"],
     deps = [
-        "//shared/maxprocs:go_default_library",
+        "//runtime/maxprocs:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//params:go_default_library",
