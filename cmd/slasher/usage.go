@@ -6,9 +6,9 @@ import (
 	"sort"
 
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli/v2"
 )
 
@@ -93,7 +93,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ActiveFlags(featureconfig.SlasherFlags),
+		Flags: features.ActiveFlags(features.SlasherFlags),
 	},
 }
 

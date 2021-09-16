@@ -5,8 +5,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -62,7 +62,7 @@ func (s *Store) ProposalSlashingsByStatus(ctx context.Context, status types.Slas
 func (s *Store) DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.deleteProposerSlashing")
 	defer span.End()
-	root, err := hashutil.HashProto(slashing)
+	root, err := hash.HashProto(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
@@ -83,7 +83,7 @@ func (s *Store) HasProposerSlashing(ctx context.Context, slashing *ethpb.Propose
 	defer span.End()
 	var status types.SlashingStatus
 	var found bool
-	root, err := hashutil.HashProto(slashing)
+	root, err := hash.HashProto(slashing)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
@@ -109,7 +109,7 @@ func (s *Store) SaveProposerSlashing(ctx context.Context, status types.SlashingS
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	root, err := hashutil.HashProto(slashing)
+	root, err := hash.HashProto(slashing)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (s *Store) SaveProposerSlashings(ctx context.Context, status types.Slashing
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		root, err := hashutil.HashProto(slashing)
+		root, err := hash.HashProto(slashing)
 		if err != nil {
 			return err
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 )
 
 func main() {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{WriteSSZStateTransitions: true})
+	resetCfg := features.InitWithReset(&features.Flags{WriteSSZStateTransitions: true})
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")

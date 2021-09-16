@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -154,7 +154,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	genesisTime := timeutils.Now()
+	genesisTime := prysmTime.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg:                   cfg,
@@ -305,7 +305,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
-	gt := timeutils.Now()
+	gt := prysmTime.Now()
 	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {

@@ -12,13 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -107,7 +107,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		go func() {
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
@@ -128,7 +128,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
-	if featureconfig.Get().UpdateHeadTimely {
+	if features.Get().UpdateHeadTimely {
 		if newFinalized {
 			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 				return errors.Wrap(err, "could not save new justified")
@@ -166,7 +166,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-		if !featureconfig.Get().UpdateHeadTimely {
+		if !features.Get().UpdateHeadTimely {
 			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 				return errors.Wrap(err, "could not save new justified")
 			}
@@ -309,7 +309,7 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		if featureconfig.Get().UpdateHeadTimely {
+		if features.Get().UpdateHeadTimely {
 			s.prevFinalizedCheckpt = s.finalizedCheckpt
 			s.finalizedCheckpt = fCheckpoint
 		}
@@ -422,7 +422,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
 func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
-	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+	if !features.Get().CorrectlyPruneCanonicalAtts {
 		return nil
 	}
 

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
@@ -138,7 +138,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
-	require.NoError(t, genesisState.SetGenesisTime(uint64(timeutils.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	require.NoError(t, genesisState.SetGenesisTime(uint64(time.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	att, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)

@@ -10,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 var (
@@ -54,7 +54,7 @@ func GenerateGenesisStateFromDepositData(
 	}
 	root := trie.HashTreeRoot()
 	if genesisTime == 0 {
-		genesisTime = uint64(timeutils.Now().Unix())
+		genesisTime = uint64(time.Now().Unix())
 	}
 	beaconState, err := coreState.GenesisBeaconState(ctx, deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
@@ -187,6 +187,6 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(pubKey []byte) []byte {
-	h := hashutil.Hash(pubKey)
+	h := hash.Hash(pubKey)
 	return append([]byte{blsWithdrawalPrefixByte}, h[1:]...)[:32]
 }

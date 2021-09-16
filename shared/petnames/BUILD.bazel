@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/petnames",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/hashutil:go_default_library",
-        "//shared/rand:go_default_library",
+        "//crypto/hash:go_default_library",
+        "//crypto/rand:go_default_library",
     ],
 )

@@ -12,11 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -60,7 +60,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(state)
 
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not process slots")
@@ -120,7 +120,7 @@ func CalculateStateRoot(
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
 	if ctx.Err() != nil {
-		traceutil.AnnotateError(span, ctx.Err())
+		tracing.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
 	if state == nil || state.IsNil() {
@@ -135,7 +135,7 @@ func CalculateStateRoot(
 
 	// Execute per slots transition.
 	var err error
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not process slots")
@@ -207,12 +207,12 @@ func ProcessBlockNoVerifyAnySig(
 
 	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
 	rSet, err := b.RandaoSignatureSet(state, signed.Block().Body().RandaoReveal())
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
 	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block().Body().Attestations())
@@ -302,25 +302,25 @@ func ProcessBlockForStateRoot(
 	}
 	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(ctx, state, signed.Block().Body().Eth1Data())
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 

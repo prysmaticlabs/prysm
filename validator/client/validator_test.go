@@ -12,12 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1049,9 +1049,9 @@ func (m *doppelGangerRequestMatcher) String() string {
 func TestValidator_CheckDoppelGanger(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	flgs := featureconfig.Get()
+	flgs := features.Get()
 	flgs.EnableDoppelGanger = true
-	reset := featureconfig.InitWithReset(flgs)
+	reset := features.InitWithReset(flgs)
 	defer reset()
 	tests := []struct {
 		name            string

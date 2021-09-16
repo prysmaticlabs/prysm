@@ -27,7 +27,7 @@ IMPORT_PATH = "github.com/prysmaticlabs/prysm/fuzz"
 
 COMMON_DEPS = [
     "//beacon-chain/state/v1:go_default_library",
-    "//shared/featureconfig:go_default_library",
+    "//config/features:go_default_library",
 ] + SSZ_DEPS
 
 COMMON_SRCS = [
@@ -85,7 +85,7 @@ go_fuzz_test(
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
-        "//shared/rand:go_default_library",
+        "//crypto/rand:go_default_library",
     ] + COMMON_DEPS,
 )
 
@@ -187,9 +187,9 @@ go_library(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//fuzz/testing:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/featureconfig:go_default_library",
+        "//config/features:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/rand:go_default_library",
+        "//crypto/rand:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_libp2p_go_libp2p_core//host:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",

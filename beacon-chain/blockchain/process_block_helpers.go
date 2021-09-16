@@ -10,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -114,7 +114,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	return nil
@@ -243,7 +243,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	if !featureconfig.Get().UpdateHeadTimely {
+	if !features.Get().UpdateHeadTimely {
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = cp
 	}

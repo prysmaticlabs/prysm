@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/urfave/cli/v2"
 )
@@ -17,8 +17,8 @@ func TestAllFlagsExistInHelp(t *testing.T) {
 	for _, group := range appHelpFlagGroups {
 		helpFlags = append(helpFlags, group.Flags...)
 	}
-	helpFlags = featureconfig.ActiveFlags(helpFlags)
-	appFlags = featureconfig.ActiveFlags(appFlags)
+	helpFlags = features.ActiveFlags(helpFlags)
+	appFlags = features.ActiveFlags(appFlags)
 
 	for _, flag := range appFlags {
 		assert.Equal(t, true, doesFlagExist(flag, helpFlags), "Flag %s does not exist in help/usage flags.", flag.Names()[0])

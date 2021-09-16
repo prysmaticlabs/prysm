@@ -9,12 +9,12 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -50,7 +50,7 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -103,7 +103,7 @@ func TestStateAltair_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -155,7 +155,7 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -211,7 +211,7 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -266,7 +266,7 @@ func TestState_DeleteState(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()

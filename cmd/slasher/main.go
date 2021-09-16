@@ -10,13 +10,13 @@ import (
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/tos"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/journald"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/tos"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
@@ -83,7 +83,7 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
-	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.SlasherFlags...))
+	appFlags = cmd.WrapFlags(append(appFlags, features.SlasherFlags...))
 }
 
 func main() {

@@ -5,11 +5,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -63,7 +63,7 @@ func (s *Service) DetectAttesterSlashings(
 	keys := make(map[[32]byte]bool)
 	var slashingList []*ethpb.AttesterSlashing
 	for _, ss := range slashings {
-		hash, err := hashutil.HashProto(ss)
+		hash, err := hash.HashProto(ss)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash slashing")
 		}
@@ -198,7 +198,7 @@ func (s *Service) mapResultsToAtts(ctx context.Context, results []*types.Detecti
 
 func resultHash(result *types.DetectionResult) [32]byte {
 	resultBytes := append(bytesutil.Bytes8(uint64(result.SlashableEpoch)), result.SigBytes[:]...)
-	return hashutil.Hash(resultBytes)
+	return hash.Hash(resultBytes)
 }
 
 func isDoublePropose(incomingBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlockHeader) bool {
