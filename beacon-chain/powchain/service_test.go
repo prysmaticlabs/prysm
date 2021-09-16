@@ -21,9 +21,9 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -570,7 +570,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -579,7 +579,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: thirdEndpoint}, httputils.Endpoint{Url: fourthEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: thirdEndpoint}, network.Endpoint{Url: fourthEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
