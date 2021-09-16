@@ -1,9 +1,9 @@
-package httputils
+package network
 
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -11,7 +11,7 @@ import (
 func TestToHeaderValue(t *testing.T) {
 	t.Run("None", func(t *testing.T) {
 		data := &AuthorizationData{
-			Method: authorizationmethod.None,
+			Method: authorization.None,
 			Value:  "foo",
 		}
 		header, err := data.ToHeaderValue()
@@ -20,7 +20,7 @@ func TestToHeaderValue(t *testing.T) {
 	})
 	t.Run("Basic", func(t *testing.T) {
 		data := &AuthorizationData{
-			Method: authorizationmethod.Basic,
+			Method: authorization.Basic,
 			Value:  "foo",
 		}
 		header, err := data.ToHeaderValue()
@@ -29,7 +29,7 @@ func TestToHeaderValue(t *testing.T) {
 	})
 	t.Run("Bearer", func(t *testing.T) {
 		data := &AuthorizationData{
-			Method: authorizationmethod.Bearer,
+			Method: authorization.Bearer,
 			Value:  "foo",
 		}
 		header, err := data.ToHeaderValue()
@@ -49,25 +49,25 @@ func TestToHeaderValue(t *testing.T) {
 func TestMethod(t *testing.T) {
 	t.Run("None", func(t *testing.T) {
 		method := Method("")
-		assert.Equal(t, authorizationmethod.None, method)
+		assert.Equal(t, authorization.None, method)
 		method = Method("foo")
-		assert.Equal(t, authorizationmethod.None, method)
+		assert.Equal(t, authorization.None, method)
 	})
 	t.Run("Basic", func(t *testing.T) {
 		method := Method("Basic")
-		assert.Equal(t, authorizationmethod.Basic, method)
+		assert.Equal(t, authorization.Basic, method)
 	})
 	t.Run("Basic different text case", func(t *testing.T) {
 		method := Method("bAsIc")
-		assert.Equal(t, authorizationmethod.Basic, method)
+		assert.Equal(t, authorization.Basic, method)
 	})
 	t.Run("Bearer", func(t *testing.T) {
 		method := Method("Bearer")
-		assert.Equal(t, authorizationmethod.Bearer, method)
+		assert.Equal(t, authorization.Bearer, method)
 	})
 	t.Run("Bearer different text case", func(t *testing.T) {
 		method := Method("bEaReR")
-		assert.Equal(t, authorizationmethod.Bearer, method)
+		assert.Equal(t, authorization.Bearer, method)
 	})
 }
 
@@ -75,7 +75,7 @@ func TestEndpointEquals(t *testing.T) {
 	e := Endpoint{
 		Url: "Url",
 		Auth: AuthorizationData{
-			Method: authorizationmethod.Basic,
+			Method: authorization.Basic,
 			Value:  "Basic username:password",
 		},
 	}
@@ -84,7 +84,7 @@ func TestEndpointEquals(t *testing.T) {
 		other := Endpoint{
 			Url: "Url",
 			Auth: AuthorizationData{
-				Method: authorizationmethod.Basic,
+				Method: authorization.Basic,
 				Value:  "Basic username:password",
 			},
 		}
@@ -94,7 +94,7 @@ func TestEndpointEquals(t *testing.T) {
 		other := Endpoint{
 			Url: "Different",
 			Auth: AuthorizationData{
-				Method: authorizationmethod.Basic,
+				Method: authorization.Basic,
 				Value:  "Basic username:password",
 			},
 		}
@@ -104,7 +104,7 @@ func TestEndpointEquals(t *testing.T) {
 		other := Endpoint{
 			Url: "Url",
 			Auth: AuthorizationData{
-				Method: authorizationmethod.Bearer,
+				Method: authorization.Bearer,
 				Value:  "Bearer token",
 			},
 		}
@@ -114,27 +114,27 @@ func TestEndpointEquals(t *testing.T) {
 
 func TestAuthorizationDataEquals(t *testing.T) {
 	d := AuthorizationData{
-		Method: authorizationmethod.Basic,
+		Method: authorization.Basic,
 		Value:  "username:password",
 	}
 
 	t.Run("equal", func(t *testing.T) {
 		other := AuthorizationData{
-			Method: authorizationmethod.Basic,
+			Method: authorization.Basic,
 			Value:  "username:password",
 		}
 		assert.Equal(t, true, d.Equals(other))
 	})
 	t.Run("different method", func(t *testing.T) {
 		other := AuthorizationData{
-			Method: authorizationmethod.None,
+			Method: authorization.None,
 			Value:  "username:password",
 		}
 		assert.Equal(t, false, d.Equals(other))
 	})
 	t.Run("different value", func(t *testing.T) {
 		other := AuthorizationData{
-			Method: authorizationmethod.Basic,
+			Method: authorization.Basic,
 			Value:  "different:different",
 		}
 		assert.Equal(t, false, d.Equals(other))
