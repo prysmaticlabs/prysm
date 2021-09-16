@@ -29,7 +29,7 @@ type InputBlockWithPrestate struct {
 }
 ```
 
-You'll also want to add that struct to `//fuzz:ssz_generated_files` to generate the custom fast SSZ
+You'll also want to add that struct to `//testing/fuzz:ssz_generated_files` to generate the custom fast SSZ
 methods for serialization to improve test performance.
 
 Your fuzz test must accept a single argument of type `[]byte`. The return types are ignored by 
@@ -77,7 +77,7 @@ go_fuzz_test(
 )
 ```
 
-Be sure to add your target to the test suite at `//fuzz:fuzz_tests`.
+Be sure to add your target to the test suite at `//testing/fuzz:fuzz_tests`.
 
 ### 4) Run your fuzz test
 
@@ -85,7 +85,7 @@ To run your fuzz test you must manually target it with bazel test and run with t
 `--config=fuzz`.
 
 ```
-bazel test //fuzz:example_fuzz_test --config=fuzz
+bazel test //testing/fuzz:example_fuzz_test --config=fuzz
 ```
 
 ## Running fuzzit regression tests
@@ -95,7 +95,7 @@ configuration flag. Note: This requires docker installed on your machine. See
 [fuzzitdev/fuzzit#58](https://github.com/fuzzitdev/fuzzit/issues/58).
 
 ```
-bazel test //fuzz:fuzz_tests --config=fuzzit
+bazel test //testing/fuzz:fuzz_tests --config=fuzzit
 ```
 
 If the same command above is run with the FUZZIT_API_KEY environment variable set, then the fuzzit

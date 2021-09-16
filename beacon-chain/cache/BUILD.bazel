@@ -17,7 +17,7 @@ go_library(
         "sync_committee_head_state.go",
         "sync_subnet_ids.go",
     ] + select({
-        "//fuzz:fuzzing_enabled": [
+        "//testing/fuzz:fuzzing_enabled": [
             "active_balance_disabled.go",
             "committee_disabled.go",
             "proposer_indices_disabled.go",
@@ -33,7 +33,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//fuzz:__pkg__",
+        "//testing/fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [
