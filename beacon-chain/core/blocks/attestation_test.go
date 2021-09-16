@@ -216,20 +216,20 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 	var sig [96]byte
 	copy(sig[:], "signed")
-	attestation := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := testutil.HydrateAttestation(&ethpb.Attestation{
 		Signature: sig[:],
 	})
 	for _, tt := range tests {
-		attestation.AggregationBits = tt.aggregationBitfield
+		att.AggregationBits = tt.aggregationBitfield
 		wanted := &ethpb.IndexedAttestation{
 			AttestingIndices: tt.wantedAttestingIndices,
-			Data:             attestation.Data,
-			Signature:        attestation.Signature,
+			Data:             att.Data,
+			Signature:        att.Signature,
 		}
 
-		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		ia, err := attestation.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestation.ConvertToIndexed(context.Background(), att, committee)
 		require.NoError(t, err)
 		assert.DeepEqual(t, wanted, ia, "Convert attestation to indexed attestation didn't result as wanted")
 	}
