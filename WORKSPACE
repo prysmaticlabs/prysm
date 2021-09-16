@@ -87,9 +87,9 @@ http_archive(
     patches = [
         # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
         # nogo check fails for certain third_party dependencies.
-        "//third_party:io_bazel_rules_go.patch",
+        "//hack/third_party:io_bazel_rules_go.patch",
         # Expose internals of go_test for custom build transitions.
-        "//third_party:io_bazel_rules_go_test.patch",
+        "//hack/third_party:io_bazel_rules_go_test.patch",
     ],
     sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
@@ -106,7 +106,7 @@ git_repository(
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
-        "//third_party:com_github_gogo_protobuf-equal.patch",
+        "//hack/third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
     shallow_since = "1610265707 +0000",
@@ -298,7 +298,7 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 
 http_archive(
     name = "sigp_beacon_fuzz_corpora",
-    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
+    build_file = "//hack/third_party:beacon-fuzz/corpora.BUILD",
     sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
     strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
     urls = [
@@ -328,7 +328,7 @@ load("//:deps.bzl", "prysm_deps")
 # gazelle:repository_macro deps.bzl%prysm_deps
 prysm_deps()
 
-load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
+load("@prysm//hack/third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
 
