@@ -1,4 +1,4 @@
-package authorizationmethod
+package authorization
 
 // AuthorizationMethod is an authorization method such as 'Basic' or 'Bearer'.
 type AuthorizationMethod uint8
