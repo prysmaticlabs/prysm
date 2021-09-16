@@ -38,7 +38,7 @@ git clone https://github.com/someteam/somerepo b && cd b
 Then, make all your changes in `b` and finally create the diff of all your changes as follows:
 ```
 cd ..
-diff -ur --exclude=".git" a b > $GOPATH/src/github.com/prysmaticlabs/prysm/hack/third_party/YOURPATCH.patch
+diff -ur --exclude=".git" a b > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/YOURPATCH.patch
 ```
 
 Next, we need to tell the Bazel [WORKSPACE](https://github.com/prysmaticlabs/prysm/blob/master/WORKSPACE) to patch the specific dependency.
@@ -51,7 +51,7 @@ go_repository(
     commit = "367ca574419a062ae26818f60bdeb5751a6f538",
     patch_args = ["-p1"],
     patches = [
-        "//hack/third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
+        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
     ],
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )

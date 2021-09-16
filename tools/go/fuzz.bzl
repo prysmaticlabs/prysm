@@ -170,7 +170,7 @@ def go_fuzz_test(
         srcs = [":" + name],
         deps = [
             "@herumi_bls_eth_go_binary//:lib",
-            "//hack/third_party/afl:fuzzing_engine",
+            "//third_party/afl:fuzzing_engine",
         ],
         tags = ["manual", "fuzzer"] + tags,
     )
@@ -179,10 +179,10 @@ def go_fuzz_test(
         name = name + "_afl_bundle",
         outs = [name + "_afl_bundle.zip"],
         srcs = [
-            "//hack/third_party/afl:libs",
+            "//third_party/afl:libs",
             ":" + name + "_with_afl",
         ],
-        cmd = "cp $(location :" + name + "_with_afl) fuzzer; $(location @bazel_tools//tools/zip:zipper) cf $@ $(locations //hack/third_party/afl:libs) fuzzer",
+        cmd = "cp $(location :" + name + "_with_afl) fuzzer; $(location @bazel_tools//tools/zip:zipper) cf $@ $(locations //third_party/afl:libs) fuzzer",
         tools = [
             "@bazel_tools//tools/zip:zipper",
         ],

@@ -2119,7 +2119,7 @@ def prysm_deps():
         importpath = "github.com/libp2p/go-libp2p-tls",
         patch_args = ["-p1"],
         patches = [
-            "@prysm//hack/third_party:libp2p_tls.patch",  # See: https://github.com/libp2p/go-libp2p-tls/issues/66
+            "@prysm//third_party:libp2p_tls.patch",  # See: https://github.com/libp2p/go-libp2p-tls/issues/66
         ],
         sum = "h1:Ge/2CYttU7XdkPPqQ7e3TiuMFneLie1rM/UjRxPPGsI=",
         version = "v0.1.4-0.20200421131144-8a8ad624a291",
@@ -3340,7 +3340,7 @@ def prysm_deps():
             "https://github.com/supranational/blst/archive/624d0351000111276aa70a32145945d2645e49a9.tar.gz",
         ],
         strip_prefix = "blst-624d0351000111276aa70a32145945d2645e49a9",
-        build_file = "//hack/third_party:blst/blst.BUILD",
+        build_file = "//third_party:blst/blst.BUILD",
         sha256 = "6118737ddc0652f3a874fbe29e09a80c66c604d933b8cd478e5f2b7454860c6e",
     )
     go_repository(
