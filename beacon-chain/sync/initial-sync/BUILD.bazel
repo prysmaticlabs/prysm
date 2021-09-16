@@ -74,6 +74,7 @@ go_test(
         "//cmd/beacon-chain/flags:go_default_library",
         "//config/features:go_default_library",
         "//container/queue:go_default_library",
+        "//container/slice:go_default_library",
         "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
