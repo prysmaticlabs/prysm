@@ -95,7 +95,7 @@ func TestDebounce_MultipleHandlerInvocation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	interval := time.Second
 	timesHandled := 0
-	go Debounce(ctx, interval, eventsChan, func(event interface{}) {
+	go async.Debounce(ctx, interval, eventsChan, func(event interface{}) {
 		timesHandled++
 	})
 	for i := 0; i < 100; i++ {
