@@ -3,8 +3,8 @@ package petnames
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 // given a random seed for initialization.
 func DeterministicName(seed []byte, separator string) string {
 	rng := rand.NewDeterministicGenerator()
-	hashedValue := hashutil.FastSum64(seed)
+	hashedValue := hash.FastSum64(seed)
 	rng.Seed(int64(hashedValue))
 	adverb := adverbs[rng.Intn(len(adverbs)-1)]
 	adjective := adjectives[rng.Intn(len(adjectives)-1)]

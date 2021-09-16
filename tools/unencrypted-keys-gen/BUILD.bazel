@@ -9,7 +9,7 @@ go_library(
         "//tools/interop/convert-keys:__pkg__",
     ],
     deps = [
-        "//shared/bls:go_default_library",
+        "//crypto/bls:go_default_library",
         "//shared/interop:go_default_library",
         "//tools/unencrypted-keys-gen/keygen:go_default_library",
     ],
