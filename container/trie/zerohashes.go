@@ -1,4 +1,4 @@
-package trieutil
+package trie
 
 // ZeroHashes is a representation of all zerohashes of
 // varying depths till h=100.
