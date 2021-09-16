@@ -15,11 +15,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/slasher/beaconclient",
     visibility = ["//slasher:__subpackages__"],
     deps = [
+        "//api/grpc:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//slasher/cache:go_default_library",
