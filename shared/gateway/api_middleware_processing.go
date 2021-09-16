@@ -294,6 +294,9 @@ func hexToBase64Processor(v reflect.Value) error {
 }
 
 func base64ToHexProcessor(v reflect.Value) error {
+	if v.String() == "" {
+		return nil
+	}
 	b, err := base64.StdEncoding.DecodeString(v.String())
 	if err != nil {
 		return err
