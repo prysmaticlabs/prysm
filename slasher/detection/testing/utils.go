@@ -4,8 +4,8 @@ package testing
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // SignedBlockHeader given slot, proposer index this function generates signed block header.

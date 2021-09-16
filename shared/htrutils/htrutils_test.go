@@ -3,8 +3,8 @@ package htrutils_test
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -32,7 +32,7 @@ func TestForkRoot(t *testing.T) {
 }
 
 func TestCheckPointRoot(t *testing.T) {
-	testHasher := hashutil.CustomSHA256Hasher()
+	testHasher := hash.CustomSHA256Hasher()
 	testCheckpoint := ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  []byte{222},

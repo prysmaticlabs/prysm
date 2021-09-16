@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -237,7 +237,7 @@ func (b *BeaconState) IsNil() bool {
 }
 
 func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return htrutils.Uint64Root(b.state.GenesisTime), nil
