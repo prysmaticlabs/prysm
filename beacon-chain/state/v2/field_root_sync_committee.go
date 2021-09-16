@@ -1,8 +1,8 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
@@ -10,7 +10,7 @@ import (
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
 func syncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][32]byte
 	if committee == nil {
 		return [32]byte{}, nil

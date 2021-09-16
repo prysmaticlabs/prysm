@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 )
 
@@ -49,7 +49,7 @@ func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 	for i := startIndex; i < startIndex+numKeys; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
-		hash := hashutil.Hash(enc)
+		hash := hash.Hash(enc)
 		// Reverse byte order to big endian for use with big ints.
 		b := reverseByteOrder(hash[:])
 		num := new(big.Int)

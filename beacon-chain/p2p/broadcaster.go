@@ -11,10 +11,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -212,7 +212,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	}
 
 	if span.IsRecordingEvents() {
-		id := hashutil.FastSum64(buf.Bytes())
+		id := hash.FastSum64(buf.Bytes())
 		messageLen := int64(buf.Len())
 		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}

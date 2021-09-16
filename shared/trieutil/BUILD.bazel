@@ -9,9 +9,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/trieutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
     ],
 )
@@ -23,9 +23,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
+        "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",

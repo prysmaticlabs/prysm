@@ -21,17 +21,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	synccontribution "github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -550,8 +550,8 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 	}
 	var enc []byte
 	enc = fastssz.MarshalUint64(enc, uint64(core.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
-	depRoot := hashutil.Hash(enc)
-	blockHash := hashutil.Hash(depRoot[:])
+	depRoot := hash.Hash(enc)
+	blockHash := hash.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
@@ -572,8 +572,8 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
 	randGen := rand.NewGenerator()
-	depRoot := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
-	blockHash := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	depRoot := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	blockHash := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),

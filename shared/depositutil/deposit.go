@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -73,7 +73,7 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
 func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
-	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
+	h := hash.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }
 
