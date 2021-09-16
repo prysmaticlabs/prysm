@@ -2,8 +2,8 @@ package sync_contribution
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/container/attestation/aggregation"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/sirupsen/logrus"
 )
 

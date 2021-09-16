@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
+	aggtesting "github.com/prysmaticlabs/prysm/container/attestation/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
