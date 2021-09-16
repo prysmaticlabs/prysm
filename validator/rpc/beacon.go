@@ -10,7 +10,7 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/grpc"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -37,7 +37,7 @@ func (s *Server) registerBeaconClient() error {
 		return errors.New("no dial options for beacon chain gRPC client")
 	}
 
-	s.ctx = grpc.AppendHeaders(s.ctx, s.clientGrpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
 
 	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {

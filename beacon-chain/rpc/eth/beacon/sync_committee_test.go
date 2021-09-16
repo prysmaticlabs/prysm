@@ -7,7 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/api/grpc"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -193,7 +193,7 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 		sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
 		require.Equal(t, true, ok, "type assertion failed")
 		md := sts.Header()
-		v, ok := md[strings.ToLower(grpc.CustomErrorMetadataKey)]
+		v, ok := md[strings.ToLower(grpcutil.CustomErrorMetadataKey)]
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,
