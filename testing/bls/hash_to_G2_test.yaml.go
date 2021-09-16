@@ -8,6 +8,7 @@ type HashToG2Test struct {
 		Message string `json:"msg"`
 	} `json:"input"`
 	Output struct {
-		X, Y string `json:"x"`
+		X string `json:"x"`
+		Y string `json:"y"`
 	} `json:"output"`
 }
