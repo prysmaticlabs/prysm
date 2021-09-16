@@ -1,5 +1,5 @@
 // Package iputils contains useful functions for ip address formatting.
-package iputils
+package network
 
 import (
 	"net"
