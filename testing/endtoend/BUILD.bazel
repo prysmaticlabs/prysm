@@ -15,7 +15,6 @@ go_test(
     data = [
         "//:prysm_sh",
         "//cmd/beacon-chain",
-        "//cmd/slasher",
         "//cmd/validator",
         "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
