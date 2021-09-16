@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -41,7 +42,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
@@ -142,7 +142,7 @@ type Service struct {
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
-	depositTrie             *trieutil.SparseMerkleTrie
+	depositTrie             *trie.SparseMerkleTrie
 	chainStartData          *protodb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
@@ -167,7 +167,7 @@ type Web3ServiceConfig struct {
 func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
@@ -350,7 +350,7 @@ func (s *Service) DepositRoot() [32]byte {
 
 // DepositTrie returns the sparse Merkle trie used for storing
 // deposits from the ETH1.0 deposit contract.
-func (s *Service) DepositTrie() *trieutil.SparseMerkleTrie {
+func (s *Service) DepositTrie() *trie.SparseMerkleTrie {
 	return s.depositTrie
 }
 
@@ -965,7 +965,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *protodb.
 	if eth1DataInDB == nil {
 		return nil
 	}
-	s.depositTrie = trieutil.CreateTrieFromProto(eth1DataInDB.Trie)
+	s.depositTrie = trie.CreateTrieFromProto(eth1DataInDB.Trie)
 	s.chainStartData = eth1DataInDB.ChainstartData
 	var err error
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {

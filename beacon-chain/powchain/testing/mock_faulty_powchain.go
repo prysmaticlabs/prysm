@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // FaultyMockPOWChain defines an incorrectly functioning powchain service.
@@ -60,8 +60,8 @@ func (f *FaultyMockPOWChain) DepositRoot() [32]byte {
 }
 
 // DepositTrie --
-func (f *FaultyMockPOWChain) DepositTrie() *trieutil.SparseMerkleTrie {
-	return &trieutil.SparseMerkleTrie{}
+func (f *FaultyMockPOWChain) DepositTrie() *trie.SparseMerkleTrie {
+	return &trie.SparseMerkleTrie{}
 }
 
 // ChainStartDeposits --
