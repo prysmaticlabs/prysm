@@ -6,7 +6,7 @@ go_library(
         "log.go",
         "prompt.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/accounts/prompt",
+    importpath = "github.com/prysmaticlabs/prysm/validator/accounts/userprompt",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//cmd/validator/flags:go_default_library",

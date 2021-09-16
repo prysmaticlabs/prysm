@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"github.com/urfave/cli/v2"
@@ -27,7 +27,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
-		dataDir, err = prompt.InputDirectory(cliCtx, prompt.DataDirDirPromptText, cmd.DataDirFlag)
+		dataDir, err = userprompt.InputDirectory(cliCtx, userprompt.DataDirDirPromptText, cmd.DataDirFlag)
 		if err != nil {
 			return errors.Wrapf(err, "could not read directory value from input")
 		}
@@ -54,7 +54,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
-	protectionFilePath, err := prompt.InputDirectory(cliCtx, prompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
+	protectionFilePath, err := userprompt.InputDirectory(cliCtx, userprompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not get slashing protection json file")
 	}

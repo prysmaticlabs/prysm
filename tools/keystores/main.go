@@ -170,7 +170,7 @@ func encrypt(cliCtx *cli.Context) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "could not validate prompt confirmation")
+			return errors.Wrap(err, "could not validate userprompt confirmation")
 		}
 		if response == "n" {
 			return nil

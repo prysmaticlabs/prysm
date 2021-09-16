@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"github.com/urfave/cli/v2"
@@ -37,7 +37,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
-		dataDir, err = prompt.InputDirectory(cliCtx, prompt.DataDirDirPromptText, cmd.DataDirFlag)
+		dataDir, err = userprompt.InputDirectory(cliCtx, userprompt.DataDirDirPromptText, cmd.DataDirFlag)
 		if err != nil {
 			return errors.Wrapf(err, "could not read directory value from input")
 		}
@@ -67,7 +67,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not export slashing protection history")
 	}
-	outputDir, err := prompt.InputDirectory(
+	outputDir, err := userprompt.InputDirectory(
 		cliCtx,
 		"Enter your desired output directory for your slashing protection history file",
 		flags.SlashingProtectionExportDirFlag,

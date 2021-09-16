@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -120,7 +120,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
-// Ask user to select accounts via an interactive prompt.
+// Ask user to select accounts via an interactive userprompt.
 func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
