@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -49,7 +49,7 @@ func (s *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch cha
 		select {
 		case slashing := <-ch:
 			if slashing != nil && slashing.Attestation_1 != nil && slashing.Attestation_2 != nil {
-				slashableIndices := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+				slashableIndices := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 				_, err := s.cfg.BeaconClient.SubmitAttesterSlashing(ctx, slashing)
 				if err == nil {
 					log.WithFields(logrus.Fields{
