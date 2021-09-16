@@ -1,4 +1,4 @@
-package async
+package async_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -24,7 +25,7 @@ func TestDebounce_NoEvents(t *testing.T) {
 		})
 	}()
 	go func() {
-		Debounce(ctx, interval, eventsChan, func(event interface{}) {
+		async.Debounce(ctx, interval, eventsChan, func(event interface{}) {
 			timesHandled++
 		})
 		wg.Done()
@@ -60,7 +61,7 @@ func TestDebounce_CtxClosing(t *testing.T) {
 		})
 	}()
 	go func() {
-		Debounce(ctx, interval, eventsChan, func(event interface{}) {
+		async.Debounce(ctx, interval, eventsChan, func(event interface{}) {
 			timesHandled++
 		})
 		wg.Done()
@@ -76,7 +77,7 @@ func TestDebounce_SingleHandlerInvocation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	interval := time.Second
 	timesHandled := 0
-	go Debounce(ctx, interval, eventsChan, func(event interface{}) {
+	go async.Debounce(ctx, interval, eventsChan, func(event interface{}) {
 		timesHandled++
 	})
 	for i := 0; i < 100; i++ {
