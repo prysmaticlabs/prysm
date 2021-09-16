@@ -19,6 +19,7 @@ go_test(
     srcs = ["helpers_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//shared/gateway:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
     ],
