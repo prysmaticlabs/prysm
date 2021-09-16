@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -162,7 +162,7 @@ func signedDeposit(
 	withdrawalKey []byte,
 	balance uint64,
 ) (*ethpb.Deposit, error) {
-	withdrawalCreds := hashutil.Hash(withdrawalKey)
+	withdrawalCreds := hash.Hash(withdrawalKey)
 	withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 	depositMessage := &ethpb.DepositMessage{
 		PublicKey:             publicKey,
@@ -325,7 +325,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 
 		// Create the new deposits and add them to the trie. Always use the first validator to create deposit
 		for i := uint64(0); i < numRequired; i++ {
-			withdrawalCreds := hashutil.Hash(publicKeys[1].Marshal())
+			withdrawalCreds := hash.Hash(publicKeys[1].Marshal())
 			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 			depositMessage := &ethpb.DepositMessage{

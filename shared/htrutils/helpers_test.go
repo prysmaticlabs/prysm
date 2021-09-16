@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -13,7 +13,7 @@ import (
 const merkleizingListLimitError = "merkleizing list that is too large, over limit"
 
 func TestBitlistRoot(t *testing.T) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	capacity := uint64(10)
 	bfield := bitfield.NewBitlist(capacity)
 	expected := [32]byte{176, 76, 194, 203, 142, 166, 117, 79, 148, 194, 231, 64, 60, 245, 142, 32, 201, 2, 58, 152, 53, 12, 132, 40, 41, 102, 224, 189, 103, 41, 211, 202}
@@ -24,7 +24,7 @@ func TestBitlistRoot(t *testing.T) {
 }
 
 func TestBitwiseMerkleize(t *testing.T) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	chunks := [][]byte{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
@@ -39,7 +39,7 @@ func TestBitwiseMerkleize(t *testing.T) {
 }
 
 func TestBitwiseMerkleizeOverLimit(t *testing.T) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	chunks := [][]byte{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
@@ -52,7 +52,7 @@ func TestBitwiseMerkleizeOverLimit(t *testing.T) {
 }
 
 func TestBitwiseMerkleizeArrays(t *testing.T) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	chunks := [][32]byte{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
 		{33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 62, 62, 63, 64},
@@ -67,7 +67,7 @@ func TestBitwiseMerkleizeArrays(t *testing.T) {
 }
 
 func TestBitwiseMerkleizeArraysOverLimit(t *testing.T) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	chunks := [][32]byte{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
 		{33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 62, 62, 63, 64},
