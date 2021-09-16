@@ -1,4 +1,4 @@
-package trieutil
+package trie
 
 import (
 	"strconv"
