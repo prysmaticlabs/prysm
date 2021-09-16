@@ -1,4 +1,4 @@
-package prereq
+package prereqs
 
 import (
 	"context"
