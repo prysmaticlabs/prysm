@@ -1,11 +1,11 @@
-package iputils_test
+package network_test
 
 import (
 	"net"
 	"regexp"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -13,7 +13,7 @@ import (
 func TestExternalIPv4(t *testing.T) {
 	// Regular expression format for IPv4
 	IPv4Format := `\.\d{1,3}\.\d{1,3}\b`
-	test, err := iputils.ExternalIPv4()
+	test, err := network.ExternalIPv4()
 	require.NoError(t, err)
 
 	valid := regexp.MustCompile(IPv4Format)
@@ -21,7 +21,7 @@ func TestExternalIPv4(t *testing.T) {
 }
 
 func TestRetrieveIP(t *testing.T) {
-	ip, err := iputils.ExternalIP()
+	ip, err := network.ExternalIP()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestSortAddresses(t *testing.T) {
 		{0x03, 0x89, 0x33, 0x13},
 	}
 
-	sortedAddrs := iputils.SortAddresses(testAddresses)
+	sortedAddrs := network.SortAddresses(testAddresses)
 	assert.Equal(t, true, sortedAddrs[0].To4() != nil, "expected ipv4 address")
 	assert.Equal(t, true, sortedAddrs[1].To4() != nil, "expected ipv4 address")
 	assert.Equal(t, true, sortedAddrs[2].To4() != nil, "expected ipv4 address")

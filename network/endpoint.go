@@ -1,10 +1,10 @@
-package httputils
+package network
 
 import (
 	"errors"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 )
 
 // Endpoint is an endpoint with authorization data.
@@ -15,7 +15,7 @@ type Endpoint struct {
 
 // AuthorizationData holds all information necessary to authorize with HTTP.
 type AuthorizationData struct {
-	Method authorizationmethod.AuthorizationMethod
+	Method authorization.AuthorizationMethod
 	Value  string
 }
 
@@ -32,11 +32,11 @@ func (d AuthorizationData) Equals(other AuthorizationData) bool {
 // ToHeaderValue retrieves the value of the authorization header from AuthorizationData.
 func (d *AuthorizationData) ToHeaderValue() (string, error) {
 	switch d.Method {
-	case authorizationmethod.Basic:
+	case authorization.Basic:
 		return "Basic " + d.Value, nil
-	case authorizationmethod.Bearer:
+	case authorization.Bearer:
 		return "Bearer " + d.Value, nil
-	case authorizationmethod.None:
+	case authorization.None:
 		return "", nil
 	}
 
@@ -44,12 +44,12 @@ func (d *AuthorizationData) ToHeaderValue() (string, error) {
 }
 
 // Method returns the authorizationmethod.AuthorizationMethod corresponding with the parameter value.
-func Method(auth string) authorizationmethod.AuthorizationMethod {
+func Method(auth string) authorization.AuthorizationMethod {
 	if strings.HasPrefix(strings.ToLower(auth), "basic") {
-		return authorizationmethod.Basic
+		return authorization.Basic
 	}
 	if strings.HasPrefix(strings.ToLower(auth), "bearer") {
-		return authorizationmethod.Bearer
+		return authorization.Bearer
 	}
-	return authorizationmethod.None
+	return authorization.None
 }
