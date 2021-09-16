@@ -26,6 +26,8 @@ var (
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
 	enableDebugRPCEndpoints = flag.Bool("enable-debug-rpc-endpoints", false, "Enable debug rpc endpoints such as /eth/v1alpha1/beacon/state")
 	grpcMaxMsgSize          = flag.Int("grpc-max-msg-size", 1<<22, "Integer to define max recieve message call size")
+	disableHTTPPrysmAPI     = flag.Bool("disable-http-prysm-api", false, "Disable all HTTP endpoints of Prysm API")
+	disableHTTPEthAPI       = flag.Bool("disable-http-eth-api", false, "Disable all HTTP endpoints of the official Ethereum API")
 )
 
 func init() {
@@ -38,17 +40,21 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints)
+	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints, !(*disableHTTPPrysmAPI), !(*disableHTTPEthAPI))
+	muxs := make([]*gateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	}
+	if gatewayConfig.V1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1PbMux)
+	}
 
-	gw := gateway.New(
-		context.Background(),
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
-		gatewayConfig.Handler,
-		*beaconRPC,
-		fmt.Sprintf("%s:%d", *host, *port),
-	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
-		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
-		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *ethApiPort), &apimiddleware.BeaconEndpointFactory{})
+	gw := gateway.New(context.Background(), muxs, gatewayConfig.Handler, *beaconRPC, fmt.Sprintf("%s:%d", *host, *port)).
+		WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
+		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
+	if !(*disableHTTPEthAPI) {
+		gw.WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *ethApiPort), &apimiddleware.BeaconEndpointFactory{})
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())

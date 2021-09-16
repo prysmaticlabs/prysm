@@ -99,6 +99,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCPort,
 			flags.CertFlag,
 			flags.KeyFlag,
+			flags.DisableHTTPPrysmAPI,
+			flags.DisableHTTPEthAPI,
 			flags.DisableGRPCGateway,
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,

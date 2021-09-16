@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -45,7 +45,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
+	sharedgateway "github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -661,21 +661,27 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	enableHTTPPrysmAPI := !b.cliCtx.Bool(flags.DisableHTTPPrysmAPI.Name)
+	enableHTTPEthAPI := !b.cliCtx.Bool(flags.DisableHTTPEthAPI.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
-	gatewayConfig := gateway2.DefaultConfig(enableDebugRPCEndpoints)
+	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, enableHTTPPrysmAPI, enableHTTPEthAPI)
+	muxs := make([]*sharedgateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	}
+	if gatewayConfig.V1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1PbMux)
+	}
 
-	g := gateway.New(
-		b.ctx,
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
-		gatewayConfig.Handler,
-		selfAddress,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).
+	g := sharedgateway.New(b.ctx, muxs, gatewayConfig.Handler, selfAddress, gatewayAddress).
+		WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
-		WithMaxCallRecvMsgSize(maxCallSize).
-		WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
+		WithMaxCallRecvMsgSize(maxCallSize)
+	if enableHTTPEthAPI {
+		g.WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
+	}
 
 	return b.services.RegisterService(g)
 }
