@@ -19,10 +19,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -149,7 +149,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
 func ipAddr() net.IP {
-	ip, err := iputils.ExternalIP()
+	ip, err := network.ExternalIP()
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
