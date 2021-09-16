@@ -12,12 +12,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection",
     visibility = ["//slasher:__subpackages__"],
     deps = [
+        "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/hashutil:go_default_library",
         "//shared/slashutil:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//slasher/beaconclient:go_default_library",

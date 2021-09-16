@@ -8,9 +8,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
@@ -61,7 +61,7 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 		modulo = committeeCount / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	b := hashutil.Hash(slotSig)
+	b := hash.Hash(slotSig)
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 

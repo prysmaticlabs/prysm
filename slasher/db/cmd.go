@@ -1,8 +1,8 @@
 package db
 
 import (
+	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/urfave/cli/v2"
 )
 

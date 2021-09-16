@@ -18,13 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/prereq"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
@@ -63,7 +63,7 @@ func New(cliCtx *cli.Context) (*SlasherNode, error) {
 	}
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
+	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 
 	if cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.

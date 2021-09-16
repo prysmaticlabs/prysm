@@ -5,8 +5,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -131,7 +131,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 // of the beacon state. This method performs slice reads and the caller MUST
 // hold the lock before calling this method.
 func (b *BeaconState) recomputeRoot(idx int) {
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 	layers := b.merkleLayers
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]

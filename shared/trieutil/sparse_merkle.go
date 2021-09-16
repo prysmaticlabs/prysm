@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -61,7 +61,7 @@ func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, err
 		}
 		updatedValues := make([][]byte, 0)
 		for j := 0; j < len(layers[i]); j += 2 {
-			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
+			concat := hash.Hash(append(layers[i][j], layers[i][j+1]...))
 			updatedValues = append(updatedValues, concat[:])
 		}
 		layers[i+1] = updatedValues
@@ -89,7 +89,7 @@ func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 		depositCount = 0
 	}
 	binary.LittleEndian.PutUint64(enc[:], depositCount)
-	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
+	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
 // Insert an item into the trie.
@@ -116,10 +116,10 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 			neighbor = m.branches[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root[:], neighbor...))
+			parentHash := hash.Hash(append(root[:], neighbor...))
 			root = parentHash
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root[:]...))
+			parentHash := hash.Hash(append(neighbor, root[:]...))
 			root = parentHash
 		}
 		parentIdx := currentIndex / 2
@@ -181,9 +181,9 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 	node := bytesutil.ToBytes32(item)
 	for i := 0; i <= int(depth); i++ {
 		if (uint64(merkleIndex) / mathutil.PowerOf2(uint64(i)) % 2) != 0 {
-			node = hashutil.Hash(append(proof[i], node[:]...))
+			node = hash.Hash(append(proof[i], node[:]...))
 		} else {
-			node = hashutil.Hash(append(node[:], proof[i]...))
+			node = hash.Hash(append(node[:], proof[i]...))
 		}
 	}
 

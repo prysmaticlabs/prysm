@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -331,7 +331,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hash.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)
 		proposerIndices = append(proposerIndices, index)
@@ -342,7 +342,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hash.Hash(seedWithSlot)
 		index, err := computeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
 		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)
@@ -770,7 +770,7 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
 		candidateIndex, err := ComputeShuffledIndex(types.ValidatorIndex(i%length), length, seed, true /* shuffle */)
