@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -265,7 +265,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"204"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"204"},
 			},
 		}
 		container := defaultResponseContainer()
@@ -309,7 +309,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		}
 
 		// Set invalid status code.
-		response.Header["Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey] = []string{"invalid"}
+		response.Header["Grpc-Metadata-"+grpc.HttpCodeMetadataKey] = []string{"invalid"}
 
 		container := defaultResponseContainer()
 		responseJson, err := json.Marshal(container)
@@ -375,7 +375,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 func TestWriteError(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		responseHeader := http.Header{
-			"Grpc-Metadata-" + grpcutils.CustomErrorMetadataKey: []string{"{\"CustomField\":\"bar\"}"},
+			"Grpc-Metadata-" + grpc.CustomErrorMetadataKey: []string{"{\"CustomField\":\"bar\"}"},
 		}
 		errJson := &testErrorJson{
 			Message: "foo",
@@ -405,7 +405,7 @@ func TestWriteError(t *testing.T) {
 		logHook := test.NewGlobal()
 
 		responseHeader := http.Header{
-			"Grpc-Metadata-" + grpcutils.CustomErrorMetadataKey: []string{"invalid"},
+			"Grpc-Metadata-" + grpc.CustomErrorMetadataKey: []string{"invalid"},
 		}
 
 		WriteError(httptest.NewRecorder(), &testErrorJson{}, responseHeader)

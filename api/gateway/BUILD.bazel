@@ -10,15 +10,15 @@ go_library(
         "log.go",
         "param_handling.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/gateway",
+    importpath = "github.com/prysmaticlabs/prysm/api/gateway",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//validator:__subpackages__",
     ],
     deps = [
+        "//api/grpc:go_default_library",
         "//shared:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
@@ -41,8 +41,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api/grpc:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
