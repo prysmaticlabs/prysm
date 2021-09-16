@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -151,7 +151,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	// Password File should have been written.
 	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.FileExists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
@@ -334,7 +334,7 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 
 	// Expected a silent failure if the feature flag is not enabled.
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, false, fileutil.FileExists(passwordFilePath))
+	assert.Equal(t, false, file.FileExists(passwordFilePath))
 	resetCfg = features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
@@ -343,7 +343,7 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	// File should have been written.
-	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.FileExists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")

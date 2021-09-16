@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
@@ -130,8 +130,8 @@ func trimPeers(peers []peer.ID, peersPercentage float64) []peer.ID {
 	// Weak/slow peers will be pushed down the list and trimmed since only percentage of peers is selected.
 	limit := uint64(math.Round(float64(len(peers)) * peersPercentage))
 	// Limit cannot be less that minimum peers required by sync mechanism.
-	limit = mathutil.Max(limit, uint64(required))
+	limit = math.Max(limit, uint64(required))
 	// Limit cannot be higher than number of peers available (safe-guard).
-	limit = mathutil.Min(limit, uint64(len(peers)))
+	limit = math.Min(limit, uint64(len(peers)))
 	return peers[:limit]
 }

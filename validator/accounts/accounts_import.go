@@ -16,9 +16,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -156,7 +156,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
-	isDir, err := fileutil.HasDir(keysDir)
+	isDir, err := file.HasDir(keysDir)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if path is a directory")
 	}
@@ -205,8 +205,8 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		}
 		accountsPassword = string(data)
 	} else {
-		accountsPassword, err = promptutil.PasswordPrompt(
-			"Enter the password for your imported accounts", promptutil.NotEmpty,
+		accountsPassword, err = prompt.PasswordPrompt(
+			"Enter the password for your imported accounts", prompt.NotEmpty,
 		)
 		if err != nil {
 			return fmt.Errorf("could not read account password: %w", err)
@@ -241,11 +241,11 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
 // the Prysm validator's accounts.
 func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *imported.Keymanager) error {
 	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
-	fullPath, err := fileutil.ExpandPath(privKeyFile)
+	fullPath, err := file.ExpandPath(privKeyFile)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand file path for %s", privKeyFile)
 	}
-	if !fileutil.FileExists(fullPath) {
+	if !file.FileExists(fullPath) {
 		return fmt.Errorf("file %s does not exist", fullPath)
 	}
 	privKeyHex, err := ioutil.ReadFile(fullPath) // #nosec G304

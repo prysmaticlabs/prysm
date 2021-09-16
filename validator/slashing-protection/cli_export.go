@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
@@ -43,7 +43,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		}
 	}
 	// ensure that the validator.db is found under the specified dir or its subdirectories
-	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
+	found, _, err := file.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
 	if err != nil {
 		return errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
@@ -78,12 +78,12 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if outputDir == "" {
 		return errors.New("output directory not specified")
 	}
-	exists, err := fileutil.HasDir(outputDir)
+	exists, err := file.HasDir(outputDir)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if output directory %s already exists", outputDir)
 	}
 	if !exists {
-		if err := fileutil.MkdirAll(outputDir); err != nil {
+		if err := file.MkdirAll(outputDir); err != nil {
 			return errors.Wrapf(err, "could not create output directory %s", outputDir)
 		}
 	}
@@ -93,7 +93,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not JSON marshal slashing protection history")
 	}
-	if err := fileutil.WriteFile(outputFilePath, encoded); err != nil {
+	if err := file.WriteFile(outputFilePath, encoded); err != nil {
 		return errors.Wrapf(err, "could not write file to path %s", outputFilePath)
 	}
 	log.Infof(

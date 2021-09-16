@@ -16,12 +16,12 @@ go_library(
     deps = [
         "//cmd/slasher/flags:go_default_library",
         "//config/features:go_default_library",
+        "//io/logs:go_default_library",
         "//monitoring/journald:go_default_library",
         "//runtime/debug:go_default_library",
         "//runtime/tos:go_default_library",
         "//runtime/version:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/logutil:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/node:go_default_library",
         "@com_github_joonix_log//:go_default_library",

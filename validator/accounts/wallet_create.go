@@ -10,7 +10,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -131,13 +131,13 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := promptutil.InputPassword(
+	walletPassword, err := prompt.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		wallet.NewWalletPasswordPromptText,
 		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
-		promptutil.ValidatePasswordInput,
+		prompt.ValidatePasswordInput,
 	)
 	if err != nil {
 		return nil, err
@@ -160,14 +160,14 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		createWalletConfig.NumAccounts = int(numAccounts)
 	}
 	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord && !has25thWordFile {
-		resp, err := promptutil.ValidatePrompt(
-			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
+		resp, err := prompt.ValidatePrompt(
+			os.Stdin, newMnemonicPassphraseYesNoText, prompt.ValidateYesOrNo,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
 		if strings.EqualFold(resp, "y") {
-			mnemonicPassphrase, err := promptutil.InputPassword(
+			mnemonicPassphrase, err := prompt.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
 				newMnemonicPassphrasePromptText,

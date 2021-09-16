@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
@@ -33,7 +33,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 		}
 	}
 	// ensure that the validator.db is found under the specified dir or its subdirectories
-	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
+	found, _, err := file.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
 	if err != nil {
 		return errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
@@ -65,7 +65,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			flags.SlashingProtectionJSONFileFlag.Name,
 		)
 	}
-	enc, err := fileutil.ReadFileAsBytes(protectionFilePath)
+	enc, err := file.ReadFileAsBytes(protectionFilePath)
 	if err != nil {
 		return err
 	}

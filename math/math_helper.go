@@ -1,5 +1,5 @@
-// Package mathutil includes important helpers for Ethereum such as fast integer square roots.
-package mathutil
+// Package math includes important helpers for Ethereum such as fast integer square roots.
+package math
 
 import (
 	"errors"

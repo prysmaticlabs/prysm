@@ -14,10 +14,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -80,13 +80,13 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	// Ask the user for their desired password for their backed up accounts.
-	backupsPassword, err := promptutil.InputPassword(
+	backupsPassword, err := prompt.InputPassword(
 		cliCtx,
 		flags.BackupPasswordFile,
 		"Enter a new password for your backed up accounts",
 		"Confirm new password",
 		true,
-		promptutil.ValidatePasswordInput,
+		prompt.ValidatePasswordInput,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not determine password for backed up accounts")
@@ -201,13 +201,13 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 	if len(keystoresToBackup) == 0 {
 		return errors.New("nothing to backup")
 	}
-	if err := fileutil.MkdirAll(outputDir); err != nil {
+	if err := file.MkdirAll(outputDir); err != nil {
 		return errors.Wrapf(err, "could not create directory at path: %s", outputDir)
 	}
 	// Marshal and zip all keystore files together and write the zip file
 	// to the specified output directory.
 	archivePath := filepath.Join(outputDir, archiveFilename)
-	if fileutil.FileExists(archivePath) {
+	if file.FileExists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	// We create a new file to store our backup.zip.

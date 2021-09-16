@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -56,14 +56,14 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
 	has25thWordFile := cliCtx.IsSet(flags.Mnemonic25thWordFileFlag.Name)
 	if !skipMnemonic25thWord && !has25thWordFile {
-		resp, err := promptutil.ValidatePrompt(
-			os.Stdin, mnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
+		resp, err := prompt.ValidatePrompt(
+			os.Stdin, mnemonicPassphraseYesNoText, prompt.ValidateYesOrNo,
 		)
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
 		}
 		if strings.EqualFold(resp, "y") {
-			mnemonicPassphrase, err := promptutil.InputPassword(
+			mnemonicPassphrase, err := prompt.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
 				mnemonicPassphrasePromptText,
@@ -86,13 +86,13 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	walletPassword, err := promptutil.InputPassword(
+	walletPassword, err := prompt.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		wallet.NewWalletPasswordPromptText,
 		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
-		promptutil.ValidatePasswordInput,
+		prompt.ValidatePasswordInput,
 	)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 		languages = append(languages, k)
 	}
 	sort.Strings(languages)
-	selectedLanguage, err := promptutil.ValidatePrompt(
+	selectedLanguage, err := prompt.ValidatePrompt(
 		os.Stdin,
 		fmt.Sprintf("Enter the language of your seed phrase: %s", strings.Join(languages, ", ")),
 		func(input string) error {
@@ -192,7 +192,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 		return "", fmt.Errorf("could not get mnemonic language: %w", err)
 	}
 	bip39.SetWordList(allowedLanguages[selectedLanguage])
-	mnemonicPhrase, err = promptutil.ValidatePrompt(
+	mnemonicPhrase, err = prompt.ValidatePrompt(
 		os.Stdin,
 		"Enter the seed phrase for the wallet you would like to recover",
 		ValidateMnemonic)
@@ -210,7 +210,7 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 		}
 		return numAccounts, nil
 	}
-	numAccounts, err := promptutil.ValidatePrompt(os.Stdin, "Enter how many accounts you would like to generate from the mnemonic", promptutil.ValidateNumber)
+	numAccounts, err := prompt.ValidatePrompt(os.Stdin, "Enter how many accounts you would like to generate from the mnemonic", prompt.ValidateNumber)
 	if err != nil {
 		return 0, err
 	}

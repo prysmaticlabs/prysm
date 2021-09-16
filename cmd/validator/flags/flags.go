@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -308,7 +308,7 @@ var (
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {
 	// Try to place the data folder in the user's home dir
-	home := fileutil.HomeDir()
+	home := file.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")

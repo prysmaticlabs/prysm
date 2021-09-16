@@ -10,7 +10,7 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -87,8 +87,8 @@ func (km *Keymanager) attemptDecryptKeystore(
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
 	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
 	for doesNotDecrypt {
-		password, err = promptutil.PasswordPrompt(
-			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), promptutil.NotEmpty,
+		password, err = prompt.PasswordPrompt(
+			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), prompt.NotEmpty,
 		)
 		if err != nil {
 			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)

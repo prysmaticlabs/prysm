@@ -1,10 +1,10 @@
-package mathutil_test
+package math_test
 
 import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -80,28 +80,28 @@ func TestIntegerSquareRoot(t *testing.T) {
 	}
 
 	for _, testVals := range tt {
-		require.Equal(t, testVals.root, mathutil.IntegerSquareRoot(testVals.number))
+		require.Equal(t, testVals.root, math.IntegerSquareRoot(testVals.number))
 	}
 }
 
 func BenchmarkIntegerSquareRootBelow52Bits(b *testing.B) {
 	val := uint64(1 << 33)
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, uint64(92681), mathutil.IntegerSquareRoot(val))
+		require.Equal(b, uint64(92681), math.IntegerSquareRoot(val))
 	}
 }
 
 func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, uint64(1<<31), mathutil.IntegerSquareRoot(val))
+		require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
 	}
 }
 
 func BenchmarkIntegerSquareRoot_WithDatatable(b *testing.B) {
 	val := uint64(1024)
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, uint64(32), mathutil.IntegerSquareRoot(val))
+		require.Equal(b, uint64(32), math.IntegerSquareRoot(val))
 	}
 }
 
@@ -133,7 +133,7 @@ func TestCeilDiv8(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		require.Equal(t, tt.div8, mathutil.CeilDiv8(tt.number))
+		require.Equal(t, tt.div8, math.CeilDiv8(tt.number))
 	}
 }
 
@@ -164,7 +164,7 @@ func TestIsPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.b, mathutil.IsPowerOf2(tt.a))
+		require.Equal(t, tt.b, math.IsPowerOf2(tt.a))
 	}
 }
 
@@ -191,7 +191,7 @@ func TestPowerOf2(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.b, mathutil.PowerOf2(tt.a))
+		require.Equal(t, tt.b, math.PowerOf2(tt.a))
 	}
 }
 
@@ -228,7 +228,7 @@ func TestMaxValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.result, mathutil.Max(tt.a, tt.b))
+		require.Equal(t, tt.result, math.Max(tt.a, tt.b))
 	}
 }
 
@@ -265,7 +265,7 @@ func TestMinValue(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.result, mathutil.Min(tt.a, tt.b))
+		require.Equal(t, tt.result, math.Min(tt.a, tt.b))
 	}
 }
 
@@ -290,7 +290,7 @@ func TestMul64(t *testing.T) {
 		{args: args{1 << 63, 2}, res: 0, err: true},
 	}
 	for _, tt := range tests {
-		got, err := mathutil.Mul64(tt.args.a, tt.args.b)
+		got, err := math.Mul64(tt.args.a, tt.args.b)
 		if tt.err && err == nil {
 			t.Errorf("Mul64() Expected Error = %v, want error", tt.err)
 			continue
@@ -322,7 +322,7 @@ func TestAdd64(t *testing.T) {
 		{args: args{1 << 63, 2}, res: 9223372036854775810, err: false},
 	}
 	for _, tt := range tests {
-		got, err := mathutil.Add64(tt.args.a, tt.args.b)
+		got, err := math.Add64(tt.args.a, tt.args.b)
 		if tt.err && err == nil {
 			t.Errorf("Add64() Expected Error = %v, want error", tt.err)
 			continue

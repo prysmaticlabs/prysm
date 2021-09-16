@@ -27,7 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 const (
@@ -162,7 +162,7 @@ func storeNewRandomKey(ks keyStore, password string) error {
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	if err := fileutil.MkdirAll(filepath.Dir(file)); err != nil {
+	if err := file.MkdirAll(filepath.Dir(file)); err != nil {
 		return err
 	}
 	// Atomic write: create a temporary hidden file first

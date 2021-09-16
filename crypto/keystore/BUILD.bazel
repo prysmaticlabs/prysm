@@ -12,7 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/bls:go_default_library",
-        "//shared/fileutil:go_default_library",
+        "//io/file:go_default_library",
         "//time:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pborman_uuid//:go_default_library",
