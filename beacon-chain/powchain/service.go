@@ -35,11 +35,11 @@ import (
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
-	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -133,10 +133,10 @@ type Service struct {
 	cfg                     *Web3ServiceConfig
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	headTicker              *time.Ticker
-	httpEndpoints           []httputils.Endpoint
-	currHttpEndpoint        httputils.Endpoint
-	httpLogger              bind.ContractFilterer
+	headTicker       *time.Ticker
+	httpEndpoints    []network.Endpoint
+	currHttpEndpoint network.Endpoint
+	httpLogger       bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
@@ -182,13 +182,13 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	}
 
 	stringEndpoints := dedupEndpoints(config.HttpEndpoints)
-	endpoints := make([]httputils.Endpoint, len(stringEndpoints))
+	endpoints := make([]network.Endpoint, len(stringEndpoints))
 	for i, e := range stringEndpoints {
 		endpoints[i] = HttpEndpoint(e)
 	}
 
 	// Select first http endpoint in the provided list.
-	var currEndpoint httputils.Endpoint
+	var currEndpoint network.Endpoint
 	if len(config.HttpEndpoints) > 0 {
 		currEndpoint = endpoints[0]
 	}
@@ -327,7 +327,7 @@ func (s *Service) updateBeaconNodeStats() {
 	s.bsUpdater.Update(bs)
 }
 
-func (s *Service) updateCurrHttpEndpoint(endpoint httputils.Endpoint) {
+func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
 	s.currHttpEndpoint = endpoint
 	s.updateBeaconNodeStats()
 }
@@ -410,12 +410,12 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes(endpoint httputils.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
+func (s *Service) dialETH1Nodes(endpoint network.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(endpoint.Url)
 	if err != nil {
 		return nil, nil, err
 	}
-	if endpoint.Auth.Method != authorizationmethod.None {
+	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
 		if err != nil {
 			return nil, nil, err
