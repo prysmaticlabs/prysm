@@ -487,7 +487,7 @@ func (mr *MockBeaconChainClientMockRecorder) StreamMinimalConsensusInfo(arg0, ar
 }
 
 // StreamNewPendingBlocks mocks base method
-func (m *MockBeaconChainClient) StreamNewPendingBlocks(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamNewPendingBlocksClient, error) {
+func (m *MockBeaconChainClient) StreamNewPendingBlocks(arg0 context.Context, arg1 *eth.StreamPendingBlocksRequest, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamNewPendingBlocksClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

@@ -589,11 +589,12 @@ func (b *BeaconNode) registerInitialSyncService() error {
 	}
 
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
-		DB:            b.db,
-		Chain:         chainService,
-		P2P:           b.fetchP2P(),
-		StateNotifier: b,
-		BlockNotifier: b,
+		DB:                 b.db,
+		Chain:              chainService,
+		P2P:                b.fetchP2P(),
+		StateNotifier:      b,
+		BlockNotifier:      b,
+		EnableVanguardNode: b.cliCtx.Bool(cmd.VanguardNetwork.Name),
 	})
 	return b.services.RegisterService(is)
 }

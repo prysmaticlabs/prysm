@@ -29,7 +29,9 @@ var _ shared.Service = (*Service)(nil)
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.ChainInfoFetcher
+	blockchain.HeadFetcher
+	blockchain.FinalizationFetcher
+	blockchain.PendingQueueFetcher
 }
 
 // Config to set up the initial sync service.
@@ -39,6 +41,8 @@ type Config struct {
 	Chain         blockchainService
 	StateNotifier statefeed.Notifier
 	BlockNotifier blockfeed.Notifier
+	// Vanguard: vanguard chain related attributes
+	EnableVanguardNode bool
 }
 
 // Service service.
@@ -101,6 +105,11 @@ func (s *Service) Start() {
 		s.markSynced(genesis)
 		return
 	}
+	// Vanguard: Deactivating verification from orchestrator client
+	if s.cfg.EnableVanguardNode {
+		log.Info("Deactivating orchestrator verification in initial sync mode")
+		s.cfg.Chain.DeactivateOrcVerification()
+	}
 	s.waitForMinimumPeers()
 	if err := s.roundRobinSync(genesis); err != nil {
 		if errors.Is(s.ctx.Err(), context.Canceled) {
@@ -136,16 +145,11 @@ func (s *Service) Initialized() bool {
 	return s.chainStarted.IsSet()
 }
 
-// Synced returns true if initial sync has been completed.
-func (s *Service) Synced() bool {
-	return s.synced.IsSet()
-}
-
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {
 	headState, err := s.cfg.Chain.HeadState(s.ctx)
-	if err != nil || headState == nil || headState.IsNil() {
+	if err != nil || headState == nil {
 		return errors.Errorf("could not retrieve head state: %v", err)
 	}
 

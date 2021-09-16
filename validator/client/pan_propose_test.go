@@ -28,32 +28,34 @@ func TestVerifyPandoraShardHeader(t *testing.T) {
 	blk.Block.Slot = 98
 	blk.Block.ProposerIndex = 23
 	epoch := types.Epoch(uint64(blk.Block.Slot) / 32)
+	emptyRootHash := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	canonicalBlkNum := uint64(313)
 
 	header, extraData := testutil.NewPandoraBlock(blk.Block.Slot, uint64(blk.Block.ProposerIndex))
 	headerHash := sealHash(header)
 
 	// Checks all the validations
-	err := validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData)
+	err := validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData, emptyRootHash, canonicalBlkNum)
 	require.NoError(t, err, "Should pass without any error")
 
 	// Should get an `errInvalidHeaderHash` error
 	header.Time = uint64(14265167)
 	want := "invalid header hash"
-	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData, emptyRootHash, canonicalBlkNum)
 	require.ErrorContains(t, want, err, "Should get an errInvalidHeaderHash error")
 
 	// Should get an `errInvalidSlot` error
 	header.Time = uint64(1426516743)
 	blk.Block.Slot = 90
 	want = "invalid slot"
-	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData, emptyRootHash, canonicalBlkNum)
 	require.ErrorContains(t, want, err, "Should get an errInvalidSlot error")
 
 	// Should get an `errInvalidEpoch` error
 	blk.Block.Slot = 98
 	epoch = 2
 	want = "invalid epoch"
-	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block.Slot, epoch, header, headerHash, extraData, emptyRootHash, canonicalBlkNum)
 	require.ErrorContains(t, want, err, "Should get an errInvalidEpoch error")
 }
 

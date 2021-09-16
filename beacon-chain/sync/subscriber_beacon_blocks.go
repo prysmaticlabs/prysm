@@ -34,7 +34,15 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	if err := s.cfg.Chain.ReceiveBlock(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
-		s.setBadBlock(ctx, root)
+		switch {
+		case errors.Is(err, errPendingBlockTryLimitExceed):
+			log.WithError(err).Debug("Block is not processed")
+		case errors.Is(err, errInvalidBlock):
+			log.WithError(err).Debug("Block is not processed")
+		default:
+			log.Debugf("Could not process block from slot %d: %v", block.Slot, err)
+			s.setBadBlock(ctx, root)
+		}
 		return err
 	}
 

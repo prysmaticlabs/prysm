@@ -420,3 +420,19 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 func (s *ChainService) SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error) {
 	return nil, nil
 }
+
+func (s *ChainService) ActivateOrcVerification() {
+	return
+}
+
+func (s *ChainService) CanPropose() error {
+	return nil
+}
+
+func (s *ChainService) DeactivateOrcVerification() {
+	return
+}
+
+func (s *ChainService) OrcVerification() bool {
+	return true
+}

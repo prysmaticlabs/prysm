@@ -32,6 +32,10 @@ var (
 	errPanShardingInfoNotFound = errors.New("pandora sharding info not found in canonical head")
 	// errSubmitShardingSignatureFailed
 	errSubmitShardingSignatureFailed = errors.New("pandora sharding signature submission failed")
+
+	errInvalidParentHash = errors.New("invalid parent hash")
+
+	errInvalidBlockNumber = errors.New("invalid block number")
 )
 
 // processPandoraShardHeader method does the following tasks:
@@ -58,8 +62,7 @@ func (v *validator) processPandoraShardHeader(
 	}
 
 	// Request for pandora chain header
-	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(
-		ctx, latestPandoraHash, latestPandoraBlkNum+1, uint64(slot), uint64(epoch))
+	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(ctx, latestPandoraHash, latestPandoraBlkNum+1, uint64(slot), uint64(epoch))
 	if err != nil {
 		log.WithField("blockSlot", slot).
 			WithField("fmtKey", fmtKey).
@@ -71,7 +74,7 @@ func (v *validator) processPandoraShardHeader(
 	}
 
 	// Validate pandora chain header hash, extraData fields
-	if err := v.verifyPandoraShardHeader(slot, epoch, header, headerHash, extraData); err != nil {
+	if err := v.verifyPandoraShardHeader(slot, epoch, header, headerHash, extraData, latestPandoraHash, latestPandoraBlkNum); err != nil {
 		log.WithField("blockSlot", slot).
 			WithField("fmtKey", fmtKey).
 			WithError(err).Error("Failed to validate pandora block header")
@@ -162,7 +165,22 @@ func (v *validator) verifyPandoraShardHeader(
 	header *eth1Types.Header,
 	headerHash common.Hash,
 	extraData *pandora.ExtraData,
+	canonicalHash common.Hash,
+	canonicalBlockNum uint64,
 ) error {
+
+	// verify parent hash and block number
+	if canonicalBlockNum > 0 {
+		if canonicalHash != header.ParentHash {
+			log.WithError(errInvalidParentHash).Error("invalid parent hash from pandora chain")
+			return errInvalidParentHash
+		}
+
+		if canonicalBlockNum+1 != header.Number.Uint64() {
+			log.WithError(errInvalidBlockNumber).Error("invalid block number from pandora chain")
+			return errInvalidBlockNumber
+		}
+	}
 
 	// verify header hash
 	if sealHash(header) != headerHash {

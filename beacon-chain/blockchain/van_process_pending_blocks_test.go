@@ -6,54 +6,60 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	vanTypes "github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/van_mock"
-	"math/rand"
 	"sort"
 	"testing"
 	"time"
 )
 
 // TestService_PublishAndStorePendingBlock checks PublishAndStorePendingBlock method
-func TestService_PublishAndStorePendingBlock(t *testing.T) {
+func TestService_PublishBlock(t *testing.T) {
 	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
 	cfg := &Config{
-		BlockNotifier: &blockchainTesting.MockBlockNotifier{},
+		BeaconDB:      beaconDB,
+		StateGen:      stategen.New(beaconDB),
+		BlockNotifier: &blockchainTesting.MockBlockNotifier{RecordEvents: true},
+		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 	}
 	s, err := NewService(ctx, cfg)
 	require.NoError(t, err)
-
-	b := testutil.NewBeaconBlock()
-	require.NoError(t, s.publishAndStorePendingBlock(ctx, b.Block))
-	cachedBlock, err := s.pendingBlockCache.PendingBlock(b.Block.GetSlot())
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
 	require.NoError(t, err)
-	assert.DeepEqual(t, b.Block, cachedBlock)
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	b := testutil.NewBeaconBlock()
+	s.publishBlock(b, st.Copy())
+	time.Sleep(3 * time.Second)
+	if recvd := len(s.blockNotifier.(*blockchainTesting.MockBlockNotifier).ReceivedEvents()); recvd < 1 {
+		t.Errorf("Received %d pending block notifications, expected at least 1", recvd)
+	}
 }
 
 // TestService_SortedUnConfirmedBlocksFromCache checks SortedUnConfirmedBlocksFromCache method
 func TestService_SortedUnConfirmedBlocksFromCache(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{
-		BlockNotifier: &blockchainTesting.MockBlockNotifier{},
-	}
-	s, err := NewService(ctx, cfg)
+	s, err := NewService(ctx, &Config{})
 	require.NoError(t, err)
-
 	blks := make([]*ethpb.BeaconBlock, 10)
 	for i := 0; i < 10; i++ {
 		b := testutil.NewBeaconBlock()
-		b.Block.Slot = types.Slot(rand.Uint64() % 100)
+		b.Block.Slot = types.Slot(10 - i)
 		blks[i] = b.Block
 		require.NoError(t, s.pendingBlockCache.AddPendingBlock(b.Block))
 	}
-
 	sort.Slice(blks, func(i, j int) bool {
 		return blks[i].Slot < blks[j].Slot
 	})
-
 	sortedBlocks, err := s.SortedUnConfirmedBlocksFromCache()
 	require.NoError(t, err)
 	require.DeepEqual(t, blks, sortedBlocks)
@@ -70,7 +76,6 @@ func TestService_fetchOrcConfirmations(t *testing.T) {
 		OrcRPCClient:       mockedOrcClient,
 		EnableVanguardNode: true,
 	}
-
 	confirmationStatus := make([]*vanTypes.ConfirmationResData, 10)
 	for i := 0; i < 10; i++ {
 		confirmationStatus[i] = &vanTypes.ConfirmationResData{Slot: types.Slot(i), Status: vanTypes.Verified}
@@ -79,8 +84,8 @@ func TestService_fetchOrcConfirmations(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).AnyTimes().Return(confirmationStatus, nil)
-
 	s, err := NewService(ctx, cfg)
+	go s.processOrcConfirmationRoutine()
 	require.NoError(t, err)
 	blks := make([]*ethpb.BeaconBlock, 10)
 	for i := 0; i < 10; i++ {
@@ -89,11 +94,6 @@ func TestService_fetchOrcConfirmations(t *testing.T) {
 		blks[i] = b.Block
 		confirmationStatus[i] = &vanTypes.ConfirmationResData{Slot: types.Slot(i), Status: vanTypes.Verified}
 		require.NoError(t, s.pendingBlockCache.AddPendingBlock(b.Block))
-	}
-
-	time.Sleep(3 * time.Second)
-	if recvd := len(s.blockNotifier.(*blockchainTesting.MockBlockNotifier).ReceivedEvents()); recvd < 1 {
-		t.Errorf("Received %d pending block notifications, expected at least 1", recvd)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestService_waitForConfirmationBlock(t *testing.T) {
 					Status: vanTypes.Verified,
 				},
 			},
-			expectedOutput: "invalid block found, discarded block batch",
+			expectedOutput: "invalid block found in orchestrator",
 		},
 		{
 			name:                 "Retry for the block with pending status",
@@ -176,22 +176,21 @@ func TestService_waitForConfirmationBlock(t *testing.T) {
 			var mockedOrcClient *van_mock.MockClient
 			ctrl := gomock.NewController(t)
 			mockedOrcClient = van_mock.NewMockClient(ctrl)
-
 			cfg := &Config{
 				BlockNotifier:      &blockchainTesting.MockBlockNotifier{},
 				OrcRPCClient:       mockedOrcClient,
 				EnableVanguardNode: true,
 			}
+			s, err := NewService(ctx, cfg)
+			require.NoError(t, err)
+			go s.processOrcConfirmationRoutine()
 			mockedOrcClient.EXPECT().ConfirmVanBlockHashes(
 				gomock.Any(),
 				gomock.Any(),
 			).AnyTimes().Return(tt.confirmationStatus, nil)
-			s, err := NewService(ctx, cfg)
-			require.NoError(t, err)
 			for i := 0; i < len(tt.pendingBlocksInQueue); i++ {
 				require.NoError(t, s.pendingBlockCache.AddPendingBlock(tt.pendingBlocksInQueue[i].Block))
 			}
-
 			if tt.expectedOutput == "" {
 				require.NoError(t, s.waitForConfirmationBlock(ctx, tt.incomingBlock))
 			} else {
