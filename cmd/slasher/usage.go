@@ -7,8 +7,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/urfave/cli/v2"
 )
 
