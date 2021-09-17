@@ -17,14 +17,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {

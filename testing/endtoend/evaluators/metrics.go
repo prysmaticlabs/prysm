@@ -12,8 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -90,7 +90,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	forkDigest, err := p2putils.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
+	forkDigest, err := forks.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
 	if err != nil {
 		return err
 	}
