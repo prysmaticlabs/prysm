@@ -11,8 +11,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/math"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -94,7 +94,7 @@ func ComputeWeakSubjectivityPeriod(st state.ReadOnlyBeaconState) (types.Epoch, e
 	if T*(200+3*D) < t*(200+12*D) {
 		epochsForValidatorSetChurn := N * (t*(200+12*D) - T*(200+3*D)) / (600 * delta * (2*t + T))
 		epochsForBalanceTopUps := N * (200 + 3*D) / (600 * Delta)
-		wsp += mathutil.Max(epochsForValidatorSetChurn, epochsForBalanceTopUps)
+		wsp += math.Max(epochsForValidatorSetChurn, epochsForBalanceTopUps)
 	} else {
 		wsp += 3 * N * D * t / (200 * Delta * (T - t))
 	}

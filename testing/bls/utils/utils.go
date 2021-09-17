@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -24,7 +24,7 @@ func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
 		// Remove .yml suffix
 		fName := strings.TrimSuffix(f.Name(), ".yaml")
 		fileNames = append(fileNames, fName)
-		data, err := fileutil.ReadFileAsBytes(path.Join(filepath, f.Name()))
+		data, err := file.ReadFileAsBytes(path.Join(filepath, f.Name()))
 		require.NoError(t, err)
 		fileContent = append(fileContent, data)
 	}

@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-package fileutil_test
+package file_test
 
 import (
 	"bufio"
@@ -25,7 +25,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -42,7 +42,7 @@ func TestPathExpansion(t *testing.T) {
 	}
 	require.NoError(t, os.Setenv("DDDXXX", "/tmp"))
 	for test, expected := range tests {
-		expanded, err := fileutil.ExpandPath(test)
+		expanded, err := file.ExpandPath(test)
 		require.NoError(t, err)
 		assert.Equal(t, expected, expanded)
 	}
@@ -52,7 +52,7 @@ func TestMkdirAll_AlreadyExists_WrongPermissions(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
-	err = fileutil.MkdirAll(dirName)
+	err = file.MkdirAll(dirName)
 	assert.ErrorContains(t, "already exists without proper 0700 permissions", err)
 }
 
@@ -60,7 +60,7 @@ func TestMkdirAll_AlreadyExists_Override(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, params.BeaconIoConfig().ReadWriteExecutePermissions)
 	require.NoError(t, err)
-	assert.NoError(t, fileutil.MkdirAll(dirName))
+	assert.NoError(t, file.MkdirAll(dirName))
 }
 
 func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
@@ -70,7 +70,7 @@ func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwxr-xr-x", info.Mode().String())
-	assert.NoError(t, fileutil.HandleBackupDir(dirName, true))
+	assert.NoError(t, file.HandleBackupDir(dirName, true))
 	info, err = os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwx------", info.Mode().String())
@@ -83,7 +83,7 @@ func TestHandleBackupDir_AlreadyExists_No_Override(t *testing.T) {
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwxr-xr-x", info.Mode().String())
-	err = fileutil.HandleBackupDir(dirName, false)
+	err = file.HandleBackupDir(dirName, false)
 	assert.ErrorContains(t, "dir already exists without proper 0700 permissions", err)
 	info, err = os.Stat(dirName)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestHandleBackupDir_AlreadyExists_No_Override(t *testing.T) {
 
 func TestHandleBackupDir_NewDir(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
-	require.NoError(t, fileutil.HandleBackupDir(dirName, true))
+	require.NoError(t, file.HandleBackupDir(dirName, true))
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwx------", info.Mode().String())
@@ -100,9 +100,9 @@ func TestHandleBackupDir_NewDir(t *testing.T) {
 
 func TestMkdirAll_OK(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
-	err := fileutil.MkdirAll(dirName)
+	err := file.MkdirAll(dirName)
 	assert.NoError(t, err)
-	exists, err := fileutil.HasDir(dirName)
+	exists, err := file.HasDir(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, true, exists)
 }
@@ -113,7 +113,7 @@ func TestWriteFile_AlreadyExists_WrongPermissions(t *testing.T) {
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
 	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), os.ModePerm))
-	err = fileutil.WriteFile(someFileName, []byte("hi"))
+	err = file.WriteFile(someFileName, []byte("hi"))
 	assert.ErrorContains(t, "already exists without proper 0600 permissions", err)
 }
 
@@ -123,7 +123,7 @@ func TestWriteFile_AlreadyExists_OK(t *testing.T) {
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
 	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), params.BeaconIoConfig().ReadWritePermissions))
-	assert.NoError(t, fileutil.WriteFile(someFileName, []byte("hi")))
+	assert.NoError(t, file.WriteFile(someFileName, []byte("hi")))
 }
 
 func TestWriteFile_OK(t *testing.T) {
@@ -131,8 +131,8 @@ func TestWriteFile_OK(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, fileutil.WriteFile(someFileName, []byte("hi")))
-	exists := fileutil.FileExists(someFileName)
+	require.NoError(t, file.WriteFile(someFileName, []byte("hi")))
+	exists := file.FileExists(someFileName)
 	assert.Equal(t, true, exists)
 }
 
@@ -141,7 +141,7 @@ func TestCopyFile(t *testing.T) {
 	err := ioutil.WriteFile(fName, []byte{1, 2, 3}, params.BeaconIoConfig().ReadWritePermissions)
 	require.NoError(t, err)
 
-	err = fileutil.CopyFile(fName, fName+"copy")
+	err = file.CopyFile(fName, fName+"copy")
 	assert.NoError(t, err)
 	defer func() {
 		assert.NoError(t, os.Remove(fName+"copy"))
@@ -182,64 +182,64 @@ func TestCopyDir(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder1"), 0777))
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder2"), 0777))
 	for _, fd := range fds {
-		require.NoError(t, fileutil.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
-		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir1, fd.path)))
-		assert.Equal(t, false, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+		require.NoError(t, file.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
+		assert.Equal(t, true, file.FileExists(filepath.Join(tmpDir1, fd.path)))
+		assert.Equal(t, false, file.FileExists(filepath.Join(tmpDir2, fd.path)))
 	}
 
 	// Make sure that files are copied into non-existent directory only. If directory exists function exits.
-	assert.ErrorContains(t, "destination directory already exists", fileutil.CopyDir(tmpDir1, t.TempDir()))
-	require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
+	assert.ErrorContains(t, "destination directory already exists", file.CopyDir(tmpDir1, t.TempDir()))
+	require.NoError(t, file.CopyDir(tmpDir1, tmpDir2))
 
 	// Now, all files should have been copied.
 	for _, fd := range fds {
-		assert.Equal(t, true, fileutil.FileExists(filepath.Join(tmpDir2, fd.path)))
+		assert.Equal(t, true, file.FileExists(filepath.Join(tmpDir2, fd.path)))
 		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
 	}
-	assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+	assert.Equal(t, true, file.DirsEqual(tmpDir1, tmpDir2))
 }
 
 func TestDirsEqual(t *testing.T) {
 	t.Run("non-existent source directory", func(t *testing.T) {
-		assert.Equal(t, false, fileutil.DirsEqual(filepath.Join(t.TempDir(), "nonexistent"), t.TempDir()))
+		assert.Equal(t, false, file.DirsEqual(filepath.Join(t.TempDir(), "nonexistent"), t.TempDir()))
 	})
 
 	t.Run("non-existent dest directory", func(t *testing.T) {
-		assert.Equal(t, false, fileutil.DirsEqual(t.TempDir(), filepath.Join(t.TempDir(), "nonexistent")))
+		assert.Equal(t, false, file.DirsEqual(t.TempDir(), filepath.Join(t.TempDir(), "nonexistent")))
 	})
 
 	t.Run("non-empty directory", func(t *testing.T) {
 		// Start with directories that do not have the same contents.
 		tmpDir1, tmpFileNames := tmpDirWithContents(t)
 		tmpDir2 := filepath.Join(t.TempDir(), "newfolder")
-		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+		assert.Equal(t, false, file.DirsEqual(tmpDir1, tmpDir2))
 
 		// Copy dir, and retest (hashes should match now).
-		require.NoError(t, fileutil.CopyDir(tmpDir1, tmpDir2))
-		assert.Equal(t, true, fileutil.DirsEqual(tmpDir1, tmpDir2))
+		require.NoError(t, file.CopyDir(tmpDir1, tmpDir2))
+		assert.Equal(t, true, file.DirsEqual(tmpDir1, tmpDir2))
 
 		// Tamper the data, make sure that hashes do not match anymore.
 		require.NoError(t, os.Remove(filepath.Join(tmpDir1, tmpFileNames[2])))
-		assert.Equal(t, false, fileutil.DirsEqual(tmpDir1, tmpDir2))
+		assert.Equal(t, false, file.DirsEqual(tmpDir1, tmpDir2))
 	})
 }
 
 func TestHashDir(t *testing.T) {
 	t.Run("non-existent directory", func(t *testing.T) {
-		hash, err := fileutil.HashDir(filepath.Join(t.TempDir(), "nonexistent"))
+		hash, err := file.HashDir(filepath.Join(t.TempDir(), "nonexistent"))
 		assert.ErrorContains(t, "no such file or directory", err)
 		assert.Equal(t, "", hash)
 	})
 
 	t.Run("empty directory", func(t *testing.T) {
-		hash, err := fileutil.HashDir(t.TempDir())
+		hash, err := file.HashDir(t.TempDir())
 		assert.NoError(t, err)
 		assert.Equal(t, "hashdir:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=", hash)
 	})
 
 	t.Run("non-empty directory", func(t *testing.T) {
 		tmpDir, _ := tmpDirWithContents(t)
-		hash, err := fileutil.HashDir(tmpDir)
+		hash, err := file.HashDir(tmpDir)
 		assert.NoError(t, err)
 		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
 	})
@@ -266,7 +266,7 @@ func TestDirFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			outFiles, err := fileutil.DirFiles(tt.path)
+			outFiles, err := file.DirFiles(tt.path)
 			require.NoError(t, err)
 
 			sort.Strings(outFiles)
@@ -317,7 +317,7 @@ func TestRecursiveFileFind(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			found, _, err := fileutil.RecursiveFileFind(tt.name, tt.root)
+			found, _, err := file.RecursiveFileFind(tt.name, tt.root)
 			require.NoError(t, err)
 
 			assert.DeepEqual(t, tt.found, found)
@@ -421,7 +421,7 @@ func TestHasReadWritePermissions(t *testing.T) {
 					t.Fatalf("Could not delete temp dir: %v", err)
 				}
 			})
-			got, err := fileutil.HasReadWritePermissions(fullPath)
+			got, err := file.HasReadWritePermissions(fullPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HasReadWritePermissions() error = %v, wantErr %v", err, tt.wantErr)
 				return
