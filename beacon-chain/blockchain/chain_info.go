@@ -302,7 +302,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(ctx context.Context, index types
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	v, err := s.headState(ctx).ValidatorAtIndexReadOnly(index)
+	v, err := s.headValidatorAtIndex(index)
 	if err != nil {
 		return [48]byte{}, err
 	}

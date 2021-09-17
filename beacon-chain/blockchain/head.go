@@ -260,6 +260,13 @@ func (s *Service) headGenesisValidatorRoot() [32]byte {
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
+// This returns the validator referenced by the provided index in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	return s.head.state.ValidatorAtIndexReadOnly(index)
+}
+
 // Returns true if head state exists.
 // This is the lock free version.
 func (s *Service) hasHeadState() bool {
