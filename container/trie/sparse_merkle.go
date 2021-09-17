@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/math"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
@@ -180,7 +180,7 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 	}
 	node := bytesutil.ToBytes32(item)
 	for i := 0; i <= int(depth); i++ {
-		if (uint64(merkleIndex) / mathutil.PowerOf2(uint64(i)) % 2) != 0 {
+		if (uint64(merkleIndex) / math.PowerOf2(uint64(i)) % 2) != 0 {
 			node = hash.Hash(append(proof[i], node[:]...))
 		} else {
 			node = hash.Hash(append(node[:], proof[i]...))

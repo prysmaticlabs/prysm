@@ -15,9 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -185,7 +185,7 @@ func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	minSlashing := mathutil.Min(totalSlashing*slashingMultiplier, totalBalance)
+	minSlashing := math.Min(totalSlashing*slashingMultiplier, totalBalance)
 	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {

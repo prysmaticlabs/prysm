@@ -6,10 +6,10 @@ go_library(
         "prompt.go",
         "validate.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/promptutil",
+    importpath = "github.com/prysmaticlabs/prysm/io/prompt",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/fileutil:go_default_library",
+        "//io/file:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_nbutton23_zxcvbn_go//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

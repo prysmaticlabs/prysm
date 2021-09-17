@@ -1,4 +1,4 @@
-package promptutil
+package prompt
 
 import (
 	"io/ioutil"

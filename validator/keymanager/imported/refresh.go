@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -24,7 +24,7 @@ import (
 func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	debounceFileChangesInterval := features.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
-	if !fileutil.FileExists(accountsFilePath) {
+	if !file.FileExists(accountsFilePath) {
 		return
 	}
 	watcher, err := fsnotify.NewWatcher()
