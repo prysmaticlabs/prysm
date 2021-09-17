@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/r3labs/sse"
 )
 
@@ -130,7 +130,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
 			}
 		} else {

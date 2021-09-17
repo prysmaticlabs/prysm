@@ -1,6 +1,6 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/shared/gateway"
+import "github.com/prysmaticlabs/prysm/api/gateway"
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
@@ -520,8 +520,8 @@ type beaconStateV2Json struct {
 	Balances                    []string               `json:"balances"`
 	RandaoMixes                 []string               `json:"randao_mixes" hex:"true"`
 	Slashings                   []string               `json:"slashings"`
-	PreviousEpochParticipation  string                 `json:"previous_epoch_participation"`
-	CurrentEpochParticipation   string                 `json:"current_epoch_participation"`
+	PreviousEpochParticipation  EpochParticipation     `json:"previous_epoch_participation"`
+	CurrentEpochParticipation   EpochParticipation     `json:"current_epoch_participation"`
 	JustificationBits           string                 `json:"justification_bits" hex:"true"`
 	PreviousJustifiedCheckpoint *checkpointJson        `json:"previous_justified_checkpoint"`
 	CurrentJustifiedCheckpoint  *checkpointJson        `json:"current_justified_checkpoint"`

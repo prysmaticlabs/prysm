@@ -154,7 +154,7 @@ go_library(
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
     clinkopts = select({
-        "@prysm//fuzz:fuzzing_enabled": ["-Wl,--unresolved-symbols=ignore-all", "-fsanitize=address"],
+        "@prysm//testing/fuzz:fuzzing_enabled": ["-Wl,--unresolved-symbols=ignore-all", "-fsanitize=address"],
         "//conditions:default": [],
     }),
 )

@@ -8,10 +8,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -159,7 +159,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
-		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
+		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
 			valsToSlash++
 			continue
 		}
@@ -212,7 +212,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	var proposerIndex types.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
-		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
+		if slice.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
 			proposerIndex = types.ValidatorIndex(i)
 			break
 		}
