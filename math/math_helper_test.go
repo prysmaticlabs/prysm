@@ -1,7 +1,7 @@
 package math_test
 
 import (
-	"math"
+	stdmath "math"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/math"
@@ -317,8 +317,8 @@ func TestAdd64(t *testing.T) {
 		{args: args{1 << 31, 1 << 31}, res: 4294967296, err: false},
 		{args: args{1 << 63, 1 << 63}, res: 0, err: true},
 		{args: args{1 << 63, 1}, res: 9223372036854775809, err: false},
-		{args: args{math.MaxUint64, 1}, res: 0, err: true},
-		{args: args{math.MaxUint64, 0}, res: math.MaxUint64, err: false},
+		{args: args{stdmath.MaxUint64, 1}, res: 0, err: true},
+		{args: args{stdmath.MaxUint64, 0}, res: stdmath.MaxUint64, err: false},
 		{args: args{1 << 63, 2}, res: 9223372036854775810, err: false},
 	}
 	for _, tt := range tests {
