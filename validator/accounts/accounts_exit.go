@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -146,7 +147,7 @@ func interact(
 			cliCtx,
 			flags.VoluntaryExitPublicKeysFlag,
 			validatingPublicKeys,
-			prompt.SelectAccountsVoluntaryExitPromptText,
+			userprompt.SelectAccountsVoluntaryExitPromptText,
 		)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")

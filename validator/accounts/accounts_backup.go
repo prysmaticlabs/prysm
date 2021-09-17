@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -61,7 +62,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	// Input the directory where they wish to backup their accounts.
-	backupDir, err := prompt.InputDirectory(cliCtx, backupPromptText, flags.BackupDirFlag)
+	backupDir, err := userprompt.InputDirectory(cliCtx, backupPromptText, flags.BackupDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
@@ -72,7 +73,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.BackupPublicKeysFlag,
 		pubKeys,
-		prompt.SelectAccountsBackupPromptText,
+		userprompt.SelectAccountsBackupPromptText,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for backup")

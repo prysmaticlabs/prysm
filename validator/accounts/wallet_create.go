@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -126,7 +127,7 @@ func extractKeymanagerKindFromCli(cliCtx *cli.Context) (keymanager.Kind, error) 
 }
 
 func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keymanager.Kind) (*CreateWalletConfig, error) {
-	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +187,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		}
 	}
 	if keymanagerKind == keymanager.Remote {
-		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
+		opts, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not input remote keymanager config")
 		}
@@ -263,7 +264,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", prompt.FormatPromptError(err))
+		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", userprompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }

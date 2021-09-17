@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -44,7 +45,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		cliCtx,
 		flags.DeletePublicKeysFlag,
 		validatingPublicKeys,
-		prompt.SelectAccountsDeletePromptText,
+		userprompt.SelectAccountsDeletePromptText,
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for deletion")

@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -82,7 +83,7 @@ type ImportAccountsConfig struct {
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+		walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +151,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		return importPrivateKeyAsAccount(cliCtx, w, k)
 	}
 
-	keysDir, err := prompt.InputDirectory(cliCtx, prompt.ImportKeysDirPromptText, flags.KeysDirFlag)
+	keysDir, err := userprompt.InputDirectory(cliCtx, userprompt.ImportKeysDirPromptText, flags.KeysDirFlag)
 	if err != nil {
 		return errors.Wrap(err, "could not parse keys directory")
 	}
