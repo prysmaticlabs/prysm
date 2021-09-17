@@ -7,7 +7,7 @@
   },
   "unreachable": {
     "exclude_files": {
-      "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
+      "runtime/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
       "external/.*": "Unreachable third party code"
     }
   },

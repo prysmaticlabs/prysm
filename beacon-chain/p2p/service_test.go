@@ -22,8 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -320,7 +320,7 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 		})
 	}
 
-	fd, err := p2putils.CreateForkDigest(gt, gvr)
+	fd, err := forks.CreateForkDigest(gt, gvr)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // wait for pubsub filter to initialize.

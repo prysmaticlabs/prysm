@@ -1,6 +1,6 @@
 // Package shared includes useful utilities globally accessible in
 // the Prysm monorepo.
-package shared
+package runtime
 
 import (
 	"fmt"

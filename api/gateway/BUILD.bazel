@@ -17,7 +17,7 @@ go_library(
     ],
     deps = [
         "//api/grpc:go_default_library",
-        "//shared:go_default_library",
+        "//runtime:go_default_library",
         "//shared/bytesutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
