@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -79,7 +79,7 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet, err := mathutil.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
+	indexOffSet, err := math.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
 	if err != nil {
 		return nil, err
 	}

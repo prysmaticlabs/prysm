@@ -1,4 +1,4 @@
-package fileutil
+package file
 
 import (
 	"crypto/sha256"
