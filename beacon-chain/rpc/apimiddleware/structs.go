@@ -1,6 +1,6 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/shared/gateway"
+import "github.com/prysmaticlabs/prysm/api/gateway"
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
