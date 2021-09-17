@@ -15,6 +15,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//api/grpc:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
@@ -44,7 +45,6 @@ go_library(
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
@@ -74,6 +74,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api/grpc:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -99,7 +100,6 @@ go_test(
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

@@ -16,6 +16,7 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
@@ -23,15 +24,14 @@ import (
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/prereq"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -82,7 +82,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
+	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)

@@ -11,8 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	log "github.com/sirupsen/logrus"
 )
 

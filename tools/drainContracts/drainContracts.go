@@ -19,7 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
