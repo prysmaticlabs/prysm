@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -29,7 +29,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 		}, nil
 	}
 
-	versions := p2putils.SortedForkVersions(schedule)
+	versions := forks.SortedForkVersions(schedule)
 	forks := make([]*ethpb.Fork, len(schedule))
 	var previous, current []byte
 	for i, v := range versions {

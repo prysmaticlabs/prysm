@@ -1,4 +1,4 @@
-package p2putils
+package forks
 
 import (
 	"math"
