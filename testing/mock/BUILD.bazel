@@ -17,7 +17,7 @@ go_library(
         "keymanager_mock.go",
         "node_service_mock.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/mock",
+    importpath = "github.com/prysmaticlabs/prysm/testing/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/service:go_default_library",

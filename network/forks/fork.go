@@ -1,5 +1,5 @@
-// Package p2putils contains useful helpers for Ethereum consensus fork-related functionality.
-package p2putils
+// Package forks contains useful helpers for Ethereum consensus fork-related functionality.
+package forks
 
 import (
 	"math"
