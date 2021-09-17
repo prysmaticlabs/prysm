@@ -22,7 +22,7 @@ go_library(
         "//shared/depositutil:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
-        "//shared/p2putils:__pkg__",
+        "//network/forks:__pkg__",
         "//shared/testutil:__pkg__",
         "//shared/testutil/altair:__pkg__",
         "//slasher:__subpackages__",
