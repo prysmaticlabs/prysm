@@ -18,11 +18,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//network/forks:__pkg__",
         "//shared/attestationutil:__pkg__",
         "//shared/depositutil:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
-        "//shared/p2putils:__pkg__",
         "//shared/testutil:__pkg__",
         "//shared/testutil/altair:__pkg__",
         "//slasher:__subpackages__",

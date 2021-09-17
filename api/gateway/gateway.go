@@ -12,14 +12,14 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 )
 
-var _ shared.Service = (*Gateway)(nil)
+var _ runtime.Service = (*Gateway)(nil)
 
 // PbMux serves grpc-gateway requests for selected patterns using registered protobuf handlers.
 type PbMux struct {

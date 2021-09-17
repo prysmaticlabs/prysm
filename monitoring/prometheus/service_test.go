@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -57,7 +57,7 @@ func (m *mockService) Status() error {
 }
 
 func TestHealthz(t *testing.T) {
-	registry := shared.NewServiceRegistry()
+	registry := runtime.NewServiceRegistry()
 	m := &mockService{}
 	require.NoError(t, registry.RegisterService(m), "Failed to register service")
 	s := NewService("" /*addr*/, registry)
@@ -109,7 +109,7 @@ func TestStatus(t *testing.T) {
 
 func TestContentNegotiation(t *testing.T) {
 	t.Run("/healthz all services are ok", func(t *testing.T) {
-		registry := shared.NewServiceRegistry()
+		registry := runtime.NewServiceRegistry()
 		m := &mockService{}
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
 		s := NewService("", registry)
@@ -139,7 +139,7 @@ func TestContentNegotiation(t *testing.T) {
 	})
 
 	t.Run("/healthz failed service", func(t *testing.T) {
-		registry := shared.NewServiceRegistry()
+		registry := runtime.NewServiceRegistry()
 		m := &mockService{}
 		m.status = errors.New("something is wrong")
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
