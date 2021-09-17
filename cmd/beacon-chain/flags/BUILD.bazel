@@ -10,10 +10,10 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags",
     visibility = [
+        "//api/gateway:__pkg__",
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
-        "//endtoend:__subpackages__",
-        "//shared/gateway:__pkg__",
+        "//testing/endtoend:__subpackages__",
     ],
     deps = [
         "//shared/cmd:go_default_library",

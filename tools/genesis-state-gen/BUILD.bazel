@@ -56,7 +56,7 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/bls:go_default_library",
+        "//crypto/bls:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

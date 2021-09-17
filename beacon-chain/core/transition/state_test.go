@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -103,8 +103,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	pbstate, err := v1.ProtobufBeaconState(state.CloneInnerState())
 	require.NoError(t, err)
 
-	root1, err1 := hashutil.HashProto(pbState1)
-	root2, err2 := hashutil.HashProto(pbstate)
+	root1, err1 := hash.HashProto(pbState1)
+	root2, err2 := hash.HashProto(pbstate)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

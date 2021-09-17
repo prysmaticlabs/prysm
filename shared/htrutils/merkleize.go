@@ -2,7 +2,7 @@
 package htrutils
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/container/trie"
 )
 
 // Merkleize.go is mostly a directly copy of the same filename from
@@ -96,7 +96,7 @@ func Merkleize(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte) (
 			if i&(uint64(1)<<j) == 0 {
 				// if we are at the count, we want to merge in zero-hashes for padding
 				if i == count && j < depth {
-					v := hasher.Combi(hArr, trieutil.ZeroHashes[j])
+					v := hasher.Combi(hArr, trie.ZeroHashes[j])
 					copy(h, v[:])
 				} else {
 					break
@@ -119,14 +119,14 @@ func Merkleize(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte) (
 
 	// complement with 0 if empty, or if not the right power of 2
 	if (uint64(1) << depth) != count {
-		copy(h, trieutil.ZeroHashes[0][:])
+		copy(h, trie.ZeroHashes[0][:])
 		merge(count)
 	}
 
 	// the next power of two may be smaller than the ultimate virtual size,
 	// complement with zero-hashes at each depth.
 	for j := depth; j < limitDepth; j++ {
-		tmp[j+1] = hasher.Combi(tmp[j], trieutil.ZeroHashes[j])
+		tmp[j+1] = hasher.Combi(tmp[j], trie.ZeroHashes[j])
 	}
 
 	return tmp[limitDepth]
@@ -146,7 +146,7 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 	}
 	depth := Depth(count)
 	limitDepth := Depth(limit)
-	branch = append(branch, trieutil.ZeroHashes[:limitDepth]...)
+	branch = append(branch, trie.ZeroHashes[:limitDepth]...)
 
 	tmp := make([][32]byte, limitDepth+1)
 
@@ -168,7 +168,7 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 			if i&(uint64(1)<<j) == 0 {
 				// if we are at the count, we want to merge in zero-hashes for padding
 				if i == count && j < depth {
-					v := hasher.Combi(hArr, trieutil.ZeroHashes[j])
+					v := hasher.Combi(hArr, trie.ZeroHashes[j])
 					copy(h, v[:])
 				} else {
 					break
@@ -191,7 +191,7 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 
 	// complement with 0 if empty, or if not the right power of 2
 	if (uint64(1) << depth) != count {
-		copy(h, trieutil.ZeroHashes[0][:])
+		copy(h, trie.ZeroHashes[0][:])
 		merge(count)
 	}
 
