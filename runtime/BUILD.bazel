@@ -27,4 +27,3 @@ genrule(
     tags = ["local"],
     visibility = ["//visibility:public"],
 )
-
