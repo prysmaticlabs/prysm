@@ -23,6 +23,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//api/grpc:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//crypto/bls:go_default_library",
@@ -31,7 +32,6 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/grpcutils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/petnames:go_default_library",
         "//validator/accounts/iface:go_default_library",

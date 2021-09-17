@@ -16,6 +16,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/rpc",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//api/grpc:go_default_library",
+        "//api/pagination:go_default_library",
         "//config/features:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
@@ -28,8 +30,6 @@ go_library(
         "//runtime/version:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/grpcutils:go_default_library",
-        "//shared/pagination:go_default_library",
         "//shared/petnames:go_default_library",
         "//time:go_default_library",
         "//validator/accounts:go_default_library",
