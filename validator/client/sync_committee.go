@@ -10,12 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -31,7 +31,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 

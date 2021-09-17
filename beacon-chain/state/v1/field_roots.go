@@ -8,10 +8,10 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -50,7 +50,7 @@ type stateRootHasher struct {
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
 func computeFieldRoots(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
+	if features.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
@@ -63,7 +63,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
 
 	// Genesis time root.

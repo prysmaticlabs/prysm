@@ -2,7 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 )
 
 // BeaconEndpointFactory creates endpoints used for running beacon chain API calls through the API Middleware.
@@ -55,6 +55,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/duties/proposer/{epoch}",
 		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
+		"/eth/v2/validator/blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
@@ -100,7 +101,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/headers/{block_id}":
 		endpoint.GetResponse = &blockHeaderResponseJson{}
 	case "/eth/v1/beacon/blocks":
-		endpoint.PostRequest = &beaconBlockContainerJson{}
+		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPostDeserializeRequestBodyIntoContainer: []gateway.Hook{prepareGraffiti},
 		}
@@ -195,6 +196,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.GetResponse = &produceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
+	case "/eth/v2/validator/blocks/{slot}":
+		endpoint.GetResponse = &produceBlockResponseV2Json{}
+		endpoint.RequestURLLiterals = []string{"slot"}
+		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
+		endpoint.Hooks = gateway.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: []func(interface{}) (bool, []byte, gateway.ErrorJson){serializeProducedV2Block},
+		}
 	case "/eth/v1/validator/attestation_data":
 		endpoint.GetResponse = &produceAttestationDataResponseJson{}
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}}

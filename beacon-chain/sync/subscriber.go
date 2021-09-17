@@ -15,14 +15,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -169,7 +169,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 
 		defer func() {
 			if r := recover(); r != nil {
-				traceutil.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
+				tracing.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
 				log.WithField("error", r).Error("Panic occurred")
 				debug.PrintStack()
 			}
@@ -184,7 +184,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		}
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			log.WithError(err).Debug("Could not handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
@@ -280,7 +280,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
 	genesis := s.cfg.Chain.GenesisTime()
-	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -350,7 +350,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 	genesis := s.cfg.Chain.GenesisTime()
-	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -480,7 +480,7 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
 	genesis := s.cfg.Chain.GenesisTime()
-	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -549,7 +549,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().SyncCommitteeSubnetCount)
 	genesis := s.cfg.Chain.GenesisTime()
-	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
 		for {
@@ -630,12 +630,12 @@ func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
 	wantedSubs := s.aggregatorSubnetIndices(currSlot)
 
 	// Combine subscriptions to get all requested subscriptions
-	return sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
+	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
 func (s *Service) retrieveActiveSyncSubnets(currEpoch types.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
-	return sliceutil.SetUint64(subs)
+	return slice.SetUint64(subs)
 }
 
 // filters out required peers for the node to function, not
@@ -652,7 +652,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	}
 	currSlot := s.cfg.Chain.CurrentSlot()
 	wantedSubs := s.retrievePersistentSubs(currSlot)
-	wantedSubs = sliceutil.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
+	wantedSubs = slice.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 
 	// Map of peers in subnets

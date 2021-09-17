@@ -10,10 +10,10 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -215,7 +215,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		CorrectlyInsertOrphanedAtts: true,
 	})
 	defer resetCfg()
@@ -241,7 +241,7 @@ func TestSaveOrphanedAtts(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		CorrectlyInsertOrphanedAtts: true,
 	})
 	defer resetCfg()

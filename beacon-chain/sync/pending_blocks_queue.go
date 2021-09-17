@@ -12,20 +12,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
-var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
+var processPendingBlocksPeriod = slots.DivideSlotBy(3 /* times per slot */)
 
 const maxPeerRequest = 50
 const numOfTries = 5
@@ -95,7 +95,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			blkRoot, err := b.Block().HashTreeRoot()
 			if err != nil {
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				span.End()
 				return err
 			}
@@ -142,7 +142,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -152,7 +152,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			if err := s.cfg.Chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -206,7 +206,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			log.Debugf("Could not send recent block request: %v", err)
 		}
 		newRoots := make([][32]byte, 0, len(roots))

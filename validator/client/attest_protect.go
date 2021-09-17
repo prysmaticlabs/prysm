@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"go.opencensus.io/trace"
@@ -81,7 +81,7 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
+	if features.Get().SlasherProtection && v.protector != nil {
 		if !v.protector.CommitAttestation(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()

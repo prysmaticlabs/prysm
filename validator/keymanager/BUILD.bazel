@@ -13,8 +13,8 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
-        "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
     ],
 )

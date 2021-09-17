@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -9,11 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -51,13 +53,13 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	m, err := s.readSyncContributionMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	// The contribution's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance).
 	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.Chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	// Validate the message's data according to the p2p specification.
@@ -152,11 +154,11 @@ func (s *Service) rejectInvalidIndexInSubCommittee(m *ethpb.SignedContributionAn
 		// The aggregator's validator index is in the declared subcommittee of the current sync committee.
 		committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		if len(committeeIndices) == 0 {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		isValid := false
@@ -180,7 +182,7 @@ func (s *Service) rejectInvalidSelectionProof(m *ethpb.SignedContributionAndProo
 		defer span.End()
 		// The `contribution_and_proof.selection_proof` is a valid signature of the `SyncAggregatorSelectionData`.
 		if err := s.verifySyncSelectionData(ctx, m.Message); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 		return pubsub.ValidationAccept
@@ -194,15 +196,34 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 		// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
 		d, err := s.cfg.Chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
+		if features.Get().EnableBatchVerification {
+			publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return pubsub.ValidationReject
+			}
+			root, err := helpers.ComputeSigningRoot(m.Message, d)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return pubsub.ValidationReject
+			}
+			set := &bls.SignatureSet{
+				Messages:   [][32]byte{root},
+				PublicKeys: []bls.PublicKey{publicKey},
+				Signatures: [][]byte{m.Signature},
+			}
+			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
+		}
+
 		if err := helpers.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject
 		}
 		return pubsub.ValidationAccept
@@ -216,6 +237,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
 		activePubkeys := []bls.PublicKey{}
+		activeRawPubkeys := [][]byte{}
 		syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if err != nil {
 			return pubsub.ValidationIgnore
@@ -230,27 +252,43 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 			if bVector.BitAt(uint64(i)) {
 				pubK, err := bls.PublicKeyFromBytes(pk)
 				if err != nil {
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return pubsub.ValidationIgnore
 				}
 				activePubkeys = append(activePubkeys, pubK)
+				activeRawPubkeys = append(activeRawPubkeys, pk)
 			}
-		}
-		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
 		}
 		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 		rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
 		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
+		}
+		// Aggregate pubkeys separately again to allow
+		// for signature sets to be created for batch verification.
+		if features.Get().EnableBatchVerification {
+			aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return pubsub.ValidationIgnore
+			}
+			set := &bls.SignatureSet{
+				Messages:   [][32]byte{sigRoot},
+				PublicKeys: []bls.PublicKey{aggKey},
+				Signatures: [][]byte{m.Message.Contribution.Signature},
+			}
+			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
+		}
+		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject
 		}
 		verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
 		if !verified {
@@ -291,6 +329,26 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 	pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.AggregatorIndex)
 	if err != nil {
 		return err
+	}
+	if features.Get().EnableBatchVerification {
+		publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+		if err != nil {
+			return err
+		}
+		root, err := helpers.ComputeSigningRoot(selectionData, domain)
+		if err != nil {
+			return err
+		}
+		set := &bls.SignatureSet{
+			Messages:   [][32]byte{root},
+			PublicKeys: []bls.PublicKey{publicKey},
+			Signatures: [][]byte{m.SelectionProof},
+		}
+		valid := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		if valid != pubsub.ValidationAccept {
+			return errors.New("invalid sync selection proof provided")
+		}
+		return nil
 	}
 	return helpers.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
 }

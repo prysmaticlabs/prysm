@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -17,9 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -340,8 +340,8 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slotutil.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
+	twoThirdsASlot := 2 * slots.DivideSlotBy(3) /* 2/3 slot duration */
+	ticker := slots.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-ticker.C():

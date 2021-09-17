@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -63,7 +63,7 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(fmt.Sprintf("naive_%s", tt.name), func(b *testing.B) {
 			b.StopTimer()
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(NaiveAggregation),
 			})
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
@@ -75,7 +75,7 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 		})
 		b.Run(fmt.Sprintf("max-cover_%s", tt.name), func(b *testing.B) {
 			b.StopTimer()
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
 			})
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
@@ -87,7 +87,7 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 		})
 		b.Run(fmt.Sprintf("opt-max-cover_%s", tt.name), func(b *testing.B) {
 			b.StopTimer()
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 			})
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)

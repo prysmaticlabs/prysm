@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -403,7 +403,7 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	require.NoError(t, err)
 	// Write the encoded keystore to disk with the timestamp appended
-	createdAt := timeutils.Now().Unix()
+	createdAt := prysmTime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(imported.KeystoreFileNameFormat, createdAt))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath

@@ -5,19 +5,19 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestDepositTrieRoot_OK(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
-	localTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	localTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
@@ -55,7 +55,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
-	localTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	localTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})

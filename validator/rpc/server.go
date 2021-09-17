@@ -11,13 +11,13 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -147,7 +147,7 @@ func (s *Server) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),

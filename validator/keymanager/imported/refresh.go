@@ -8,10 +8,10 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/shared/asyncutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -22,7 +22,7 @@ import (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
-	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
+	debounceFileChangesInterval := features.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	if !fileutil.FileExists(accountsFilePath) {
 		return

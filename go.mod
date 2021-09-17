@@ -94,7 +94,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969
 	github.com/stretchr/testify v1.7.0
-	github.com/supranational/blst v0.3.4
+	github.com/supranational/blst v0.3.5
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.1.0

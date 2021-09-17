@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -22,12 +22,12 @@ func (f *blocksFetcher) peerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
 	if lock, ok := f.peerLocks[pid]; ok && lock != nil {
-		lock.accessed = timeutils.Now()
+		lock.accessed = prysmTime.Now()
 		return lock
 	}
 	f.peerLocks[pid] = &peerLock{
 		Mutex:    sync.Mutex{},
-		accessed: timeutils.Now(),
+		accessed: prysmTime.Now(),
 	}
 	return f.peerLocks[pid]
 }

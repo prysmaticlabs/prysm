@@ -121,7 +121,9 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	}
 	pStatus, err := peers.ChainState(pid)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+		// In the event chain state is non existent, we
+		// initialize with the zero value.
+		pStatus = new(ethpb.Status)
 	}
 	lastUpdated, err := peers.ChainStateLastUpdated(pid)
 	if err != nil {
