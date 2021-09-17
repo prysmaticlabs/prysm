@@ -45,6 +45,7 @@ type ReadOnlyBeaconState interface {
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
+	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -66,6 +67,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
+	SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.

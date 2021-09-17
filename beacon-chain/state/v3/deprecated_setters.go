@@ -35,8 +35,3 @@ func (b *BeaconState) RotateAttestations() error {
 func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 	return nil, errors.New("ToProto is not yet supported for hard fork 1 beacon state")
 }
-
-// SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
-func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
-	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
-}

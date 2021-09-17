@@ -77,6 +77,8 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "currentSyncCommittee"
 	case NextSyncCommittee:
 		return "nextSyncCommittee"
+	case LatestExecutionPayloadHeader:
+		return "latestExecutionPayloadHeader"
 	default:
 		return ""
 	}
@@ -114,6 +116,8 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
+	// State fields added in Merge.
+	LatestExecutionPayloadHeader
 )
 
 // Altair fields which replaced previous phase 0 fields.

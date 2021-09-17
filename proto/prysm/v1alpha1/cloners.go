@@ -376,3 +376,35 @@ func CopySyncAggregate(a *SyncAggregate) *SyncAggregate {
 		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
+
+// CopyExecutionPayload copies the provided ApplicationPayload.
+func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
+	if payload == nil {
+		return nil
+	}
+
+	return &ExecutionPayload{
+		ParentHash:   bytesutil.SafeCopyBytes(payload.ParentHash),
+		Coinbase:     bytesutil.SafeCopyBytes(payload.Coinbase),
+		StateRoot:    bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptRoot:  bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		LogsBloom:    bytesutil.SafeCopyBytes(payload.LogsBloom),
+		Random:    bytesutil.SafeCopyBytes(payload.Random),
+		BlockNumber: payload.BlockNumber,
+		GasLimit:     payload.GasLimit,
+		GasUsed:      payload.GasUsed,
+		Timestamp:    payload.Timestamp,
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:    bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions: CopyTransactions(payload.Transactions),
+	}
+}
+
+// CopyTransactions copies the transactions.
+func CopyTransactions(txs [][]byte) [][]byte {
+	newTxs := make([][]byte, len(txs))
+	for i := range newTxs {
+		newTxs[i] = bytesutil.SafeCopyBytes(txs[i])
+	}
+	return newTxs
+}

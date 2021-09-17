@@ -29,3 +29,8 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	return nil, errors.New("NextSyncCommittee is not supported for phase 0 beacon state")
 }
+
+// LatestExecutionPayloadHeader is not supported for phase 0 beacon state.
+func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
+	return nil, errors.New("LatestExecutionPayloadHeader is not supported for phase 0 beacon state")
+}
