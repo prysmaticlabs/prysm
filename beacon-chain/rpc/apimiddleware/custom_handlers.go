@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/r3labs/sse"
 )
 
@@ -37,6 +37,24 @@ func handleGetBeaconBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
 		responseJson: &blockSSZResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleGetBeaconStateSSZV2(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
+		fileName:     "beacon_state.ssz",
+		responseJson: &beaconStateSSZResponseV2Json{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleGetBeaconBlockSSZV2(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v2/beacon/blocks/{block_id}/ssz",
+		fileName:     "beacon_block.ssz",
+		responseJson: &blockSSZResponseV2Json{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -130,7 +148,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
 			}
 		} else {

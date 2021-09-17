@@ -1,4 +1,4 @@
-package grpcutils
+package grpc
 
 import (
 	"context"
