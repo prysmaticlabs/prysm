@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -85,7 +85,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
 				genRoot := s.cfg.Chain.GenesisValidatorRoot()
-				digest, err := p2putils.ForkDigestFromEpoch(5, genRoot[:])
+				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
@@ -192,12 +192,12 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				r.registerRPCHandlersAltair()
 
 				genRoot := r.cfg.Chain.GenesisValidatorRoot()
-				digest, err := p2putils.ForkDigestFromEpoch(0, genRoot[:])
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				r.registerSubscribers(0, digest)
 				assert.Equal(t, true, r.subHandler.digestExists(digest))
 
-				digest, err = p2putils.ForkDigestFromEpoch(3, genRoot[:])
+				digest, err = forks.ForkDigestFromEpoch(3, genRoot[:])
 				assert.NoError(t, err)
 				r.registerSubscribers(3, digest)
 				assert.Equal(t, true, r.subHandler.digestExists(digest))
@@ -208,10 +208,10 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
 				genRoot := s.cfg.Chain.GenesisValidatorRoot()
-				digest, err := p2putils.ForkDigestFromEpoch(0, genRoot[:])
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, false, s.subHandler.digestExists(digest))
-				digest, err = p2putils.ForkDigestFromEpoch(3, genRoot[:])
+				digest, err = forks.ForkDigestFromEpoch(3, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 
