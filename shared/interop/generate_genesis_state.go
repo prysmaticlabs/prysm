@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/time"
 )
@@ -75,7 +75,7 @@ func GenerateGenesisStateFromDepositData(
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
 func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trie.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
-	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+	results, err := async.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
 	})
 	if err != nil {
@@ -115,7 +115,7 @@ func DepositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 	}
 	depositDataItems := make([]*ethpb.Deposit_Data, len(privKeys))
 	depositDataRoots := make([][]byte, len(privKeys))
-	results, err := mputil.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+	results, err := async.Scatter(len(privKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		items, roots, err := depositDataFromKeys(privKeys[offset:offset+entries], pubKeys[offset:offset+entries])
 		return &depositData{items: items, roots: roots}, err
 	})

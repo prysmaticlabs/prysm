@@ -22,6 +22,8 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//api/grpc:go_default_library",
+        "//async:go_default_library",
+        "//async/event:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -39,8 +41,6 @@ go_library(
         "//runtime/version:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/event:go_default_library",
-        "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slashutil:go_default_library",
         "//time:go_default_library",
@@ -105,6 +105,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//async/event:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//cache/lru:go_default_library",
         "//config/features:go_default_library",
@@ -115,7 +116,6 @@ go_test(
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//runtime:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/event:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

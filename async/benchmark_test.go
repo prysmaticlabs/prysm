@@ -1,4 +1,4 @@
-package mputil_test
+package async_test
 
 import (
 	"crypto/rand"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/mputil"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
 )
@@ -52,7 +52,7 @@ func BenchmarkHash(b *testing.B) {
 func BenchmarkHashMP(b *testing.B) {
 	output := make([][]byte, len(input))
 	for i := 0; i < b.N; i++ {
-		workerResults, err := mputil.Scatter(len(input), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		workerResults, err := async.Scatter(len(input), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 			return hash(input[offset : offset+entries]), nil
 		})
 		require.NoError(b, err)

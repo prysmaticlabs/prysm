@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -53,7 +53,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
@@ -172,7 +172,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockAltair")
 	defer span.End()
 
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 
