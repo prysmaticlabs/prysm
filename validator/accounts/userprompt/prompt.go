@@ -1,4 +1,4 @@
-package prompt
+package userprompt
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -20,7 +20,7 @@ const (
 	ImportKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
 	// DataDirDirPromptText for the validator database directory.
 	DataDirDirPromptText = "Enter the directory of the validator database you would like to use"
-	// SlashingProtectionJSONPromptText for the EIP-3076 slashing protection JSON prompt.
+	// SlashingProtectionJSONPromptText for the EIP-3076 slashing protection JSON userprompt.
 	SlashingProtectionJSONPromptText = "Enter the the filepath of your EIP-3076 Slashing Protection JSON from your previously used validator client"
 	// WalletDirPromptText for the wallet.
 	WalletDirPromptText = "Enter a wallet directory"
@@ -38,11 +38,11 @@ var au = aurora.NewAurora(true)
 func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {
 	directory := cliCtx.String(flag.Name)
 	if cliCtx.IsSet(flag.Name) {
-		return fileutil.ExpandPath(directory)
+		return file.ExpandPath(directory)
 	}
 	// Append and log the appropriate directory name depending on the flag used.
 	if flag.Name == flags.WalletDirFlag.Name {
-		ok, err := fileutil.HasDir(directory)
+		ok, err := file.HasDir(directory)
 		if err != nil {
 			return "", errors.Wrapf(err, "could not check if wallet dir %s exists", directory)
 		}
@@ -52,14 +52,14 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 		}
 	}
 
-	inputtedDir, err := promptutil.DefaultPrompt(au.Bold(promptText).String(), directory)
+	inputtedDir, err := prompt.DefaultPrompt(au.Bold(promptText).String(), directory)
 	if err != nil {
 		return "", err
 	}
 	if inputtedDir == directory {
 		return directory, nil
 	}
-	return fileutil.ExpandPath(inputtedDir)
+	return file.ExpandPath(inputtedDir)
 }
 
 // InputRemoteKeymanagerConfig via the cli.
@@ -72,16 +72,16 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 	log.Info("Input desired configuration")
 	var err error
 	if addr == "" {
-		addr, err = promptutil.ValidatePrompt(
+		addr, err = prompt.ValidatePrompt(
 			os.Stdin,
 			"Remote gRPC address (such as host.example.com:4000)",
-			promptutil.NotEmpty)
+			prompt.NotEmpty)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if requireTls && crt == "" {
-		crt, err = promptutil.ValidatePrompt(
+		crt, err = prompt.ValidatePrompt(
 			os.Stdin,
 			"Path to TLS crt (such as /path/to/client.crt)",
 			validateCertPath)
@@ -90,7 +90,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 		}
 	}
 	if requireTls && key == "" {
-		key, err = promptutil.ValidatePrompt(
+		key, err = prompt.ValidatePrompt(
 			os.Stdin,
 			"Path to TLS key (such as /path/to/client.key)",
 			validateCertPath)
@@ -99,7 +99,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 		}
 	}
 	if requireTls && ca == "" {
-		ca, err = promptutil.ValidatePrompt(
+		ca, err = prompt.ValidatePrompt(
 			os.Stdin,
 			"Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
 			validateCertPath)
@@ -110,19 +110,19 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 
 	crtPath, keyPath, caPath := "", "", ""
 	if crt != "" {
-		crtPath, err = fileutil.ExpandPath(strings.TrimRight(crt, "\r\n"))
+		crtPath, err = file.ExpandPath(strings.TrimRight(crt, "\r\n"))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 		}
 	}
 	if key != "" {
-		keyPath, err = fileutil.ExpandPath(strings.TrimRight(key, "\r\n"))
+		keyPath, err = file.ExpandPath(strings.TrimRight(key, "\r\n"))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 		}
 	}
 	if ca != "" {
-		caPath, err = fileutil.ExpandPath(strings.TrimRight(ca, "\r\n"))
+		caPath, err = file.ExpandPath(strings.TrimRight(ca, "\r\n"))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
 		}
@@ -145,10 +145,10 @@ func validateCertPath(input string) error {
 	if input == "" {
 		return errors.New("crt path cannot be empty")
 	}
-	if !promptutil.IsValidUnicode(input) {
+	if !prompt.IsValidUnicode(input) {
 		return errors.New("not valid unicode")
 	}
-	if !fileutil.FileExists(input) {
+	if !file.FileExists(input) {
 		return fmt.Errorf("no crt found at path: %s", input)
 	}
 	return nil

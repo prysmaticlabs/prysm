@@ -9,8 +9,8 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -52,7 +52,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert we stored the hashed password.
-	passwordHashExists := fileutil.FileExists(filepath.Join(defaultWalletPath, HashedRPCPassword))
+	passwordHashExists := file.FileExists(filepath.Join(defaultWalletPath, HashedRPCPassword))
 	assert.Equal(t, true, passwordHashExists)
 
 	// We attempt to create the wallet.

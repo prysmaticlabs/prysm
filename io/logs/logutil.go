@@ -1,6 +1,6 @@
-// Package logutil creates a Multi writer instance that
+// Package logs creates a Multi writer instance that
 // write all logs that are written to stdout.
-package logutil
+package logs
 
 import (
 	"io"

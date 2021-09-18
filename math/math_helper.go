@@ -1,9 +1,9 @@
-// Package mathutil includes important helpers for Ethereum such as fast integer square roots.
-package mathutil
+// Package math includes important helpers for Ethereum such as fast integer square roots.
+package math
 
 import (
 	"errors"
-	"math"
+	stdmath "math"
 	"math/bits"
 
 	"github.com/thomaso-mirodin/intmath/u64"
@@ -37,7 +37,7 @@ func IntegerSquareRoot(n uint64) uint64 {
 		return u64.Sqrt(n)
 	}
 
-	return uint64(math.Sqrt(float64(n)))
+	return uint64(stdmath.Sqrt(float64(n)))
 }
 
 // CeilDiv8 divides the input number by 8

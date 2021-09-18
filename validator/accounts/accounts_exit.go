@@ -12,13 +12,13 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -147,7 +147,7 @@ func interact(
 			cliCtx,
 			flags.VoluntaryExitPublicKeysFlag,
 			validatingPublicKeys,
-			prompt.SelectAccountsVoluntaryExitPromptText,
+			userprompt.SelectAccountsVoluntaryExitPromptText,
 		)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
@@ -163,8 +163,8 @@ func interact(
 		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
 			if len(filteredPubKeys) == 1 {
 				promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
-				resp, err := promptutil.ValidatePrompt(
-					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				resp, err := prompt.ValidatePrompt(
+					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
 				)
 				if err != nil {
 					return nil, nil, err
@@ -181,7 +181,7 @@ func interact(
 				} else {
 					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
 				}
-				resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
+				resp, err := prompt.ValidatePrompt(r, promptText, prompt.ValidateYesOrNo)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -203,8 +203,8 @@ func interact(
 	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
 		"of the page from the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
-	resp, err := promptutil.ValidatePrompt(r, promptText, func(input string) error {
-		return promptutil.ValidatePhrase(input, exitPassphrase)
+	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
+		return prompt.ValidatePhrase(input, exitPassphrase)
 	})
 	if err != nil {
 		return nil, nil, err

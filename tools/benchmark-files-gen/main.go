@@ -15,9 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -47,7 +47,7 @@ func main() {
 		}
 	}
 
-	if err := fileutil.MkdirAll(*outputDir); err != nil {
+	if err := file.MkdirAll(*outputDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -80,7 +80,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
 }
 
 func generateMarshalledFullStateAndBlock() error {
@@ -153,7 +153,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := fileutil.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
+	if err := file.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
 		return err
 	}
 
@@ -168,7 +168,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
 }
 
 func generate2FullEpochState() error {
@@ -203,7 +203,7 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
 }
 
 func genesisBeaconState() (state.BeaconState, error) {

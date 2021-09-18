@@ -1,4 +1,4 @@
-package promptutil
+package prompt
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
@@ -128,7 +128,7 @@ func InputPassword(
 ) (string, error) {
 	if cliCtx.IsSet(passwordFileFlag.Name) {
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
-		passwordFilePath, err := fileutil.ExpandPath(passwordFilePathInput)
+		passwordFilePath, err := file.ExpandPath(passwordFilePathInput)
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}

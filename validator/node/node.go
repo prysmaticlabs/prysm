@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -30,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -226,7 +226,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	} else {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		if !fileutil.FileExists(dataFile) {
+		if !file.FileExists(dataFile) {
 			log.Warnf("Slashing protection file %s is missing.\n"+
 				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
@@ -572,9 +572,9 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+	if file.FileExists(defaultWalletPasswordFilePath) {
 		// Ensure file has proper permissions.
-		hasPerms, err := fileutil.HasReadWritePermissions(defaultWalletPasswordFilePath)
+		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {
 			return err
 		}
