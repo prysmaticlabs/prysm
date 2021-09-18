@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/async/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

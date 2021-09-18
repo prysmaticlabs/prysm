@@ -6,7 +6,7 @@ go_library(
         "feed.go",
         "subscription.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/event",
+    importpath = "github.com/prysmaticlabs/prysm/async/event",
     visibility = ["//visibility:public"],
     deps = ["//time/mclock:go_default_library"],
 )

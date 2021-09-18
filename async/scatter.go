@@ -1,6 +1,6 @@
 // Package mputil contains useful helpers for converting
 // multi-processor computation.
-package mputil
+package async
 
 import (
 	"errors"
