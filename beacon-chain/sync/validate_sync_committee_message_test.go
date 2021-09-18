@@ -217,8 +217,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				assert.NoError(t, err)
 				s.cfg.Chain = &mockChain.ChainService{
 					SyncCommitteeIndices: []types.CommitteeIndex{0},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 				}
 				numOfVals := hState.NumValidators()
 
@@ -324,10 +324,10 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
 					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
-					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					SyncCommitteeDomain:  d,
+					PublicKey:            bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				// Set Topic and Subnet
@@ -378,10 +378,10 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 
 				s.cfg.Chain = &mockChain.ChainService{
 					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
-					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					SyncCommitteeDomain:  d,
+					PublicKey:            bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()

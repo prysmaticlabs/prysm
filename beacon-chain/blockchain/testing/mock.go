@@ -51,7 +51,7 @@ type ChainService struct {
 	ForkChoiceStore             *protoarray.Store
 	VerifyBlkDescendantErr      error
 	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	SyncCommitteeIndices    []types.CommitteeIndex
+	SyncCommitteeIndices        []types.CommitteeIndex
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
@@ -408,7 +408,6 @@ func (s *ChainService) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey
 func (s *ChainService) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
 	return s.PublicKey, nil
 }
-
 
 // HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
 func (s *ChainService) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
