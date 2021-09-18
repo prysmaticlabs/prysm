@@ -397,7 +397,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 				}
 				msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 
@@ -476,7 +476,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(pubkey),
 					SyncSelectionProofDomain:    d,
 				}
@@ -560,7 +560,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{1},
+					SyncCommitteeIndices: []types.CommitteeIndex{1},
 				}
 
 				s.initCaches()
@@ -641,7 +641,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    d,
 					SyncContributionProofDomain: cd,
@@ -736,7 +736,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,
 					SyncContributionProofDomain: cd,
@@ -834,7 +834,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				s.cfg.Chain = &mockChain.ChainService{
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
 					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,
 					SyncContributionProofDomain: cd,
