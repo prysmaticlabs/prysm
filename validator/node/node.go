@@ -19,18 +19,18 @@ import (
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -55,7 +55,7 @@ type ValidatorClient struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
 	db                *kv.Store
-	services          *shared.ServiceRegistry // Lifecycle and service store.
+	services          *runtime.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
 	walletInitialized *event.Feed
@@ -84,7 +84,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// Warn if user's platform is not supported
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 
-	registry := shared.NewServiceRegistry()
+	registry := runtime.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	validatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
@@ -226,7 +226,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	} else {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		if !fileutil.FileExists(dataFile) {
+		if !file.FileExists(dataFile) {
 			log.Warnf("Slashing protection file %s is missing.\n"+
 				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
@@ -572,9 +572,9 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+	if file.FileExists(defaultWalletPasswordFilePath) {
 		// Ensure file has proper permissions.
-		hasPerms, err := fileutil.HasReadWritePermissions(defaultWalletPasswordFilePath)
+		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {
 			return err
 		}

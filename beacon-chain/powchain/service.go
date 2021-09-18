@@ -34,13 +34,13 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
@@ -493,7 +493,7 @@ func (s *Service) waitForConnection() {
 			s.updateConnectedETH1(true)
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
+				"endpoint": logs.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -522,7 +522,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
+			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -541,7 +541,7 @@ func (s *Service) waitForConnection() {
 				s.updateConnectedETH1(true)
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
+					"endpoint": logs.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -953,7 +953,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	}
 	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
 	if nextIndex != currIndex {
-		log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
+		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 	}
 }
 

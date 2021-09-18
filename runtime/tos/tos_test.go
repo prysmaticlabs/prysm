@@ -25,14 +25,14 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	os.Stdin = tmpfile
 	defer func() { os.Stdin = origStdin }()
 
-	// prompt decline
+	// userprompt decline
 	_, err = tmpfile.Write([]byte("decline"))
 	require.NoError(t, err)
 	_, err = tmpfile.Seek(0, 0)
 	require.NoError(t, err)
 	require.ErrorContains(t, "you have to accept Terms and Conditions", VerifyTosAcceptedOrPrompt(context))
 
-	// prompt accept
+	// userprompt accept
 	err = tmpfile.Truncate(0)
 	require.NoError(t, err)
 	_, err = tmpfile.Seek(0, 0)

@@ -189,6 +189,10 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
+	if state.Version() != signed.Block().Version() {
+		return nil, nil, fmt.Errorf("state and block are different version. %d != %d", state.Version(), signed.Block().Version())
+	}
+
 	blk := signed.Block()
 	state, err := ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
