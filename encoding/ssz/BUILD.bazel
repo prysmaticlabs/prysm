@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["deep_equal.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/sszutil",
+    importpath = "github.com/prysmaticlabs/prysm/encoding/ssz",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -16,8 +16,8 @@ go_test(
     size = "small",
     srcs = ["deep_equal_test.go"],
     deps = [
-        ":go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/testutil/assert:go_default_library",
+        "@com_github_prysmaticlabs_prysm//shared/sszutil:go_default_library",
     ],
 )

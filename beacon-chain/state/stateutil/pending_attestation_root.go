@@ -4,19 +4,19 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	htrutils2 "github.com/prysmaticlabs/prysm/encoding/htrutils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // PendingAttRootWithHasher describes a method from which the hash tree root
 // of a pending attestation is returned.
-func PendingAttRootWithHasher(hasher htrutils.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
+func PendingAttRootWithHasher(hasher htrutils2.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte
 
 	// Bitfield.
-	aggregationRoot, err := htrutils.BitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
+	aggregationRoot, err := htrutils2.BitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -37,7 +37,7 @@ func PendingAttRootWithHasher(hasher htrutils.HashFn, att *ethpb.PendingAttestat
 
 	fieldRoots = [][32]byte{aggregationRoot, attDataRoot, inclusionRoot, proposerRoot}
 
-	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils2.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // PendingAttEncKey returns the encoded key in bytes of input `pendingAttestation`,
@@ -63,7 +63,7 @@ func PendingAttEncKey(att *ethpb.PendingAttestation) []byte {
 	return enc
 }
 
-func attDataRootWithHasher(hasher htrutils.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
+func attDataRootWithHasher(hasher htrutils2.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
 	if data != nil {
@@ -84,21 +84,21 @@ func attDataRootWithHasher(hasher htrutils.HashFn, data *ethpb.AttestationData) 
 		fieldRoots[2] = blockRoot[:]
 
 		// Source
-		sourceRoot, err := htrutils.CheckpointRoot(hasher, data.Source)
+		sourceRoot, err := htrutils2.CheckpointRoot(hasher, data.Source)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
 		}
 		fieldRoots[3] = sourceRoot[:]
 
 		// Target
-		targetRoot, err := htrutils.CheckpointRoot(hasher, data.Target)
+		targetRoot, err := htrutils2.CheckpointRoot(hasher, data.Target)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}
 		fieldRoots[4] = targetRoot[:]
 	}
 
-	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils2.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func marshalAttData(data *ethpb.AttestationData) []byte {

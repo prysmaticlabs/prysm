@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/htrutils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 // BlockHeaderRoot computes the HashTreeRoot Merkleization of

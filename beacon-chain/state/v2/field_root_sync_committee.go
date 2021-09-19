@@ -2,8 +2,8 @@ package v2
 
 import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	htrutils2 "github.com/prysmaticlabs/prysm/encoding/htrutils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 // syncCommitteeRoot computes the HashTreeRoot Merkleization of a commitee root.
@@ -25,7 +25,7 @@ func syncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 		}
 		pubKeyRoots = append(pubKeyRoots, r)
 	}
-	pubkeyRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, pubKeyRoots, uint64(len(pubKeyRoots)), uint64(len(pubKeyRoots)))
+	pubkeyRoot, err := htrutils2.BitwiseMerkleizeArrays(hasher, pubKeyRoots, uint64(len(pubKeyRoots)), uint64(len(pubKeyRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -37,13 +37,13 @@ func syncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	}
 	fieldRoots = [][32]byte{pubkeyRoot, aggregateKeyRoot}
 
-	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils2.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func merkleizePubkey(hasher htrutils.HashFn, pubkey []byte) ([32]byte, error) {
-	chunks, err := htrutils.Pack([][]byte{pubkey})
+func merkleizePubkey(hasher htrutils2.HashFn, pubkey []byte) ([32]byte, error) {
+	chunks, err := htrutils2.Pack([][]byte{pubkey})
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return htrutils.BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), uint64(len(chunks)))
+	return htrutils2.BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), uint64(len(chunks)))
 }

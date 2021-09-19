@@ -4,8 +4,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/encoding/htrutils"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.

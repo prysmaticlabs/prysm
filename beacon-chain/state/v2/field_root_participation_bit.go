@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 

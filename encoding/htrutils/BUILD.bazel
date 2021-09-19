@@ -8,7 +8,7 @@ go_library(
         "htrutils.go",
         "merkleize.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/htrutils",
+    importpath = "github.com/prysmaticlabs/prysm/encoding/htrutils",
     visibility = ["//visibility:public"],
     deps = [
         "//container/trie:go_default_library",

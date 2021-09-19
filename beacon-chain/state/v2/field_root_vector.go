@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/htrutils"
 )
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {

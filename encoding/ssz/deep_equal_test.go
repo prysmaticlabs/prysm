@@ -1,4 +1,4 @@
-package sszutil_test
+package ssz_test
 
 import (
 	"testing"

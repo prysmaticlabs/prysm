@@ -58,7 +58,7 @@ func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 	}
 }
 
-// DeepSSZEqual compares values using sszutil.DeepEqual.
+// DeepSSZEqual compares values using ssz.DeepEqual.
 func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
 	if !sszutil.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
@@ -68,7 +68,7 @@ func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 	}
 }
 
-// DeepNotSSZEqual compares values using sszutil.DeepEqual.
+// DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
 	if sszutil.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
