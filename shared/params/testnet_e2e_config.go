@@ -1,10 +1,6 @@
 package params
 
-import "math"
-
-// AltairE2EForkEpoch is the pre-determined altair fork epoch in our
-// E2E test.
-const AltairE2EForkEpoch = math.MaxUint64
+const AltairE2EForkEpoch = 6
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
@@ -26,6 +22,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
 	e2eConfig.GenesisDelay = 10 // 10 seconds so E2E has enough time to process deposits and get started.
+	e2eConfig.ChurnLimitQuotient = 65536
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 10

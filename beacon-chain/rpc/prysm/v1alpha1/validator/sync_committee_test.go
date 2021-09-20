@@ -54,8 +54,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
-			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
-			NextSyncCommitteeIndices:    []types.CommitteeIndex{1},
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
 	pubKey := [48]byte{}
@@ -65,14 +64,6 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
-
-	// Request at period boundary, should get index 1 for validator 0.
-	periodBoundary := types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1
-	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
-		PublicKey: pubKey[:], Slot: periodBoundary,
-	})
-	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{1}, res.Indices)
 }
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {

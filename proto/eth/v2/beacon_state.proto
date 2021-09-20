@@ -87,12 +87,13 @@ message BeaconStateResponseV2 {
 }
 
 message BeaconStateSSZResponseV2 {
-  bytes data = 1;
+  v2.Version version = 1;
+  bytes data = 2;
 }
 
 message BeaconStateContainer {
   oneof state {
-    v1.BeaconState phase0State = 1;
-    BeaconStateV2 altairState = 2;
+    v1.BeaconState phase0_state = 1;
+    BeaconStateV2 altair_state = 2;
   }
 }

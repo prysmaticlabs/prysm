@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
 )
 

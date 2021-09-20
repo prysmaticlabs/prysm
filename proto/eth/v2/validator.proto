@@ -17,6 +17,7 @@ package ethereum.eth.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v2/beacon_block.proto";
+import "proto/eth/v2/version.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
@@ -48,20 +49,9 @@ message SyncCommitteeDuty {
   repeated uint64 validator_sync_committee_indices = 3;
 }
 
-message ProduceBlockRequestV2 {
-  // The slot to request a block for.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-
-  // The validators RANDAO reveal 96 byte value.
-  bytes randao_reveal = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-
-  // 32 byte field of arbitrary data. This field may contain any data and
-  // is not used for anything other than a fun message.
-  optional bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-}
-
 message ProduceBlockResponseV2 {
-  BeaconBlockAltair data = 1;
+  Version version = 1;
+  BeaconBlockContainerV2 data = 2;
 }
 
 message SubmitSyncCommitteeSubscriptionsRequest {
@@ -75,7 +65,7 @@ message SyncCommitteeSubscription {
   // The sync committee indices to be subscribed to.
   repeated uint64 sync_committee_indices = 2;
 
-  // The final epoch that the specified validator requires the subscription for.
+  // The final epoch (exclusive value) that the specified validator requires the subscription for.
   uint64 until_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 

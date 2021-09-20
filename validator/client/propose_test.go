@@ -10,17 +10,17 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -29,8 +29,8 @@ import (
 )
 
 type mocks struct {
-	validatorClient *mock.MockBeaconNodeValidatorClient
-	nodeClient      *mock.MockNodeClient
+	validatorClient *mock2.MockBeaconNodeValidatorClient
+	nodeClient      *mock2.MockNodeClient
 	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -67,8 +67,8 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
-		nodeClient:      mock.NewMockNodeClient(ctrl),
+		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
+		nodeClient:      mock2.NewMockNodeClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -875,7 +875,7 @@ func TestSignAltairBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	pubKey := [48]byte{'a'}
 	tests := []struct {
@@ -958,7 +958,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).

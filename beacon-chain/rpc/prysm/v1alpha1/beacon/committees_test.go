@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -33,7 +33,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -95,7 +95,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
 		State:   headState,
-		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -149,7 +149,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
-		Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,

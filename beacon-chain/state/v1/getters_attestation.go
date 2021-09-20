@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -69,7 +69,7 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
 	}
 
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	roots := make([][]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := h.pendingAttestationRoot(hasher, atts[i])

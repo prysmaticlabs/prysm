@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -39,7 +39,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 }
 
 func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		ProposerAttsSelectionUsingMaxCover: true,
 	})
 	defer resetCfg()
@@ -121,7 +121,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
 		// (since it has two new/unknown bits).
 		t.Run("naive", func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				ProposerAttsSelectionUsingMaxCover: false,
 			})
 			defer resetCfg()
@@ -143,7 +143,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			require.DeepEqual(t, want, atts)
 		})
 		t.Run("max-cover", func(t *testing.T) {
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				ProposerAttsSelectionUsingMaxCover: true,
 			})
 			defer resetCfg()

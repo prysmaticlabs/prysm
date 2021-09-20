@@ -10,13 +10,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -435,12 +435,12 @@ func blockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter
 		// between these two sets of roots.
 		if len(rootsBySlotRange) > 0 {
 			joined := append([][][]byte{keys}, indices...)
-			keys = sliceutil.IntersectionByteSlices(joined...)
+			keys = slice.IntersectionByteSlices(joined...)
 		} else {
 			// If we have found indices that meet the filter criteria, but there are no block roots
 			// that meet the slot range filter criteria, we find the intersection
 			// of the regular filter indices.
-			keys = sliceutil.IntersectionByteSlices(indices...)
+			keys = slice.IntersectionByteSlices(indices...)
 		}
 	}
 
@@ -594,7 +594,7 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 }
 
 // unmarshal block from marshaled proto beacon block bytes to versioned beacon block struct type.
-func unmarshalBlock(ctx context.Context, enc []byte) (block.SignedBeaconBlock, error) {
+func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -621,7 +621,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (block.SignedBeaconBlock, e
 }
 
 // marshal versioned beacon block from struct type down to bytes.
-func marshalBlock(ctx context.Context, blk block.SignedBeaconBlock) ([]byte, error) {
+func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error) {
 	obj, err := blk.MarshalSSZ()
 	if err != nil {
 		return nil, err

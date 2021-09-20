@@ -9,14 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
@@ -141,14 +141,14 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot == current_slot",
 			args: args{
 				attSlot:     15,
-				genesisTime: timeutils.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesisTime: prysmTime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 		},
 		{
 			name: "attestation.slot == current_slot, received in middle of slot",
 			args: args{
 				attSlot: 15,
-				genesisTime: timeutils.Now().Add(
+				genesisTime: prysmTime.Now().Add(
 					-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(-(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second)),
 			},
@@ -157,7 +157,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot == current_slot, received 200ms early",
 			args: args{
 				attSlot: 16,
-				genesisTime: timeutils.Now().Add(
+				genesisTime: prysmTime.Now().Add(
 					-16 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(-200 * time.Millisecond),
 			},
@@ -166,7 +166,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot > current_slot",
 			args: args{
 				attSlot:     16,
-				genesisTime: timeutils.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesisTime: prysmTime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			wantedErr: "not within attestation propagation range",
 		},
@@ -174,7 +174,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
 			args: args{
 				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
-				genesisTime: timeutils.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesisTime: prysmTime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			wantedErr: "not within attestation propagation range",
 		},
@@ -182,14 +182,14 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
 			args: args{
 				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
-				genesisTime: timeutils.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesisTime: prysmTime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 		},
 		{
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late",
 			args: args{
 				attSlot: 100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
-				genesisTime: timeutils.Now().Add(
+				genesisTime: prysmTime.Now().Add(
 					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
@@ -198,7 +198,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 			name: "attestation.slot is well beyond current slot",
 			args: args{
 				attSlot:     1 << 32,
-				genesisTime: timeutils.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesisTime: prysmTime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			wantedErr: "which exceeds max allowed value relative to the local clock",
 		},

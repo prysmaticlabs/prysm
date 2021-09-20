@@ -12,17 +12,17 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
@@ -60,7 +60,7 @@ type mockKeymanager struct {
 	accountsChangedFeed *event.Feed
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	keys := make([][48]byte, 0)
@@ -74,7 +74,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	return keys, nil
 }
 
-func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
@@ -112,7 +112,7 @@ func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResp
 func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
@@ -127,7 +127,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -167,7 +167,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	db := dbTest.SetupDB(t, [][48]byte{})
 	v := validator{
@@ -176,7 +176,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -219,7 +219,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
 		//keyManager:      testKeyManager,
@@ -227,7 +227,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
 	genesisValidatorsRoot := bytesutil.PadTo([]byte("validators"), 32)
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -248,7 +248,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
@@ -261,7 +261,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 		validatorClient: client,
 		keyManager:      km,
 	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -274,12 +274,12 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
 		validatorClient: client,
 	}
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -296,7 +296,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
+	client := mock2.NewMockBeaconChainClient(ctrl)
 	v := validator{
 		beaconClient: client,
 		genesisTime:  1,
@@ -312,7 +312,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
+	client := mock2.NewMockBeaconChainClient(ctrl)
 	v := validator{
 		beaconClient: client,
 	}
@@ -329,7 +329,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [48]byte{}
@@ -347,7 +347,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
@@ -365,7 +365,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
@@ -383,7 +383,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		gomock.Any(),
@@ -402,7 +402,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 func TestWaitSync_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	n := mock.NewMockNodeClient(ctrl)
+	n := mock2.NewMockNodeClient(ctrl)
 
 	v := validator{
 		node: n,
@@ -422,7 +422,7 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 func TestWaitSync_NotSyncing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	n := mock.NewMockNodeClient(ctrl)
+	n := mock2.NewMockNodeClient(ctrl)
 
 	v := validator{
 		node: n,
@@ -439,7 +439,7 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 func TestWaitSync_Syncing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	n := mock.NewMockNodeClient(ctrl)
+	n := mock2.NewMockNodeClient(ctrl)
 
 	v := validator{
 		node: n,
@@ -461,7 +461,7 @@ func TestWaitSync_Syncing(t *testing.T) {
 func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	slot := types.Slot(1)
 	v := validator{
@@ -487,7 +487,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 func TestUpdateDuties_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
@@ -524,7 +524,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 func TestUpdateDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	privKey, err := bls.RandKey()
@@ -582,7 +582,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	slot := params.BeaconConfig().SlotsPerEpoch
 
 	numValidators := 10
@@ -836,7 +836,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			hook := logTest.NewGlobal()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+			client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 			v := validator{
 				validatorClient: client,
 				duties: &ethpb.DutiesResponse{
@@ -860,7 +860,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 func TestAllValidatorsAreExited_AllExited(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	statuses := []*ethpb.ValidatorStatusResponse{
 		{Status: ethpb.ValidatorStatus_EXITED},
@@ -881,7 +881,7 @@ func TestAllValidatorsAreExited_AllExited(t *testing.T) {
 func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	statuses := []*ethpb.ValidatorStatusResponse{
 		{Status: ethpb.ValidatorStatus_ACTIVE},
@@ -902,7 +902,7 @@ func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	statuses := []*ethpb.ValidatorStatusResponse{
 		{Status: ethpb.ValidatorStatus_EXITED},
@@ -922,7 +922,7 @@ func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
 func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	v := validator{keyManager: genMockKeymanager(0), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
@@ -933,7 +933,7 @@ func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
 func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	// Create two different public keys
 	pubKey0 := [48]byte{1, 2, 3, 4}
@@ -973,12 +973,12 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	valClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	valClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	v := validator{
 		blockFeed:       new(event.Feed),
 		validatorClient: valClient,
 	}
-	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
+	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	valClient.EXPECT().StreamBlocksAltair(
 		gomock.Any(),
@@ -1000,13 +1000,13 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
 		validatorClient: client,
 		blockFeed:       new(event.Feed),
 	}
-	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
+	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	client.EXPECT().StreamBlocksAltair(
 		gomock.Any(),
@@ -1049,9 +1049,9 @@ func (m *doppelGangerRequestMatcher) String() string {
 func TestValidator_CheckDoppelGanger(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	flgs := featureconfig.Get()
+	flgs := features.Get()
 	flgs.EnableDoppelGanger = true
-	reset := featureconfig.InitWithReset(flgs)
+	reset := features.InitWithReset(flgs)
 	defer reset()
 	tests := []struct {
 		name            string
@@ -1061,7 +1061,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		{
 			name: "no doppelganger",
 			validatorSetter: func(t *testing.T) *validator {
-				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
@@ -1093,7 +1093,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		{
 			name: "multiple doppelganger exists",
 			validatorSetter: func(t *testing.T) *validator {
-				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
@@ -1127,7 +1127,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		{
 			name: "single doppelganger exists",
 			validatorSetter: func(t *testing.T) *validator {
-				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
@@ -1161,7 +1161,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		{
 			name: "multiple attestations saved",
 			validatorSetter: func(t *testing.T) *validator {
-				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
@@ -1200,7 +1200,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		{
 			name: "no history exists",
 			validatorSetter: func(t *testing.T) *validator {
-				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 				// Use only 1 key for deterministic order.
 				km := genMockKeymanager(1)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())

@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -165,7 +165,7 @@ func ProcessRegistryUpdates(state state.BeaconState) (state.BeaconState, error) 
 //            penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
+func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state.BeaconState, error) {
 	currentEpoch := core.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
@@ -185,7 +185,7 @@ func ProcessSlashings(state state.BeaconState) (state.BeaconState, error) {
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, totalBalance)
+	minSlashing := math.Min(totalSlashing*slashingMultiplier, totalBalance)
 	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
@@ -267,7 +267,7 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 		return false, val, nil
 	}
 
-	if featureconfig.Get().EnableOptimizedBalanceUpdate {
+	if features.Get().EnableOptimizedBalanceUpdate {
 		validatorFunc = func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 			if val == nil {
 				return false, nil, fmt.Errorf("validator %d is nil in state", idx)
@@ -469,7 +469,7 @@ func UnslashedAttestingIndices(state state.ReadOnlyBeaconState, atts []*ethpb.Pe
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -97,7 +97,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, archiveFilename)
-	assert.DeepEqual(t, true, fileutil.FileExists(zipFilePath))
+	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
 	f, err := os.Open(zipFilePath)
@@ -187,7 +187,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, archiveFilename)
-	assert.DeepEqual(t, true, fileutil.FileExists(zipFilePath))
+	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
 	f, err := os.Open(zipFilePath)

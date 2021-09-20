@@ -10,10 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var (
@@ -79,7 +79,7 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet, err := mathutil.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
+	indexOffSet, err := math.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +154,8 @@ func (c *CommitteeCache) HasEntry(seed string) bool {
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.ShuffledIndices))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
+	start := slice.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := slice.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 	return start, end
 }
 

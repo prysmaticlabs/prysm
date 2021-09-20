@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -110,7 +110,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([
 	cfg := params.BeaconConfig()
 	syncCommitteeSize := cfg.SyncCommitteeSize
 	cIndices := make([]types.ValidatorIndex, 0, syncCommitteeSize)
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := types.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if ctx.Err() != nil {
@@ -178,8 +178,8 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 	}
 
 	cfg := params.BeaconConfig()
-	modulo := mathutil.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
-	hashedSig := hashutil.Hash(sig)
+	modulo := math.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
+	hashedSig := hash.Hash(sig)
 	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
 }
 

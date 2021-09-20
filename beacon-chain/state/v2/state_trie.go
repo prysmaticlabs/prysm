@@ -10,12 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -237,7 +237,7 @@ func (b *BeaconState) IsNil() bool {
 }
 
 func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return htrutils.Uint64Root(b.state.GenesisTime), nil
@@ -347,7 +347,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
+	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

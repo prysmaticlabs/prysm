@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
+	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -16,7 +16,7 @@ const (
 	publicKeyMigrationBatchSize = 100 // Batch update 100 public keys at a time.
 )
 
-func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
+func (s *Store) migrateSourceTargetEpochsBucketUp(_ context.Context) error {
 	// First, we extract the public keys we need to migrate data for.
 	publicKeyBytes := make([][]byte, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -43,7 +43,7 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 	// If we did a single transaction for all public keys, resource use might be too high,
 	// and if we do a single one per key, the migration will take too long.
 	batchedKeys := batchPublicKeys(publicKeyBytes, publicKeyMigrationBatchSize)
-	bar := progressutil.InitializeProgressBar(
+	bar := progress.InitializeProgressBar(
 		len(batchedKeys), "Adding optimizations for validator slashing protection",
 	)
 	for _, batch := range batchedKeys {
@@ -95,7 +95,7 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 	})
 }
 
-func (s *Store) migrateSourceTargetEpochsBucketDown(ctx context.Context) error {
+func (s *Store) migrateSourceTargetEpochsBucketDown(_ context.Context) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		err := bkt.ForEach(func(k, _ []byte) error {

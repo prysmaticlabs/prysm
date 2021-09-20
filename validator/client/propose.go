@@ -8,19 +8,19 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	wrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -53,7 +53,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
@@ -172,7 +172,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockAltair")
 	defer span.End()
 
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -333,7 +333,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
-	totalSecondsPassed := timeutils.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}

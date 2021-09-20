@@ -5,16 +5,16 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
 // provided with the elements of a fixed sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	leaves := elements
 
 	if len(leaves) == 1 {
@@ -65,12 +65,12 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 // provided with the elements of a variable sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	depth := htrutils.Depth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
 	if len(elements) == 0 {
-		zerohash := trieutil.ZeroHashes[depth]
+		zerohash := trie.ZeroHashes[depth]
 		layers[len(layers)-1] = []*[32]byte{&zerohash}
 		return layers
 	}
@@ -85,7 +85,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := 0; i < int(depth); i++ {
 		oddNodeLength := len(layers[i])%2 == 1
 		if oddNodeLength {
-			zerohash := trieutil.ZeroHashes[i]
+			zerohash := trie.ZeroHashes[i]
 			layers[i] = append(layers[i], &zerohash)
 		}
 		updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
@@ -107,7 +107,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 
 // RecomputeFromLayer recomputes specific branches of a fixed sized trie depending on the provided changed indexes.
 func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	for i, idx := range changedIdx {
 		layer[0][idx] = &changedLeaves[i]
 	}
@@ -140,7 +140,7 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 
 // RecomputeFromLayerVariable recomputes specific branches of a variable sized trie depending on the provided changed indexes.
 func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
 	}
@@ -205,7 +205,7 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte,
 	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	for idx >= len(layers[0]) {
-		zerohash := trieutil.ZeroHashes[0]
+		zerohash := trie.ZeroHashes[0]
 		layers[0] = append(layers[0], &zerohash)
 	}
 	layers[0][idx] = &item
@@ -218,7 +218,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 
 		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
-			neighbor = trieutil.ZeroHashes[i]
+			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
@@ -259,7 +259,7 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a length of 32.
 func Merkleize(leaves [][]byte) [][][]byte {
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))

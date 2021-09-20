@@ -16,12 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 var _ depositcache.DepositFetcher = (*Service)(nil)
 var _ powchain.ChainStartFetcher = (*Service)(nil)
 
@@ -92,7 +92,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
+	go slots.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)

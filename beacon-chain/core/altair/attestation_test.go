@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -213,7 +213,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
@@ -271,7 +271,7 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
 		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex))
@@ -631,7 +631,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{},
 			},
-			inputDelay: types.Slot(mathutil.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			inputDelay: types.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
 			participationIndices: map[uint8]bool{
 				sourceFlagIndex: true,
 			},
@@ -645,7 +645,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 			},
-			inputDelay: types.Slot(mathutil.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			inputDelay: types.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
 			participationIndices: map[uint8]bool{
 				sourceFlagIndex: true,
 				targetFlagIndex: true,

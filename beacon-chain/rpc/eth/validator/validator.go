@@ -224,26 +224,55 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceBlock")
 	defer span.End()
 
+	block, err := vs.v1BeaconBlock(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+	}
+	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
+}
+
+func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
+	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
+	defer span.End()
+
+	epoch := core.SlotToEpoch(req.Slot)
+	if epoch < params.BeaconConfig().AltairForkEpoch {
+		block, err := vs.v1BeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
+			},
+		}, nil
+	}
+
 	v1alpha1req := &ethpbalpha.BlockRequest{
 		Slot:         req.Slot,
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
 	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBlock(ctx, v1alpha1req)
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		// We simply return err because it's already of a gRPC error type.
 		return nil, err
 	}
-	block, err := migration.V1Alpha1ToV1Block(v1alpha1resp)
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
+	}
+	block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 	}
-
-	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
-}
-
-func (vs *Server) ProduceBlockAltair(ctx context.Context, request *ethpbv2.ProduceBlockRequestV2) (*ethpbv2.ProduceBlockResponseV2, error) {
-	panic("implement me")
+	return &ethpbv2.ProduceBlockResponseV2{
+		Version: ethpbv2.Version_ALTAIR,
+		Data: &ethpbv2.BeaconBlockContainerV2{
+			Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
+		},
+	}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
@@ -457,16 +486,16 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 
 	for i, sub := range req.Data {
-		if sub.UntilEpoch < currEpoch {
-			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch)
+		if sub.UntilEpoch <= currEpoch {
+			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch+1)
 		}
 		maxValidEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-		if sub.UntilEpoch > maxValidEpoch {
+		if sub.UntilEpoch > maxValidEpoch+1 {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
 				i,
-				maxValidEpoch,
+				maxValidEpoch+1,
 			)
 		}
 	}
@@ -626,4 +655,17 @@ func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.V
 	default:
 		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
 	}
+}
+
+func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.BeaconBlock, error) {
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBlock(ctx, v1alpha1req)
+	if err != nil {
+		return nil, err
+	}
+	return migration.V1Alpha1ToV1Block(v1alpha1resp)
 }
