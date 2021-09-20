@@ -186,6 +186,6 @@ var (
 	MinPeersPerSubnet = &cli.Uint64Flag{
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
-		Value: uint64(5),
+		Value: 4,
 	}
 )
