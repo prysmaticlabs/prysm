@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -14,16 +15,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/testing/mock"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -135,7 +135,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)

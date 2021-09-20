@@ -8,7 +8,6 @@ go_library(
         "boot_node.go",
         "eth1.go",
         "log.go",
-        "slasher.go",
         "tracing_sink.go",
         "validator.go",
     ],

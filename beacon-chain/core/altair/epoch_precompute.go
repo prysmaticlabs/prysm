@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -225,7 +225,7 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	increment := cfg.EffectiveBalanceIncrement
 	factor := cfg.BaseRewardFactor
-	baseRewardMultiplier := increment * factor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 	inactivityDenominator := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
 

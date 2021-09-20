@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -35,7 +35,7 @@ const maxBlocksPerSlot = 3
 func (s *Service) processPendingBlocksQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
-	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
+	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Could not process pending blocks")

@@ -1526,7 +1526,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	v1Server := &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher: &mockChain.ChainService{
-			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
 	server := Server{

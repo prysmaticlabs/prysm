@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/async/abool"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
@@ -107,12 +107,12 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
-	hasDir, err := fileutil.HasDir(dirPath)
+	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(dirPath); err != nil {
+		if err := file.MkdirAll(dirPath); err != nil {
 			return nil, err
 		}
 	}

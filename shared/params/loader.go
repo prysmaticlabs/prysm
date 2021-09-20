@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -45,7 +45,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		}
 	}
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
-	conf.SqrRootSlotsPerEpoch = types.Slot(mathutil.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
+	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
 	OverrideBeaconConfig(conf)
 }

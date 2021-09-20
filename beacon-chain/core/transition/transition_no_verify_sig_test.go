@@ -159,3 +159,12 @@ func TestCalculateStateRootAltair_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepNotEqual(t, params.BeaconConfig().ZeroHash, r)
 }
+
+func TestProcessBlockDifferentVersion(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 64) // Phase 0 state
+	_, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block) // Altair block
+	require.NoError(t, err)
+	_, _, err = transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
+	require.ErrorContains(t, "state and block are different version. 0 != 1", err)
+}

@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -84,7 +84,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 // via the respective epoch.
 func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState, blk block.SignedBeaconBlock) error {
 	currentEpoch := core.SlotToEpoch(blk.Block().Slot())
-	fork, err := p2putils.Fork(currentEpoch)
+	fork, err := forks.Fork(currentEpoch)
 	if err != nil {
 		return err
 	}
@@ -173,11 +173,11 @@ func createAttestationSignatureSet(
 		if err != nil {
 			return nil, err
 		}
-		ia, err := attestationutil.ConvertToIndexed(ctx, a, c)
+		ia, err := attestation.ConvertToIndexed(ctx, a, c)
 		if err != nil {
 			return nil, err
 		}
-		if err := attestationutil.IsValidAttestationIndices(ctx, ia); err != nil {
+		if err := attestation.IsValidAttestationIndices(ctx, ia); err != nil {
 			return nil, err
 		}
 		indices := ia.AttestingIndices

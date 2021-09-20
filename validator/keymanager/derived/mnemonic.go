@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -65,9 +65,9 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 		return nil
 	}
 	// Confirm the user has written down the mnemonic phrase offline.
-	_, err := promptutil.ValidatePrompt(os.Stdin, confirmationText, promptutil.ValidateConfirmation)
+	_, err := prompt.ValidatePrompt(os.Stdin, confirmationText, prompt.ValidateConfirmation)
 	if err != nil {
-		log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
+		log.Errorf("Could not confirm acknowledgement of userprompt, please enter y")
 	}
 	return nil
 }
