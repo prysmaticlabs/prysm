@@ -22,7 +22,7 @@ go_library(
         "//network/forks:__pkg__",
         "//proto/prysm/v1alpha1/attestation:__pkg__",
         "//shared/attestationutil:__pkg__",
-        "//shared/depositutil:__pkg__",
+        "//contracts/deposit:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
         "//shared/testutil:__pkg__",

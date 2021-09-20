@@ -11,7 +11,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//proto/testing:__subpackages__",
         "//shared/aggregation:__subpackages__",
-        "//shared/depositutil:__subpackages__",
+        "//contracts/deposit:__subpackages__",
         "//shared/testutil:__pkg__",
         "//slasher/rpc:__subpackages__",
         "//testing/benchmark:__pkg__",

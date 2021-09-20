@@ -7,7 +7,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/drainContracts",
     visibility = ["//visibility:private"],
     deps = [
-        "//contracts/deposit-contract:go_default_library",
+        "//contracts/deposit:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",

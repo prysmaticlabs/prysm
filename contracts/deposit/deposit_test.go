@@ -1,12 +1,12 @@
-package depositutil_test
+package deposit_test
 
 import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -19,7 +19,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k2, err := bls.RandKey()
 	require.NoError(t, err)
 
-	result, _, err := depositutil.DepositInput(k1, k2, 0)
+	result, _, err := deposit.DepositInput(k1, k2, 0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, k1.PublicKey().Marshal(), result.PublicKey)
 
@@ -46,29 +46,29 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	deposit := deposits[0]
+	dep := deposits[0]
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		params.BeaconConfig().GenesisForkVersion,
 		params.BeaconConfig().ZeroHash[:],
 	)
 	require.NoError(t, err)
-	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
+	err = deposit.VerifyDepositSignature(dep.Data, domain)
 	require.NoError(t, err)
 }
 
 func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	deposit := deposits[0]
+	dep := deposits[0]
 	domain, err := helpers.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
 		params.BeaconConfig().GenesisForkVersion,
 		params.BeaconConfig().ZeroHash[:],
 	)
 	require.NoError(t, err)
-	deposit.Data.Signature = deposit.Data.Signature[1:]
-	err = depositutil.VerifyDepositSignature(deposit.Data, domain)
+	dep.Data.Signature = dep.Data.Signature[1:]
+	err = deposit.VerifyDepositSignature(dep.Data, domain)
 	if err == nil {
 		t.Fatal("Deposit Verification succeeds with a invalid signature")
 	}
