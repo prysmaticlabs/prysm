@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -69,7 +69,7 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, da
 //    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
 //    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
 func MatchingStatus(beaconState state.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (matchedSrc, matchedTgt, matchedHead bool, err error) {
-	matchedSrc = attestationutil.CheckPointIsEqual(data.Source, cp)
+	matchedSrc = attestation.CheckPointIsEqual(data.Source, cp)
 
 	r, err := helpers.BlockRoot(beaconState, data.Target.Epoch)
 	if err != nil {
