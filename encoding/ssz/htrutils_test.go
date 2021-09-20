@@ -44,11 +44,11 @@ func TestCheckPointRoot(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func TestHistoricalRootsRoot(t *testing.T) {
+func TestByteArrayRootWithLimit(t *testing.T) {
 	testHistoricalRoots := [][]byte{{123}, {234}}
 	expected := [32]byte{70, 204, 150, 196, 89, 138, 190, 205, 65, 207, 120, 166, 179, 247, 147, 20, 29, 133, 117, 116, 151, 234, 129, 32, 22, 15, 79, 178, 98, 73, 132, 152}
 
-	result, err := ssz.HistoricalRootsRoot(testHistoricalRoots)
+	result, err := ssz.ByteArrayRootWithLimit(testHistoricalRoots, 16777216)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
 }
