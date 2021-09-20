@@ -137,6 +137,7 @@ go_library(
     importpath = "github.com/herumi/bls-eth-go-binary/bls",
     srcs = [
         "bls/bls.go",
+        "bls/eth.go",
         "bls/callback.go",
         "bls/cast.go",
         "bls/mcl.go",
