@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "api_gateway_eth.go",
         "api_gateway_v1alpha1.go",
+        "api_middleware.go",
         "data.go",
         "finality.go",
         "fork.go",
