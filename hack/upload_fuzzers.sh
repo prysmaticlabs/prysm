@@ -4,7 +4,7 @@
 # Clusterfuzz will pick up the new fuzz bundles as fuzzing jobs are run.
 
 # Build targets.
-bazel build --config=fuzz \
+bazel build --config=fuzz --config=nostamp \
   //testing/fuzz:block_fuzz_test_libfuzzer_bundle \
   //testing/fuzz:state_fuzz_test_libfuzzer_bundle \
   //testing/fuzz:ssz_encoder_attestations_test_libfuzzer_bundle
