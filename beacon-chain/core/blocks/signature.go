@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -173,11 +173,11 @@ func createAttestationSignatureSet(
 		if err != nil {
 			return nil, err
 		}
-		ia, err := attestationutil.ConvertToIndexed(ctx, a, c)
+		ia, err := attestation.ConvertToIndexed(ctx, a, c)
 		if err != nil {
 			return nil, err
 		}
-		if err := attestationutil.IsValidAttestationIndices(ctx, ia); err != nil {
+		if err := attestation.IsValidAttestationIndices(ctx, ia); err != nil {
 			return nil, err
 		}
 		indices := ia.AttestingIndices

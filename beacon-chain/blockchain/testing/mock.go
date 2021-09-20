@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -23,7 +24,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -51,8 +51,7 @@ type ChainService struct {
 	ForkChoiceStore             *protoarray.Store
 	VerifyBlkDescendantErr      error
 	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	CurrentSyncCommitteeIndices []types.CommitteeIndex
-	NextSyncCommitteeIndices    []types.CommitteeIndex
+	SyncCommitteeIndices        []types.CommitteeIndex
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
@@ -410,14 +409,9 @@ func (s *ChainService) HeadValidatorIndexToPublicKey(ctx context.Context, index 
 	return s.PublicKey, nil
 }
 
-// HeadCurrentSyncCommitteeIndices mocks HeadCurrentSyncCommitteeIndices and always return `CurrentSyncCommitteeIndices`.
-func (s *ChainService) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
-	return s.CurrentSyncCommitteeIndices, nil
-}
-
-// HeadNextSyncCommitteeIndices mocks HeadNextSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
-func (s *ChainService) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
-	return s.NextSyncCommitteeIndices, nil
+// HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
+func (s *ChainService) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+	return s.SyncCommitteeIndices, nil
 }
 
 // HeadSyncCommitteePubKeys mocks HeadSyncCommitteePubKeys and always return empty nil.

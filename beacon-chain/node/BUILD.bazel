@@ -15,6 +15,7 @@ go_library(
     ],
     deps = [
         "//api/gateway:go_default_library",
+        "//async/event:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -47,7 +48,6 @@ go_library(
         "//runtime/prereqs:go_default_library",
         "//runtime/version:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/event:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
