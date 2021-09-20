@@ -82,8 +82,8 @@ go_test(
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
         "//crypto/hash:go_default_library",
+        "//encoding/htrutils:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/htrutils:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",
     ],
