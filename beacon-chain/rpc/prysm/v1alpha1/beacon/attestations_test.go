@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -545,7 +545,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
@@ -553,7 +553,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts2[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i+len(atts)] = idxAtt
 	}
@@ -652,7 +652,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
 		indexedAtts[i] = idxAtt
 	}
@@ -955,7 +955,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		allAtts = append(allAtts, aggAtts...)
 		for _, att := range aggAtts {
 			committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-			idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+			idxAtt, err := attestation.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 			require.NoError(t, err)
 			indexedAtts[dataRoot] = append(indexedAtts[dataRoot], idxAtt)
 		}

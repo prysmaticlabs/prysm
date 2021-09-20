@@ -1,6 +1,6 @@
 // Package attestationutil contains useful helpers for converting
 // attestations into indexed form.
-package attestationutil
+package attestation
 
 import (
 	"bytes"
