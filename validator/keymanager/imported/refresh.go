@@ -8,10 +8,10 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/shared/asyncutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -49,7 +49,7 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	// We debounce events sent over the file changes channel by an interval
 	// to ensure we are not overwhelmed by a ton of events fired over the channel in
 	// a short span of time.
-	go asyncutil.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
+	go async.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
 		ev, ok := event.(fsnotify.Event)
 		if !ok {
 			log.Errorf("Type %T is not a valid file system event", event)

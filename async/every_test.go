@@ -1,18 +1,18 @@
-package runutil_test
+package async_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/async"
 )
 
 func TestEveryRuns(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	i := 0
-	runutil.RunEvery(ctx, 100*time.Millisecond, func() {
+	async.RunEvery(ctx, 100*time.Millisecond, func() {
 		i++
 	})
 

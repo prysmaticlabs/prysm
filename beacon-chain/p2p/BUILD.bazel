@@ -40,6 +40,7 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
+        "//async:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
@@ -66,7 +67,6 @@ go_library(
         "//runtime/version:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/runutil:go_default_library",
         "//time:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
@@ -129,6 +129,7 @@ go_test(
     embed = [":go_default_library"],
     flaky = True,
     deps = [
+        "//async/event:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
@@ -150,7 +151,6 @@ go_test(
         "//proto/testing:go_default_library",
         "//runtime/version:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/event:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

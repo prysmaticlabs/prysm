@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 )
 
 const (
@@ -25,7 +25,7 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		secrets []bls.SecretKey
 		publics []bls.PublicKey
 	}
-	results, err := mputil.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+	results, err := async.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
 		return &keys{secrets: secs, publics: pubs}, err
 	})

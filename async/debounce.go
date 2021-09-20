@@ -1,4 +1,4 @@
-package asyncutil
+package async
 
 import (
 	"context"

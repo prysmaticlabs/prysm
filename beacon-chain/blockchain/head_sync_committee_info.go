@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -13,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -137,7 +137,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	var headState state.BeaconState
 	var err error
-	mLock := mputil.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
+	mLock := async.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
 	mLock.Lock()
 	defer mLock.Unlock()
 

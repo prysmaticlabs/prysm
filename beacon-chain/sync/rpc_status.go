@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -19,7 +20,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ import (
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-	runutil.RunEvery(s.ctx, interval, func() {
+	async.RunEvery(s.ctx, interval, func() {
 		wg := new(sync.WaitGroup)
 		for _, pid := range s.cfg.P2P.Peers().Connected() {
 			wg.Add(1)
@@ -83,7 +83,7 @@ func (s *Service) resyncIfBehind() {
 	millisecondsPerEpoch := int64(params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot))
 	// Run sixteen times per epoch.
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
-	runutil.RunEvery(s.ctx, interval, func() {
+	async.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot())
 			// Factor number of expected minimum sync peers, to make sure that enough peers are

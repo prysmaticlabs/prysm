@@ -7,13 +7,13 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -26,7 +26,7 @@ var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
 func (s *Service) processPendingAttsQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
-	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
+	async.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
 		if err := s.processPendingAtts(s.ctx); err != nil {
 			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
