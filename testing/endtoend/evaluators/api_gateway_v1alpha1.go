@@ -451,6 +451,14 @@ func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}
 	if err != nil {
 		return err
 	}
+	if httpResp.StatusCode != http.StatusOK {
+		b := make([]byte, httpResp.ContentLength)
+		_, err = httpResp.Body.Read(b)
+		if err != nil {
+			return fmt.Errorf("could not read response body: %w", err)
+		}
+		return fmt.Errorf("response not OK, message: %s", string(b))
+	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 

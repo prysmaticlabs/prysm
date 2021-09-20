@@ -214,7 +214,8 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return err
 	}
 	// We post a top-level array, not an object, as per the spec.
-	reqJSON := []string{"0"}
+	reqJSON := &attesterDutiesResponseJson{}
+	//reqJSON := []string{"0"}
 	respJSON := &attesterDutiesResponseJson{}
 	if err := doMiddlewareJSONPostRequestV1(
 		"/validator/duties/attester/"+strconv.Itoa(sharedparams.AltairE2EForkEpoch),
@@ -245,6 +246,14 @@ func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst int
 	if err != nil {
 		return err
 	}
+	if httpResp.StatusCode != http.StatusOK {
+		b := make([]byte, httpResp.ContentLength)
+		_, err = httpResp.Body.Read(b)
+		if err != nil {
+			return fmt.Errorf("could not read response body: %w", err)
+		}
+		return fmt.Errorf("response not OK, message: %s", string(b))
+	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
@@ -261,6 +270,14 @@ func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postDa
 	)
 	if err != nil {
 		return err
+	}
+	if httpResp.StatusCode != http.StatusOK {
+		b := make([]byte, httpResp.ContentLength)
+		_, err = httpResp.Body.Read(b)
+		if err != nil {
+			return fmt.Errorf("could not read response body: %w", err)
+		}
+		return fmt.Errorf("response not OK, message: %s", string(b))
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
