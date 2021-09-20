@@ -1,10 +1,10 @@
-package htrutils_test
+package ssz_test
 
 import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	htrutils2 "github.com/prysmaticlabs/prysm/encoding/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -12,12 +12,12 @@ func TestGetDepth(t *testing.T) {
 	trieSize := uint64(896745231)
 	expected := uint8(30)
 
-	result := htrutils2.Depth(trieSize)
+	result := ssz.Depth(trieSize)
 	assert.Equal(t, expected, result)
 }
 
 func TestMerkleizeCountGreaterThanLimit(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -30,11 +30,11 @@ func TestMerkleizeCountGreaterThanLimit(t *testing.T) {
 			t.Errorf("The code did not panic.")
 		}
 	}()
-	htrutils2.Merkleize(hashFn, count, limit, leafIndexer)
+	ssz.Merkleize(hashFn, count, limit, leafIndexer)
 }
 
 func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(0)
 	limit := uint64(0)
 	chunks := [][]byte{{}}
@@ -42,12 +42,12 @@ func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
 		return chunks[i]
 	}
 	expected := [32]byte{}
-	result := htrutils2.Merkleize(hashFn, count, limit, leafIndexer)
+	result := ssz.Merkleize(hashFn, count, limit, leafIndexer)
 	assert.Equal(t, expected, result)
 }
 
 func TestMerkleizeNormalPath(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(3)
 	chunks := [][]byte{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}}
@@ -55,12 +55,12 @@ func TestMerkleizeNormalPath(t *testing.T) {
 		return chunks[i]
 	}
 	expected := [32]byte{95, 27, 253, 237, 215, 58, 147, 198, 175, 194, 180, 231, 154, 130, 205, 68, 146, 112, 225, 86, 6, 103, 186, 82, 7, 142, 33, 189, 174, 56, 199, 173}
-	result := htrutils2.Merkleize(hashFn, count, limit, leafIndexer)
+	result := ssz.Merkleize(hashFn, count, limit, leafIndexer)
 	assert.Equal(t, expected, result)
 }
 
 func TestConstructProofCountGreaterThanLimit(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -73,11 +73,11 @@ func TestConstructProofCountGreaterThanLimit(t *testing.T) {
 			t.Errorf("The code did not panic.")
 		}
 	}()
-	htrutils2.ConstructProof(hashFn, count, limit, leafIndexer, index)
+	ssz.ConstructProof(hashFn, count, limit, leafIndexer, index)
 }
 
 func TestConstructProofIndexGreaterThanEqualToLimit(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(1)
 	limit := uint64(1)
 	chunks := [][]byte{{}}
@@ -90,11 +90,11 @@ func TestConstructProofIndexGreaterThanEqualToLimit(t *testing.T) {
 			t.Errorf("The code did not panic.")
 		}
 	}()
-	htrutils2.ConstructProof(hashFn, count, limit, leafIndexer, index)
+	ssz.ConstructProof(hashFn, count, limit, leafIndexer, index)
 }
 
 func TestConstructProofNormalPath(t *testing.T) {
-	hashFn := htrutils2.NewHasherFunc(hash.CustomSHA256Hasher())
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	count := uint64(2)
 	limit := uint64(3)
 	chunks := [][]byte{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}}
@@ -106,7 +106,7 @@ func TestConstructProofNormalPath(t *testing.T) {
 		{1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		{245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169, 39, 89, 251, 75},
 	}
-	result := htrutils2.ConstructProof(hashFn, count, limit, leafIndexer, index)
+	result := ssz.ConstructProof(hashFn, count, limit, leafIndexer, index)
 	assert.Equal(t, len(expected), len(result))
 	for i, v := range expected {
 		assert.DeepEqual(t, result[i], v)

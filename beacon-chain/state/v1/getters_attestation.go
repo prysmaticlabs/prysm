@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	htrutils2 "github.com/prysmaticlabs/prysm/encoding/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -79,7 +79,7 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation
 		roots[i] = pendingRoot[:]
 	}
 
-	attsRootsRoot, err := htrutils2.BitwiseMerkleize(
+	attsRootsRoot, err := ssz.BitwiseMerkleize(
 		hasher,
 		roots,
 		uint64(len(roots)),
@@ -95,11 +95,11 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation
 	// We need to mix in the length of the slice.
 	attsLenRoot := make([]byte, 32)
 	copy(attsLenRoot, attsLenBuf.Bytes())
-	res := htrutils2.MixInLength(attsRootsRoot, attsLenRoot)
+	res := ssz.MixInLength(attsRootsRoot, attsLenRoot)
 	return res, nil
 }
 
-func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils2.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}
