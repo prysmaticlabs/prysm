@@ -79,7 +79,7 @@ func (s *Service) validateSyncCommitteeMessage(
 		return pubsub.ValidationIgnore
 	}
 
-	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
+	committeeIndices, err := s.cfg.Chain.HeadSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
