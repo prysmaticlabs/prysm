@@ -400,36 +400,36 @@ func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
 }
 
 // HeadPublicKeyToValidatorIndex mocks HeadPublicKeyToValidatorIndex and always return 0 and true.
-func (s *ChainService) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
+func (s *ChainService) HeadPublicKeyToValidatorIndex(_ context.Context, _ [48]byte) (types.ValidatorIndex, bool) {
 	return 0, true
 }
 
 // HeadValidatorIndexToPublicKey mocks HeadValidatorIndexToPublicKey and always return empty and nil.
-func (s *ChainService) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
+func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.ValidatorIndex) ([48]byte, error) {
 	return s.PublicKey, nil
 }
 
 // HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
-func (s *ChainService) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
 	return s.SyncCommitteeIndices, nil
 }
 
 // HeadSyncCommitteePubKeys mocks HeadSyncCommitteePubKeys and always return empty nil.
-func (s *ChainService) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error) {
+func (s *ChainService) HeadSyncCommitteePubKeys(_ context.Context, _ types.Slot, _ types.CommitteeIndex) ([][]byte, error) {
 	return s.SyncCommitteePubkeys, nil
 }
 
 // HeadSyncCommitteeDomain mocks HeadSyncCommitteeDomain and always return empty nil.
-func (s *ChainService) HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncCommitteeDomain(_ context.Context, _ types.Slot) ([]byte, error) {
 	return s.SyncCommitteeDomain, nil
 }
 
 // HeadSyncSelectionProofDomain mocks HeadSyncSelectionProofDomain and always return empty nil.
-func (s *ChainService) HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncSelectionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
 	return s.SyncSelectionProofDomain, nil
 }
 
 // HeadSyncContributionProofDomain mocks HeadSyncContributionProofDomain and always return empty nil.
-func (s *ChainService) HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
 	return s.SyncContributionProofDomain, nil
 }
