@@ -316,7 +316,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 							s.ctx,
 							s.addDigestAndIndexToTopic(topic, digest, i),
 							i,
-							params.BeaconNetworkConfig().MinimumPeersInSubnet,
+							flags.Get().MinimumPeersPerSubnet,
 						)
 						if err != nil {
 							log.WithError(err).Debug("Could not search for peers")
@@ -431,7 +431,7 @@ func (s *Service) subscribeAggregatorSubnet(
 	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
@@ -457,7 +457,7 @@ func (s *Service) subscribeSyncSubnet(
 	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to sync gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
@@ -516,7 +516,7 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.
 							s.ctx,
 							s.addDigestAndIndexToTopic(topic, digest, i),
 							i,
-							params.BeaconNetworkConfig().MinimumPeersInSubnet,
+							flags.Get().MinimumPeersPerSubnet,
 						)
 						if err != nil {
 							log.WithError(err).Debug("Could not search for peers")
@@ -595,7 +595,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		// perform a search for peers with the desired committee index.
-		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
@@ -620,7 +620,7 @@ func (s *Service) unSubscribeFromTopic(topic string) {
 // find if we have peers who are subscribed to the same subnet
 func (s *Service) validPeersExist(subnetTopic string) bool {
 	numOfPeers := s.cfg.P2P.PubSub().ListPeers(subnetTopic + s.cfg.P2P.Encoding().ProtocolSuffix())
-	return uint64(len(numOfPeers)) >= params.BeaconNetworkConfig().MinimumPeersInSubnet
+	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
 }
 
 func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
@@ -661,10 +661,10 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	for _, sub := range wantedSubs {
 		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.P2P.Encoding().ProtocolSuffix()
 		peers := s.cfg.P2P.PubSub().ListPeers(subnetTopic)
-		if len(peers) > int(params.BeaconNetworkConfig().MinimumPeersInSubnet) {
+		if len(peers) > flags.Get().MinimumPeersPerSubnet {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
-			peers = peers[:params.BeaconNetworkConfig().MinimumPeersInSubnet]
+			peers = peers[:flags.Get().MinimumPeersPerSubnet]
 		}
 		// Add peer to peer map.
 		for _, p := range peers {
