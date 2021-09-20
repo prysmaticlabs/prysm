@@ -259,7 +259,7 @@ func (vs *Server) validatorStatus(
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
-		deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+		dep, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
@@ -272,13 +272,13 @@ func (vs *Server) validatorStatus(
 			log.Warn("Could not compute domain")
 			return resp, nonExistentIndex
 		}
-		if err := deposit.VerifyDepositSignature(deposit.Data, domain); err != nil {
+		if err := deposit.VerifyDepositSignature(dep.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
 			log.Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
 		}
 		// Set validator deposit status if their deposit is visible.
-		resp.Status = depositStatus(deposit.Data.Amount)
+		resp.Status = depositStatus(dep.Data.Amount)
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 		return resp, nonExistentIndex

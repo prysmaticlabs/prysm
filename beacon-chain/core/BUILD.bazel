@@ -6,11 +6,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//contracts/deposit:__pkg__",
         "//fuzz:__pkg__",
         "//network/forks:__pkg__",
         "//proto/prysm/v1alpha1/attestation:__pkg__",
         "//shared/attestationutil:__pkg__",
-        "//contracts/deposit:__pkg__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
         "//shared/testutil:__pkg__",
