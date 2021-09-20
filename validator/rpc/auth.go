@@ -63,7 +63,7 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 }
 
 // Login to authenticate with the validator RPC API using a password.
-func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+func (s *Server) Login(_ context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
@@ -86,7 +86,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 }
 
 // HasUsedWeb checks if the user has authenticated via the web interface.
-func (s *Server) HasUsedWeb(ctx context.Context, _ *empty.Empty) (*pb.HasUsedWebResponse, error) {
+func (s *Server) HasUsedWeb(_ context.Context, _ *empty.Empty) (*pb.HasUsedWebResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
@@ -99,7 +99,7 @@ func (s *Server) HasUsedWeb(ctx context.Context, _ *empty.Empty) (*pb.HasUsedWeb
 }
 
 // Logout a user by invalidating their JWT key.
-func (s *Server) Logout(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
+func (s *Server) Logout(_ context.Context, _ *empty.Empty) (*empty.Empty, error) {
 	// Invalidate the old JWT key, making all requests done with its token fail.
 	jwtKey, err := createRandomJWTKey()
 	if err != nil {
@@ -123,7 +123,7 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 }
 
 // ChangePassword allows changing the RPC password via the API as an authenticated method.
-func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
+func (s *Server) ChangePassword(_ context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
 	if req.CurrentPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Current password cannot be empty")
 	}
@@ -164,7 +164,7 @@ func (s *Server) SaveHashedPassword(password string) error {
 // Interval in which we should check if a user has not yet used the RPC Signup endpoint
 // which means they are using the --web flag and someone could come in and signup for them
 // if they have their web host:port exposed to the Internet.
-func (s *Server) checkUserSignup(ctx context.Context) {
+func (s *Server) checkUserSignup(_ context.Context) {
 	ticker := time.NewTicker(checkUserSignupInterval)
 	defer ticker.Stop()
 	for {
