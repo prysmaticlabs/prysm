@@ -433,7 +433,7 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_c_bata_go_prompt",
-        importpath = "github.com/c-bata/go-prompt",
+        importpath = "github.com/c-bata/go-userprompt",
         sum = "h1:uyKRz6Z6DUyj49QVijyM339UJV9yhbr70gESwbNU3e0=",
         version = "v0.2.2",
     )
@@ -1433,8 +1433,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:LEw2KkKciJEr3eKDLzdZ/rjzSR6Y+BS6xKxdA78Bq6s=",
-        version = "v0.0.0-20210130185500-57372fb27371",
+        sum = "h1:wCMygKUQhmcQAjlk2Gquzq6dLmyMv2kF+llRspoRgrk=",
+        version = "v0.0.0-20210917013441-d37c07cfda4e",
     )
 
     go_repository(

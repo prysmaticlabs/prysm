@@ -6,7 +6,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -23,7 +23,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	var backupsDir string
 	var err error
 	if outputDir != "" {
-		backupsDir, err = fileutil.ExpandPath(outputDir)
+		backupsDir, err = file.ExpandPath(outputDir)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.HandleBackupDir(backupsDir, permissionOverride); err != nil {
+	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_validatordb_%d.backup", time.Now().Unix()))
