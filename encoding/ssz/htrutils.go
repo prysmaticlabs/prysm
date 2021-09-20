@@ -1,4 +1,3 @@
-// Package //encoding/sszls defines HashTreeRoot utility functions.
 package ssz
 
 import (
