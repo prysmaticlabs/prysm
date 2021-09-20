@@ -1,29 +1,26 @@
 package evaluators
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"time"
+	"strconv"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/proto/eth/service"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	sharedparams "github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
-
-type stateValidatorsResponseJson struct {
-	Data []*validatorContainerJson `json:"data"`
-}
-
-type validatorContainerJson struct {
-	Index     string         `json:"index"`
-	Balance   string         `json:"balance"`
-	Status    string         `json:"status"`
-	Validator *validatorJson `json:"validator"`
-}
 
 type validatorJson struct {
 	PublicKey                  string `json:"pubkey"`
@@ -35,221 +32,239 @@ type validatorJson struct {
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
 }
-
-// APIGatewayV1VerifyIntegrity of our API gateway for the Prysm v1 API.
-// This ensures our gRPC HTTP gateway returns good data compared to some fixtures.
-var APIGatewayV1VerifyIntegrity = e2etypes.Evaluator{
-	Name:       "api_gateway_v1_verify_integrity_epoch_%d",
-	Policy:     policies.OnEpoch(1),
-	Evaluation: apiVerifyValidators,
+type validatorContainerJson struct {
+	Index     string         `json:"index"`
+	Balance   string         `json:"balance"`
+	Status    string         `json:"status"`
+	Validator *validatorJson `json:"validator"`
 }
 
-func apiVerifyValidators(conns ...*grpc.ClientConn) error {
-	count := len(conns)
-	for i := 0; i < count; i++ {
-		resp, err := http.Get(
-			fmt.Sprintf("http://localhost:%d/eth/v1/beacon/states/head/validators?status=exited", e2e.TestParams.BeaconNodeRPCPort+i+30),
-		)
-		if err != nil {
-			// Continue if the connection fails, regular flake.
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("expected status code OK for beacon node %d, received %v with body %s", i, resp.StatusCode, body)
-		}
-		validators := &stateValidatorsResponseJson{}
-		if err = json.NewDecoder(resp.Body).Decode(&validators); err != nil {
-			return err
-		}
-		if len(validators.Data) != 0 {
-			return fmt.Errorf("expected no exited validators to be returned from the API request for beacon node %d", i)
-		}
-		resp, err = http.Get(
-			fmt.Sprintf("http://localhost:%d/eth/v1/beacon/states/head/validators?id=100&id=200", e2e.TestParams.BeaconNodeRPCPort+i+30),
-		)
-		if err != nil {
-			// Continue if the connection fails, regular flake.
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("expected status code OK for beacon node %d, received %v with body %s", i, resp.StatusCode, body)
-		}
-		validators = &stateValidatorsResponseJson{}
-		if err = json.NewDecoder(resp.Body).Decode(&validators); err != nil {
-			return err
-		}
-		if len(validators.Data) != 2 {
-			return fmt.Errorf("expected 2 validators to be returned from the API request for beacon node %d", i)
-		}
-		if err = assertValidator(validators.Data[0]); err != nil {
-			return errors.Wrapf(err, "incorrect validator data returned from the API request for beacon node %d", i)
-		}
-		if err = assertValidator(validators.Data[1]); err != nil {
-			return errors.Wrapf(err, "incorrect validator data returned from the API request for beacon node %d", i)
-		}
+// APIMiddlewareVerifyIntegrity tests our API Middleware for the official Ethereum API.
+// This ensures our API Middleware returns good data compared to gRPC.
+var APIMiddlewareVerifyIntegrity = e2etypes.Evaluator{
+	Name:       "api_middleware_verify_integrity_epoch_%d",
+	Policy:     policies.OnEpoch(sharedparams.AltairE2EForkEpoch),
+	Evaluation: apiMiddlewareVerify,
+}
 
-		if err = resp.Body.Close(); err != nil {
+const (
+	v1MiddlewarePathTemplate = "http://localhost:%d/eth/v1"
+)
+
+func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
+	for beaconNodeIdx, conn := range conns {
+		if err := runAPIComparisonFunctions(
+			beaconNodeIdx,
+			conn,
+			withCompareValidatorsEth,
+			withCompareSyncCommittee,
+			withCompareAttesterDuties,
+		); err != nil {
 			return err
 		}
-		time.Sleep(connTimeDelay)
 	}
 	return nil
 }
 
-func assertValidator(v *validatorContainerJson) error {
-	if v == nil {
+func withCompareValidatorsEth(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type stateValidatorsResponseJson struct {
+		Data []*validatorContainerJson `json:"data"`
+	}
+	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	resp, err := beaconClient.ListValidators(ctx, &ethpbv1.StateValidatorsRequest{
+		StateId: []byte("head"),
+		Status:  []ethpbv1.ValidatorStatus{ethpbv1.ValidatorStatus_EXITED},
+	})
+	if err != nil {
+		return err
+	}
+	respJSON := &stateValidatorsResponseJson{}
+	if err := doMiddlewareJSONGetRequestV1(
+		"/beacon/states/head/validators?status=exited",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	if len(respJSON.Data) != len(resp.Data) {
+		return fmt.Errorf(
+			"API Middleware number of validators %d does not match gRPC %d",
+			len(respJSON.Data),
+			len(resp.Data),
+		)
+	}
+	resp, err = beaconClient.ListValidators(ctx, &ethpbv1.StateValidatorsRequest{
+		StateId: []byte("head"),
+		Id:      [][]byte{[]byte("100"), []byte("200")},
+	})
+	if err != nil {
+		return err
+	}
+	if err := doMiddlewareJSONGetRequestV1(
+		"/beacon/states/head/validators?id=100&id=200",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	if len(respJSON.Data) != len(resp.Data) {
+		return fmt.Errorf(
+			"API Middleware number of validators %d does not match gRPC %d",
+			len(respJSON.Data),
+			len(resp.Data),
+		)
+	}
+	if err = assertValidator(respJSON.Data[0], resp.Data[0]); err != nil {
+		return errors.Wrapf(err, "incorrect validator data returned from the API request")
+	}
+	if err = assertValidator(respJSON.Data[1], resp.Data[1]); err != nil {
+		return errors.Wrapf(err, "incorrect validator data returned from the API request")
+	}
+	return nil
+}
+
+func assertValidator(jsonVal *validatorContainerJson, val *ethpbv1.ValidatorContainer) error {
+	if jsonVal == nil {
 		return errors.New("validator is nil")
 	}
-	if v.Index != "100" && v.Index != "200" {
-		return fmt.Errorf("unexpected validator index '%s'", v.Index)
+	if jsonVal.Index != "100" && jsonVal.Index != "200" {
+		return fmt.Errorf("unexpected validator index '%s'", jsonVal.Index)
 	}
-
-	valid := false
-	var field, expected, actual string
-
-	switch v.Index {
-	case "100":
-		if v.Balance != "32000000000" {
-			field = "Balance"
-			expected = "32000000000"
-			actual = v.Balance
-			break
-		}
-		if v.Status != "active_ongoing" {
-			field = "Status"
-			expected = "active_ongoing"
-			actual = v.Status
-			break
-		}
-		if v.Validator == nil {
-			return errors.New("validator is nil")
-		}
-		if v.Validator.PublicKey != "0x8931cd39ec3133b6ec91f26eec4de555cd7966086b1993dfe69c2b16e80adc62ce82d353b3356d8cc249e4e2d4254122" {
-			field = "PublicKey"
-			expected = "0x8931cd39ec3133b6ec91f26eec4de555cd7966086b1993dfe69c2b16e80adc62ce82d353b3356d8cc249e4e2d4254122"
-			actual = v.Validator.PublicKey
-			break
-		}
-		if v.Validator.WithdrawalCredentials != "0x00b5a389a138ec5069e430a91ec2884660fbb77a4bffdefd03f5e5769c2ba1a9" {
-			field = "WithdrawalCredentials"
-			expected = "0x00b5a389a138ec5069e430a91ec2884660fbb77a4bffdefd03f5e5769c2ba1a9"
-			actual = v.Validator.WithdrawalCredentials
-			break
-		}
-		if v.Validator.EffectiveBalance != "32000000000" {
-			field = "EffectiveBalance"
-			expected = "32000000000"
-			actual = v.Validator.EffectiveBalance
-			break
-		}
-		if v.Validator.Slashed {
-			field = "Slashed"
-			expected = "32000000000"
-			actual = "true"
-			break
-		}
-		if v.Validator.ActivationEligibilityEpoch != "0" {
-			field = "ActivationEligibilityEpoch"
-			expected = "0"
-			actual = v.Validator.ActivationEligibilityEpoch
-			break
-		}
-		if v.Validator.ActivationEpoch != "0" {
-			field = "ActivationEpoch"
-			expected = "0"
-			actual = v.Validator.ActivationEpoch
-			break
-		}
-		if v.Validator.ExitEpoch != "18446744073709551615" {
-			field = "ExitEpoch"
-			expected = "18446744073709551615"
-			actual = v.Validator.ExitEpoch
-			break
-		}
-		if v.Validator.WithdrawableEpoch != "18446744073709551615" {
-			field = "WithdrawableEpoch"
-			expected = "18446744073709551615"
-			actual = v.Validator.WithdrawableEpoch
-			break
-		}
-		valid = true
-	case "200":
-		if v.Balance != "32000000000" {
-			field = "Balance"
-			expected = "32000000000"
-			actual = v.Balance
-			break
-		}
-		if v.Status != "active_ongoing" {
-			field = "Status"
-			expected = "active_ongoing"
-			actual = v.Status
-			break
-		}
-		if v.Validator == nil {
-			return errors.New("validator is nil")
-		}
-		if v.Validator.PublicKey != "0x8b4ff71ee947785f545c017bbb9ce84c3f6a90097368cf79663b2e11acc53e18e8f7159919784f4d28282cb39a7113f7" {
-			field = "PublicKey"
-			expected = "0x8b4ff71ee947785f545c017bbb9ce84c3f6a90097368cf79663b2e11acc53e18e8f7159919784f4d28282cb39a7113f7"
-			actual = v.Validator.PublicKey
-			break
-		}
-		if v.Validator.WithdrawalCredentials != "0x00b9ea0e53f64def81fe2e783a8bb02e57fb519f56a7224f93f2d37e1572417d" {
-			field = "WithdrawalCredentials"
-			expected = "0x00b9ea0e53f64def81fe2e783a8bb02e57fb519f56a7224f93f2d37e1572417d"
-			actual = v.Validator.WithdrawalCredentials
-			break
-		}
-		if v.Validator.EffectiveBalance != "32000000000" {
-			field = "EffectiveBalance"
-			expected = "32000000000"
-			actual = v.Validator.EffectiveBalance
-			break
-		}
-		if v.Validator.Slashed {
-			field = "Slashed"
-			expected = "32000000000"
-			actual = "true"
-			break
-		}
-		if v.Validator.ActivationEligibilityEpoch != "0" {
-			field = "ActivationEligibilityEpoch"
-			expected = "0"
-			actual = v.Validator.ActivationEligibilityEpoch
-			break
-		}
-		if v.Validator.ActivationEpoch != "0" {
-			field = "ActivationEpoch"
-			expected = "0"
-			actual = v.Validator.ActivationEpoch
-			break
-		}
-		if v.Validator.ExitEpoch != "18446744073709551615" {
-			field = "ExitEpoch"
-			expected = "18446744073709551615"
-			actual = v.Validator.ExitEpoch
-			break
-		}
-		if v.Validator.WithdrawableEpoch != "18446744073709551615" {
-			field = "WithdrawableEpoch"
-			expected = "18446744073709551615"
-			actual = v.Validator.WithdrawableEpoch
-			break
-		}
-		valid = true
+	if jsonVal.Balance != strconv.FormatUint(val.Balance, 10) {
+		return buildFieldError("Balance", strconv.FormatUint(val.Balance, 10), jsonVal.Balance)
 	}
-
-	if !valid {
-		return fmt.Errorf("value of '%s' was expected to be '%s' but was '%s'", field, expected, actual)
+	if jsonVal.Status != strings.ToLower(val.Status.String()) {
+		return buildFieldError("Status", strings.ToLower(val.Status.String()), jsonVal.Status)
+	}
+	if jsonVal.Validator == nil {
+		return errors.New("validator is nil")
+	}
+	if jsonVal.Validator.PublicKey != hexutil.Encode(val.Validator.Pubkey) {
+		return buildFieldError("PublicKey", hexutil.Encode(val.Validator.Pubkey), jsonVal.Validator.PublicKey)
+	}
+	if jsonVal.Validator.Slashed != val.Validator.Slashed {
+		return buildFieldError("Slashed", strconv.FormatBool(val.Validator.Slashed), strconv.FormatBool(jsonVal.Validator.Slashed))
 	}
 	return nil
+}
+
+func withCompareSyncCommittee(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type syncCommitteeValidatorsJson struct {
+		Validators          []string   `json:"validators"`
+		ValidatorAggregates [][]string `json:"validator_aggregates"`
+	}
+	type syncCommitteesResponseJson struct {
+		Data *syncCommitteeValidatorsJson `json:"data"`
+	}
+	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	resp, err := beaconClient.ListSyncCommittees(ctx, &ethpbv2.StateSyncCommitteesRequest{
+		StateId: []byte("head"),
+	})
+	if err != nil {
+		return err
+	}
+	respJSON := &syncCommitteesResponseJson{}
+	if err := doMiddlewareJSONGetRequestV1(
+		"/beacon/states/head/sync_committees",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	if len(respJSON.Data.Validators) != len(resp.Data.Validators) {
+		return fmt.Errorf(
+			"API Middleware number of validators %d does not match gRPC %d",
+			len(respJSON.Data.Validators),
+			len(resp.Data.Validators),
+		)
+	}
+	if len(respJSON.Data.ValidatorAggregates) != len(resp.Data.ValidatorAggregates) {
+		return fmt.Errorf(
+			"API Middleware number of validator aggregates %d does not match gRPC %d",
+			len(respJSON.Data.ValidatorAggregates),
+			len(resp.Data.ValidatorAggregates),
+		)
+	}
+	return nil
+}
+
+func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	type attesterDutyJson struct {
+		Pubkey                  string `json:"pubkey" hex:"true"`
+		ValidatorIndex          string `json:"validator_index"`
+		CommitteeIndex          string `json:"committee_index"`
+		CommitteeLength         string `json:"committee_length"`
+		CommitteesAtSlot        string `json:"committees_at_slot"`
+		ValidatorCommitteeIndex string `json:"validator_committee_index"`
+		Slot                    string `json:"slot"`
+	}
+	type attesterDutiesResponseJson struct {
+		DependentRoot string              `json:"dependent_root" hex:"true"`
+		Data          []*attesterDutyJson `json:"data"`
+	}
+	ctx := context.Background()
+	validatorClient := service.NewBeaconValidatorClient(conn)
+	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
+		Epoch: sharedparams.AltairE2EForkEpoch,
+		Index: []types.ValidatorIndex{0},
+	})
+	if err != nil {
+		return err
+	}
+	// We post a top-level array, not an object, as per the spec.
+	reqJSON := []string{"0"}
+	respJSON := &attesterDutiesResponseJson{}
+	if err := doMiddlewareJSONPostRequestV1(
+		"/validator/duties/attester/"+strconv.Itoa(sharedparams.AltairE2EForkEpoch),
+		beaconNodeIdx,
+		reqJSON,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	if respJSON.DependentRoot != hexutil.Encode(resp.DependentRoot) {
+		return buildFieldError("DependentRoot", string(resp.DependentRoot), respJSON.DependentRoot)
+	}
+	if len(respJSON.Data) != len(resp.Data) {
+		return fmt.Errorf(
+			"API Middleware number of duties %d does not match gRPC %d",
+			len(respJSON.Data),
+			len(resp.Data),
+		)
+	}
+	return nil
+}
+
+func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst interface{}) error {
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+30)
+	httpResp, err := http.Get(
+		basePath + requestPath,
+	)
+	if err != nil {
+		return err
+	}
+	return json.NewDecoder(httpResp.Body).Decode(&dst)
+}
+
+func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData interface{}, dst interface{}) error {
+	b, err := json.Marshal(postData)
+	if err != nil {
+		return err
+	}
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+30)
+	httpResp, err := http.Post(
+		basePath+requestPath,
+		"application/json",
+		bytes.NewBuffer(b),
+	)
+	if err != nil {
+		return err
+	}
+	return json.NewDecoder(httpResp.Body).Decode(&dst)
+}
+
+func buildFieldError(field, expected, actual string) error {
+	return fmt.Errorf("value of '%s' was expected to be '%s' but was '%s'", field, expected, actual)
 }
