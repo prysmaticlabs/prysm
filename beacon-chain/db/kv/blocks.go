@@ -594,7 +594,7 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 }
 
 // unmarshal block from marshaled proto beacon block bytes to versioned beacon block struct type.
-func unmarshalBlock(ctx context.Context, enc []byte) (block.SignedBeaconBlock, error) {
+func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -621,7 +621,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (block.SignedBeaconBlock, e
 }
 
 // marshal versioned beacon block from struct type down to bytes.
-func marshalBlock(ctx context.Context, blk block.SignedBeaconBlock) ([]byte, error) {
+func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error) {
 	obj, err := blk.MarshalSSZ()
 	if err != nil {
 		return nil, err
