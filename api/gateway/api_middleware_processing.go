@@ -56,6 +56,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Re
 
 // PrepareRequestForProxying applies additional logic to the request so that it can be correctly proxied to grpc-gateway.
 func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *http.Request) ErrorJson {
+	req.URL.Path = "/internal" + req.URL.Path
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""

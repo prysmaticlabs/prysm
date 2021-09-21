@@ -138,6 +138,10 @@ func (g *Gateway) Start() {
 		})
 	}
 
+	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+		go g.registerApiMiddleware()
+	}
+
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
 		Handler: corsMux,
@@ -151,10 +155,6 @@ func (g *Gateway) Start() {
 			return
 		}
 	}()
-
-	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
-		go g.registerApiMiddleware()
-	}
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
@@ -277,10 +277,6 @@ func (g *Gateway) registerApiMiddleware() {
 		ProxyAddress:    g.apiMiddlewareAddr,
 		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
-	log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
-	if err := proxy.Run(); err != http.ErrServerClosed {
-		log.WithError(err).Error("Failed to start API middleware")
-		g.startFailure = err
-		return
-	}
+	log.Info("Starting API middleware")
+	proxy.Run(g.mux)
 }

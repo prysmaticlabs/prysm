@@ -69,7 +69,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 	}
 	v1PbHandler := gateway.PbMux{
 		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
+		Patterns:      []string{"/internal/eth/v1/", "/internal/eth/v2/"},
 		Mux:           v1Mux,
 	}
 
