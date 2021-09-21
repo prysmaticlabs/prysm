@@ -1,4 +1,4 @@
-package slashutil
+package slashings
 
 import "github.com/prysmaticlabs/prysm/shared/params"
 

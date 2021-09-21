@@ -14,12 +14,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/components",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
+        "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/features:go_default_library",
         "//contracts/deposit:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/cmd:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//testing/endtoend/helpers:go_default_library",

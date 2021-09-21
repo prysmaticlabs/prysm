@@ -1,4 +1,4 @@
-package slashutil
+package slashings
 
 import (
 	"testing"

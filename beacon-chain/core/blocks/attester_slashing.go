@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
 )
 
 // ProcessAttesterSlashings is one of the operations performed
@@ -128,7 +128,7 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	att1 := &ethpb.IndexedAttestation{Data: data1}
 	att2 := &ethpb.IndexedAttestation{Data: data2}
 	// Check if att1 is surrounding att2.
-	isSurroundVote := slashutil.IsSurround(att1, att2)
+	isSurroundVote := slashings.IsSurround(att1, att2)
 	return isDoubleVote || isSurroundVote
 }
 

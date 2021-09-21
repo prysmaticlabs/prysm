@@ -44,7 +44,7 @@ go_test(
         "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/interop:go_default_library",
+        "//runtime/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

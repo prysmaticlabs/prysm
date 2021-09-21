@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"go.opencensus.io/trace"
 )
@@ -45,7 +45,7 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	signingRootsDiffer := slashutil.SigningRootsDiffer(existingSigningRoot, signingRoot)
+	signingRootsDiffer := slashings.SigningRootsDiffer(existingSigningRoot, signingRoot)
 
 	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
 	// than or equal to the minimum target epoch present in that signer’s attestations.
