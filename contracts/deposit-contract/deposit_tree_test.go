@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/interop"
+	interop2 "github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -25,9 +25,9 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 
 	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
 
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
+	privKeys, pubKeys, err := interop2.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
 	require.NoError(t, err)
-	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop2.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 
 	testAcc.TxOpts.Value = depositcontract.Amount32Eth()
@@ -63,9 +63,9 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 
 	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
 
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
+	privKeys, pubKeys, err := interop2.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
 	require.NoError(t, err)
-	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop2.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 	testAcc.TxOpts.Value = depositcontract.Amount32Eth()
 

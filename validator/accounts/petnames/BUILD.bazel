@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["names.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/petnames",
+    importpath = "github.com/prysmaticlabs/prysm/validator/accounts/petnames",
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/hash:go_default_library",

@@ -1,4 +1,4 @@
-package slashutil
+package slashings
 
 import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 

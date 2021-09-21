@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/interop"
+	interop2 "github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -25,9 +25,9 @@ func TestRegister_Below1ETH(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate deposit data
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
+	privKeys, pubKeys, err := interop2.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
 	require.NoError(t, err)
-	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop2.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 
 	var depositDataRoot [32]byte
@@ -44,9 +44,9 @@ func TestValidatorRegister_OK(t *testing.T) {
 	testAccount.TxOpts.Value = depositcontract.Amount32Eth()
 
 	// Generate deposit data
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
+	privKeys, pubKeys, err := interop2.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
 	require.NoError(t, err)
-	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop2.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 
 	var depositDataRoot [32]byte
@@ -89,9 +89,9 @@ func TestDrain(t *testing.T) {
 	testAccount.TxOpts.Value = depositcontract.Amount32Eth()
 
 	// Generate deposit data
-	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
+	privKeys, pubKeys, err := interop2.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)
 	require.NoError(t, err)
-	depositDataItems, depositDataRoots, err := interop.DepositDataFromKeys(privKeys, pubKeys)
+	depositDataItems, depositDataRoots, err := interop2.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 
 	var depositDataRoot [32]byte
