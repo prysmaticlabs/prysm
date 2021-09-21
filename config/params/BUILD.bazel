@@ -17,7 +17,7 @@ go_library(
         "testutils.go",
         "values.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/params",
+    importpath = "github.com/prysmaticlabs/prysm/config/params",
     visibility = ["//visibility:public"],
     deps = [
         "//math:go_default_library",
