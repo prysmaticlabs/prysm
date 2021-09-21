@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -25,7 +26,7 @@ var _ runtime.Service = (*Gateway)(nil)
 type PbMux struct {
 	Registrations []PbHandlerRegistration // Protobuf registrations to be registered in Mux.
 	Patterns      []string                // URL patterns that will be handled by Mux.
-	Mux           *gwruntime.ServeMux     // The mux that will be used for grpc-gateway requests.
+	Mux           *gwruntime.ServeMux     // The router that will be used for grpc-gateway requests.
 }
 
 // PbHandlerRegistration is a function that registers a protobuf handler.
@@ -40,12 +41,11 @@ type Gateway struct {
 	pbHandlers                   []PbMux
 	muxHandler                   MuxHandler
 	maxCallRecvMsgSize           uint64
-	mux                          *http.ServeMux
+	router                       *mux.Router
 	server                       *http.Server
 	cancel                       context.CancelFunc
 	remoteCert                   string
 	gatewayAddr                  string
-	apiMiddlewareAddr            string
 	apiMiddlewareEndpointFactory EndpointFactory
 	ctx                          context.Context
 	startFailure                 error
@@ -64,7 +64,7 @@ func New(
 	g := &Gateway{
 		pbHandlers:     pbHandlers,
 		muxHandler:     muxHandler,
-		mux:            http.NewServeMux(),
+		router:         mux.NewRouter(),
 		gatewayAddr:    gatewayAddress,
 		ctx:            ctx,
 		remoteAddr:     remoteAddr,
@@ -73,9 +73,9 @@ func New(
 	return g
 }
 
-// WithMux allows adding a custom http.ServeMux to the gateway.
-func (g *Gateway) WithMux(m *http.ServeMux) *Gateway {
-	g.mux = m
+// WithRouter allows adding a custom mux router to the gateway.
+func (g *Gateway) WithRouter(r *mux.Router) *Gateway {
+	g.router = r
 	return g
 }
 
@@ -98,8 +98,7 @@ func (g *Gateway) WithMaxCallRecvMsgSize(size uint64) *Gateway {
 }
 
 // WithApiMiddleware allows adding API Middleware proxy to the gateway.
-func (g *Gateway) WithApiMiddleware(address string, endpointFactory EndpointFactory) *Gateway {
-	g.apiMiddlewareAddr = address
+func (g *Gateway) WithApiMiddleware(endpointFactory EndpointFactory) *Gateway {
 	g.apiMiddlewareEndpointFactory = endpointFactory
 	return g
 }
@@ -126,21 +125,25 @@ func (g *Gateway) Start() {
 			}
 		}
 		for _, p := range h.Patterns {
-			g.mux.Handle(p, h.Mux)
+			g.router.PathPrefix(p).Handler(h.Mux)
 		}
 	}
 
-	corsMux := g.corsMiddleware(g.mux)
+	corsMux := g.corsMiddleware(g.router)
 
 	if g.muxHandler != nil {
-		g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		g.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			g.muxHandler(corsMux, w, r)
 		})
 	}
 
+	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+		go g.registerApiMiddleware()
+	}
+
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
-		Handler: corsMux,
+		Handler: g.router,
 	}
 
 	go func() {
@@ -151,10 +154,6 @@ func (g *Gateway) Start() {
 			return
 		}
 	}()
-
-	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
-		go g.registerApiMiddleware()
-	}
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
@@ -274,13 +273,8 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 func (g *Gateway) registerApiMiddleware() {
 	proxy := &ApiProxyMiddleware{
 		GatewayAddress:  g.gatewayAddr,
-		ProxyAddress:    g.apiMiddlewareAddr,
 		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
-	log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
-	if err := proxy.Run(); err != http.ErrServerClosed {
-		log.WithError(err).Error("Failed to start API middleware")
-		g.startFailure = err
-		return
-	}
+	log.Info("Starting API middleware")
+	proxy.Run(g.router)
 }
