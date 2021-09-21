@@ -3,12 +3,13 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "deep_equal.go",
         "hashers.go",
         "helpers.go",
         "htrutils.go",
         "merkleize.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/htrutils",
+    importpath = "github.com/prysmaticlabs/prysm/encoding/ssz",
     visibility = ["//visibility:public"],
     deps = [
         "//container/trie:go_default_library",
@@ -18,7 +19,9 @@ go_library(
         "//shared/params:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 
@@ -26,6 +29,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "deep_equal_test.go",
         "hashers_test.go",
         "helpers_test.go",
         "htrutils_test.go",

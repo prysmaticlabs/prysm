@@ -1,6 +1,6 @@
 // +build !develop
 
-package params
+package params_test
 
 import (
 	log "github.com/sirupsen/logrus"

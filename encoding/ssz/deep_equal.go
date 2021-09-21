@@ -1,4 +1,4 @@
-package sszutil
+package ssz
 
 import (
 	"reflect"
@@ -22,7 +22,7 @@ type visit struct {
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// This file extends Go's reflect.DeepEqual function into a sszutil.DeepEqual
+// This file extends Go's reflect.DeepEqual function into a ssz.DeepEqual
 // function that is compliant with the supported types of ssz and its
 // intricacies when determining equality of empty values.
 //

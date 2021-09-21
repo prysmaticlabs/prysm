@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
@@ -21,7 +21,7 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 		return [][]*[32]byte{{&leaves[0]}}
 	}
 	hashLayer := leaves
-	layers := make([][][32]byte, htrutils.Depth(length)+1)
+	layers := make([][][32]byte, ssz.Depth(length)+1)
 	layers[0] = hashLayer
 	layers, _ = merkleizeTrieLeaves(layers, hashLayer, hasher)
 	refLayers := make([][]*[32]byte, len(layers))
@@ -66,7 +66,7 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hash.CustomSHA256Hasher()
-	depth := htrutils.Depth(length)
+	depth := ssz.Depth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
 	if len(elements) == 0 {
@@ -252,7 +252,7 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	rootBufRoot := make([]byte, 32)
 	copy(rootBufRoot, rootBuf.Bytes())
-	return htrutils.MixInLength(root, rootBufRoot), nil
+	return ssz.MixInLength(root, rootBufRoot), nil
 }
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
@@ -260,7 +260,7 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 // pads the leaves to a length of 32.
 func Merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hash.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, ssz.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
