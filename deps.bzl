@@ -821,12 +821,19 @@ def prysm_deps():
         sum = "h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=",
         version = "v1.9.0",
     )
+
+    # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
+    # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ferranbt_fastssz",
-        importpath = "github.com/ferranbt/fastssz",
+        importpath = "github.com/ferranbt/fastssz",  # keep
+        commit = "c930e5e537a4733062d622f07e71529afd2fa6b2",  # keep
+        remote = "https://github.com/rauljordan/fastssz",  # keep
         nofuzz = True,
-        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
-        version = "v0.0.0-20210905181407-59cf6761a7d5",
+        replace = None,  # keep
+        sum = None,  # keep
+        vcs = "git",  # keep
+        version = None,  # keep
     )
 
     go_repository(
