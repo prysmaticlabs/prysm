@@ -13,6 +13,7 @@ type GlobalFlags struct {
 	DisableDiscv5              bool
 	SubscribeToAllSubnets      bool
 	MinimumSyncPeers           int
+	MinimumPeersPerSubnet      int
 	BlockBatchLimit            int
 	BlockBatchLimitBurstFactor int
 }
@@ -51,6 +52,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg.DisableDiscv5 = ctx.Bool(DisableDiscv5.Name)
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
+	cfg.MinimumPeersPerSubnet = ctx.Int(MinPeersPerSubnet.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)
