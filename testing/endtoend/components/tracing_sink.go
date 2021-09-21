@@ -54,7 +54,7 @@ func (ts *TracingSink) Started() <-chan struct{} {
 func (ts *TracingSink) initializeSink() {
 	mux := &http.ServeMux{}
 	ts.server = &http.Server{
-		Addr: ts.endpoint,
+		Addr:    ts.endpoint,
 		Handler: mux,
 	}
 	defer func() {
