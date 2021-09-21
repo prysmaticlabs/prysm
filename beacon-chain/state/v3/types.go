@@ -1,4 +1,4 @@
-package v2
+package v3
 
 import (
 	"sync"
@@ -7,12 +7,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func init() {
-	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateMergeFieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[types.BlockRoots] = types.BasicArray
