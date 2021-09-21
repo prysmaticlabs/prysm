@@ -3,6 +3,8 @@ package gateway
 import (
 	"net/http"
 	"reflect"
+
+	"github.com/gorilla/mux"
 )
 
 // ApiProxyMiddleware is a proxy between an Ethereum consensus API HTTP client and grpc-gateway.
@@ -71,14 +73,14 @@ type fieldProcessor struct {
 }
 
 // Run starts the proxy, registering all proxy endpoints.
-func (m *ApiProxyMiddleware) Run(gatewayServer *http.ServeMux) {
+func (m *ApiProxyMiddleware) Run(gatewayRouter *mux.Router) {
 	for _, path := range m.EndpointCreator.Paths() {
-		m.handleApiPath(gatewayServer, path, m.EndpointCreator)
+		m.handleApiPath(gatewayRouter, path, m.EndpointCreator)
 	}
 }
 
-func (m *ApiProxyMiddleware) handleApiPath(gatewayServer *http.ServeMux, path string, endpointFactory EndpointFactory) {
-	gatewayServer.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
+func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path string, endpointFactory EndpointFactory) {
+	gatewayRouter.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
 		endpoint, err := endpointFactory.Create(path)
 		if err != nil {
 			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")

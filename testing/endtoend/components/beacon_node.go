@@ -114,7 +114,6 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", cmdshared.P2PTCPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+20),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.BeaconNodeMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+40),
-		fmt.Sprintf("--%s=%d", flags.EthApiPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+30),
 		fmt.Sprintf("--%s=%d", flags.ContractDeploymentBlock.Name, 0),
 		fmt.Sprintf("--%s=%d", flags.MinPeersPerSubnet.Name, 0),
 		fmt.Sprintf("--%s=%d", cmdshared.RPCMaxPageSizeFlag.Name, params.BeaconConfig().MinGenesisActiveValidatorCount),
