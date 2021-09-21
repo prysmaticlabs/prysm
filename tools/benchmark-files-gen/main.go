@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	interop2 "github.com/prysmaticlabs/prysm/runtime/interop"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
@@ -72,7 +72,7 @@ func main() {
 }
 
 func generateGenesisBeaconState() error {
-	genesisState, _, err := interop2.GenerateGenesisState(context.Background(), 0, benchmark.ValidatorCount)
+	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	privs, _, err := interop2.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	privs, _, err := interop2.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
