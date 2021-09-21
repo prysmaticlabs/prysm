@@ -130,13 +130,13 @@ func (g *Gateway) Start() {
 		}
 	}
 
-	/*corsMux := g.corsMiddleware(g.router)
+	corsMux := g.corsMiddleware(g.router)
 
 	if g.muxHandler != nil {
 		g.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			g.muxHandler(corsMux, w, r)
 		})
-	}*/
+	}
 
 	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
 		go g.registerApiMiddleware()
