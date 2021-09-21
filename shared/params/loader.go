@@ -32,7 +32,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		}
 
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
-			parts := replaceHexStringWithYAMLFormat(line)
+			parts := ReplaceHexStringWithYAMLFormat(line)
 			lines[i] = strings.Join(parts, "\n")
 		}
 	}
@@ -50,7 +50,8 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	OverrideBeaconConfig(conf)
 }
 
-func replaceHexStringWithYAMLFormat(line string) []string {
+// ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.
+func ReplaceHexStringWithYAMLFormat(line string) []string {
 	parts := strings.Split(line, "0x")
 	decoded, err := hex.DecodeString(parts[1])
 	if err != nil {

@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -34,7 +34,7 @@ func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 }
 
 // Eth1DataRootWithHasher returns the hash tree root of input `eth1Data`.
-func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
 		return [32]byte{}, errors.New("nil eth1 data")
 	}
@@ -55,7 +55,7 @@ func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([
 		blockHash := bytesutil.ToBytes32(eth1Data.BlockHash)
 		fieldRoots[2] = blockHash[:]
 	}
-	root, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	root, err := ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -89,12 +89,12 @@ func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 		}
 		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
 	}
-	eth1Chunks, err := htrutils.Pack(eth1VotesRoots)
+	eth1Chunks, err := ssz.Pack(eth1VotesRoots)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
 
-	eth1VotesRootsRoot, err := htrutils.BitwiseMerkleize(
+	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(
 		hasher,
 		eth1Chunks,
 		uint64(len(eth1Chunks)),
@@ -110,7 +110,7 @@ func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	eth1VotesRootBufRoot := make([]byte, 32)
 	copy(eth1VotesRootBufRoot, eth1VotesRootBuf.Bytes())
-	root := htrutils.MixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
+	root := ssz.MixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
 
 	return root, nil
 }

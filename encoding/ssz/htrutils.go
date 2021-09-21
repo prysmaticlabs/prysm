@@ -1,5 +1,4 @@
-// Package htrutils defines HashTreeRoot utility functions.
-package htrutils
+package ssz
 
 import (
 	"bytes"
@@ -56,22 +55,22 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// HistoricalRootsRoot computes the HashTreeRoot Merkleization of
-// a list of [32]byte historical block roots according to the Ethereum
-// Simple Serialize specification.
-func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
-	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
+// ByteArrayRootWithLimit computes the HashTreeRoot Merkleization of
+// a list of [32]byte roots according to the Ethereum Simple Serialize
+// specification.
+func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
+	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), roots, uint64(len(roots)), limit)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
+		return [32]byte{}, errors.Wrap(err, "could not compute byte array merkleization")
 	}
-	historicalRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(historicalRootsBuf, binary.LittleEndian, uint64(len(historicalRoots))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal historical roots length")
+	buf := new(bytes.Buffer)
+	if err := binary.Write(buf, binary.LittleEndian, uint64(len(roots))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal byte array length")
 	}
 	// We need to mix in the length of the slice.
-	historicalRootsOutput := make([]byte, 32)
-	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
-	mixedLen := MixInLength(result, historicalRootsOutput)
+	output := make([]byte, 32)
+	copy(output, buf.Bytes())
+	mixedLen := MixInLength(result, output)
 	return mixedLen, nil
 }
 
