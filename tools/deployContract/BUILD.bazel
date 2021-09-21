@@ -11,7 +11,6 @@ go_library(
         "//runtime/version:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
