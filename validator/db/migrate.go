@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/urfave/cli/v2"
 )
