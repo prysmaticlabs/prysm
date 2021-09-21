@@ -1,4 +1,4 @@
-package params
+package params_test
 
 import (
 	"io/ioutil"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/yaml.v2"
@@ -15,7 +16,7 @@ import (
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
-	assertVals := func(name string, fields []string, c1, c2 *BeaconChainConfig) {
+	assertVals := func(name string, fields []string, c1, c2 *params.BeaconChainConfig) {
 		//  Misc params.
 		assert.Equal(t, c1.MaxCommitteesPerSlot, c2.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
 		assert.Equal(t, c1.TargetCommitteeSize, c2.TargetCommitteeSize, "%s: TargetCommitteeSize", name)
@@ -105,16 +106,16 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 
 	t.Run("mainnet", func(t *testing.T) {
 		mainnetConfigFile := presetsFilePath(t, "mainnet")
-		LoadChainConfigFile(mainnetConfigFile)
+		params.LoadChainConfigFile(mainnetConfigFile)
 		fields := fieldsFromYaml(t, mainnetConfigFile)
-		assertVals("mainnet", fields, MainnetConfig(), BeaconConfig())
+		assertVals("mainnet", fields, params.MainnetConfig(), params.BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
 		minimalConfigFile := presetsFilePath(t, "minimal")
-		LoadChainConfigFile(minimalConfigFile)
+		params.LoadChainConfigFile(minimalConfigFile)
 		fields := fieldsFromYaml(t, minimalConfigFile)
-		assertVals("minimal", fields, MinimalSpecConfig(), BeaconConfig())
+		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
 }
 
@@ -122,19 +123,19 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	file, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	// Set current config to minimal config
-	OverrideBeaconConfig(MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	// load empty config file, so that it defaults to mainnet values
-	LoadChainConfigFile(file.Name())
-	if BeaconConfig().MinGenesisTime != MainnetConfig().MinGenesisTime {
+	params.LoadChainConfigFile(file.Name())
+	if params.BeaconConfig().MinGenesisTime != params.MainnetConfig().MinGenesisTime {
 		t.Errorf("Expected MinGenesisTime to be set to mainnet value: %d found: %d",
-			MainnetConfig().MinGenesisTime,
-			BeaconConfig().MinGenesisTime)
+			params.MainnetConfig().MinGenesisTime,
+			params.BeaconConfig().MinGenesisTime)
 	}
-	if BeaconConfig().SlotsPerEpoch != MainnetConfig().SlotsPerEpoch {
+	if params.BeaconConfig().SlotsPerEpoch != params.MainnetConfig().SlotsPerEpoch {
 		t.Errorf("Expected SlotsPerEpoch to be set to mainnet value: %d found: %d",
-			MainnetConfig().SlotsPerEpoch,
-			BeaconConfig().SlotsPerEpoch)
+			params.MainnetConfig().SlotsPerEpoch,
+			params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -198,7 +199,7 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 		},
 	}
 	for _, line := range testLines {
-		parts := replaceHexStringWithYAMLFormat(line.line)
+		parts := params.ReplaceHexStringWithYAMLFormat(line.line)
 		res := strings.Join(parts, "\n")
 
 		if res != line.wanted {
@@ -243,7 +244,7 @@ func fieldsFromYaml(t *testing.T, fp string) []string {
 	return keys
 }
 
-func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *BeaconChainConfig) {
+func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *params.BeaconChainConfig) {
 	// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
 	ft1 := reflect.TypeOf(*c1)
 	for _, field := range fields {
