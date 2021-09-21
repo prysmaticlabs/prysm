@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["names.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/petnames",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//crypto/hash:go_default_library",
         "//crypto/rand:go_default_library",
