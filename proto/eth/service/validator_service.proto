@@ -98,7 +98,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlockV2(v1.ProduceBlockRequest) returns (v2.ProduceBlockResponseV2) {
-    option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
+    option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}" };
   }
 
   // ProduceAttestationData requests that the beacon node produces attestation data for

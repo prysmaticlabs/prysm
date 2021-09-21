@@ -154,14 +154,14 @@ service BeaconChain {
   // GetBlockV2 retrieves block details for given block id.
   rpc GetBlockV2(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
     option (google.api.http) = {
-      get: "/eth/v2/beacon/blocks/{block_id}"
+      get: "/internal/eth/v2/beacon/blocks/{block_id}"
     };
   }
 
   // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
   rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
     option (google.api.http) = {
-      get: "/eth/v2/beacon/blocks/{block_id}/ssz"
+      get: "/internal/eth/v2/beacon/blocks/{block_id}/ssz"
     };
   }
 

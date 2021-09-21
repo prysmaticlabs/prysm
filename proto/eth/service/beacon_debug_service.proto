@@ -53,14 +53,14 @@ service BeaconDebug {
   // GetBeaconStateV2 returns full BeaconState object for given stateId.
   rpc GetBeaconStateV2(v2.StateRequestV2) returns (v2.BeaconStateResponseV2) {
     option (google.api.http) = {
-      get: "/eth/v2/debug/beacon/states/{state_id}"
+      get: "/internal/eth/v2/debug/beacon/states/{state_id}"
     };
   }
 
   // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full BeaconState object for given stateId.
   rpc GetBeaconStateSSZV2(v2.StateRequestV2) returns (v2.BeaconStateSSZResponseV2) {
     option (google.api.http) = {
-      get: "/eth/v2/debug/beacon/states/{state_id}/ssz"
+      get: "/internal/eth/v2/debug/beacon/states/{state_id}/ssz"
     };
   }
 
