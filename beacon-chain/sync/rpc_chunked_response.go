@@ -113,7 +113,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 
 func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (block.SignedBeaconBlock, error) {
 	if len(digest) == 0 {
-		bFunc, ok := types.BlockMap[butil.ToBytes44(params.BeaconConfig().GenesisForkVersion)]
+		bFunc, ok := types.BlockMap[butil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {
 			return nil, errors.New("no block type exists for the genesis fork version.")
 		}
@@ -128,7 +128,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 		if err != nil {
 			return nil, err
 		}
-		if rDigest == butil.ToBytes44(digest) {
+		if rDigest == butil.ToBytes4(digest) {
 			return blkFunc()
 		}
 	}

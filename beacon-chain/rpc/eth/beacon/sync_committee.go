@@ -150,10 +150,10 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 }
 
 func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
-	if !bytes.IsHexOfLen(msg.BeaconBlockRoot, 64) {
+	if !butil.IsHexOfLen(msg.BeaconBlockRoot, 64) {
 		return errors.New("invalid block root format")
 	}
-	if !bytes.IsHexOfLen(msg.Signature, 192) {
+	if !butil.IsHexOfLen(msg.Signature, 192) {
 		return errors.New("invalid signature format")
 	}
 	return nil

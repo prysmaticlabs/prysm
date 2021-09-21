@@ -384,7 +384,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	if syncSig == nil {
 		syncSigBytes = [96]byte{0xC0} // Infinity signature if itself is nil.
 	} else {
-		syncSigBytes = butil.ToBytes496(syncSig.Marshal())
+		syncSigBytes = butil.ToBytes96(syncSig.Marshal())
 	}
 
 	return &ethpb.SyncAggregate{

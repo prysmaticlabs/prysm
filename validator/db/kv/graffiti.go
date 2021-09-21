@@ -25,7 +25,7 @@ func (s *Store) GraffitiOrderedIndex(ctx context.Context, fileHash [32]byte) (ui
 		dbFileHash := bkt.Get(graffitiFileHashKey)
 		if bytes.Equal(dbFileHash, fileHash[:]) {
 			indexBytes := bkt.Get(graffitiOrderedIndexKey)
-			orderedIndex = bytes.BytesToUint64BigEndian(indexBytes)
+			orderedIndex = butil.BytesToUint64BigEndian(indexBytes)
 		} else {
 			indexBytes := butil.Uint64ToBytesBigEndian(0)
 			if err := bkt.Put(graffitiOrderedIndexKey, indexBytes); err != nil {

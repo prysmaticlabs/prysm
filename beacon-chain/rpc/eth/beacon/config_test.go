@@ -348,9 +348,9 @@ func TestForkSchedule_Ok(t *testing.T) {
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
 	schedule := make(map[[4]byte]types.Epoch, 3)
-	schedule[butil.ToBytes44(secondForkVersion)] = secondForkEpoch
-	schedule[butil.ToBytes44(firstForkVersion)] = firstForkEpoch
-	schedule[butil.ToBytes44(thirdForkVersion)] = thirdForkEpoch
+	schedule[butil.ToBytes4(secondForkVersion)] = secondForkEpoch
+	schedule[butil.ToBytes4(firstForkVersion)] = firstForkEpoch
+	schedule[butil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
 	config.ForkVersionSchedule = schedule
 	params.OverrideBeaconConfig(config)
 

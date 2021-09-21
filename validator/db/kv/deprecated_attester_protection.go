@@ -88,7 +88,7 @@ func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
-	copy(dh[:latestEpochWrittenSize], bytes.EpochToBytesLittleEndian(latestEpochWritten))
+	copy(dh[:latestEpochWrittenSize], butil.EpochToBytesLittleEndian(latestEpochWritten))
 	return dh, nil
 }
 
@@ -126,7 +126,7 @@ func (dh deprecatedEncodedAttestingHistory) setTargetData(
 		ext := make([]byte, uint64(cursor+historySize)-uint64(len(dh)))
 		dh = append(dh, ext...)
 	}
-	copy(dh[cursor:cursor+sourceSize], bytes.EpochToBytesLittleEndian(historyData.Source))
+	copy(dh[cursor:cursor+sourceSize], butil.EpochToBytesLittleEndian(historyData.Source))
 	copy(dh[cursor+sourceSize:cursor+sourceSize+signingRootSize], historyData.SigningRoot)
 
 	return dh, nil

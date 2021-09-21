@@ -85,7 +85,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs; sourceEpoch++ {
 						sourceEpochBytes := butil.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-						targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
+						targetEpoch := butil.BytesToUint64BigEndian(targetEpochBytes)
 						require.Equal(t, sourceEpoch+1, targetEpoch)
 					}
 					return nil
@@ -171,7 +171,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 					for sourceEpoch := uint64(0); sourceEpoch < numEpochs+1; sourceEpoch++ {
 						sourceEpochBytes := butil.Uint64ToBytesBigEndian(sourceEpoch)
 						targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-						targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
+						targetEpoch := butil.BytesToUint64BigEndian(targetEpochBytes)
 						require.Equal(t, sourceEpoch+1, targetEpoch)
 					}
 					return nil
