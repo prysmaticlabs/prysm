@@ -84,7 +84,7 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 	bCfg := params.BeaconConfig()
 	forkEpoch := eth2types.Epoch(100)
 	bCfg.AltairForkEpoch = forkEpoch
-	bCfg.ForkVersionSchedule[butil.ToBytes44(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
+	bCfg.ForkVersionSchedule[butil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Garbage Message

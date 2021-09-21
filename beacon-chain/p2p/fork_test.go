@@ -210,7 +210,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
 	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		butil.ToBytes44(params.BeaconConfig().GenesisForkVersion): 0,
+		butil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
 		{0, 0, 0, 1}: 1,
 	}
 	nextForkEpoch := types.Epoch(1)
@@ -265,7 +265,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 
 	bCfg := params.BeaconConfig()
 	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
-	bCfg.ForkVersionSchedule[butil.ToBytes44(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
+	bCfg.ForkVersionSchedule[butil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
 	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)

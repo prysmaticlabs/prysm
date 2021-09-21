@@ -114,7 +114,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig()
 	bCfg.AltairForkEpoch = 1
-	bCfg.ForkVersionSchedule[butil.ToBytes44(bCfg.AltairForkVersion)] = 1
+	bCfg.ForkVersionSchedule[butil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	params.OverrideBeaconConfig(bCfg)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)

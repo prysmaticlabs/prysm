@@ -44,7 +44,7 @@ func TestInitializeDataMaps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.action()
-			_, ok := BlockMap[butil.ToBytes44(params.BeaconConfig().GenesisForkVersion)]
+			_, ok := BlockMap[butil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 			assert.Equal(t, tt.exists, ok)
 		})
 	}

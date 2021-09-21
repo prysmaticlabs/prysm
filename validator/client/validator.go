@@ -878,7 +878,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // This constructs a validator subscribed key, it's used to track
 // which subnet has already been pending requested.
 func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [64]byte {
-	return butil.ToBytes464(append(butil.Bytes32(uint64(slot)), butil.Bytes32(uint64(committeeID))...))
+	return butil.ToBytes64(append(butil.Bytes32(uint64(slot)), butil.Bytes32(uint64(committeeID))...))
 }
 
 // This tracks all validators' voting status.
