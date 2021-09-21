@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 )
@@ -225,7 +225,7 @@ func DepositTrieSubset(sparseTrie *trie.SparseMerkleTrie, size int) (*trie.Spars
 
 	roots := make([][32]byte, len(items))
 	for i, dep := range items {
-		roots[i] = bytesutil.ToBytes32(dep)
+		roots[i] = butil.ToBytes32(dep)
 	}
 	return depositTrie, roots, nil
 }
@@ -282,7 +282,7 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trie.SparseMerkleTrie,
 
 	roots := make([][32]byte, len(deposits))
 	for i, dep := range encodedDeposits {
-		roots[i] = bytesutil.ToBytes32(dep)
+		roots[i] = butil.ToBytes32(dep)
 	}
 
 	return depositTrie, roots, nil

@@ -11,7 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -20,7 +20,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 	priv, err := blst.RandKey()
 	require.NoError(t, err)
 	b := priv.Marshal()
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	pk, err := blst.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	pk2, err := blst.SecretKeyFromBytes(b32[:])

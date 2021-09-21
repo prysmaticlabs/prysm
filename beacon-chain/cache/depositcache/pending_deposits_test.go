@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -31,9 +31,9 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := DepositCache{}
 	proof1 := makeDepositProof()
-	proof1[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	proof1[0] = butil.PadTo([]byte{'A'}, 32)
 	proof2 := makeDepositProof()
-	proof2[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	proof2[0] = butil.PadTo([]byte{'A'}, 32)
 	data := &ethpb.Deposit_Data{
 		PublicKey:             make([]byte, 48),
 		WithdrawalCredentials: make([]byte, 32),
@@ -63,7 +63,7 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	dc := DepositCache{}
 	proof := makeDepositProof()
-	proof[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	proof[0] = butil.PadTo([]byte{'A'}, 32)
 	data := &ethpb.Deposit_Data{
 		PublicKey:             make([]byte, 48),
 		WithdrawalCredentials: make([]byte, 32),

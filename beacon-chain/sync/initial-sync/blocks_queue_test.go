@@ -17,7 +17,7 @@ import (
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -255,7 +255,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block block.SignedBeaconBlock) error {
-				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
+				if !beaconDB.HasBlock(ctx, butil.ToBytes32(block.Block().ParentRoot())) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
 				root, err := block.Block().HashTreeRoot()
@@ -1077,7 +1077,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 
 	// Populate database with blocks from unfavourable fork i.e. branch that leads to dead end.
 	for _, blk := range chain1[1:] {
-		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+		parentRoot := butil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
 			require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
@@ -1259,7 +1259,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	// Populate database with blocks with part of the chain, orphaned block will be added on top.
 	for _, blk := range chain[1:84] {
-		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+		parentRoot := butil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
 			require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
@@ -1326,7 +1326,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 				continue
 			}
 
-			parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
+			parentRoot := butil.ToBytes32(blk.Block().ParentRoot())
 			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasInitSyncBlock(parentRoot) {
 				log.Errorf("%v: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 				continue

@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -18,7 +18,7 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 	for _, pub := range pubkeys {
 		signingRoot, _, err := db.ProposalHistoryForSlot(context.Background(), pub, 0)
 		require.NoError(t, err)
-		expected := bytesutil.PadTo([]byte{}, 32)
+		expected := butil.PadTo([]byte{}, 32)
 		require.DeepEqual(t, expected, signingRoot[:], "Expected proposal history slot signing root to be empty")
 	}
 }
@@ -44,7 +44,7 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
+	require.DeepEqual(t, butil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
 }
 
 func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
@@ -84,13 +84,13 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		signingRoot []byte
 	}{
 		{
-			signingRoot: bytesutil.PadTo([]byte{1}, 32),
+			signingRoot: butil.PadTo([]byte{1}, 32),
 		},
 		{
-			signingRoot: bytesutil.PadTo([]byte{2}, 32),
+			signingRoot: butil.PadTo([]byte{2}, 32),
 		},
 		{
-			signingRoot: bytesutil.PadTo([]byte{3}, 32),
+			signingRoot: butil.PadTo([]byte{3}, 32),
 		},
 	}
 
@@ -147,7 +147,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 			storedSlots: []types.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
 		},
 	}
-	signedRoot := bytesutil.PadTo([]byte{1}, 32)
+	signedRoot := butil.PadTo([]byte{1}, 32)
 
 	for _, tt := range tests {
 		db := setupDB(t, [][48]byte{pubKey})

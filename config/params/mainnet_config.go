@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -147,16 +147,16 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
-	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
-	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBeaconProposer:              butil.ToBytes4(butil.Bytes4(0)),
+	DomainBeaconAttester:              butil.ToBytes4(butil.Bytes4(1)),
+	DomainRandao:                      butil.ToBytes4(butil.Bytes4(2)),
+	DomainDeposit:                     butil.ToBytes4(butil.Bytes4(3)),
+	DomainVoluntaryExit:               butil.ToBytes4(butil.Bytes4(4)),
+	DomainSelectionProof:              butil.ToBytes4(butil.Bytes4(5)),
+	DomainAggregateAndProof:           butil.ToBytes4(butil.Bytes4(6)),
+	DomainSyncCommittee:               butil.ToBytes4(butil.Bytes4(7)),
+	DomainSyncCommitteeSelectionProof: butil.ToBytes4(butil.Bytes4(8)),
+	DomainContributionAndProof:        butil.ToBytes4(butil.Bytes4(9)),
 
 	// Prysm constants.
 	GweiPerEth:                  1000000000,

@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -18,7 +18,7 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig()
 	bCfg.AltairForkEpoch = 100
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 100
+	bCfg.ForkVersionSchedule[butil.ToBytes4(bCfg.AltairForkVersion)] = 100
 	params.OverrideBeaconConfig(bCfg)
 	bState, keys := testutil.DeterministicGenesisState(t, 100)
 	altairBlk := testutil.NewBeaconBlockAltair()

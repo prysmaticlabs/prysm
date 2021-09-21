@@ -19,7 +19,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -39,7 +39,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 999
-	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	head.Block.ParentRoot = butil.PadTo([]byte{'a'}, 32)
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 

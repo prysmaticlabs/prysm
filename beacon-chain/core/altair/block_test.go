@@ -13,7 +13,7 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -184,7 +184,7 @@ func TestProcessSyncCommittee_FilterSyncCommitteeVotes(t *testing.T) {
 	require.NoError(t, err)
 	votedMap := make(map[[48]byte]bool)
 	for _, key := range votedKeys {
-		votedMap[bytesutil.ToBytes48(key.Marshal())] = true
+		votedMap[butil.ToBytes48(key.Marshal())] = true
 	}
 	require.Equal(t, int(syncBits.Len()/2), len(votedKeys))
 	require.Equal(t, int(syncBits.Len()/2), len(votedIndices))

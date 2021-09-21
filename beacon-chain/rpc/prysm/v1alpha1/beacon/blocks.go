@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -264,7 +264,7 @@ func (bs *Server) ListBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksR
 
 // ListBlocksForRoot retrieves the block for the provided root.
 func (bs *Server) ListBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Root) ([]blockContainer, int, string, error) {
-	blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
+	blk, err := bs.BeaconDB.Block(ctx, butil.ToBytes32(q.Root))
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 	}
@@ -482,7 +482,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	}
 
 	isGenesis := func(cp *ethpb.Checkpoint) bool {
-		return bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
+		return butil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
 	}
 	// Retrieve genesis block in the event we have genesis checkpoints.
 	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
@@ -492,7 +492,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	if !isGenesis(finalizedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+		b, err := bs.BeaconDB.Block(ctx, butil.ToBytes32(finalizedCheckpoint.Root))
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
 		}
@@ -503,7 +503,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	if !isGenesis(justifiedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+		b, err := bs.BeaconDB.Block(ctx, butil.ToBytes32(justifiedCheckpoint.Root))
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get justified block")
 		}
@@ -514,7 +514,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	if !isGenesis(prevJustifiedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+		b, err := bs.BeaconDB.Block(ctx, butil.ToBytes32(prevJustifiedCheckpoint.Root))
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
 		}

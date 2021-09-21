@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"go.etcd.io/bbolt"
@@ -22,7 +22,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 				err := db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(archivedRootBucket)
 					assert.NoError(t, err)
-					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
+					if err := tx.Bucket(archivedRootBucket).Put(butil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
 					return tx.Bucket(migrationsBucket).Put(migrationArchivedIndex0Key, migrationCompleted)
@@ -31,7 +31,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			},
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
-					v := tx.Bucket(archivedRootBucket).Get(bytesutil.Uint64ToBytesLittleEndian(2048))
+					v := tx.Bucket(archivedRootBucket).Get(butil.Uint64ToBytesLittleEndian(2048))
 					assert.DeepEqual(t, []byte("foo"), v, "Did not receive correct data for key 2048")
 					return nil
 				})
@@ -46,7 +46,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 					assert.NoError(t, err)
 					_, err = tx.CreateBucketIfNotExists(slotsHasObjectBucket)
 					assert.NoError(t, err)
-					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
+					if err := tx.Bucket(archivedRootBucket).Put(butil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
 					sb := testutil.NewBeaconBlock()
@@ -62,7 +62,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					k := uint64(2048)
-					v := tx.Bucket(stateSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k))
+					v := tx.Bucket(stateSlotIndicesBucket).Get(butil.Uint64ToBytesBigEndian(k))
 					assert.DeepEqual(t, []byte("foo"), v, "Did not receive correct data for key %d", k)
 					return nil
 				})

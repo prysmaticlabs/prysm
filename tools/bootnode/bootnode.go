@@ -35,7 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -210,7 +210,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		if len(retRoot) != 32 {
 			return nil, errors.Errorf("Invalid root size, expected 32 but got %d", len(retRoot))
 		}
-		genRoot = bytesutil.ToBytes32(retRoot)
+		genRoot = butil.ToBytes32(retRoot)
 	}
 	digest, err := helpers.ComputeForkDigest(fVersion, genRoot[:])
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -19,7 +19,7 @@ func TestImportedKeymanager_ExtractKeystores(t *testing.T) {
 		secretKey, err := bls.RandKey()
 		require.NoError(t, err)
 		validatingKeys[i] = secretKey
-		secretKeysCache[bytesutil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
+		secretKeysCache[butil.ToBytes48(secretKey.PublicKey().Marshal())] = secretKey
 	}
 	ctx := context.Background()
 	password := "password"

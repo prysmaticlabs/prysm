@@ -15,7 +15,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -51,7 +51,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		DepositRoot:  butil.PadTo([]byte{2}, 32),
 		BlockHash:    make([]byte, 32),
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
@@ -114,14 +114,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 					ProposerIndex: 3,
 					Slot:          1,
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: butil.PadTo([]byte("A"), 96),
 			}),
 			Header_2: testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: butil.PadTo([]byte("B"), 96),
 			}),
 		},
 	}
@@ -146,7 +146,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := testutil.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target: &ethpb.Checkpoint{Root: butil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 	})
@@ -173,8 +173,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	block.Block.Body.Attestations = attestations
 	block.Block.Body.AttesterSlashings = attesterSlashings
 	block.Block.Body.VoluntaryExits = exits
-	block.Block.Body.Eth1Data.DepositRoot = bytesutil.PadTo([]byte{2}, 32)
-	block.Block.Body.Eth1Data.BlockHash = bytesutil.PadTo([]byte{3}, 32)
+	block.Block.Body.Eth1Data.DepositRoot = butil.PadTo([]byte{2}, 32)
+	block.Block.Body.Eth1Data.BlockHash = butil.PadTo([]byte{3}, 32)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 	cp := beaconState.CurrentJustifiedCheckpoint()
@@ -218,7 +218,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
-			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+			StateRoot:     butil.PadTo([]byte("A"), 32),
 		},
 	})
 	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
@@ -228,7 +228,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
-			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+			StateRoot:     butil.PadTo([]byte("B"), 32),
 		},
 	})
 	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])

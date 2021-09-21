@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -395,8 +395,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		gomock.Any(),
 	).Return(stream, nil /* err */).AnyTimes()
 
-	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
-	activeKey := bytesutil.ToBytes48([]byte("active"))
+	inactiveKey := butil.ToBytes48([]byte("inactive"))
+	activeKey := butil.ToBytes48([]byte("active"))
 	km := remote.NewMock()
 	km.PublicKeys = [][48]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)

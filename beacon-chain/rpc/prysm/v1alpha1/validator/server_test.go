@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -123,7 +123,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
+		WithdrawalCredentials: butil.PadTo([]byte("hey"), 32),
 		Signature:             make([]byte, 96),
 	}
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -301,7 +301,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(3))
-	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	genesisValidatorsRoot := butil.ToBytes32([]byte("validators"))
 	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
@@ -367,7 +367,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	genesisValidatorsRoot := butil.ToBytes32([]byte("validators"))
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),

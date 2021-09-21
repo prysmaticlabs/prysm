@@ -9,7 +9,7 @@ go_library(
         "//shared/testutil:__pkg__",
     ],
     deps = [
-        "//encoding/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
@@ -22,7 +22,7 @@ go_test(
     deps = [
         ":go_default_library",
         "//beacon-chain/state/v1:go_default_library",
-        "//encoding/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

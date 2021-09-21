@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
@@ -254,7 +254,7 @@ func readBucketStat(ctx context.Context, dbNameWithPath string, statsC chan<- *b
 func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState, keys [][]byte, sizes []uint64) {
 	stateMap := make(map[uint64]*modifiedState)
 	for rowCount, key := range keys {
-		st, stateErr := db.State(ctx, bytesutil.ToBytes32(key))
+		st, stateErr := db.State(ctx, butil.ToBytes32(key))
 		if stateErr != nil {
 			log.WithError(stateErr).Errorf("could not get state for key : %s", hexutils.BytesToHex(key))
 			continue
@@ -278,7 +278,7 @@ func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState,
 
 func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *modifiedStateSummary, keys [][]byte, sizes []uint64) {
 	for rowCount, key := range keys {
-		ss, ssErr := db.StateSummary(ctx, bytesutil.ToBytes32(key))
+		ss, ssErr := db.StateSummary(ctx, butil.ToBytes32(key))
 		if ssErr != nil {
 			log.WithError(ssErr).Errorf("could not get state summary for key : %s", hexutils.BytesToHex(key))
 			continue
@@ -412,11 +412,11 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	ctx := context.Background()
 	failCount := 0
 	for rowCount, key := range sourceStateKeys[910:] {
-		sourceState, stateErr := sourceDB.State(ctx, bytesutil.ToBytes32(key))
+		sourceState, stateErr := sourceDB.State(ctx, butil.ToBytes32(key))
 		if stateErr != nil {
 			log.Fatalf("could not get from source db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
 		}
-		destinationState, stateErr := destDB.State(ctx, bytesutil.ToBytes32(key))
+		destinationState, stateErr := destDB.State(ctx, butil.ToBytes32(key))
 		if stateErr != nil {
 			log.Fatalf("could not get destination db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
 		}

@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -202,9 +202,9 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 
 	// Second time checking same proposals but all with different signing root should
 	// return all double proposals.
-	proposals[0].SigningRoot = bytesutil.ToBytes32([]byte{2})
-	proposals[1].SigningRoot = bytesutil.ToBytes32([]byte{2})
-	proposals[2].SigningRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[0].SigningRoot = butil.ToBytes32([]byte{2})
+	proposals[1].SigningRoot = butil.ToBytes32([]byte{2})
+	proposals[2].SigningRoot = butil.ToBytes32([]byte{2})
 
 	doubleProposals, err = beaconDB.CheckDoubleBlockProposals(ctx, proposals)
 	require.NoError(t, err)
@@ -490,7 +490,7 @@ func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.Va
 		Slot:          slot,
 		ProposerIndex: proposerIndex,
 		ParentRoot:    params.BeaconConfig().ZeroHash[:],
-		StateRoot:     bytesutil.PadTo(signingRoot, 32),
+		StateRoot:     butil.PadTo(signingRoot, 32),
 		BodyRoot:      params.BeaconConfig().ZeroHash[:],
 	}
 	signRoot, err := header.HashTreeRoot()
@@ -507,7 +507,7 @@ func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.Va
 }
 
 func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
-	signRoot := bytesutil.ToBytes32(signingRoot)
+	signRoot := butil.ToBytes32(signingRoot)
 	if signingRoot == nil {
 		signRoot = params.BeaconConfig().ZeroHash
 	}

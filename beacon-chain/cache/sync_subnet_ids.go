@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 type syncSubnetIDs struct {
@@ -126,6 +126,6 @@ func (s *syncSubnetIDs) EmptyAllCaches() {
 // build a key composed of both the pubkey and epoch here. The epoch
 // here would be the 1st epoch of the sync committee period.
 func keyBuilder(pubkey []byte, epoch types.Epoch) string {
-	epochBytes := bytesutil.Bytes8(uint64(epoch))
+	epochBytes := butil.Bytes8(uint64(epoch))
 	return string(append(pubkey, epochBytes...))
 }

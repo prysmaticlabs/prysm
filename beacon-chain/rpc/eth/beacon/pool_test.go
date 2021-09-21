@@ -20,7 +20,7 @@ import (
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpb_v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -39,102 +39,102 @@ func TestListPoolAttestations(t *testing.T) {
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 1,
-				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				Root:  butil.PadTo([]byte("sourceroot1"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 10,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				Root:  butil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		Signature: butil.PadTo([]byte("signature1"), 96),
 	}
 	att2 := &ethpb_v1alpha1.Attestation{
 		AggregationBits: []byte{4, 40},
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            4,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot4"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 4,
-				Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+				Root:  butil.PadTo([]byte("sourceroot4"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 40,
-				Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+				Root:  butil.PadTo([]byte("targetroot4"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature4"), 96),
+		Signature: butil.PadTo([]byte("signature4"), 96),
 	}
 	att3 := &ethpb_v1alpha1.Attestation{
 		AggregationBits: []byte{2, 20},
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  butil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		Signature: butil.PadTo([]byte("signature2"), 96),
 	}
 	att4 := &ethpb_v1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            4,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  butil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		Signature: butil.PadTo([]byte("signature2"), 96),
 	}
 	att5 := &ethpb_v1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  butil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		Signature: butil.PadTo([]byte("signature1"), 96),
 	}
 	att6 := &ethpb_v1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
 		Data: &ethpb_v1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
 			Source: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  butil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb_v1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		Signature: butil.PadTo([]byte("signature2"), 96),
 	}
 	s := &Server{
 		ChainInfoFetcher: &chainMock.ChainService{State: state},
@@ -202,34 +202,34 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 			Data: &ethpb_v1alpha1.AttestationData{
 				Slot:            1,
 				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
 				Source: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+					Root:  butil.PadTo([]byte("sourceroot1"), 32),
 				},
 				Target: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+					Root:  butil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
-			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+			Signature: butil.PadTo([]byte("signature1"), 96),
 		},
 		Attestation_2: &ethpb_v1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{2, 20},
 			Data: &ethpb_v1alpha1.AttestationData{
 				Slot:            2,
 				CommitteeIndex:  2,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
 				Source: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 2,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+					Root:  butil.PadTo([]byte("sourceroot2"), 32),
 				},
 				Target: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 20,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+					Root:  butil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
-			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+			Signature: butil.PadTo([]byte("signature2"), 96),
 		},
 	}
 	slashing2 := &ethpb_v1alpha1.AttesterSlashing{
@@ -238,34 +238,34 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 			Data: &ethpb_v1alpha1.AttestationData{
 				Slot:            3,
 				CommitteeIndex:  3,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot3"), 32),
 				Source: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 3,
-					Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+					Root:  butil.PadTo([]byte("sourceroot3"), 32),
 				},
 				Target: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 30,
-					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
+					Root:  butil.PadTo([]byte("targetroot3"), 32),
 				},
 			},
-			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+			Signature: butil.PadTo([]byte("signature3"), 96),
 		},
 		Attestation_2: &ethpb_v1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{4, 40},
 			Data: &ethpb_v1alpha1.AttestationData{
 				Slot:            4,
 				CommitteeIndex:  4,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot4"), 32),
 				Source: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 4,
-					Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+					Root:  butil.PadTo([]byte("sourceroot4"), 32),
 				},
 				Target: &ethpb_v1alpha1.Checkpoint{
 					Epoch: 40,
-					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+					Root:  butil.PadTo([]byte("targetroot4"), 32),
 				},
 			},
-			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+			Signature: butil.PadTo([]byte("signature4"), 96),
 		},
 	}
 
@@ -289,21 +289,21 @@ func TestListPoolProposerSlashings(t *testing.T) {
 			Header: &ethpb_v1alpha1.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 1,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+			Signature: butil.PadTo([]byte("signature1"), 96),
 		},
 		Header_2: &ethpb_v1alpha1.SignedBeaconBlockHeader{
 			Header: &ethpb_v1alpha1.BeaconBlockHeader{
 				Slot:          2,
 				ProposerIndex: 2,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot2"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+			Signature: butil.PadTo([]byte("signature2"), 96),
 		},
 	}
 	slashing2 := &ethpb_v1alpha1.ProposerSlashing{
@@ -311,21 +311,21 @@ func TestListPoolProposerSlashings(t *testing.T) {
 			Header: &ethpb_v1alpha1.BeaconBlockHeader{
 				Slot:          3,
 				ProposerIndex: 3,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot3"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot3"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot3"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot3"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+			Signature: butil.PadTo([]byte("signature3"), 96),
 		},
 		Header_2: &ethpb_v1alpha1.SignedBeaconBlockHeader{
 			Header: &ethpb_v1alpha1.BeaconBlockHeader{
 				Slot:          4,
 				ProposerIndex: 4,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot4"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot4"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot4"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot4"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+			Signature: butil.PadTo([]byte("signature4"), 96),
 		},
 	}
 
@@ -349,14 +349,14 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 			Epoch:          1,
 			ValidatorIndex: 1,
 		},
-		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		Signature: butil.PadTo([]byte("signature1"), 96),
 	}
 	exit2 := &ethpb_v1alpha1.SignedVoluntaryExit{
 		Exit: &ethpb_v1alpha1.VoluntaryExit{
 			Epoch:          2,
 			ValidatorIndex: 2,
 		},
-		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		Signature: butil.PadTo([]byte("signature2"), 96),
 	}
 
 	s := &Server{
@@ -391,14 +391,14 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Slot:            1,
 				Index:           1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
 				Source: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+					Root:  butil.PadTo([]byte("sourceroot1"), 32),
 				},
 				Target: &ethpb.Checkpoint{
 					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+					Root:  butil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
 			Signature: make([]byte, 96),
@@ -408,14 +408,14 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Slot:            1,
 				Index:           1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
 				Source: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+					Root:  butil.PadTo([]byte("sourceroot2"), 32),
 				},
 				Target: &ethpb.Checkpoint{
 					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+					Root:  butil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
 			Signature: make([]byte, 96),
@@ -455,14 +455,14 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			Index:           1,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 1,
-				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				Root:  butil.PadTo([]byte("sourceroot1"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 10,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				Root:  butil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -505,9 +505,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 			Message: &ethpb.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
 			},
 			Signature: make([]byte, 96),
 		},
@@ -515,9 +515,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 			Message: &ethpb.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+				ParentRoot:    butil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     butil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      butil.PadTo([]byte("bodyroot2"), 32),
 			},
 			Signature: make([]byte, 96),
 		},
@@ -561,9 +561,9 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 		Message: &ethpb.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 0,
-			ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
-			StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
-			BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
+			StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
+			BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -722,7 +722,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			Root:  butil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
@@ -732,18 +732,18 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 
 	sourceCheckpoint := &ethpb.Checkpoint{
 		Epoch: 0,
-		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		Root:  butil.PadTo([]byte("sourceroot1"), 32),
 	}
 	att1 := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				Root:  butil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -753,11 +753,11 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -828,7 +828,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			Root:  butil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
@@ -837,7 +837,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 
 	sourceCheckpoint := &ethpb.Checkpoint{
 		Epoch: 0,
-		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		Root:  butil.PadTo([]byte("sourceroot1"), 32),
 	}
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
@@ -846,11 +846,11 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				Root:  butil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -860,11 +860,11 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -928,7 +928,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			Root:  butil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
@@ -942,14 +942,14 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  butil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 1,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Root:  butil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: nil,

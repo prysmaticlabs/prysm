@@ -13,7 +13,7 @@ go_library(
         "//async:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//config/params:go_default_library",
-        "//encoding/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//io/logs:go_default_library",
         "//network:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

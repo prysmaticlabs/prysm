@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -33,7 +33,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return cachedState, nil
 	}
 
-	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.cfg.StateGen.StateByRoot(ctx, butil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
@@ -77,7 +77,7 @@ func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime u
 
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
-	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
+	r := butil.ToBytes32(data.BeaconBlockRoot)
 	b, err := s.cfg.BeaconDB.Block(ctx, r)
 	if err != nil {
 		return err

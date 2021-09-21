@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -77,7 +77,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
 	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
 	// In this case, we could exit early to save on additional computation.
-	if s.cfg.ForkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+	if s.cfg.ForkChoiceStore.IsCanonical(butil.ToBytes32(root)) {
 		return nil
 	}
 
@@ -145,8 +145,8 @@ func (s *Service) processAttestations(ctx context.Context) {
 			continue
 		}
 
-		hasState := s.cfg.BeaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-		hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+		hasState := s.cfg.BeaconDB.HasStateSummary(ctx, butil.ToBytes32(a.Data.BeaconBlockRoot))
+		hasBlock := s.hasBlock(ctx, butil.ToBytes32(a.Data.BeaconBlockRoot))
 		if !(hasState && hasBlock) {
 			continue
 		}
@@ -163,8 +163,8 @@ func (s *Service) processAttestations(ctx context.Context) {
 			log.WithFields(logrus.Fields{
 				"slot":             a.Data.Slot,
 				"committeeIndex":   a.Data.CommitteeIndex,
-				"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
-				"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
+				"beaconBlockRoot":  fmt.Sprintf("%#x", butil.Trunc(a.Data.BeaconBlockRoot)),
+				"targetRoot":       fmt.Sprintf("%#x", butil.Trunc(a.Data.Target.Root)),
 				"aggregationCount": a.AggregationBits.Count(),
 			}).WithError(err).Warn("Could not process attestation for fork choice")
 		}

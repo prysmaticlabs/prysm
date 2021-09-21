@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -142,7 +142,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	att, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
+	tRoot := butil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
@@ -164,11 +164,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
+	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: butil.PadTo([]byte{'A'}, 32)})
 	require.NoError(t, err)
 	val := &ethpb.Validator{
-		PublicKey:             bytesutil.PadTo([]byte("foo"), 48),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("bar"), 32),
+		PublicKey:             butil.PadTo([]byte("foo"), 48),
+		WithdrawalCredentials: butil.PadTo([]byte("bar"), 32),
 	}
 	err = s.SetValidators([]*ethpb.Validator{val})
 	require.NoError(t, err)
@@ -182,18 +182,18 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 
-	r = bytesutil.ToBytes32([]byte{'A'})
-	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}))
+	r = butil.ToBytes32([]byte{'A'})
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: butil.PadTo([]byte{'A'}, 32)}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, butil.ToBytes32([]byte{'A'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: butil.PadTo([]byte{'A'}, 32)}))
 
 	s1, err := service.getAttPreState(ctx, cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}))
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: butil.PadTo([]byte{'B'}, 32)}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, butil.ToBytes32([]byte{'B'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: butil.PadTo([]byte{'B'}, 32)}))
 	s2, err := service.getAttPreState(ctx, cp2)
 	require.NoError(t, err)
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
@@ -215,9 +215,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}))
+	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: butil.PadTo([]byte{'C'}, 32)}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, butil.ToBytes32([]byte{'C'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: butil.PadTo([]byte{'C'}, 32)}))
 	s3, err := service.getAttPreState(ctx, cp3)
 	require.NoError(t, err)
 	assert.Equal(t, s.Slot(), s3.Slot(), "Unexpected state slot")
@@ -236,8 +236,8 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch := types.Epoch(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: butil.PadTo([]byte("hi"), 32)}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, butil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(checkpoint.Epoch)), returned.Slot(), "Incorrectly returned base state")
@@ -247,8 +247,8 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
 	epoch = 2
-	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: butil.PadTo([]byte("bye"), 32)}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, butil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
 	s, err := core.StartSlot(newCheckpoint.Epoch)

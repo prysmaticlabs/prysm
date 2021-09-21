@@ -8,7 +8,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/testing/bls/utils"
 )
@@ -43,7 +43,7 @@ func testBatchVerify(t *testing.T) {
 			for j, raw := range test.Input.Messages {
 				msgBytes, err := hex.DecodeString(raw[2:])
 				require.NoError(t, err)
-				messages[j] = bytesutil.ToBytes32(msgBytes)
+				messages[j] = butil.ToBytes32(msgBytes)
 			}
 			for j, raw := range test.Input.Signatures {
 				sigBytes, err := hex.DecodeString(raw[2:])

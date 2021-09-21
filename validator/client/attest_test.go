@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -112,9 +112,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		},
 	}}
 
-	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
-	targetRoot := bytesutil.ToBytes32([]byte("B"))
-	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+	beaconBlockRoot := butil.ToBytes32([]byte("A"))
+	targetRoot := butil.ToBytes32([]byte("B"))
+	sourceRoot := butil.ToBytes32([]byte("C"))
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
@@ -184,10 +184,10 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}}
-	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
-	targetRoot := bytesutil.ToBytes32([]byte("B"))
-	sourceRoot := bytesutil.ToBytes32([]byte("C"))
-	beaconBlockRoot2 := bytesutil.ToBytes32([]byte("D"))
+	beaconBlockRoot := butil.ToBytes32([]byte("A"))
+	targetRoot := butil.ToBytes32([]byte("B"))
+	sourceRoot := butil.ToBytes32([]byte("C"))
+	beaconBlockRoot2 := butil.ToBytes32([]byte("D"))
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -236,9 +236,9 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}}
-	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
-	targetRoot := bytesutil.ToBytes32([]byte("B"))
-	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+	beaconBlockRoot := butil.ToBytes32([]byte("A"))
+	targetRoot := butil.ToBytes32([]byte("B"))
+	sourceRoot := butil.ToBytes32([]byte("C"))
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -288,9 +288,9 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}}
-	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
-	targetRoot := bytesutil.ToBytes32([]byte("B"))
-	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+	beaconBlockRoot := butil.ToBytes32([]byte("A"))
+	targetRoot := butil.ToBytes32([]byte("B"))
+	sourceRoot := butil.ToBytes32([]byte("C"))
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -318,9 +318,9 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
-		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32), Epoch: 2},
-		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 1},
+		BeaconBlockRoot: butil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("B"), 32), Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("C"), 32), Epoch: 1},
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
@@ -380,9 +380,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
-		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
-		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
+		BeaconBlockRoot: butil.PadTo([]byte("A"), 32),
+		Target:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("C"), 32), Epoch: 3},
 	}, nil).Do(func(arg0, arg1 interface{}, arg2 ...grpc.CallOption) {
 		wg.Done()
 	})
@@ -418,8 +418,8 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
-		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
+		Target:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("B"), 32)},
+		Source:          &ethpb.Checkpoint{Root: butil.PadTo([]byte("C"), 32), Epoch: 3},
 		BeaconBlockRoot: make([]byte, 32),
 	}, nil)
 
@@ -445,7 +445,7 @@ func TestSignAttestation(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	secretKey, err := bls.SecretKeyFromBytes(butil.PadTo([]byte{1}, 32))
 	require.NoError(t, err, "Failed to generate key from bytes")
 	publicKey := secretKey.PublicKey()
 	wantedFork := &ethpb.Fork{
@@ -464,7 +464,7 @@ func TestSignAttestation(t *testing.T) {
 	att.Data.Source.Epoch = 100
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999
-	att.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("blockRoot"), 32)
+	att.Data.BeaconBlockRoot = butil.PadTo([]byte("blockRoot"), 32)
 	var pubKey [48]byte
 	copy(pubKey[:], publicKey.Marshal())
 	km := &mockKeymanager{

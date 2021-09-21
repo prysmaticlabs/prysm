@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -74,7 +74,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	graffiti := butil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
 		Slot:         1,
 		RandaoReveal: randaoReveal,
@@ -181,7 +181,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	assert.NoError(t, err)
 
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	graffiti := butil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
 		Slot:         1,
 		RandaoReveal: randaoReveal,
@@ -416,7 +416,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:   butil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
 		},
 		Eth1DepositIndex: 2,
@@ -433,7 +433,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 2,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -443,7 +443,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -456,7 +456,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 400,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
+					PublicKey:             butil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -466,7 +466,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			Eth1BlockHeight: 600,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
+					PublicKey:             butil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -533,7 +533,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	var votes []*ethpb.Eth1Data
 
 	vote := &ethpb.Eth1Data{
-		BlockHash:    bytesutil.PadTo([]byte("0x1"), 32),
+		BlockHash:    butil.PadTo([]byte("0x1"), 32),
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
@@ -568,7 +568,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -578,7 +578,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -591,7 +591,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 5000,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
+					PublicKey:             butil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -601,7 +601,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			Eth1BlockHeight: 6000,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
+					PublicKey:             butil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -660,7 +660,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
-		BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+		BlockHash:    butil.PadTo([]byte("0x0"), 32),
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 100,
 	}))
@@ -678,7 +678,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -687,7 +687,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -700,7 +700,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
+					PublicKey:             butil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -755,7 +755,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:    butil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
 			DepositCount: 100,
 		},
@@ -774,7 +774,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -783,7 +783,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -796,7 +796,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
+					PublicKey:             butil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -849,7 +849,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:    butil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
 			DepositCount: 5,
 		},
@@ -868,7 +868,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -877,7 +877,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -890,7 +890,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
+					PublicKey:             butil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -943,7 +943,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:    butil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
 			DepositCount: 4,
 		},
@@ -966,7 +966,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -976,7 +976,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -989,7 +989,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
+					PublicKey:             butil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -999,7 +999,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
+					PublicKey:             butil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1053,7 +1053,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:    butil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
 			DepositCount: 4,
 		},
@@ -1076,7 +1076,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1086,7 +1086,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1099,7 +1099,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
+					PublicKey:             butil.PadTo([]byte("c"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1109,7 +1109,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
+					PublicKey:             butil.PadTo([]byte("d"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1249,7 +1249,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
@@ -1259,7 +1259,7 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             make([]byte, 96),
 					WithdrawalCredentials: make([]byte, 32),
 				}},
@@ -1315,7 +1315,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		Eth1BlockHeight: 0,
 		Deposit: &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
-				PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+				PublicKey:             butil.PadTo([]byte("a"), 48),
 				Signature:             make([]byte, 96),
 				WithdrawalCredentials: make([]byte, 32),
 			}},
@@ -1968,7 +1968,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 
 	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
+			BlockHash:   butil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
 		},
 		Eth1DepositIndex: 2,
@@ -1987,7 +1987,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 			Index: 0,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					PublicKey:             butil.PadTo([]byte("a"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -1996,7 +1996,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 			Index: 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					PublicKey:             butil.PadTo([]byte("b"), 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -2009,7 +2009,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 			Index: i,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{byte(i)}, 48),
+					PublicKey:             butil.PadTo([]byte{byte(i)}, 48),
 					Signature:             mockSig[:],
 					WithdrawalCredentials: mockCreds[:],
 				}},
@@ -2130,7 +2130,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	graffiti := butil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
 		Slot:         1,
 		RandaoReveal: randaoReveal,
@@ -2242,7 +2242,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	graffiti := butil.ToBytes32([]byte("eth2"))
 	require.NoError(t, err)
 	req := &ethpb.BlockRequest{
 		Slot:         altairSlot + 1,
@@ -2320,15 +2320,15 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 		require.NoError(t, proposerServer.SyncCommitteePool.SaveSyncCommitteeContribution(cont))
 	}
 
-	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, bytesutil.ToBytes32(conts[0].BlockRoot))
+	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, butil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
 	require.DeepEqual(t, bitfield.Bitvector512{0xf, 0xf, 0xf, 0xf}, aggregate.SyncCommitteeBits)
 
-	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, bytesutil.ToBytes32(conts[0].BlockRoot))
+	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, butil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
 	require.DeepEqual(t, bitfield.Bitvector512{0xaa, 0xaa, 0xaa, 0xaa}, aggregate.SyncCommitteeBits)
 
-	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot))
+	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, butil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
 	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
 }

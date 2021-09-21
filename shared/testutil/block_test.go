@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -145,7 +145,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 
 	depositedPubkey := block.Block.Body.Deposits[0].Data.PublicKey
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState.Validators())
-	index := valIndexMap[bytesutil.ToBytes48(depositedPubkey)]
+	index := valIndexMap[butil.ToBytes48(depositedPubkey)]
 	val, err := beaconState.ValidatorAtIndexReadOnly(index)
 	require.NoError(t, err)
 	if val.EffectiveBalance() != params.BeaconConfig().MaxEffectiveBalance {

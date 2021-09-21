@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -122,7 +122,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				}
 			}
 			log.WithFields(logrus.Fields{
-				"blockRoot":        hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
+				"blockRoot":        hex.EncodeToString(butil.Trunc(bRoot[:])),
 				"pendingAttsCount": len(attestations),
 			}).Debug("Verified and saved pending attestations to pool")
 
@@ -136,7 +136,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				"currentSlot": s.cfg.Chain.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
-				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
+				"blockRoot":   hex.EncodeToString(butil.Trunc(bRoot[:])),
 			}).Debug("Requesting block for pending attestation")
 			pendingRoots = append(pendingRoots, bRoot)
 		}
@@ -148,7 +148,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root.
 func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) {
-	root := bytesutil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
+	root := butil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()

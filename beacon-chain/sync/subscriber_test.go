@@ -26,7 +26,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -156,7 +156,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating attester slashing")
-	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.cfg.DB.SaveState(ctx, beaconState, butil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 

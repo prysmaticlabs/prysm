@@ -26,7 +26,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -58,7 +58,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
-	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
+	msg.Signature = butil.PadTo([]byte("fake"), 96)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -388,7 +388,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := testutil.NewBeaconBlock()
@@ -494,7 +494,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := testutil.NewBeaconBlock()
@@ -535,7 +535,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	sk, err := bls.SecretKeyFromBytes(b32[:])

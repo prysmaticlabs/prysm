@@ -13,7 +13,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -202,7 +202,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
+		PublicKeysToDelete: butil.FromBytes48Array(keys),
 	})
 	require.NoError(t, err)
 }

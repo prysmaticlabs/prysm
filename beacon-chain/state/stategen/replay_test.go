@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -114,7 +114,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig()
 	bCfg.AltairForkEpoch = 1
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
+	bCfg.ForkVersionSchedule[butil.ToBytes44(bCfg.AltairForkVersion)] = 1
 	params.OverrideBeaconConfig(bCfg)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -145,7 +145,7 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree1(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 8, roots[len(roots)-1])
@@ -174,7 +174,7 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree1(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 5, roots[5])
@@ -201,7 +201,7 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree1(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 7, roots[7])
@@ -230,7 +230,7 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree2(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree2(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 3, roots[6])
@@ -257,7 +257,7 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree3(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree3(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[2])
@@ -283,7 +283,7 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, savedBlocks, err := tree4(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, savedBlocks, err := tree4(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
 	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[1])
@@ -308,7 +308,7 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 		beaconDB: beaconDB,
 	}
 
-	roots, _, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
+	roots, _, err := tree1(t, beaconDB, butil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 	_, err = s.LoadBlocks(ctx, 0, 5, roots[8])
 	assert.ErrorContains(t, "end block roots don't match", err)
@@ -518,11 +518,11 @@ func tree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	for _, b := range []*ethpb.SignedBeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
-		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		beaconBlock.Block.ParentRoot = butil.PadTo(b.Block.ParentRoot, 32)
 		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		if err := beaconDB.SaveState(context.Background(), st.Copy(), butil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -554,7 +554,7 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b21 := testutil.NewBeaconBlock()
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r1[:]
-	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	b21.Block.StateRoot = butil.PadTo([]byte{'A'}, 32)
 	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -562,7 +562,7 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b22 := testutil.NewBeaconBlock()
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r1[:]
-	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
+	b22.Block.StateRoot = butil.PadTo([]byte{'B'}, 32)
 	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -570,7 +570,7 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b23 := testutil.NewBeaconBlock()
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r1[:]
-	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
+	b23.Block.StateRoot = butil.PadTo([]byte{'C'}, 32)
 	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -578,7 +578,7 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b24 := testutil.NewBeaconBlock()
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r1[:]
-	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
+	b24.Block.StateRoot = butil.PadTo([]byte{'D'}, 32)
 	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -597,12 +597,12 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	for _, b := range []*ethpb.SignedBeaconBlock{b0, b1, b21, b22, b23, b24, b3} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
-		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
+		beaconBlock.Block.ParentRoot = butil.PadTo(b.Block.ParentRoot, 32)
+		beaconBlock.Block.StateRoot = butil.PadTo(b.Block.StateRoot, 32)
 		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		if err := beaconDB.SaveState(context.Background(), st.Copy(), butil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -634,7 +634,7 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b21 := testutil.NewBeaconBlock()
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r1[:]
-	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	b21.Block.StateRoot = butil.PadTo([]byte{'A'}, 32)
 	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -642,7 +642,7 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b22 := testutil.NewBeaconBlock()
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r1[:]
-	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
+	b22.Block.StateRoot = butil.PadTo([]byte{'B'}, 32)
 	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -650,7 +650,7 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b23 := testutil.NewBeaconBlock()
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r1[:]
-	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
+	b23.Block.StateRoot = butil.PadTo([]byte{'C'}, 32)
 	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -658,7 +658,7 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b24 := testutil.NewBeaconBlock()
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r1[:]
-	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
+	b24.Block.StateRoot = butil.PadTo([]byte{'D'}, 32)
 	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -670,12 +670,12 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	for _, b := range []*ethpb.SignedBeaconBlock{b0, b1, b21, b22, b23, b24} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
-		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
+		beaconBlock.Block.ParentRoot = butil.PadTo(b.Block.ParentRoot, 32)
+		beaconBlock.Block.StateRoot = butil.PadTo(b.Block.StateRoot, 32)
 		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		if err := beaconDB.SaveState(context.Background(), st.Copy(), butil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -701,7 +701,7 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b21 := testutil.NewBeaconBlock()
 	b21.Block.Slot = 2
 	b21.Block.ParentRoot = r0[:]
-	b21.Block.StateRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	b21.Block.StateRoot = butil.PadTo([]byte{'A'}, 32)
 	r21, err := b21.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -709,7 +709,7 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b22 := testutil.NewBeaconBlock()
 	b22.Block.Slot = 2
 	b22.Block.ParentRoot = r0[:]
-	b22.Block.StateRoot = bytesutil.PadTo([]byte{'B'}, 32)
+	b22.Block.StateRoot = butil.PadTo([]byte{'B'}, 32)
 	r22, err := b22.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -717,7 +717,7 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b23 := testutil.NewBeaconBlock()
 	b23.Block.Slot = 2
 	b23.Block.ParentRoot = r0[:]
-	b23.Block.StateRoot = bytesutil.PadTo([]byte{'C'}, 32)
+	b23.Block.StateRoot = butil.PadTo([]byte{'C'}, 32)
 	r23, err := b23.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -725,7 +725,7 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	b24 := testutil.NewBeaconBlock()
 	b24.Block.Slot = 2
 	b24.Block.ParentRoot = r0[:]
-	b24.Block.StateRoot = bytesutil.PadTo([]byte{'D'}, 32)
+	b24.Block.StateRoot = butil.PadTo([]byte{'D'}, 32)
 	r24, err := b24.Block.HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
@@ -737,12 +737,12 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 	for _, b := range []*ethpb.SignedBeaconBlock{b0, b21, b22, b23, b24} {
 		beaconBlock := testutil.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
-		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
+		beaconBlock.Block.ParentRoot = butil.PadTo(b.Block.ParentRoot, 32)
+		beaconBlock.Block.StateRoot = butil.PadTo(b.Block.StateRoot, 32)
 		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		if err := beaconDB.SaveState(context.Background(), st.Copy(), butil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)

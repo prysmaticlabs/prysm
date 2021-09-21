@@ -10,7 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -30,7 +30,7 @@ func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) 
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
 	).Return(&ethpb.SyncMessageBlockRootResponse{
-		Root: bytesutil.PadTo([]byte{}, 32),
+		Root: butil.PadTo([]byte{}, 32),
 	}, nil)
 
 	pubKey := [48]byte{}
@@ -58,7 +58,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
 	).Return(&ethpb.SyncMessageBlockRootResponse{
-		Root: bytesutil.PadTo(r, 32),
+		Root: butil.PadTo(r, 32),
 	}, nil)
 
 	m.validatorClient.EXPECT().
@@ -90,7 +90,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
 	).Return(&ethpb.SyncMessageBlockRootResponse{
-		Root: bytesutil.PadTo(r, 32),
+		Root: butil.PadTo(r, 32),
 	}, nil)
 
 	m.validatorClient.EXPECT().
@@ -131,7 +131,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 		gomock.Any(), // ctx
 		&emptypb.Empty{},
 	).Return(&ethpb.SyncMessageBlockRootResponse{
-		Root: bytesutil.PadTo(r, 32),
+		Root: butil.PadTo(r, 32),
 	}, nil)
 
 	m.validatorClient.EXPECT().
@@ -156,7 +156,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not")
 	require.Equal(t, types.Slot(1), generatedMsg.Slot)
 	require.Equal(t, validatorIndex, generatedMsg.ValidatorIndex)
-	require.DeepEqual(t, bytesutil.PadTo(r, 32), generatedMsg.BlockRoot)
+	require.DeepEqual(t, butil.PadTo(r, 32), generatedMsg.BlockRoot)
 }
 
 func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testing.T) {

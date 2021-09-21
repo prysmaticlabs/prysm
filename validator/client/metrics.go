@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -215,7 +215,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 	if err != nil {
 		return err
 	}
-	pubKeys := bytesutil.FromBytes48Array(pks)
+	pubKeys := butil.FromBytes48Array(pks)
 
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubKeys,
@@ -242,7 +242,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	v.prevBalanceLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
-		pubKeyBytes := bytesutil.ToBytes48(pubKey)
+		pubKeyBytes := butil.ToBytes48(pubKey)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
@@ -251,7 +251,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
-		truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
+		truncatedKey := fmt.Sprintf("%#x", butil.Trunc(pubKey))
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth

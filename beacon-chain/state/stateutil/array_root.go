@@ -3,7 +3,7 @@ package stateutil
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // HandleByteArrays computes and returns byte arrays in a slice of root format.
@@ -14,7 +14,7 @@ func HandleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 	}
 	roots := make([][32]byte, 0, length)
 	rootCreator := func(input []byte) {
-		newRoot := bytesutil.ToBytes32(input)
+		newRoot := butil.ToBytes32(input)
 		roots = append(roots, newRoot)
 	}
 	if convertAll {

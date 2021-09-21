@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -303,8 +303,8 @@ func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIn
 	s.seenSyncContributionLock.RLock()
 	defer s.seenSyncContributionLock.RUnlock()
 
-	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
+	b := append(butil.Bytes32(uint64(aggregatorIndex)), butil.Bytes32(uint64(slot))...)
+	b = append(b, butil.Bytes32(uint64(subComIdx))...)
 	_, seen := s.seenSyncContributionCache.Get(string(b))
 	return seen
 }
@@ -313,8 +313,8 @@ func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIn
 func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) {
 	s.seenSyncContributionLock.Lock()
 	defer s.seenSyncContributionLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
+	b := append(butil.Bytes32(uint64(aggregatorIndex)), butil.Bytes32(uint64(slot))...)
+	b = append(b, butil.Bytes32(uint64(subComIdx))...)
 	s.seenSyncContributionCache.Add(string(b), true)
 }
 

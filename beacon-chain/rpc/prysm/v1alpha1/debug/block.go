@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"google.golang.org/grpc/codes"
@@ -21,7 +21,7 @@ func (ds *Server) GetBlock(
 	ctx context.Context,
 	req *pbrpc.BlockRequestByRoot,
 ) (*pbrpc.SSZResponse, error) {
-	root := bytesutil.ToBytes32(req.BlockRoot)
+	root := butil.ToBytes32(req.BlockRoot)
 	signedBlock, err := ds.BeaconDB.Block(ctx, root)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve block by root: %v", err)
@@ -65,7 +65,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	targetStates := make(map[[32]byte]state.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block().Body().Attestations() {
-			tr := bytesutil.ToBytes32(a.Data.Target.Root)
+			tr := butil.ToBytes32(a.Data.Target.Root)
 			s, ok := targetStates[tr]
 			if !ok {
 				s, err = ds.StateGen.StateByRoot(ctx, tr)

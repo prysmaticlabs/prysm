@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -63,11 +63,11 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIn
 
 	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
 	for i, key := range committee.Pubkeys {
-		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+		index, ok := st.ValidatorIndexByPubkey(butil.ToBytes48(key))
 		if !ok {
 			return nil, nil, fmt.Errorf(
 				"validator index not found for pubkey %#x",
-				bytesutil.Trunc(key),
+				butil.Trunc(key),
 			)
 		}
 		committeeIndices[i] = index
@@ -87,11 +87,11 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCo
 		}
 		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
-			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+			index, ok := st.ValidatorIndexByPubkey(butil.ToBytes48(key))
 			if !ok {
 				return nil, fmt.Errorf(
 					"validator index not found for pubkey %#x",
-					bytesutil.Trunc(key),
+					butil.Trunc(key),
 				)
 			}
 			subcommittee.Validators[j] = index
@@ -150,10 +150,10 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 }
 
 func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
-	if !bytesutil.IsHexOfLen(msg.BeaconBlockRoot, 64) {
+	if !bytes.IsHexOfLen(msg.BeaconBlockRoot, 64) {
 		return errors.New("invalid block root format")
 	}
-	if !bytesutil.IsHexOfLen(msg.Signature, 192) {
+	if !bytes.IsHexOfLen(msg.Signature, 192) {
 		return errors.New("invalid signature format")
 	}
 	return nil

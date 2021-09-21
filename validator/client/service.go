@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -258,7 +258,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
 	for _, key := range validatingKeys {
 		log.WithField(
-			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+			"publicKey", fmt.Sprintf("%#x", butil.Trunc(key[:])),
 		).Info("Validating for public key")
 	}
 }

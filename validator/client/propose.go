@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -61,7 +61,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", butil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
@@ -149,7 +149,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	blkRoot := fmt.Sprintf("%#x", butil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
@@ -178,7 +178,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", butil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
@@ -298,7 +298,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		trace.Int64Attribute("numAttestations", int64(len(altairBlk.Altair.Body.Attestations))),
 	)
 
-	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	blkRoot := fmt.Sprintf("%#x", butil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            altairBlk.Altair.Slot,
 		"blockRoot":       blkRoot,

@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -162,7 +162,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return err
 		}
-		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+		fRoot := butil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
@@ -216,7 +216,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
 		return nil, nil, err
 	}
-	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, butil.ToBytes32(b.ParentRoot()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -380,7 +380,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 		if err != nil {
 			return err
 		}
-		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, butil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 	return nil
 }
@@ -392,7 +392,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 	}
 	// Feed in block to fork choice store.
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), bytesutil.ToBytes32(blk.Body().Graffiti()),
+		blk.Slot(), root, butil.ToBytes32(blk.ParentRoot()), butil.ToBytes32(blk.Body().Graffiti()),
 		jCheckpoint.Epoch,
 		fCheckpoint.Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")

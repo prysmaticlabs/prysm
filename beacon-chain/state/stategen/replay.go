@@ -11,7 +11,7 @@ import (
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
@@ -106,7 +106,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 			return nil, ctx.Err()
 		}
 		b := filteredBlocks[len(filteredBlocks)-1]
-		if bytesutil.ToBytes32(b.Block().ParentRoot()) != blockRoots[i] {
+		if butil.ToBytes32(b.Block().ParentRoot()) != blockRoots[i] {
 			continue
 		}
 		filteredBlocks = append(filteredBlocks, blocks[i])

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // HeaderInfo specifies the block header information in the ETH 1.0 chain.
@@ -33,7 +33,7 @@ func HeaderToHeaderInfo(hdr *gethTypes.Header) (*HeaderInfo, error) {
 // Copy sends out a copy of the current header info.
 func (h *HeaderInfo) Copy() *HeaderInfo {
 	return &HeaderInfo{
-		Hash:   bytesutil.ToBytes32(h.Hash[:]),
+		Hash:   butil.ToBytes32(h.Hash[:]),
 		Number: new(big.Int).Set(h.Number),
 		Time:   h.Time,
 	}

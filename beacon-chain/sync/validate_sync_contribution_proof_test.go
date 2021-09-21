@@ -28,7 +28,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -323,7 +323,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -380,7 +380,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -447,7 +447,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -477,7 +477,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					ValidatorsRoot:           [32]byte{'A'},
 					Genesis:                  time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					SyncCommitteeIndices:     []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
-					PublicKey:                bytesutil.ToBytes48(pubkey),
+					PublicKey:                butil.ToBytes48(pubkey),
 					SyncSelectionProofDomain: d,
 				}
 
@@ -525,7 +525,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -609,7 +609,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -642,7 +642,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					SyncCommitteeIndices:        []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
-					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
+					PublicKey:                   butil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    d,
 					SyncContributionProofDomain: cd,
 					SyncCommitteeDomain:         make([]byte, 32),
@@ -697,7 +697,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					pubkeys = coms
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -715,7 +715,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							rawBytes := p2ptypes.SSZBytes(headRoot[:])
 							sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 							assert.NoError(t, err)
-							valIdx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(coms[0]))
+							valIdx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(coms[0]))
 							assert.Equal(t, true, ok)
 							sig = keys[valIdx].Sign(sigRoot[:])
 							msg.Message.Contribution.AggregationBits.SetBitAt(uint64(0), true)
@@ -737,7 +737,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					SyncCommitteeIndices:        []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
-					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
+					PublicKey:                   butil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,
 					SyncContributionProofDomain: cd,
 					SyncCommitteeDomain:         d,
@@ -793,7 +793,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					pubkeys = coms
 					assert.NoError(t, err)
 					for _, p := range coms {
-						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p))
 						assert.Equal(t, true, ok)
 						rt, err := syncSelectionProofSigningRoot(hState, core.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
@@ -812,7 +812,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							assert.NoError(t, err)
 							sigs := []bls.Signature{}
 							for i, p2 := range coms {
-								idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p2))
+								idx, ok := hState.ValidatorIndexByPubkey(butil.ToBytes48(p2))
 								assert.Equal(t, true, ok)
 								sig := keys[idx].Sign(sigRoot[:])
 								sigs = append(sigs, sig)
@@ -835,7 +835,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 					SyncCommitteeIndices:        []types.CommitteeIndex{types.CommitteeIndex(msg.Message.Contribution.SubcommitteeIndex * subCommitteeSize)},
-					PublicKey:                   bytesutil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
+					PublicKey:                   butil.ToBytes48(keys[msg.Message.AggregatorIndex].PublicKey().Marshal()),
 					SyncSelectionProofDomain:    pd,
 					SyncContributionProofDomain: cd,
 					SyncCommitteeDomain:         d,

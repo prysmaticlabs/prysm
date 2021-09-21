@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -188,5 +188,5 @@ func ExtractGossipDigest(topic string) ([4]byte, error) {
 	if len(digest) != digestLength {
 		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
 	}
-	return bytesutil.ToBytes4(digest), nil
+	return butil.ToBytes4(digest), nil
 }

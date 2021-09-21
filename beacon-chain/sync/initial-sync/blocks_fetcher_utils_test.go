@@ -18,7 +18,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -295,7 +295,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		blk := chain2[i]
 		require.Equal(t, blk.Block.Slot, i, "incorrect block selected for slot %d", i)
 		// Only save is parent block exists.
-		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+		parentRoot := butil.ToBytes32(blk.Block.ParentRoot)
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
 			require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 			require.NoError(t, st.SetSlot(blk.Block.Slot))

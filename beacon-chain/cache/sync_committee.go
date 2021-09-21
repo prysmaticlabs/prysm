@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -129,7 +129,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 	}
 	positionsMap := make(map[types.ValidatorIndex]*positionInCommittee)
 	for i, pubkey := range csc.Pubkeys {
-		p := bytesutil.ToBytes48(pubkey)
+		p := butil.ToBytes48(pubkey)
 		validatorIndex, ok := st.ValidatorIndexByPubkey(p)
 		if !ok {
 			continue
@@ -147,7 +147,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 		return err
 	}
 	for i, pubkey := range nsc.Pubkeys {
-		p := bytesutil.ToBytes48(pubkey)
+		p := butil.ToBytes48(pubkey)
 		validatorIndex, ok := st.ValidatorIndexByPubkey(p)
 		if !ok {
 			continue

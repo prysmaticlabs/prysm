@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
 )
@@ -89,8 +89,8 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 				if historicalAtt.isEmpty() {
 					continue
 				}
-				targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
-				sourceEpochBytes := bytesutil.EpochToBytesBigEndian(historicalAtt.Source)
+				targetEpochBytes := butil.EpochToBytesBigEndian(targetEpoch)
+				sourceEpochBytes := butil.EpochToBytesBigEndian(historicalAtt.Source)
 				if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 					return err
 				}
@@ -134,7 +134,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 			if pkBucket == nil {
 				return nil
 			}
-			pubKeys = append(pubKeys, bytesutil.ToBytes48(pubKey))
+			pubKeys = append(pubKeys, butil.ToBytes48(pubKey))
 			return nil
 		})
 	})
@@ -162,7 +162,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 			if err := signingRootsBucket.ForEach(func(targetBytes, signingRoot []byte) error {
 				var sr [32]byte
 				copy(sr[:], signingRoot)
-				signingRootsByTarget[bytesutil.BytesToEpochBigEndian(targetBytes)] = sr[:]
+				signingRootsByTarget[butil.BytesToEpochBigEndian(targetBytes)] = sr[:]
 				return nil
 			}); err != nil {
 				return err
@@ -171,9 +171,9 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 			if err := sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsBytes []byte) error {
 				targetEpochs := make([]types.Epoch, 0)
 				for i := 0; i < len(targetEpochsBytes); i += 8 {
-					targetEpochs = append(targetEpochs, bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i:i+8]))
+					targetEpochs = append(targetEpochs, butil.BytesToEpochBigEndian(targetEpochsBytes[i:i+8]))
 				}
-				targetEpochsBySource[bytesutil.BytesToEpochBigEndian(sourceBytes)] = targetEpochs
+				targetEpochsBySource[butil.BytesToEpochBigEndian(sourceBytes)] = targetEpochs
 				return nil
 			}); err != nil {
 				return err

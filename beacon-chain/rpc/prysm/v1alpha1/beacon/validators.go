@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/grpc/codes"
@@ -82,7 +82,7 @@ func (bs *Server) ListValidatorBalances(
 		if len(pubKey) == 0 {
 			continue
 		}
-		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		pubkeyBytes := butil.ToBytes48(pubKey)
 		index, ok := requestedState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			// We continue the loop if one validator in the request is not found.
@@ -270,7 +270,7 @@ func (bs *Server) ListValidators(
 		if len(pubKey) == 0 {
 			continue
 		}
-		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		pubkeyBytes := butil.ToBytes48(pubKey)
 		index, ok := reqState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			continue
@@ -375,7 +375,7 @@ func (bs *Server) GetValidator(
 		}
 		return headState.ValidatorAtIndex(index)
 	}
-	pk48 := bytesutil.ToBytes48(pubKey)
+	pk48 := butil.ToBytes48(pubKey)
 	for i := types.ValidatorIndex(0); uint64(i) < uint64(headState.NumValidators()); i++ {
 		keyFromState := headState.PubkeyAtIndex(i)
 		if keyFromState == pk48 {
@@ -727,7 +727,7 @@ func (bs *Server) GetValidatorPerformance(
 		if len(pubKey) == 0 {
 			continue
 		}
-		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		pubkeyBytes := butil.ToBytes48(pubKey)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			// Validator index not found, track as missing.
@@ -836,7 +836,7 @@ func (bs *Server) GetIndividualVotes(
 	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		index, ok := requestedState.ValidatorIndexByPubkey(butil.ToBytes48(pubKey))
 		if !ok {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: types.ValidatorIndex(^uint64(0))})
 			continue

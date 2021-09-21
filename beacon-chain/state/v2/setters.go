@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -622,7 +622,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
-	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
+	b.valMapHandler.Set(butil.ToBytes48(val.PublicKey), valIdx)
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})

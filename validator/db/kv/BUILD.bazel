@@ -26,7 +26,7 @@ go_library(
         "//beacon-chain/core:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
-        "//encoding/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//io/file:go_default_library",
         "//monitoring/progress:go_default_library",
         "//monitoring/tracing:go_default_library",
@@ -61,7 +61,7 @@ go_test(
     deps = [
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
-        "//encoding/bytesutil:go_default_library",
+        "//encoding/bytes:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

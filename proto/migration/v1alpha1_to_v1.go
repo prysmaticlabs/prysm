@@ -3,7 +3,7 @@ package migration
 import (
 	"github.com/pkg/errors"
 	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -379,16 +379,16 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
 	for i, vote := range sourceEth1DataVotes {
 		resultEth1DataVotes[i] = &ethpbv1.Eth1Data{
-			DepositRoot:  bytesutil.SafeCopyBytes(vote.DepositRoot),
+			DepositRoot:  butil.SafeCopyBytes(vote.DepositRoot),
 			DepositCount: vote.DepositCount,
-			BlockHash:    bytesutil.SafeCopyBytes(vote.BlockHash),
+			BlockHash:    butil.SafeCopyBytes(vote.BlockHash),
 		}
 	}
 	resultValidators := make([]*ethpbv1.Validator, len(sourceValidators))
 	for i, validator := range sourceValidators {
 		resultValidators[i] = &ethpbv1.Validator{
-			Pubkey:                     bytesutil.SafeCopyBytes(validator.PublicKey),
-			WithdrawalCredentials:      bytesutil.SafeCopyBytes(validator.WithdrawalCredentials),
+			Pubkey:                     butil.SafeCopyBytes(validator.PublicKey),
+			WithdrawalCredentials:      butil.SafeCopyBytes(validator.WithdrawalCredentials),
 			EffectiveBalance:           validator.EffectiveBalance,
 			Slashed:                    validator.Slashed,
 			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
@@ -421,57 +421,57 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorRoot()),
+		GenesisValidatorsRoot: butil.SafeCopyBytes(altairState.GenesisValidatorRoot()),
 		Slot:                  altairState.Slot(),
 		Fork: &ethpbv1.Fork{
-			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
-			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
+			PreviousVersion: butil.SafeCopyBytes(sourceFork.PreviousVersion),
+			CurrentVersion:  butil.SafeCopyBytes(sourceFork.CurrentVersion),
 			Epoch:           sourceFork.Epoch,
 		},
 		LatestBlockHeader: &ethpbv1.BeaconBlockHeader{
 			Slot:          sourceLatestBlockHeader.Slot,
 			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
-			ParentRoot:    bytesutil.SafeCopyBytes(sourceLatestBlockHeader.ParentRoot),
-			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
-			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
+			ParentRoot:    butil.SafeCopyBytes(sourceLatestBlockHeader.ParentRoot),
+			StateRoot:     butil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
+			BodyRoot:      butil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		BlockRoots:      butil.SafeCopy2dBytes(altairState.BlockRoots()),
+		StateRoots:      butil.SafeCopy2dBytes(altairState.StateRoots()),
+		HistoricalRoots: butil.SafeCopy2dBytes(altairState.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
-			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
+			DepositRoot:  butil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
-			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
+			BlockHash:    butil.SafeCopyBytes(sourceEth1Data.BlockHash),
 		},
 		Eth1DataVotes:              resultEth1DataVotes,
 		Eth1DepositIndex:           altairState.Eth1DepositIndex(),
 		Validators:                 resultValidators,
 		Balances:                   altairState.Balances(),
-		RandaoMixes:                bytesutil.SafeCopy2dBytes(altairState.RandaoMixes()),
+		RandaoMixes:                butil.SafeCopy2dBytes(altairState.RandaoMixes()),
 		Slashings:                  altairState.Slashings(),
-		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
-		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
-		JustificationBits:          bytesutil.SafeCopyBytes(altairState.JustificationBits()),
+		PreviousEpochParticipation: butil.SafeCopyBytes(sourcePrevEpochParticipation),
+		CurrentEpochParticipation:  butil.SafeCopyBytes(sourceCurrEpochParticipation),
+		JustificationBits:          butil.SafeCopyBytes(altairState.JustificationBits()),
 		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
-			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
+			Root:  butil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
 		},
 		CurrentJustifiedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
-			Root:  bytesutil.SafeCopyBytes(sourceCurrJustifiedCheckpoint.Root),
+			Root:  butil.SafeCopyBytes(sourceCurrJustifiedCheckpoint.Root),
 		},
 		FinalizedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourceFinalizedCheckpoint.Epoch,
-			Root:  bytesutil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
+			Root:  butil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
 		},
 		InactivityScores: sourceInactivityScores,
 		CurrentSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
-			AggregatePubkey: bytesutil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
+			Pubkeys:         butil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
+			AggregatePubkey: butil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
 		},
 		NextSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
-			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
+			Pubkeys:         butil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
+			AggregatePubkey: butil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
 	}
 

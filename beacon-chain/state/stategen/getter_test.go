@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -330,7 +330,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	genesisBlockRoot := butil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	stateRoot, err := genesis.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -346,7 +346,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: r1[:]}))
-	service.hotStateCache.put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
+	service.hotStateCache.put(butil.ToBytes32(b1.Block.ParentRoot), genesis)
 
 	loadedState, err := service.loadStateBySlot(ctx, 2)
 	require.NoError(t, err)
@@ -358,7 +358,7 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	genesisBlockRoot := butil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	stateRoot, err := genesis.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -374,14 +374,14 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: r1[:]}))
-	service.hotStateCache.put(bytesutil.ToBytes32(b1.Block.ParentRoot), genesis)
+	service.hotStateCache.put(butil.ToBytes32(b1.Block.ParentRoot), genesis)
 
 	loadedState, err := service.loadStateBySlot(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(1), loadedState.Slot(), "Did not correctly load state")
 
 	// Latest block header's state root should not be zero. Zero means the current slot's block has been processed.
-	require.NotEqual(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(loadedState.LatestBlockHeader().StateRoot))
+	require.NotEqual(t, params.BeaconConfig().ZeroHash, butil.ToBytes32(loadedState.LatestBlockHeader().StateRoot))
 }
 
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
@@ -390,22 +390,22 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	service := New(beaconDB)
 
 	b0 := testutil.NewBeaconBlock()
-	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	b0.Block.ParentRoot = butil.PadTo([]byte{'a'}, 32)
 	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
-	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
+	b1.Block.ParentRoot = butil.PadTo(r0[:], 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
-	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
+	b2.Block.ParentRoot = butil.PadTo(r1[:], 32)
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
-	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
+	b3.Block.ParentRoot = butil.PadTo(r2[:], 32)
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -430,22 +430,22 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	service := New(beaconDB)
 
 	b0 := testutil.NewBeaconBlock()
-	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	b0.Block.ParentRoot = butil.PadTo([]byte{'a'}, 32)
 	r0, err := b0.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 1
-	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
+	b1.Block.ParentRoot = butil.PadTo(r0[:], 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 2
-	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
+	b2.Block.ParentRoot = butil.PadTo(r1[:], 32)
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 3
-	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
+	b3.Block.ParentRoot = butil.PadTo(r2[:], 32)
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 

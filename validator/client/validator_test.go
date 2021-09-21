@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -47,7 +47,7 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 		if err != nil {
 			panic(err)
 		}
-		km[bytesutil.ToBytes48(k.PublicKey().Marshal())] = k
+		km[butil.ToBytes48(k.PublicKey().Marshal())] = k
 	}
 
 	return &mockKeymanager{keysMap: km}
@@ -126,7 +126,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
 
 	genesis := uint64(time.Unix(1, 0).Unix())
-	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	genesisValidatorsRoot := butil.ToBytes32([]byte("validators"))
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -175,7 +175,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 		db:              db,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
-	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	genesisValidatorsRoot := butil.ToBytes32([]byte("validators"))
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -197,7 +197,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
-	genesisValidatorsRoot = bytesutil.ToBytes32([]byte("badvalidators"))
+	genesisValidatorsRoot = butil.ToBytes32([]byte("badvalidators"))
 
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
@@ -226,7 +226,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	genesisValidatorsRoot := bytesutil.PadTo([]byte("validators"), 32)
+	genesisValidatorsRoot := butil.PadTo([]byte("validators"), 32)
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -671,9 +671,9 @@ func TestRolesAt_OK(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
-	assert.Equal(t, iface.RoleAggregator, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
-	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
+	assert.Equal(t, iface.RoleAttester, roleMap[butil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAggregator, roleMap[butil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[butil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
 
 	// Test sync committee role at epoch boundary.
 	v.duties = &ethpb.DutiesResponse{
@@ -705,7 +705,7 @@ func TestRolesAt_OK(t *testing.T) {
 
 	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
 	require.NoError(t, err)
-	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[butil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -731,7 +731,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAttester, roleMap[butil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
@@ -742,7 +742,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 		log    string
 		active bool
 	}
-	pubKeys := [][]byte{bytesutil.Uint64ToBytesLittleEndian(0)}
+	pubKeys := [][]byte{butil.Uint64ToBytesLittleEndian(0)}
 	tests := []statusTest{
 		{
 			name: "UNKNOWN_STATUS, no deposit found yet",
@@ -1301,7 +1301,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 		},
 	).Return(&ethpb.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
-	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	aggregator, err := v.isSyncCommitteeAggregator(context.Background(), slot, butil.ToBytes48(pubKey))
 	require.NoError(t, err)
 	require.Equal(t, false, aggregator)
 
@@ -1322,7 +1322,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 		},
 	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{0}}, nil /*err*/)
 
-	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
+	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, butil.ToBytes48(pubKey))
 	require.NoError(t, err)
 	require.Equal(t, true, aggregator)
 }

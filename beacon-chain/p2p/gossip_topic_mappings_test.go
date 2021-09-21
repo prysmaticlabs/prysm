@@ -6,7 +6,7 @@ import (
 
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -26,7 +26,7 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	bCfg := params.BeaconConfig()
 	forkEpoch := eth2types.Epoch(100)
 	bCfg.AltairForkEpoch = forkEpoch
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
+	bCfg.ForkVersionSchedule[butil.ToBytes44(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Before Fork

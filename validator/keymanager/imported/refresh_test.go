@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
@@ -74,16 +74,16 @@ func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 
 	// Check that the public keys were added to the public keys cache.
 	for i, keyBytes := range pubKeys {
-		require.Equal(t, bytesutil.ToBytes48(keyBytes), orderedPublicKeys[i])
+		require.Equal(t, butil.ToBytes48(keyBytes), orderedPublicKeys[i])
 	}
 
 	// Check that the secret keys were added to the secret keys cache.
 	lock.RLock()
 	defer lock.RUnlock()
 	for i, keyBytes := range privKeys {
-		privKey, ok := secretKeysCache[bytesutil.ToBytes48(pubKeys[i])]
+		privKey, ok := secretKeysCache[butil.ToBytes48(pubKeys[i])]
 		require.Equal(t, true, ok)
-		require.Equal(t, bytesutil.ToBytes48(keyBytes), bytesutil.ToBytes48(privKey.Marshal()))
+		require.Equal(t, butil.ToBytes48(keyBytes), butil.ToBytes48(privKey.Marshal()))
 	}
 
 	// Check the key was added to the global accounts store.

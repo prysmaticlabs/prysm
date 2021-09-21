@@ -11,7 +11,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -220,7 +220,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, err
 		}
 		parentValid := *prevRoot != [32]byte{}
-		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block().ParentRoot())
+		isLinear := *prevRoot == butil.ToBytes32(b.Block().ParentRoot())
 		isSingular := step == 1
 		slotDiff, err := b.Block().Slot().SafeSubSlot(startSlot)
 		if err != nil {

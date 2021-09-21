@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -381,7 +381,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pubKeys))
-	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
+	assert.DeepEqual(t, pubKeys[0], butil.ToBytes48(privKey.PublicKey().Marshal()))
 }
 
 // Returns the fullPath to the newly created keystore file.

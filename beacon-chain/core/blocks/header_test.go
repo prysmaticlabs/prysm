@@ -11,7 +11,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -55,7 +55,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
 	block.Block.Slot = 10
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = 10
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = lbhdr[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
 	require.NoError(t, err)
@@ -170,8 +170,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.ParentRoot = butil.PadTo([]byte{'A'}, 32)
 	block.Signature = blockSig
 
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
@@ -212,7 +212,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = parentRoot[:]
 	block.Signature = blockSig
 
@@ -251,7 +251,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
 	block.Block.Slot = 10
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
@@ -310,7 +310,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = butil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)

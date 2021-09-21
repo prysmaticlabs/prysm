@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -31,7 +31,7 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.State
 	}
 
 	for _, ss := range summaries {
-		s.stateSummaryCache.put(bytesutil.ToBytes32(ss.Root), ss)
+		s.stateSummaryCache.put(butil.ToBytes32(ss.Root), ss)
 	}
 
 	return nil

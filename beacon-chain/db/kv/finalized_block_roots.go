@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -79,7 +79,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			break
 		}
 
-		signedBlock, err := s.Block(ctx, bytesutil.ToBytes32(root))
+		signedBlock, err := s.Block(ctx, butil.ToBytes32(root))
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return err
@@ -170,7 +170,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 		// Check genesis block root.
 		if !exists {
 			genRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
-			exists = bytesutil.ToBytes32(genRoot) == blockRoot
+			exists = butil.ToBytes32(genRoot) == blockRoot
 		}
 		return nil
 	})

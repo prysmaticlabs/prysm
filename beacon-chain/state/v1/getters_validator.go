@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -171,7 +171,7 @@ func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if b.state.Validators[idx] == nil {
 		return [48]byte{}
 	}
-	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+	return butil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
 // NumValidators returns the size of the validator registry.

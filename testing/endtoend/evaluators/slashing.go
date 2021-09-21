@@ -10,7 +10,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -141,7 +141,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	blockRoot := bytesutil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
+	blockRoot := butil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
 	attData.BeaconBlockRoot = blockRoot[:]
 
 	req := &eth.DomainRequest{
@@ -221,17 +221,17 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	hashLen := 32
 	blk := &eth.BeaconBlock{
 		Slot:          chainHead.HeadSlot - 1,
-		ParentRoot:    bytesutil.PadTo([]byte("bad parent root"), hashLen),
-		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
+		ParentRoot:    butil.PadTo([]byte("bad parent root"), hashLen),
+		StateRoot:     butil.PadTo([]byte("bad state root"), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
 			Eth1Data: &eth.Eth1Data{
-				BlockHash:    bytesutil.PadTo([]byte("bad block hash"), hashLen),
-				DepositRoot:  bytesutil.PadTo([]byte("bad deposit root"), hashLen),
+				BlockHash:    butil.PadTo([]byte("bad block hash"), hashLen),
+				DepositRoot:  butil.PadTo([]byte("bad deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), params.BeaconConfig().BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
+			RandaoReveal:      butil.PadTo([]byte("bad randao"), params.BeaconConfig().BLSSignatureLength),
+			Graffiti:          butil.PadTo([]byte("teehee"), hashLen),
 			ProposerSlashings: []*eth.ProposerSlashing{},
 			AttesterSlashings: []*eth.AttesterSlashing{},
 			Attestations:      []*eth.Attestation{},

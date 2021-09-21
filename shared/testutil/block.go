@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -196,7 +196,7 @@ func GenerateProposerSlashingForValidator(
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
-			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
+			BodyRoot:      butil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	})
 	currentEpoch := core.CurrentEpoch(bState)
@@ -210,7 +210,7 @@ func GenerateProposerSlashingForValidator(
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
-			BodyRoot:      bytesutil.PadTo([]byte{0, 2, 0}, 32),
+			BodyRoot:      butil.PadTo([]byte{0, 2, 0}, 32),
 			StateRoot:     make([]byte, 32),
 			ParentRoot:    make([]byte, 32),
 		},

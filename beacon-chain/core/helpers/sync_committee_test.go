@@ -10,7 +10,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -18,7 +18,7 @@ import (
 func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -26,7 +26,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -48,7 +48,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -56,7 +56,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -74,7 +74,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -82,7 +82,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -100,7 +100,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -108,7 +108,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -130,7 +130,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -138,7 +138,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -156,7 +156,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -164,7 +164,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -182,7 +182,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -190,7 +190,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -212,7 +212,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -220,7 +220,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -234,7 +234,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that cache was empty.
-	_, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
+	_, err = syncCommitteeCache.CurrentPeriodIndexPosition(butil.ToBytes32(root), 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
 	// Test that helper can retrieve the index given empty cache.
@@ -244,7 +244,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
-	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
+	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(butil.ToBytes32(root), 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -253,7 +253,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -261,7 +261,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -279,7 +279,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -287,7 +287,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -309,7 +309,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -317,7 +317,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
@@ -336,7 +336,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: butil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	for i := 0; i < len(validators); i++ {
 		k := make([]byte, 48)
@@ -344,7 +344,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 		validators[i] = &ethpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, butil.PadTo(k, 48))
 	}
 
 	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{

@@ -15,7 +15,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -71,7 +71,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
@@ -151,7 +151,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		t.Fatal("didn't send genesis time to subscribers")
 	}
 	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
+	b32 := butil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 

@@ -7,7 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -348,9 +348,9 @@ func TestForkSchedule_Ok(t *testing.T) {
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
 	schedule := make(map[[4]byte]types.Epoch, 3)
-	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
-	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
-	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
+	schedule[butil.ToBytes44(secondForkVersion)] = secondForkEpoch
+	schedule[butil.ToBytes44(firstForkVersion)] = firstForkEpoch
+	schedule[butil.ToBytes44(thirdForkVersion)] = thirdForkEpoch
 	config.ForkVersionSchedule = schedule
 	params.OverrideBeaconConfig(config)
 

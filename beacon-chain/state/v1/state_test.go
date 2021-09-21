@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -34,9 +34,9 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	handler := stateutil.NewValMapHandler(vals)
 	newHandler := handler.Copy()
 	wantedPubkey := strconv.Itoa(22)
-	handler.Set(bytesutil.ToBytes48([]byte(wantedPubkey)), 27)
-	val1, _ := handler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
-	val2, _ := newHandler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
+	handler.Set(butil.ToBytes48([]byte(wantedPubkey)), 27)
+	val1, _ := handler.Get(butil.ToBytes48([]byte(wantedPubkey)))
+	val2, _ := newHandler.Get(butil.ToBytes48([]byte(wantedPubkey)))
 	assert.NotEqual(t, val1, val2, "Values are supposed to be unequal due to copy")
 }
 

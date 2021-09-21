@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -30,7 +30,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		DepositRoot:  butil.PadTo([]byte{2}, 32),
 		BlockHash:    make([]byte, 32),
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
@@ -117,7 +117,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
-		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		DepositRoot:  butil.PadTo([]byte{2}, 32),
 		BlockHash:    make([]byte, 32),
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
@@ -187,7 +187,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	block.Block.StateRoot = butil.PadTo([]byte{'a'}, 32)
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)

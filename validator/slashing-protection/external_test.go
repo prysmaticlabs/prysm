@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
@@ -62,9 +62,9 @@ func TestService_CommitBlock(t *testing.T) {
 		Header: &eth.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
-			ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
-			StateRoot:     bytesutil.PadTo([]byte("state"), 32),
-			BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
+			ParentRoot:    butil.PadTo([]byte("parent"), 32),
+			StateRoot:     butil.PadTo([]byte("state"), 32),
+			BodyRoot:      butil.PadTo([]byte("body"), 32),
 		},
 	}
 	slashable, err := s.CommitBlock(context.Background(), blk)
@@ -81,9 +81,9 @@ func TestService_VerifyBlock(t *testing.T) {
 	blk := &eth.BeaconBlockHeader{
 		Slot:          0,
 		ProposerIndex: 0,
-		ParentRoot:    bytesutil.PadTo([]byte("parent"), 32),
-		StateRoot:     bytesutil.PadTo([]byte("state"), 32),
-		BodyRoot:      bytesutil.PadTo([]byte("body"), 32),
+		ParentRoot:    butil.PadTo([]byte("parent"), 32),
+		StateRoot:     butil.PadTo([]byte("state"), 32),
+		BodyRoot:      butil.PadTo([]byte("body"), 32),
 	}
 	assert.Equal(t, false, s.CheckBlockSafety(context.Background(), blk), "Expected verify block to fail verification")
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}

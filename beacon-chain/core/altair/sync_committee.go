@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -122,7 +122,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([
 			return nil, err
 		}
 
-		b := append(seed[:], bytesutil.Bytes8(uint64(i.Div(32)))...)
+		b := append(seed[:], butil.Bytes8(uint64(i.Div(32)))...)
 		randomByte := hashFunc(b)[i%32]
 		cIndex := indices[sIndex]
 		v, err := s.ValidatorAtIndexReadOnly(cIndex)
@@ -180,7 +180,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 	cfg := params.BeaconConfig()
 	modulo := math.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
 	hashedSig := hash.Hash(sig)
-	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
+	return butil.FromBytes8(hashedSig[:8])%modulo == 0, nil
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.

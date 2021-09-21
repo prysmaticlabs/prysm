@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -28,12 +28,12 @@ func PendingAttRootWithHasher(hasher ssz.HashFn, att *ethpb.PendingAttestation) 
 	inclusionBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(inclusionBuf, uint64(att.InclusionDelay))
 	// Inclusion delay.
-	inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
+	inclusionRoot := butil.ToBytes32(inclusionBuf)
 
 	proposerBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(proposerBuf, uint64(att.ProposerIndex))
 	// Proposer index.
-	proposerRoot := bytesutil.ToBytes32(proposerBuf)
+	proposerRoot := butil.ToBytes32(proposerBuf)
 
 	fieldRoots = [][32]byte{aggregationRoot, attDataRoot, inclusionRoot, proposerRoot}
 
@@ -70,17 +70,17 @@ func attDataRootWithHasher(hasher ssz.HashFn, data *ethpb.AttestationData) ([32]
 		// Slot.
 		slotBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
-		slotRoot := bytesutil.ToBytes32(slotBuf)
+		slotRoot := butil.ToBytes32(slotBuf)
 		fieldRoots[0] = slotRoot[:]
 
 		// CommitteeIndex.
 		indexBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(indexBuf, uint64(data.CommitteeIndex))
-		interRoot := bytesutil.ToBytes32(indexBuf)
+		interRoot := butil.ToBytes32(indexBuf)
 		fieldRoots[1] = interRoot[:]
 
 		// Beacon block root.
-		blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
+		blockRoot := butil.ToBytes32(data.BeaconBlockRoot)
 		fieldRoots[2] = blockRoot[:]
 
 		// Source

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -131,7 +131,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// Eth1DepositIndex root.
 	eth1DepositIndexBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eth1DepositIndexBuf, state.Eth1DepositIndex)
-	eth1DepositBuf := bytesutil.ToBytes32(eth1DepositIndexBuf)
+	eth1DepositBuf := butil.ToBytes32(eth1DepositIndexBuf)
 	fieldRoots[10] = eth1DepositBuf[:]
 
 	// Validators slice root.
@@ -177,7 +177,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[16] = currAttsRoot[:]
 
 	// JustificationBits root.
-	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)
+	justifiedBitsRoot := butil.ToBytes32(state.JustificationBits)
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.

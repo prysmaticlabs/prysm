@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/network/forks"
 )
 
@@ -72,7 +72,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 func altairMsgID(pmsg *pubsub_pb.Message) string {
 	topic := *pmsg.Topic
 	topicLen := uint64(len(topic))
-	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
+	topicLenBytes := butil.Uint64ToBytesLittleEndian(topicLen)
 
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {

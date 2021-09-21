@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -123,7 +123,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
-			genesisBlockRoot := bytesutil.ToBytes32(nil)
+			genesisBlockRoot := butil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 
 			cfg := &Config{
@@ -165,7 +165,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	beaconDB := testDB.SetupDB(t)
-	genesisBlockRoot := bytesutil.ToBytes32(nil)
+	genesisBlockRoot := butil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	cfg := &Config{
 		BeaconDB: beaconDB,

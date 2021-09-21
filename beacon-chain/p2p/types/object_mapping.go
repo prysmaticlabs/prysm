@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -37,26 +37,26 @@ var (
 func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() (block.SignedBeaconBlock, error){
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
+		butil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
 			return wrapper.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}), nil
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
+		butil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
 			return wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
 	}
 
 	// Reset our state map.
 	StateMap = map[[4]byte]proto.Message{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): &ethpb.BeaconState{},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):  &ethpb.BeaconStateAltair{},
+		butil.ToBytes4(params.BeaconConfig().GenesisForkVersion): &ethpb.BeaconState{},
+		butil.ToBytes4(params.BeaconConfig().AltairForkVersion):  &ethpb.BeaconStateAltair{},
 	}
 
 	// Reset our metadata map.
 	MetaDataMap = map[[4]byte]func() metadata.Metadata{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metadata.Metadata {
+		butil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metadata.Metadata {
+		butil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}

@@ -8,7 +8,7 @@ import (
 
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -195,14 +195,14 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 
 	// State Roots
 	require.DeepEqual(t, a.StateRoots(), b.StateRoots(), "Test precondition failed, fields are not equal")
-	require.NoError(t, a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
+	require.NoError(t, a.UpdateStateRootAtIndex(1, butil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
 		t.Fatal("Expected a.StateRoots() to be different from b.StateRoots()")
 	}
 
 	// Block Roots
 	require.DeepEqual(t, a.BlockRoots(), b.BlockRoots(), "Test precondition failed, fields are not equal")
-	require.NoError(t, a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
+	require.NoError(t, a.UpdateBlockRootAtIndex(1, butil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
 	}

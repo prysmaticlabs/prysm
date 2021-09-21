@@ -11,7 +11,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
@@ -24,8 +24,8 @@ import (
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	data := testutil.HydrateAttestationData(&ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: butil.PadTo([]byte("hello-world"), 32)},
+		Target: &ethpb.Checkpoint{Epoch: 0, Root: butil.PadTo([]byte("hello-world"), 32)},
 	})
 	aggBits1 := bitfield.NewBitlist(3)
 	aggBits1.SetBitAt(0, true)
@@ -36,7 +36,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = bytesutil.PadTo([]byte("hello-world"), 32)
+	cfc.Root = butil.PadTo([]byte("hello-world"), 32)
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 

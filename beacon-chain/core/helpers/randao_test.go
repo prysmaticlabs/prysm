@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -81,7 +81,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(mix, uniqueNumber)
 
 		for _, mx := range randaoMixes {
-			mxNum := bytesutil.FromBytes8(mx)
+			mxNum := butil.FromBytes8(mx)
 			assert.NotEqual(t, uniqueNumber, mxNum, "two distinct slices which have different representations in memory still contain the same value: %d", mxNum)
 		}
 	}

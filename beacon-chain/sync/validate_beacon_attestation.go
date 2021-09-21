@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -87,14 +87,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Reject an attestation if it references an invalid block.
-	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+	if s.hasBadBlock(butil.ToBytes32(att.Data.BeaconBlockRoot)) ||
+		s.hasBadBlock(butil.ToBytes32(att.Data.Target.Root)) ||
+		s.hasBadBlock(butil.ToBytes32(att.Data.Source.Root)) {
 		return pubsub.ValidationReject
 	}
 
 	// Verify the block being voted and the processed state is in DB and the block has passed validation if it's in the DB.
-	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
+	blockRoot := butil.ToBytes32(att.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
@@ -209,7 +209,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
 	s.seenUnAggregatedAttestationLock.RLock()
 	defer s.seenUnAggregatedAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
+	b := append(butil.Bytes32(uint64(slot)), butil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
 	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
 	return seen
@@ -219,7 +219,7 @@ func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) {
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
+	b := append(butil.Bytes32(uint64(slot)), butil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
 	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }

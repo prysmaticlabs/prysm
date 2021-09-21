@@ -5,7 +5,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -29,7 +29,7 @@ func migrateBlockSlotIndex(ctx context.Context, db *bolt.DB) error {
 			if err = bkt.Delete(k); err != nil {
 				return err
 			}
-			if err = bkt.Put(bytesutil.Uint64ToBytesBigEndian(key), v); err != nil {
+			if err = bkt.Put(butil.Uint64ToBytesBigEndian(key), v); err != nil {
 				return err
 			}
 			// check if context is cancelled in between

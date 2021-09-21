@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -123,7 +123,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	depositData := &ethpb.Deposit_Data{
-		Amount:                bytesutil.FromBytes8(amount),
+		Amount:                butil.FromBytes8(amount),
 		PublicKey:             pubkey,
 		Signature:             signature,
 		WithdrawalCredentials: withdrawalCredentials,
@@ -367,7 +367,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fRoot := bytesutil.ToBytes32(c.Root)
+	fRoot := butil.ToBytes32(c.Root)
 	// Return if no checkpoint exists yet.
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil

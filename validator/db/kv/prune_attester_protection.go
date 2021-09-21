@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -88,12 +88,12 @@ func pruneBucket(bkt *bolt.Bucket) error {
 
 	// We obtain the highest target epoch from the signing roots bucket.
 	highestEpochBytes, _ := bkt.Cursor().Last()
-	highestEpoch := bytesutil.BytesToEpochBigEndian(highestEpochBytes)
+	highestEpoch := butil.BytesToEpochBigEndian(highestEpochBytes)
 	upperBounds := pruningEpochCutoff(highestEpoch)
 
 	c := bkt.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.Next() {
-		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
+		targetEpoch := butil.BytesToEpochBigEndian(k)
 		if targetEpoch >= upperBounds {
 			return nil
 		}

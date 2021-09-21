@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -77,7 +77,7 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 	didntVoteIndices = make([]types.ValidatorIndex, 0) // No allocation. Expect most votes.
 
 	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
-		vIdx, exists := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
+		vIdx, exists := s.ValidatorIndexByPubkey(butil.ToBytes48(committeeKeys[i]))
 		// Impossible scenario.
 		if !exists {
 			return nil, nil, nil, errors.New("validator public key does not exist in state")

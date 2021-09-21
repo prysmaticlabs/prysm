@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -96,7 +96,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	end := 200
 	for i := start; i < end; i++ {
 		s := []byte(strconv.Itoa(i))
-		item := &Committees{Seed: bytesutil.ToBytes32(s)}
+		item := &Committees{Seed: butil.ToBytes32(s)}
 		require.NoError(t, cache.AddCommitteeShuffledList(item))
 	}
 
@@ -107,16 +107,16 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 		return k[i].(string) < k[j].(string)
 	})
 	wanted := end - int(maxCommitteesCacheSize)
-	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
+	s := butil.ToBytes32([]byte(strconv.Itoa(wanted)))
 	assert.Equal(t, key(s), k[0], "incorrect key received for slot 190")
 
-	s = bytesutil.ToBytes32([]byte(strconv.Itoa(199)))
+	s = butil.ToBytes32([]byte(strconv.Itoa(199)))
 	assert.Equal(t, key(s), k[len(k)-1], "incorrect key received for slot 199")
 }
 
 func TestCommitteeCacheOutOfRange(t *testing.T) {
 	cache := NewCommitteesCache()
-	seed := bytesutil.ToBytes32([]byte("foo"))
+	seed := butil.ToBytes32([]byte("foo"))
 	comms := &Committees{
 		CommitteeCount:  1,
 		Seed:            seed,

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -159,8 +159,8 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 		}
 		for epoch := types.Epoch(1); epoch < numEpochs; epoch++ {
 			att := createAttestation(epoch-1, epoch)
-			sourceEpoch := bytesutil.EpochToBytesBigEndian(att.Data.Source.Epoch)
-			targetEpoch := bytesutil.EpochToBytesBigEndian(att.Data.Target.Epoch)
+			sourceEpoch := butil.EpochToBytesBigEndian(att.Data.Source.Epoch)
+			targetEpoch := butil.EpochToBytesBigEndian(att.Data.Target.Epoch)
 			if err := sourceEpochsBucket.Put(sourceEpoch, targetEpoch); err != nil {
 				return err
 			}
@@ -409,8 +409,8 @@ func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
-			source := bytesutil.Uint64ToBytesBigEndian(uint64(i))
-			target := bytesutil.Uint64ToBytesBigEndian(uint64(i) + 1)
+			source := butil.Uint64ToBytesBigEndian(uint64(i))
+			target := butil.Uint64ToBytesBigEndian(uint64(i) + 1)
 			savedSigningRoot := signingRootsBucket.Get(target)
 			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
 			savedTarget := sourceEpochsBucket.Get(source)
@@ -466,8 +466,8 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 			signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
 			sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
-			source := bytesutil.Uint64ToBytesBigEndian(uint64(i))
-			target := bytesutil.Uint64ToBytesBigEndian(uint64(i) + 1)
+			source := butil.Uint64ToBytesBigEndian(uint64(i))
+			target := butil.Uint64ToBytesBigEndian(uint64(i) + 1)
 			savedSigningRoot := signingRootsBucket.Get(target)
 			require.DeepEqual(t, signingRoot[:], savedSigningRoot)
 			savedTarget := sourceEpochsBucket.Get(source)
@@ -523,8 +523,8 @@ func benchCheckSurroundVote(
 			}
 			for epoch := types.Epoch(1); epoch < numEpochs; epoch++ {
 				att := createAttestation(epoch-1, epoch)
-				sourceEpoch := bytesutil.EpochToBytesBigEndian(att.Data.Source.Epoch)
-				targetEpoch := bytesutil.EpochToBytesBigEndian(att.Data.Target.Epoch)
+				sourceEpoch := butil.EpochToBytesBigEndian(att.Data.Source.Epoch)
+				targetEpoch := butil.EpochToBytesBigEndian(att.Data.Target.Epoch)
 				if err := sourceEpochsBucket.Put(sourceEpoch, targetEpoch); err != nil {
 					return err
 				}

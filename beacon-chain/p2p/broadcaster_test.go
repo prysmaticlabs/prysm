@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -43,7 +43,7 @@ func TestService_Broadcast(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 	}
 
 	msg := &ethpb.Fork{
@@ -94,7 +94,7 @@ func TestService_Broadcast(t *testing.T) {
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 	}
 	assert.ErrorContains(t, ErrMessageNotMapped.Error(), p.Broadcast(context.Background(), &testpb.AddressBook{}))
 }
@@ -156,7 +156,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -299,7 +299,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -315,7 +315,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -380,7 +380,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: butil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/math"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -51,7 +51,7 @@ func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, err
 	layers := make([][][]byte, depth+1)
 	transformedLeaves := make([][]byte, len(leaves))
 	for i := range leaves {
-		arr := bytesutil.ToBytes32(leaves[i])
+		arr := butil.ToBytes32(leaves[i])
 		transformedLeaves[i] = arr[:]
 	}
 	layers[0] = transformedLeaves
@@ -97,7 +97,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], ZeroHashes[0][:])
 	}
-	someItem := bytesutil.ToBytes32(item)
+	someItem := butil.ToBytes32(item)
 	m.branches[0][index] = someItem[:]
 	if index >= len(m.originalItems) {
 		m.originalItems = append(m.originalItems, someItem[:])
@@ -105,7 +105,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 		m.originalItems[index] = someItem[:]
 	}
 	currentIndex := index
-	root := bytesutil.ToBytes32(item)
+	root := butil.ToBytes32(item)
 	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
@@ -145,7 +145,7 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	for i := uint(0); i < m.depth; i++ {
 		subIndex := (merkleIndex / (1 << i)) ^ 1
 		if subIndex < uint(len(m.branches[i])) {
-			item := bytesutil.ToBytes32(m.branches[i][subIndex])
+			item := butil.ToBytes32(m.branches[i][subIndex])
 			proof[i] = item[:]
 		} else {
 			proof[i] = ZeroHashes[i][:]
@@ -178,7 +178,7 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 	if len(proof) != int(depth)+1 {
 		return false
 	}
-	node := bytesutil.ToBytes32(item)
+	node := butil.ToBytes32(item)
 	for i := 0; i <= int(depth); i++ {
 		if (uint64(merkleIndex) / math.PowerOf2(uint64(i)) % 2) != 0 {
 			node = hash.Hash(append(proof[i], node[:]...))
@@ -194,13 +194,13 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
 	dstBranches := make([][][]byte, len(m.branches))
 	for i1, srcB1 := range m.branches {
-		dstBranches[i1] = bytesutil.SafeCopy2dBytes(srcB1)
+		dstBranches[i1] = butil.SafeCopy2dBytes(srcB1)
 	}
 
 	return &SparseMerkleTrie{
 		depth:         m.depth,
 		branches:      dstBranches,
-		originalItems: bytesutil.SafeCopy2dBytes(m.originalItems),
+		originalItems: butil.SafeCopy2dBytes(m.originalItems),
 	}
 }
 

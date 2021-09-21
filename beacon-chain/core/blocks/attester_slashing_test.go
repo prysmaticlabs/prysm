@@ -11,7 +11,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -21,11 +21,11 @@ import (
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
 	att1 := testutil.HydrateAttestationData(&ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-		Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
+		Source: &ethpb.Checkpoint{Root: butil.PadTo([]byte{'A'}, 32)},
 	})
 	att2 := testutil.HydrateAttestationData(&ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-		Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'B'}, 32)},
+		Source: &ethpb.Checkpoint{Root: butil.PadTo([]byte{'B'}, 32)},
 	})
 	assert.Equal(t, true, blocks.IsSlashableAttestationData(att1, att2), "Atts should have been slashable")
 	att1.Target.Epoch = 4

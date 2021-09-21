@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -282,7 +282,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *i
 	}
 	fmt.Printf(
 		"Imported account with public key %#x, view all accounts by running `accounts list`\n",
-		au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
+		au.BrightMagenta(butil.Trunc(privKey.PublicKey().Marshal())),
 	)
 	return nil
 }

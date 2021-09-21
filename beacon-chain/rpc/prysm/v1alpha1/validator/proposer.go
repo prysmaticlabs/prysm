@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -113,7 +113,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 
 	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
 	// an error in the first validity check of this endpoint.
-	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
+	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, butil.ToBytes32(blkData.ParentRoot))
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get attestations to pack into block: %v", err)
 	}
 
-	graffiti := bytesutil.ToBytes32(req.Graffiti)
+	graffiti := butil.ToBytes32(req.Graffiti)
 
 	// Calculate new proposer index.
 	idx, err := helpers.BeaconProposerIndex(head)
@@ -305,7 +305,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.Signe
 
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+		log.WithField("blockRoot", fmt.Sprintf("%#x", butil.Trunc(root[:]))).Debugf(
 			"Block proposal received via RPC")
 		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
@@ -384,7 +384,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	if syncSig == nil {
 		syncSigBytes = [96]byte{0xC0} // Infinity signature if itself is nil.
 	} else {
-		syncSigBytes = bytesutil.ToBytes96(syncSig.Marshal())
+		syncSigBytes = butil.ToBytes496(syncSig.Marshal())
 	}
 
 	return &ethpb.SyncAggregate{
@@ -477,7 +477,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 
 	var inRangeVotes []eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
+		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, butil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
 			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
 		}
@@ -572,8 +572,8 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
 	randGen := rand.NewGenerator()
-	depRoot := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
-	blockHash := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	depRoot := hash.Hash(butil.Bytes32(randGen.Uint64()))
+	blockHash := hash.Hash(butil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
@@ -584,7 +584,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) ComputeStateRoot(ctx context.Context, block block.SignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block().ParentRoot()))
+	beaconState, err := vs.StateGen.StateByRoot(ctx, butil.ToBytes32(block.Block().ParentRoot()))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
@@ -686,10 +686,10 @@ func (vs *Server) canonicalEth1Data(
 	var canonicalEth1Data *ethpb.Eth1Data
 	if hasSupport {
 		canonicalEth1Data = currentVote
-		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
+		eth1BlockHash = butil.ToBytes32(currentVote.BlockHash)
 	} else {
 		canonicalEth1Data = beaconState.Eth1Data()
-		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
+		eth1BlockHash = butil.ToBytes32(beaconState.Eth1Data().BlockHash)
 	}
 	_, canonicalEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {

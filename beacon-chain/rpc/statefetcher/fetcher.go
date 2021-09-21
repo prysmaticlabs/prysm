@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
@@ -109,13 +109,13 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		}
 	case "finalized":
 		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		s, err = p.StateGenService.StateByRoot(ctx, butil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
 		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		s, err = p.StateGenService.StateByRoot(ctx, butil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
@@ -179,7 +179,7 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 	for i, root := range headState.StateRoots() {
 		if bytes.Equal(root, stateId) {
 			blockRoot := headState.BlockRoots()[i]
-			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
+			return p.StateGenService.StateByRoot(ctx, butil.ToBytes32(blockRoot))
 		}
 	}
 
@@ -226,7 +226,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	b, err := p.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+	b, err := p.BeaconDB.Block(ctx, butil.ToBytes32(cp.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
@@ -241,7 +241,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified checkpoint")
 	}
-	b, err := p.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+	b, err := p.BeaconDB.Block(ctx, butil.ToBytes32(cp.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
 	}

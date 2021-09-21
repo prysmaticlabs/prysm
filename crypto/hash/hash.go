@@ -10,7 +10,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )
@@ -120,7 +120,7 @@ func HashProto(msg proto.Message) (result [32]byte, err error) {
 }
 
 // Key used for FastSum64
-var fastSumHashKey = bytesutil.ToBytes32([]byte("hash_fast_sum64_key"))
+var fastSumHashKey = butil.ToBytes32([]byte("hash_fast_sum64_key"))
 
 // FastSum64 returns a hash sum of the input data using highwayhash. This method is not secure, but
 // may be used as a quick identifier for objects where collisions are acceptable.

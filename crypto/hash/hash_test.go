@@ -7,7 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -45,7 +45,7 @@ func TestHashKeccak256(t *testing.T) {
 	hashOfabc, err := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
 	require.NoError(t, err)
 	h = hash.HashKeccak256([]byte("abc"))
-	h32 := bytesutil.ToBytes32(hashOfabc)
+	h32 := butil.ToBytes32(hashOfabc)
 	assert.Equal(t, h32, h)
 }
 

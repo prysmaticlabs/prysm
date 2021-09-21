@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -90,7 +90,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]block.Sig
 				return err
 			}
 			blocks = append(blocks, blk)
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
+			blockRoots = append(blockRoots, butil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
@@ -113,7 +113,7 @@ func (s *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 		}
 
 		for i := 0; i < len(keys); i++ {
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
+			blockRoots = append(blockRoots, butil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
@@ -180,7 +180,7 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 		}
 
 		for i := 0; i < len(keys); i++ {
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
+			blockRoots = append(blockRoots, butil.ToBytes32(keys[i]))
 		}
 		return nil
 	})
@@ -358,7 +358,7 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			key := bytesutil.BytesToSlotBigEndian(s)
+			key := butil.BytesToSlotBigEndian(s)
 			if root == nil {
 				continue
 			}
@@ -375,7 +375,7 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 	var blk block.SignedBeaconBlock
 	var err error
 	if best != nil {
-		blk, err = s.Block(ctx, bytesutil.ToBytes32(best))
+		blk, err = s.Block(ctx, butil.ToBytes32(best))
 		if err != nil {
 			return nil, err
 		}
@@ -489,8 +489,8 @@ func blockRootsBySlotRange(
 		}
 		endSlot = endSlot + params.BeaconConfig().SlotsPerEpoch - 1
 	}
-	min := bytesutil.SlotToBytesBigEndian(startSlot)
-	max := bytesutil.SlotToBytesBigEndian(endSlot)
+	min := butil.SlotToBytesBigEndian(startSlot)
+	max := butil.SlotToBytesBigEndian(endSlot)
 
 	conditional := func(key, max []byte) bool {
 		return key != nil && bytes.Compare(key, max) <= 0
@@ -503,7 +503,7 @@ func blockRootsBySlotRange(
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		if step > 1 {
-			slot := bytesutil.BytesToSlotBigEndian(k)
+			slot := butil.BytesToSlotBigEndian(k)
 			if slot.SubSlot(startSlot).Mod(step) != 0 {
 				continue
 			}
@@ -525,7 +525,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]by
 
 	roots := make([][]byte, 0)
 	bkt := tx.Bucket(blockSlotIndicesBucket)
-	key := bytesutil.SlotToBytesBigEndian(slot)
+	key := butil.SlotToBytesBigEndian(slot)
 	c := bkt.Cursor()
 	k, v := c.Seek(key)
 	if k != nil && bytes.Equal(k, key) {
@@ -549,7 +549,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block block.BeaconBlock) m
 		blockSlotIndicesBucket,
 	}
 	indices := [][]byte{
-		bytesutil.SlotToBytesBigEndian(block.Slot()),
+		butil.SlotToBytesBigEndian(block.Slot()),
 	}
 	if block.ParentRoot() != nil && len(block.ParentRoot()) > 0 {
 		buckets = append(buckets, blockParentRootIndicesBucket)

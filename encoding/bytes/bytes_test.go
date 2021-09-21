@@ -1,10 +1,10 @@
-package bytesutil_test
+package bytes_test
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -46,7 +46,7 @@ func TestToBytes(t *testing.T) {
 		{9223372036854775807, []byte{255, 255, 255, 255, 255, 255, 255, 127}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.ToBytes(tt.a, len(tt.b))
+		b := butil.ToBytes4(tt.a, len(tt.b))
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -64,7 +64,7 @@ func TestBytes1(t *testing.T) {
 		{255, []byte{255}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Bytes1(tt.a)
+		b := bytes.Bytes1(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -82,7 +82,7 @@ func TestBytes2(t *testing.T) {
 		{65535, []byte{255, 255}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Bytes2(tt.a)
+		b := bytes.Bytes2(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -100,7 +100,7 @@ func TestBytes3(t *testing.T) {
 		{16777215, []byte{255, 255, 255}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Bytes3(tt.a)
+		b := bytes.Bytes3(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -118,7 +118,7 @@ func TestBytes4(t *testing.T) {
 		{4294967295, []byte{255, 255, 255, 255}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Bytes4(tt.a)
+		b := butil.Bytes4(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -136,7 +136,7 @@ func TestBytes8(t *testing.T) {
 		{9223372036854775807, []byte{255, 255, 255, 255, 255, 255, 255, 127}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Bytes8(tt.a)
+		b := butil.Bytes8(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -147,8 +147,8 @@ func TestFromBool(t *testing.T) {
 		1,
 	}
 	for _, tt := range tests {
-		b := bytesutil.ToBool(tt)
-		c := bytesutil.FromBool(b)
+		b := bytes.ToBool(tt)
+		c := bytes.FromBool(b)
 		assert.Equal(t, tt, c)
 	}
 }
@@ -161,8 +161,8 @@ func TestFromBytes2(t *testing.T) {
 		(1 << 16) - 1,
 	}
 	for _, tt := range tests {
-		b := bytesutil.ToBytes(tt, 2)
-		c := bytesutil.FromBytes2(b)
+		b := butil.ToBytes4(tt, 2)
+		c := butil.FromBytes2(b)
 		assert.Equal(t, uint16(tt), c)
 	}
 }
@@ -178,8 +178,8 @@ func TestFromBytes4(t *testing.T) {
 		3894948296,
 	}
 	for _, tt := range tests {
-		b := bytesutil.ToBytes(tt, 4)
-		c := bytesutil.FromBytes4(b)
+		b := butil.ToBytes4(tt, 4)
+		c := butil.FromBytes4(b)
 		if c != tt {
 			t.Errorf("Wanted %d but got %d", tt, c)
 		}
@@ -198,8 +198,8 @@ func TestFromBytes8(t *testing.T) {
 		18446744073709551615,
 	}
 	for _, tt := range tests {
-		b := bytesutil.ToBytes(tt, 8)
-		c := bytesutil.FromBytes8(b)
+		b := butil.ToBytes4(tt, 8)
+		c := butil.FromBytes8(b)
 		assert.Equal(t, tt, c)
 	}
 }
@@ -216,7 +216,7 @@ func TestTruncate(t *testing.T) {
 		{[]byte{}, []byte{}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.Trunc(tt.a)
+		b := butil.Trunc(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
 }
@@ -233,7 +233,7 @@ func TestReverse(t *testing.T) {
 		{[][32]byte{}, [][32]byte{}},
 	}
 	for _, tt := range tests {
-		b := bytesutil.ReverseBytes32Slice(tt.input)
+		b := bytes.ReverseBytes32Slice(tt.input)
 		assert.DeepEqual(t, tt.output, b)
 	}
 }
@@ -252,7 +252,7 @@ func TestSetBit(t *testing.T) {
 		{[]byte{0b10000010, 0b00000000}, 31, []byte{0b10000010, 0b00000000, 0b00000000, 0b10000000}},
 	}
 	for _, tt := range tests {
-		assert.DeepEqual(t, tt.c, bytesutil.SetBit(tt.a, tt.b))
+		assert.DeepEqual(t, tt.c, bytes.SetBit(tt.a, tt.b))
 	}
 }
 
@@ -270,7 +270,7 @@ func TestClearBit(t *testing.T) {
 		{[]byte{0b10000010, 0b00001111}, 10, []byte{0b10000010, 0b00001011}},
 	}
 	for _, tt := range tests {
-		assert.DeepEqual(t, tt.c, bytesutil.ClearBit(tt.a, tt.b))
+		assert.DeepEqual(t, tt.c, bytes.ClearBit(tt.a, tt.b))
 	}
 }
 
@@ -290,7 +290,7 @@ func TestMakeEmptyBitfields(t *testing.T) {
 		{104, 14},
 	}
 	for _, tt := range tests {
-		assert.DeepEqual(t, tt.b, len(bytesutil.MakeEmptyBitlists(tt.a)))
+		assert.DeepEqual(t, tt.b, len(bytes.MakeEmptyBitlists(tt.a)))
 	}
 }
 
@@ -310,7 +310,7 @@ func TestHighestBitIndex(t *testing.T) {
 		{[]byte{255, 255, 255, 255}, 32, false},
 	}
 	for _, tt := range tests {
-		i, err := bytesutil.HighestBitIndex(tt.a)
+		i, err := bytes.HighestBitIndex(tt.a)
 		if !tt.error {
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.b, i)
@@ -358,7 +358,7 @@ func TestHighestBitIndexBelow(t *testing.T) {
 		{[]byte{255, 255, 255, 255}, 1000, 32, false},
 	}
 	for _, tt := range tests {
-		i, err := bytesutil.HighestBitIndexAt(tt.a, tt.b)
+		i, err := bytes.HighestBitIndexAt(tt.a, tt.b)
 		if !tt.error {
 			require.NoError(t, err)
 			assert.DeepEqual(t, tt.c, i)
@@ -370,8 +370,8 @@ func TestHighestBitIndexBelow(t *testing.T) {
 
 func TestUint64ToBytes_RoundTrip(t *testing.T) {
 	for i := uint64(0); i < 10000; i++ {
-		b := bytesutil.Uint64ToBytesBigEndian(i)
-		if got := bytesutil.BytesToUint64BigEndian(b); got != i {
+		b := butil.Uint64ToBytesBigEndian(i)
+		if got := bytes.BytesToUint64BigEndian(b); got != i {
 			t.Error("Round trip did not match original value")
 		}
 	}
@@ -393,7 +393,7 @@ func TestIsHex(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 	}
 	for _, tt := range tests {
-		isHex := bytesutil.IsHex(tt.a)
+		isHex := bytes.IsHex(tt.a)
 		assert.Equal(t, tt.b, isHex)
 	}
 }
@@ -415,7 +415,7 @@ func TestIsHexOfLen(t *testing.T) {
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), 64, false},
 	}
 	for _, tt := range tests {
-		isHex := bytesutil.IsHexOfLen(tt.b, tt.l)
+		isHex := bytes.IsHexOfLen(tt.b, tt.l)
 		assert.Equal(t, tt.result, isHex)
 	}
 }
@@ -450,12 +450,12 @@ func TestSafeCopyRootAtIndex(t *testing.T) {
 			name:  "correct copy",
 			input: [][]byte{{0x1}, {0x2}},
 			idx:   1,
-			want:  bytesutil.PadTo([]byte{0x2}, 32),
+			want:  butil.PadTo([]byte{0x2}, 32),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := bytesutil.SafeCopyRootAtIndex(tt.input, tt.idx)
+			got, err := butil.SafeCopyRootAtIndex(tt.input, tt.idx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SafeCopyRootAtIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -487,7 +487,7 @@ func TestSafeCopy2dBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := bytesutil.SafeCopy2dBytes(tt.input); !reflect.DeepEqual(got, tt.input) {
+			if got := butil.SafeCopy2dBytes(tt.input); !reflect.DeepEqual(got, tt.input) {
 				t.Errorf("SafeCopy2dBytes() = %v, want %v", got, tt.input)
 			}
 		})

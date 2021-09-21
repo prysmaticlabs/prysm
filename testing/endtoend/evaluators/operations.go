@@ -10,7 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -159,7 +159,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		slot := blk.Block().Slot()
 		graffitiInBlock := blk.Block().Body().Graffiti()
 		for _, graffiti := range helpers.Graffiti {
-			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), graffitiInBlock) {
+			if bytes.Equal(butil.PadTo([]byte(graffiti), 32), graffitiInBlock) {
 				e = true
 				break
 			}

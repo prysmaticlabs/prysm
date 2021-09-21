@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -73,5 +73,5 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	require.Equal(t, len(remainingAccounts), 1)
 	remainingPublicKey, err := hex.DecodeString(k3.Pubkey)
 	require.NoError(t, err)
-	assert.DeepEqual(t, remainingAccounts[0], bytesutil.ToBytes48(remainingPublicKey))
+	assert.DeepEqual(t, remainingAccounts[0], butil.ToBytes48(remainingPublicKey))
 }

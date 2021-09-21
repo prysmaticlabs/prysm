@@ -7,7 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
@@ -28,14 +28,14 @@ func Test_slashableAttestationCheck(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            5,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("great block"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 4,
-				Root:  bytesutil.PadTo([]byte("good source"), 32),
+				Root:  butil.PadTo([]byte("good source"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 10,
-				Root:  bytesutil.PadTo([]byte("good target"), 32),
+				Root:  butil.PadTo([]byte("good target"), 32),
 			},
 		},
 	}
@@ -64,14 +64,14 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            5,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("great block"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("great block"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 4,
-				Root:  bytesutil.PadTo([]byte("good source"), 32),
+				Root:  butil.PadTo([]byte("good source"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 10,
-				Root:  bytesutil.PadTo([]byte("good target"), 32),
+				Root:  butil.PadTo([]byte("good target"), 32),
 			},
 		},
 	}
@@ -126,7 +126,7 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 		},
 	}
 	sr := [32]byte{1}
-	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	fakePubkey := butil.ToBytes48([]byte("test"))
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
@@ -145,18 +145,18 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            5,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("great block root"), 32),
+			BeaconBlockRoot: butil.PadTo([]byte("great block root"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("great root"), 32),
+				Root:  butil.PadTo([]byte("great root"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("great root"), 32),
+				Root:  butil.PadTo([]byte("great root"), 32),
 			},
 		},
 	}
-	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+	fakePubkey := butil.ToBytes48([]byte("test"))
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)

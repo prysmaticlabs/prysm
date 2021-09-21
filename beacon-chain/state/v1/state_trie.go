@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -223,7 +223,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return butil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
 // ToProto returns a protobuf *v1.BeaconState representation of the state.
@@ -396,7 +396,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
-		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
+		return butil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:
@@ -496,7 +496,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(field, b.state.CurrentEpochAttestations)
 	case justificationBits:
-		return bytesutil.ToBytes32(b.state.JustificationBits), nil
+		return butil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
 		return ssz.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:

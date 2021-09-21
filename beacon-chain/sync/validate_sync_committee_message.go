@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -276,8 +276,8 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 }
 
 func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) string {
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
-	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
+	b := append(butil.Bytes32(uint64(slot)), butil.Bytes32(uint64(valIndex))...)
+	b = append(b, butil.Bytes32(subCommitteeIndex)...)
 	return string(b)
 }
 

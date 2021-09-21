@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
@@ -20,7 +20,7 @@ func MockSlashingProtectionJSON(
 	proposalHistories []kv.ProposalHistoryForPubkey,
 ) (*format.EIPSlashingProtectionFormat, error) {
 	standardProtectionFormat := &format.EIPSlashingProtectionFormat{}
-	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
+	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", butil.PadTo([]byte{32}, 32))
 	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 	for i := 0; i < len(publicKeys); i++ {
 		data := &format.ProtectionData{

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"go.etcd.io/bbolt"
 )
@@ -46,7 +46,7 @@ func Test_migrateBlockSlotIndex(t *testing.T) {
 			eval: func(t *testing.T, db *bbolt.DB) {
 				err := db.View(func(tx *bbolt.Tx) error {
 					k := uint64(2048)
-					v := tx.Bucket(blockSlotIndicesBucket).Get(bytesutil.Uint64ToBytesBigEndian(k))
+					v := tx.Bucket(blockSlotIndicesBucket).Get(butil.Uint64ToBytesBigEndian(k))
 					assert.DeepEqual(t, []byte("foo"), v, "Did not receive correct data for key %d", k)
 					return nil
 				})

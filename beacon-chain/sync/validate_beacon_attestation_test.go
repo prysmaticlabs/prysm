@@ -17,7 +17,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -220,7 +220,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b101},
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: bytesutil.PadTo([]byte("missing"), 32),
+					BeaconBlockRoot: butil.PadTo([]byte("missing"), 32),
 					CommitteeIndex:  1,
 					Slot:            1,
 					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},

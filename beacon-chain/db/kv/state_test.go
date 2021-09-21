@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -413,7 +413,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	genesis := butil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
 	blk := testutil.NewBeaconBlock()
@@ -439,7 +439,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
+	genesis := butil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
 	blk := testutil.NewBeaconBlock()
@@ -689,7 +689,7 @@ func validators(limit int) []*ethpb.Validator {
 		binary.LittleEndian.PutUint64(pubKey, rand.Uint64())
 		val := &ethpb.Validator{
 			PublicKey:                  pubKey,
-			WithdrawalCredentials:      bytesutil.ToBytes(rand.Uint64(), 32),
+			WithdrawalCredentials:      butil.ToBytes4(rand.Uint64(), 32),
 			EffectiveBalance:           rand.Uint64(),
 			Slashed:                    i%2 != 0,
 			ActivationEligibilityEpoch: types.Epoch(rand.Uint64()),
@@ -725,7 +725,7 @@ func checkStateSaveTime(b *testing.B, saveCount int) {
 		rand.Shuffle(len(allValidators), func(i, j int) { allValidators[i], allValidators[j] = allValidators[j], allValidators[i] })
 
 		require.NoError(b, st.SetValidators(allValidators))
-		require.NoError(b, db.SaveState(context.Background(), st, bytesutil.ToBytes32(key)))
+		require.NoError(b, db.SaveState(context.Background(), st, butil.ToBytes32(key)))
 	}
 
 	// create a state to save in benchmark
@@ -771,7 +771,7 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 		rand.Shuffle(len(allValidators), func(i, j int) { allValidators[i], allValidators[j] = allValidators[j], allValidators[i] })
 
 		require.NoError(b, st.SetValidators(allValidators))
-		require.NoError(b, db.SaveState(context.Background(), st, bytesutil.ToBytes32(key)))
+		require.NoError(b, db.SaveState(context.Background(), st, butil.ToBytes32(key)))
 	}
 
 	b.ReportAllocs()

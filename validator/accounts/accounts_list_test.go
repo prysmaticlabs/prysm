@@ -15,7 +15,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -384,7 +384,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
+		pubKeys[i] = butil.ToBytes48(key)
 	}
 	km := &mockRemoteKeymanager{
 		publicKeys: pubKeys,
@@ -486,7 +486,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
+		pubKeys[i] = butil.ToBytes48(key)
 		pks[i] = key
 	}
 

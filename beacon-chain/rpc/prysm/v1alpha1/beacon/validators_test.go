@@ -23,7 +23,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1363,13 +1363,13 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 			ActivationEpoch:   0,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey:         bytesutil.PadTo([]byte("1"), 48),
+			PublicKey:         butil.PadTo([]byte("1"), 48),
 		},
 		{
 			ActivationEpoch:   0,
 			ExitEpoch:         4,
 			WithdrawableEpoch: 6,
-			PublicKey:         bytesutil.PadTo([]byte("2"), 48),
+			PublicKey:         butil.PadTo([]byte("2"), 48),
 		},
 	}
 
@@ -1387,7 +1387,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	wanted := [][]byte{
-		bytesutil.PadTo([]byte("2"), 48),
+		butil.PadTo([]byte("2"), 48),
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
@@ -1533,7 +1533,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			PublicKey:             bytesutil.ToBytes(uint64(i), 48),
+			PublicKey:             butil.ToBytes4(uint64(i), 48),
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
@@ -1612,7 +1612,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
-			PublicKey:             bytesutil.ToBytes(uint64(i), 48),
+			PublicKey:             butil.ToBytes4(uint64(i), 48),
 			WithdrawalCredentials: make([]byte, 32),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
@@ -1781,9 +1781,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
-	publicKey1 := bytesutil.ToBytes48([]byte{1})
-	publicKey2 := bytesutil.ToBytes48([]byte{2})
-	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	publicKey1 := butil.ToBytes48([]byte{1})
+	publicKey2 := butil.ToBytes48([]byte{2})
+	publicKey3 := butil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -1846,9 +1846,9 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch+1))))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
-	publicKey1 := bytesutil.ToBytes48([]byte{1})
-	publicKey2 := bytesutil.ToBytes48([]byte{2})
-	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	publicKey1 := butil.ToBytes48([]byte{1})
+	publicKey2 := butil.ToBytes48([]byte{2})
+	publicKey3 := butil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -1918,9 +1918,9 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch+1))))
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
-	publicKey1 := bytesutil.ToBytes48([]byte{1})
-	publicKey2 := bytesutil.ToBytes48([]byte{2})
-	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	publicKey1 := butil.ToBytes48([]byte{1})
+	publicKey2 := butil.ToBytes48([]byte{2})
+	publicKey3 := butil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -1996,9 +1996,9 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
 	require.NoError(t, headState.SetBalances(balances))
-	publicKey1 := bytesutil.ToBytes48([]byte{1})
-	publicKey2 := bytesutil.ToBytes48([]byte{2})
-	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	publicKey1 := butil.ToBytes48([]byte{1})
+	publicKey2 := butil.ToBytes48([]byte{2})
+	publicKey3 := butil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],

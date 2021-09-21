@@ -9,7 +9,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -60,7 +60,7 @@ func testFastAggregateVerify(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to signature: %v", err)
 			}
 
-			verified := sig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msgBytes))
+			verified := sig.FastAggregateVerify(pubkeys, butil.ToBytes32(msgBytes))
 			if verified != test.Output {
 				t.Fatalf("Signature does not match the expected verification output. "+
 					"Expected %#v but received %#v for test case %d", test.Output, verified, i)

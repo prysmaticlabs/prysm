@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -75,7 +75,7 @@ func (b *BeaconState) stateRoots() [][]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
+	return butil.SafeCopy2dBytes(b.state.StateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -101,7 +101,7 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
+	return butil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.

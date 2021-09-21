@@ -22,7 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -91,7 +91,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	assert.NoError(t, r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: bytesutil.PadTo([]byte("f"), 4), HeadRoot: make([]byte, 32), FinalizedRoot: make([]byte, 32)}, stream1))
+	assert.NoError(t, r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: butil.PadTo([]byte("f"), 4), HeadRoot: make([]byte, 32), FinalizedRoot: make([]byte, 32)}, stream1))
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
@@ -255,12 +255,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 
 	p1.LocalMetadata = p2pWrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
-		Attnets:   bytesutil.PadTo([]byte{'A', 'B'}, 8),
+		Attnets:   butil.PadTo([]byte{'A', 'B'}, 8),
 	})
 
 	p2.LocalMetadata = p2pWrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
-		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
+		Attnets:   butil.PadTo([]byte{'C', 'D'}, 8),
 	})
 
 	st, err := v1.InitializeFromProto(&ethpb.BeaconState{

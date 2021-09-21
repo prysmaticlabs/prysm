@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 )
 
 // SkipSlotCache exists for the unlikely scenario that is a large gap between the head state and
@@ -28,5 +28,5 @@ func cacheKey(_ context.Context, state state.ReadOnlyBeaconState) ([32]byte, err
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return hash.Hash(append(bytesutil.Bytes32(uint64(state.Slot())), r[:]...)), nil
+	return hash.Hash(append(butil.Bytes32(uint64(state.Slot())), r[:]...)), nil
 }

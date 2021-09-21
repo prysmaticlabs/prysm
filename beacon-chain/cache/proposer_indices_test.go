@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -65,7 +65,7 @@ func TestProposerCache_CanRotate(t *testing.T) {
 	cache := NewProposerIndicesCache()
 	for i := 0; i < int(maxProposerIndicesCacheSize)+1; i++ {
 		s := []byte(strconv.Itoa(i))
-		item := &ProposerIndices{BlockRoot: bytesutil.ToBytes32(s)}
+		item := &ProposerIndices{BlockRoot: butil.ToBytes32(s)}
 		require.NoError(t, cache.AddProposerIndices(item))
 	}
 

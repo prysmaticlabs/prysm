@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
@@ -55,7 +55,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	for i, pk := range filteredPubKeys {
 		pubKeyBytes := pk.Marshal()
 		rawPublicKeys[i] = pubKeyBytes
-		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
+		formattedPubKeys[i] = fmt.Sprintf("%#x", butil.Trunc(pubKeyBytes))
 	}
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
 	if !cliCtx.IsSet(flags.DeletePublicKeysFlag.Name) {

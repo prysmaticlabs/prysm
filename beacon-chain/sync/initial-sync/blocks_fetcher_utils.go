@@ -12,7 +12,7 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
@@ -233,7 +233,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
-		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
+		parentRoot := butil.ToBytes32(block.Block().ParentRoot())
 		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
 			log.WithFields(logrus.Fields{
 				"peer": pid,
@@ -260,7 +260,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b block.SignedBeaconBlock) (*forkData, error) {
 	outBlocks := []block.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
-		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
+		parentRoot := butil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
 		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {

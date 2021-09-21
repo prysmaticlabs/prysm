@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -75,7 +75,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 
 	log.WithFields(logrus.Fields{
 		"slot":           msg.Slot,
-		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
+		"blockRoot":      fmt.Sprintf("%#x", butil.Trunc(msg.BlockRoot)),
 		"validatorIndex": msg.ValidatorIndex,
 	}).Info("Submitted new sync message")
 }
@@ -163,7 +163,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 		log.WithFields(logrus.Fields{
 			"slot":              contributionAndProof.Contribution.Slot,
-			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
+			"blockRoot":         fmt.Sprintf("%#x", butil.Trunc(contributionAndProof.Contribution.BlockRoot)),
 			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
 			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
 			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),

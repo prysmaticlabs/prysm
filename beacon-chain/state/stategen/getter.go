@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -89,7 +89,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return startState, nil
 	}
 
-	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, summary.Slot, bytesutil.ToBytes32(summary.Root))
+	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, summary.Slot, butil.ToBytes32(summary.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks")
 	}
@@ -188,7 +188,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return startState, nil
 	}
 
-	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, butil.ToBytes32(summary.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 	}
@@ -257,7 +257,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 			return nil, ctx.Err()
 		}
 		// Is the state a genesis state.
-		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
+		parentRoot := butil.ToBytes32(b.Block().ParentRoot())
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			return s.beaconDB.GenesisState(ctx)
 		}

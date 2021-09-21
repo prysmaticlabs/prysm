@@ -35,7 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
@@ -361,7 +361,7 @@ func (s *Service) LatestBlockHeight() *big.Int {
 
 // LatestBlockHash in the ETH1.0 chain.
 func (s *Service) LatestBlockHash() common.Hash {
-	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
+	return butil.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
@@ -373,7 +373,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 	if err != nil {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
-	count := bytesutil.FromBytes8(countByte)
+	count := butil.FromBytes8(countByte)
 	deposits := s.cfg.DepositCache.AllDeposits(s.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
@@ -605,7 +605,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if err != nil {
 		return err
 	}
-	rt := bytesutil.ToBytes32(chkPt.Root)
+	rt := butil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
 		fState, err := s.cfg.StateGen.StateByRoot(ctx, rt)
 		if err != nil {
@@ -622,7 +622,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
 		for _, c := range ctrs[currIndex:] {
-			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, butil.ToBytes32(c.DepositRoot))
 		}
 	}
 	return nil

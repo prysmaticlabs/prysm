@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
@@ -61,7 +61,7 @@ func (vs *Server) MultipleValidatorStatus(
 	filtered[[48]byte{}] = true // Filter out keys with all zeros.
 	// Filter out duplicate public keys.
 	for _, pubKey := range req.PublicKeys {
-		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		pubkeyBytes := butil.ToBytes48(pubKey)
 		if !filtered[pubkeyBytes] {
 			pubKeys = append(pubKeys, pubKey)
 			filtered[pubkeyBytes] = true
@@ -141,7 +141,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 				})
 			continue
 		}
-		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
+		valIndex, ok := olderState.ValidatorIndexByPubkey(butil.ToBytes48(v.PublicKey))
 		if !ok {
 			// Ignore if validator pubkey doesn't exist.
 			continue
@@ -322,7 +322,7 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
-	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+	idx, ok := headState.ValidatorIndexByPubkey(butil.ToBytes48(pubKey))
 	if !ok || uint64(idx) >= uint64(headState.NumValidators()) {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}

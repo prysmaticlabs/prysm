@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -12,7 +12,7 @@ import (
 func (s *Store) SaveGraffitiOrderedIndex(ctx context.Context, index uint64) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(graffitiBucket)
-		indexBytes := bytesutil.Uint64ToBytesBigEndian(index)
+		indexBytes := butil.Uint64ToBytesBigEndian(index)
 		return bkt.Put(graffitiOrderedIndexKey, indexBytes)
 	})
 }
@@ -25,9 +25,9 @@ func (s *Store) GraffitiOrderedIndex(ctx context.Context, fileHash [32]byte) (ui
 		dbFileHash := bkt.Get(graffitiFileHashKey)
 		if bytes.Equal(dbFileHash, fileHash[:]) {
 			indexBytes := bkt.Get(graffitiOrderedIndexKey)
-			orderedIndex = bytesutil.BytesToUint64BigEndian(indexBytes)
+			orderedIndex = bytes.BytesToUint64BigEndian(indexBytes)
 		} else {
-			indexBytes := bytesutil.Uint64ToBytesBigEndian(0)
+			indexBytes := butil.Uint64ToBytesBigEndian(0)
 			if err := bkt.Put(graffitiOrderedIndexKey, indexBytes); err != nil {
 				return err
 			}

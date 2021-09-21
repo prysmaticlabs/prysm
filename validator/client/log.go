@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
@@ -30,11 +30,11 @@ func (v *validator) LogAttestationsSubmitted() {
 		log.WithFields(logrus.Fields{
 			"Slot":              attLog.data.Slot,
 			"CommitteeIndex":    attLog.data.CommitteeIndex,
-			"BeaconBlockRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.BeaconBlockRoot)),
+			"BeaconBlockRoot":   fmt.Sprintf("%#x", butil.Trunc(attLog.data.BeaconBlockRoot)),
 			"SourceEpoch":       attLog.data.Source.Epoch,
-			"SourceRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Source.Root)),
+			"SourceRoot":        fmt.Sprintf("%#x", butil.Trunc(attLog.data.Source.Root)),
 			"TargetEpoch":       attLog.data.Target.Epoch,
-			"TargetRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Target.Root)),
+			"TargetRoot":        fmt.Sprintf("%#x", butil.Trunc(attLog.data.Target.Root)),
 			"AttesterIndices":   attLog.attesterIndices,
 			"AggregatorIndices": attLog.aggregatorIndices,
 		}).Info("Submitted new attestations")

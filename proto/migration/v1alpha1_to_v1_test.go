@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -21,17 +21,17 @@ var (
 	committeeIndex   = types.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
-	parentRoot       = bytesutil.PadTo([]byte("parentroot"), 32)
-	stateRoot        = bytesutil.PadTo([]byte("stateroot"), 32)
-	signature        = bytesutil.PadTo([]byte("signature"), 96)
-	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 96)
-	depositRoot      = bytesutil.PadTo([]byte("depositroot"), 32)
-	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
-	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), 32)
-	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
-	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
-	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
-	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
+	parentRoot       = butil.PadTo([]byte("parentroot"), 32)
+	stateRoot        = butil.PadTo([]byte("stateroot"), 32)
+	signature        = butil.PadTo([]byte("signature"), 96)
+	randaoReveal     = butil.PadTo([]byte("randaoreveal"), 96)
+	depositRoot      = butil.PadTo([]byte("depositroot"), 32)
+	blockHash        = butil.PadTo([]byte("blockhash"), 32)
+	beaconBlockRoot  = butil.PadTo([]byte("beaconblockroot"), 32)
+	sourceRoot       = butil.PadTo([]byte("sourceroot"), 32)
+	targetRoot       = butil.PadTo([]byte("targetroot"), 32)
+	bodyRoot         = butil.PadTo([]byte("bodyroot"), 32)
+	selectionProof   = butil.PadTo([]byte("selectionproof"), 96)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 
