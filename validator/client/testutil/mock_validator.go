@@ -176,7 +176,7 @@ func (fv *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.S
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyTimeLeft for mocking.
-func (fv *FakeValidator) LogNextDutyTimeLeft(slot types.Slot) error {
+func (fv *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
 	return nil
 }
 
@@ -217,12 +217,12 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 }
 
 // CheckDoppelGanger for mocking
-func (fv *FakeValidator) CheckDoppelGanger(ctx context.Context) error {
+func (fv *FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
 // ReceiveBlocks for mocking
-func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
+func (fv *FakeValidator) ReceiveBlocks(_ context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- iface.ErrConnectionIssue
@@ -241,5 +241,5 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (fv *FakeValidator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (fv *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
 }

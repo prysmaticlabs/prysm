@@ -108,7 +108,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 	}
 }
 
-func TestFuzzverifySigningRoot_10000(t *testing.T) {
+func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconState{}
 	pubkey := [48]byte{}

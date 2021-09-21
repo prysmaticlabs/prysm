@@ -41,7 +41,7 @@ var (
 	filter_BeaconChain_ListAttestations_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -57,7 +57,7 @@ func request_BeaconChain_ListAttestations_0(ctx context.Context, marshaler runti
 
 }
 
-func local_request_BeaconChain_ListAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListAttestations_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -77,7 +77,7 @@ var (
 	filter_BeaconChain_ListIndexedAttestations_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListIndexedAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -93,7 +93,7 @@ func request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, marshale
 
 }
 
-func local_request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListIndexedAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -109,7 +109,7 @@ func local_request_BeaconChain_ListIndexedAttestations_0(ctx context.Context, ma
 
 }
 
-func request_BeaconChain_StreamAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamAttestationsClient, runtime.ServerMetadata, error) {
+func request_BeaconChain_StreamAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (BeaconChain_StreamAttestationsClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -126,7 +126,7 @@ func request_BeaconChain_StreamAttestations_0(ctx context.Context, marshaler run
 
 }
 
-func request_BeaconChain_StreamIndexedAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamIndexedAttestationsClient, runtime.ServerMetadata, error) {
+func request_BeaconChain_StreamIndexedAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (BeaconChain_StreamIndexedAttestationsClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -147,7 +147,7 @@ var (
 	filter_BeaconChain_AttestationPool_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_AttestationPool_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_AttestationPool_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AttestationPoolRequest
 	var metadata runtime.ServerMetadata
 
@@ -163,7 +163,7 @@ func request_BeaconChain_AttestationPool_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_BeaconChain_AttestationPool_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_AttestationPool_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AttestationPoolRequest
 	var metadata runtime.ServerMetadata
 
@@ -183,7 +183,7 @@ var (
 	filter_BeaconChain_ListBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBlocks_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
@@ -199,7 +199,7 @@ func request_BeaconChain_ListBlocks_0(ctx context.Context, marshaler runtime.Mar
 
 }
 
-func local_request_BeaconChain_ListBlocks_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBlocks_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
@@ -219,7 +219,7 @@ var (
 	filter_BeaconChain_ListBeaconBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListBeaconBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBeaconBlocks_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
@@ -235,7 +235,7 @@ func request_BeaconChain_ListBeaconBlocks_0(ctx context.Context, marshaler runti
 
 }
 
-func local_request_BeaconChain_ListBeaconBlocks_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBeaconBlocks_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListBlocksRequest
 	var metadata runtime.ServerMetadata
 
@@ -255,7 +255,7 @@ var (
 	filter_BeaconChain_StreamBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_StreamBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamBlocksClient, runtime.ServerMetadata, error) {
+func request_BeaconChain_StreamBlocks_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (BeaconChain_StreamBlocksClient, runtime.ServerMetadata, error) {
 	var protoReq StreamBlocksRequest
 	var metadata runtime.ServerMetadata
 
@@ -279,7 +279,7 @@ func request_BeaconChain_StreamBlocks_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func request_BeaconChain_StreamChainHead_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamChainHeadClient, runtime.ServerMetadata, error) {
+func request_BeaconChain_StreamChainHead_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (BeaconChain_StreamChainHeadClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -296,7 +296,7 @@ func request_BeaconChain_StreamChainHead_0(ctx context.Context, marshaler runtim
 
 }
 
-func request_BeaconChain_GetChainHead_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetChainHead_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -305,7 +305,7 @@ func request_BeaconChain_GetChainHead_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_BeaconChain_GetChainHead_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetChainHead_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -314,7 +314,7 @@ func local_request_BeaconChain_GetChainHead_0(ctx context.Context, marshaler run
 
 }
 
-func request_BeaconChain_GetWeakSubjectivityCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetWeakSubjectivityCheckpoint_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -323,7 +323,7 @@ func request_BeaconChain_GetWeakSubjectivityCheckpoint_0(ctx context.Context, ma
 
 }
 
-func local_request_BeaconChain_GetWeakSubjectivityCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetWeakSubjectivityCheckpoint_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -336,7 +336,7 @@ var (
 	filter_BeaconChain_ListBeaconCommittees_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListBeaconCommittees_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBeaconCommittees_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -352,7 +352,7 @@ func request_BeaconChain_ListBeaconCommittees_0(ctx context.Context, marshaler r
 
 }
 
-func local_request_BeaconChain_ListBeaconCommittees_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBeaconCommittees_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -372,7 +372,7 @@ var (
 	filter_BeaconChain_ListValidatorBalances_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
@@ -388,7 +388,7 @@ func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, marshaler 
 
 }
 
-func local_request_BeaconChain_ListValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListValidatorBalances_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
@@ -408,7 +408,7 @@ var (
 	filter_BeaconChain_ListValidators_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListValidators_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorsRequest
 	var metadata runtime.ServerMetadata
 
@@ -424,7 +424,7 @@ func request_BeaconChain_ListValidators_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_BeaconChain_ListValidators_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorsRequest
 	var metadata runtime.ServerMetadata
 
@@ -444,7 +444,7 @@ var (
 	filter_BeaconChain_GetValidator_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_GetValidator_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidator_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorRequest
 	var metadata runtime.ServerMetadata
 
@@ -460,7 +460,7 @@ func request_BeaconChain_GetValidator_0(ctx context.Context, marshaler runtime.M
 
 }
 
-func local_request_BeaconChain_GetValidator_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidator_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorRequest
 	var metadata runtime.ServerMetadata
 
@@ -480,7 +480,7 @@ var (
 	filter_BeaconChain_GetValidatorActiveSetChanges_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorActiveSetChangesRequest
 	var metadata runtime.ServerMetadata
 
@@ -496,7 +496,7 @@ func request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Context, mar
 
 }
 
-func local_request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorActiveSetChangesRequest
 	var metadata runtime.ServerMetadata
 
@@ -512,7 +512,7 @@ func local_request_BeaconChain_GetValidatorActiveSetChanges_0(ctx context.Contex
 
 }
 
-func request_BeaconChain_GetValidatorQueue_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidatorQueue_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -521,7 +521,7 @@ func request_BeaconChain_GetValidatorQueue_0(ctx context.Context, marshaler runt
 
 }
 
-func local_request_BeaconChain_GetValidatorQueue_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidatorQueue_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -534,7 +534,7 @@ var (
 	filter_BeaconChain_GetValidatorPerformance_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_GetValidatorPerformance_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidatorPerformance_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ValidatorPerformanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -550,7 +550,7 @@ func request_BeaconChain_GetValidatorPerformance_0(ctx context.Context, marshale
 
 }
 
-func local_request_BeaconChain_GetValidatorPerformance_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidatorPerformance_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ValidatorPerformanceRequest
 	var metadata runtime.ServerMetadata
 
@@ -570,7 +570,7 @@ var (
 	filter_BeaconChain_ListValidatorAssignments_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListValidatorAssignments_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListValidatorAssignments_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorAssignmentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -586,7 +586,7 @@ func request_BeaconChain_ListValidatorAssignments_0(ctx context.Context, marshal
 
 }
 
-func local_request_BeaconChain_ListValidatorAssignments_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListValidatorAssignments_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ListValidatorAssignmentsRequest
 	var metadata runtime.ServerMetadata
 
@@ -606,7 +606,7 @@ var (
 	filter_BeaconChain_GetValidatorParticipation_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorParticipationRequest
 	var metadata runtime.ServerMetadata
 
@@ -622,7 +622,7 @@ func request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, marsha
 
 }
 
-func local_request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetValidatorParticipationRequest
 	var metadata runtime.ServerMetadata
 
@@ -638,7 +638,7 @@ func local_request_BeaconChain_GetValidatorParticipation_0(ctx context.Context, 
 
 }
 
-func request_BeaconChain_GetBeaconConfig_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBeaconConfig_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -647,7 +647,7 @@ func request_BeaconChain_GetBeaconConfig_0(ctx context.Context, marshaler runtim
 
 }
 
-func local_request_BeaconChain_GetBeaconConfig_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBeaconConfig_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -656,7 +656,7 @@ func local_request_BeaconChain_GetBeaconConfig_0(ctx context.Context, marshaler 
 
 }
 
-func request_BeaconChain_StreamValidatorsInfo_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamValidatorsInfoClient, runtime.ServerMetadata, error) {
+func request_BeaconChain_StreamValidatorsInfo_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (BeaconChain_StreamValidatorsInfoClient, runtime.ServerMetadata, error) {
 	var metadata runtime.ServerMetadata
 	stream, err := client.StreamValidatorsInfo(ctx)
 	if err != nil {
@@ -712,7 +712,7 @@ var (
 	filter_BeaconChain_SubmitAttesterSlashing_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AttesterSlashing
 	var metadata runtime.ServerMetadata
 
@@ -728,7 +728,7 @@ func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler
 
 }
 
-func local_request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AttesterSlashing
 	var metadata runtime.ServerMetadata
 
@@ -748,7 +748,7 @@ var (
 	filter_BeaconChain_SubmitProposerSlashing_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ProposerSlashing
 	var metadata runtime.ServerMetadata
 
@@ -764,7 +764,7 @@ func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler
 
 }
 
-func local_request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq ProposerSlashing
 	var metadata runtime.ServerMetadata
 
@@ -784,7 +784,7 @@ var (
 	filter_BeaconChain_GetIndividualVotes_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_GetIndividualVotes_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetIndividualVotes_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq IndividualVotesRequest
 	var metadata runtime.ServerMetadata
 
@@ -800,7 +800,7 @@ func request_BeaconChain_GetIndividualVotes_0(ctx context.Context, marshaler run
 
 }
 
-func local_request_BeaconChain_GetIndividualVotes_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetIndividualVotes_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq IndividualVotesRequest
 	var metadata runtime.ServerMetadata
 
@@ -1356,7 +1356,7 @@ func RegisterBeaconChainHandler(ctx context.Context, mux *runtime.ServeMux, conn
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "BeaconChainClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "BeaconChainClient" to call the correct interceptors.
-func RegisterBeaconChainHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconChainClient) error {
+func RegisterBeaconChainHandlerClient(_ context.Context, mux *runtime.ServeMux, client BeaconChainClient) error {
 
 	mux.Handle("GET", pattern_BeaconChain_ListAttestations_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())

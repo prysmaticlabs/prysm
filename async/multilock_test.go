@@ -50,7 +50,7 @@ func TestGetChan(t *testing.T) {
 	assert.Equal(ch1, ch3)
 }
 
-func TestLockUnlock(t *testing.T) {
+func TestLockUnlock(_ *testing.T) {
 	var wg sync.WaitGroup
 
 	wg.Add(5)

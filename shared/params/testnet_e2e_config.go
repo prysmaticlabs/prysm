@@ -7,10 +7,6 @@ func UseE2EConfig() {
 	beaconConfig = E2ETestConfig()
 
 	cfg := BeaconNetworkConfig().Copy()
-	// Due to the small number of peers in the e2e test network
-	// setting this to 0, prevents the node from being overwhelmed
-	// from discovery lookups.
-	cfg.MinimumPeersInSubnet = 0
 	OverrideBeaconNetworkConfig(cfg)
 }
 
