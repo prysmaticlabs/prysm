@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
