@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -57,7 +57,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
-		ev.APIGatewayV1VerifyIntegrity,
+		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 	}
 	// TODO(#9166): remove this block once v2 changes are live.

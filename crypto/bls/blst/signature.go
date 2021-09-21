@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
 package blst
@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	blst "github.com/supranational/blst/bindings/go"
 )
 

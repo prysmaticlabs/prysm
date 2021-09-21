@@ -8,8 +8,8 @@ go_library(
     visibility = ["//beacon-chain/db:__subpackages__"],
     deps = [
         "//beacon-chain/state/v1:go_default_library",
+        "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/params:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
     ],
 )
@@ -19,6 +19,6 @@ go_test(
     srcs = ["genesis_test.go"],
     deps = [
         ":go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
     ],
 )

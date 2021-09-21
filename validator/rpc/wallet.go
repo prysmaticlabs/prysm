@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -94,7 +94,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
-func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
+func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
@@ -177,7 +177,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 
 	// Web UI should check the new and confirmed password are equal.
 	walletPassword := req.WalletPassword
-	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
+	if err := prompt.ValidatePasswordInput(walletPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
@@ -331,8 +331,8 @@ func writeWalletPasswordToDisk(walletDir, password string) error {
 		return nil
 	}
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(passwordFilePath) {
+	if file.FileExists(passwordFilePath) {
 		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
 	}
-	return fileutil.WriteFile(passwordFilePath, []byte(password))
+	return file.WriteFile(passwordFilePath, []byte(password))
 }

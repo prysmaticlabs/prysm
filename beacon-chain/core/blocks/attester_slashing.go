@@ -9,12 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 // ProcessAttesterSlashings is one of the operations performed
@@ -124,11 +124,11 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false
 	}
-	isDoubleVote := !attestationutil.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
+	isDoubleVote := !attestation.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	att1 := &ethpb.IndexedAttestation{Data: data1}
 	att2 := &ethpb.IndexedAttestation{Data: data2}
 	// Check if att1 is surrounding att2.
-	isSurroundVote := slashutil.IsSurround(att1, att2)
+	isSurroundVote := slashings.IsSurround(att1, att2)
 	return isDoubleVote || isSurroundVote
 }
 
@@ -138,5 +138,5 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_2.AttestingIndices
-	return sliceutil.IntersectionUint64(indices1, indices2)
+	return slice.IntersectionUint64(indices1, indices2)
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -35,7 +36,6 @@ import (
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -1526,7 +1526,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	v1Server := &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher: &mockChain.ChainService{
-			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
 	server := Server{

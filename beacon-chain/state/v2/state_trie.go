@@ -10,12 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -240,15 +240,15 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return htrutils.Uint64Root(b.state.GenesisTime), nil
+		return ssz.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
-		return htrutils.Uint64Root(uint64(b.state.Slot)), nil
+		return ssz.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:
-		return htrutils.Uint64Root(b.state.Eth1DepositIndex), nil
+		return ssz.Uint64Root(b.state.Eth1DepositIndex), nil
 	case fork:
-		return htrutils.ForkRoot(b.state.Fork)
+		return ssz.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
@@ -274,7 +274,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
+		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
 	case eth1Data:
 		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
@@ -313,7 +313,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
-		return htrutils.SlashingsRoot(b.state.Slashings)
+		return ssz.SlashingsRoot(b.state.Slashings)
 	case previousEpochParticipationBits:
 		return participationBitsRoot(b.state.PreviousEpochParticipation)
 	case currentEpochParticipationBits:
@@ -321,11 +321,11 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	case inactivityScores:
 		return stateutil.Uint64ListRootWithRegistryLimit(b.state.InactivityScores)
 	case currentSyncCommittee:
@@ -347,7 +347,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
+	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

@@ -9,18 +9,18 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	beaconRPC               = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port                    = flag.Int("port", 8000, "Port to serve on")
-	ethApiPort              = flag.Int("port", 8001, "Port to serve Ethereum API on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
@@ -42,18 +42,18 @@ func main() {
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.EthPbMux},
 		gatewayConfig.Handler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
 		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
-		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *ethApiPort), &apimiddleware.BeaconEndpointFactory{})
+		WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
-	mux.HandleFunc("/healthz", healthzServer(gw))
-	gw = gw.WithMux(mux)
+	r := mux.NewRouter()
+	r.HandleFunc("/swagger/", gateway.SwaggerServer())
+	r.HandleFunc("/healthz", healthzServer(gw))
+	gw = gw.WithRouter(r)
 
 	gw.Start()
 

@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -183,7 +183,7 @@ func TestProcessAttestations(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
 		if !pVals[i].IsPrevEpochAttester {
@@ -192,7 +192,7 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err = attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	indices, err = attestation.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
 		assert.Equal(t, true, pVals[i].IsPrevEpochAttester, "Not a prev epoch attester")

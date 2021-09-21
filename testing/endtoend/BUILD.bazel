@@ -15,7 +15,6 @@ go_test(
     data = [
         "//:prysm_sh",
         "//cmd/beacon-chain",
-        "//cmd/slasher",
         "//cmd/validator",
         "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
@@ -30,8 +29,8 @@ go_test(
     ],
     deps = [
         "//beacon-chain/core/transition:go_default_library",
+        "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//testing/endtoend/components:go_default_library",

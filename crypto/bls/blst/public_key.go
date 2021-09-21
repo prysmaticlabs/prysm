@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
 package blst
@@ -9,8 +9,8 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var maxKeys = int64(1000000)

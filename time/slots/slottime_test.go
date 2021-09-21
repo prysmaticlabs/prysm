@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 

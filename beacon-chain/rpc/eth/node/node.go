@@ -10,6 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -291,7 +291,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 		return &emptypb.Empty{}, nil
 	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
+		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutil.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
 			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
 			return &emptypb.Empty{}, nil
 		}

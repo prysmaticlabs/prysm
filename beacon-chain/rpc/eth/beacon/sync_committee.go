@@ -7,15 +7,15 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -135,7 +135,7 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 
 	if len(msgFailures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: msgFailures}
-		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.InvalidArgument,

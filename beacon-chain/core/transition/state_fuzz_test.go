@@ -53,7 +53,7 @@ func TestOptimizedGenesisBeaconState_1000(t *testing.T) {
 	}
 }
 
-func TestIsValidGenesisState_100000(t *testing.T) {
+func TestIsValidGenesisState_100000(_ *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	fuzzer := fuzz.NewWithSeed(0)
