@@ -57,7 +57,7 @@ func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
 			beaconNodeIdx,
 			conn,
 			withCompareValidatorsEth,
-			//withCompareSyncCommittee,
+			withCompareSyncCommittee,
 			withCompareAttesterDuties,
 		); err != nil {
 			return err
