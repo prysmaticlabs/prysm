@@ -13,7 +13,6 @@ import (
 //   - gRPC responses can be returned as spec-compliant Ethereum consensus API responses
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
-	ProxyAddress    string
 	EndpointCreator EndpointFactory
 }
 

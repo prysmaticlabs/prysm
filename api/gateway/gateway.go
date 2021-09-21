@@ -46,7 +46,6 @@ type Gateway struct {
 	cancel                       context.CancelFunc
 	remoteCert                   string
 	gatewayAddr                  string
-	apiMiddlewareAddr            string
 	apiMiddlewareEndpointFactory EndpointFactory
 	ctx                          context.Context
 	startFailure                 error
@@ -138,7 +137,7 @@ func (g *Gateway) Start() {
 		})
 	}
 
-	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
 		go g.registerApiMiddleware()
 	}
 
@@ -274,7 +273,6 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 func (g *Gateway) registerApiMiddleware() {
 	proxy := &ApiProxyMiddleware{
 		GatewayAddress:  g.gatewayAddr,
-		ProxyAddress:    g.apiMiddlewareAddr,
 		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
 	log.Info("Starting API middleware")
