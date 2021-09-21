@@ -25,7 +25,7 @@ go_test(
         "spectest",
     ],
     deps = [
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "//testing/spectest/shared/phase0/epoch_processing:go_default_library",
     ],
 )

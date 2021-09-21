@@ -10,7 +10,7 @@ go_library(
     ],
     deps = [
         "//crypto/bls:go_default_library",
-        "//shared/interop:go_default_library",
+        "//runtime/interop:go_default_library",
         "//tools/unencrypted-keys-gen/keygen:go_default_library",
     ],
 )

@@ -32,7 +32,7 @@ var (
 // NextSlotState returns the saved state if the input root matches the root in `nextSlotCache`. Returns nil otherwise.
 // This is useful to check before processing slots. With a cache hit, it will return last processed state with slot plus
 // one advancement.
-func NextSlotState(ctx context.Context, root []byte) (state.BeaconState, error) {
+func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
 	nsc.RLock()
 	defer nsc.RUnlock()
 	if !bytes.Equal(root, nsc.root) {

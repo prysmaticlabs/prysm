@@ -433,7 +433,7 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_c_bata_go_prompt",
-        importpath = "github.com/c-bata/go-prompt",
+        importpath = "github.com/c-bata/go-userprompt",
         sum = "h1:uyKRz6Z6DUyj49QVijyM339UJV9yhbr70gESwbNU3e0=",
         version = "v0.2.2",
     )
@@ -1440,8 +1440,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:LEw2KkKciJEr3eKDLzdZ/rjzSR6Y+BS6xKxdA78Bq6s=",
-        version = "v0.0.0-20210130185500-57372fb27371",
+        sum = "h1:wCMygKUQhmcQAjlk2Gquzq6dLmyMv2kF+llRspoRgrk=",
+        version = "v0.0.0-20210917013441-d37c07cfda4e",
     )
 
     go_repository(
@@ -3344,11 +3344,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/624d0351000111276aa70a32145945d2645e49a9.tar.gz",
+            "https://github.com/supranational/blst/archive/0eab29bb46449d45be14df98ce38cbb8f9a05918.tar.gz",
         ],
-        strip_prefix = "blst-624d0351000111276aa70a32145945d2645e49a9",
+        strip_prefix = "blst-0eab29bb46449d45be14df98ce38cbb8f9a05918",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "6118737ddc0652f3a874fbe29e09a80c66c604d933b8cd478e5f2b7454860c6e",
+        sha256 = "29e818ea9636a604d86f53a2bab7ad5cba20ff043606edb81f3a384ff58393cd",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",

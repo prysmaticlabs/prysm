@@ -1188,29 +1188,29 @@ func RegisterBeaconValidatorHandlerClient(ctx context.Context, mux *runtime.Serv
 }
 
 var (
-	pattern_BeaconValidator_GetAttesterDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "attester", "epoch"}, ""))
+	pattern_BeaconValidator_GetAttesterDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "attester", "epoch"}, ""))
 
-	pattern_BeaconValidator_GetProposerDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "proposer", "epoch"}, ""))
+	pattern_BeaconValidator_GetProposerDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "proposer", "epoch"}, ""))
 
-	pattern_BeaconValidator_GetSyncCommitteeDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "sync", "epoch"}, ""))
+	pattern_BeaconValidator_GetSyncCommitteeDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "sync", "epoch"}, ""))
 
-	pattern_BeaconValidator_ProduceBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "validator", "blocks", "slot"}, ""))
+	pattern_BeaconValidator_ProduceBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "validator", "blocks", "slot"}, ""))
 
-	pattern_BeaconValidator_ProduceBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v2", "validator", "blocks", "slot"}, ""))
+	pattern_BeaconValidator_ProduceBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "validator", "blocks", "slot"}, ""))
 
-	pattern_BeaconValidator_ProduceAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "attestation_data"}, ""))
+	pattern_BeaconValidator_ProduceAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "attestation_data"}, ""))
 
-	pattern_BeaconValidator_GetAggregateAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "aggregate_attestation"}, ""))
+	pattern_BeaconValidator_GetAggregateAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "aggregate_attestation"}, ""))
 
-	pattern_BeaconValidator_SubmitAggregateAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "aggregate_and_proofs"}, ""))
+	pattern_BeaconValidator_SubmitAggregateAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "aggregate_and_proofs"}, ""))
 
-	pattern_BeaconValidator_SubmitBeaconCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "beacon_committee_subscriptions"}, ""))
+	pattern_BeaconValidator_SubmitBeaconCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "beacon_committee_subscriptions"}, ""))
 
-	pattern_BeaconValidator_SubmitSyncCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "sync_committee_subscriptions"}, ""))
+	pattern_BeaconValidator_SubmitSyncCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "sync_committee_subscriptions"}, ""))
 
-	pattern_BeaconValidator_ProduceSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "sync_committee_contribution"}, ""))
+	pattern_BeaconValidator_ProduceSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "sync_committee_contribution"}, ""))
 
-	pattern_BeaconValidator_SubmitContributionAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "contribution_and_proofs"}, ""))
+	pattern_BeaconValidator_SubmitContributionAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "contribution_and_proofs"}, ""))
 )
 
 var (

@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -273,7 +273,7 @@ func filterSlashablePubKeysFromAttestations(
 		for _, att := range signedAtts {
 			// Check for double votes.
 			if sr, ok := signingRootsByTarget[att.Target]; ok {
-				if slashutil.SigningRootsDiffer(sr, att.SigningRoot) {
+				if slashings.SigningRootsDiffer(sr, att.SigningRoot) {
 					slashablePubKeys = append(slashablePubKeys, pubKey)
 					break Loop
 				}
@@ -283,7 +283,7 @@ func filterSlashablePubKeysFromAttestations(
 				for _, target := range targets {
 					a := createAttestation(source, target)
 					b := createAttestation(att.Source, att.Target)
-					if slashutil.IsSurround(a, b) || slashutil.IsSurround(b, a) {
+					if slashings.IsSurround(a, b) || slashings.IsSurround(b, a) {
 						slashablePubKeys = append(slashablePubKeys, pubKey)
 						break Loop
 					}

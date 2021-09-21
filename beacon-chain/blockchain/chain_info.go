@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -298,11 +298,11 @@ func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]
 }
 
 // HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
-func (s *Service) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
+func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([48]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	v, err := s.headState(ctx).ValidatorAtIndexReadOnly(index)
+	v, err := s.headValidatorAtIndex(index)
 	if err != nil {
 		return [48]byte{}, err
 	}

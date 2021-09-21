@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -49,7 +49,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	go s.pruneAttsPool()
 
 	done := make(chan struct{}, 1)
-	runutil.RunEvery(ctx, 500*time.Millisecond, func() {
+	async.RunEvery(ctx, 500*time.Millisecond, func() {
 		atts, err := s.cfg.Pool.UnaggregatedAttestations()
 		require.NoError(t, err)
 		for _, attestation := range atts {

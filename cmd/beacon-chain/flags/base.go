@@ -3,7 +3,7 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -69,13 +69,6 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
-	}
-	// EthApiPort specifies the port which runs the official Ethereum REST API.
-	// Serves JSON values conforming to the specification: https://ethereum.github.io/beacon-apis/
-	EthApiPort = &cli.IntFlag{
-		Name:  "eth-api-port",
-		Usage: "The port which exposes a REST API conforming to the official Ethereum API specification.",
-		Value: 3501,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
@@ -143,10 +136,10 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
-	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation subnets or not.
+	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
-		Usage: "Subscribe to all possible attestation subnets.",
+		Usage: "Subscribe to all possible attestation and sync subnets.",
 	}
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
@@ -181,5 +174,11 @@ var (
 		Name: "genesis-state",
 		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
 			"eth2-clients/eth2-testnets repository on github.",
+	}
+	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
+	MinPeersPerSubnet = &cli.Uint64Flag{
+		Name:  "minimum-peers-per-subnet",
+		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
+		Value: 4,
 	}
 )

@@ -7,10 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -158,4 +158,13 @@ func TestCalculateStateRootAltair_OK(t *testing.T) {
 	r, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, params.BeaconConfig().ZeroHash, r)
+}
+
+func TestProcessBlockDifferentVersion(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 64) // Phase 0 state
+	_, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block) // Altair block
+	require.NoError(t, err)
+	_, _, err = transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
+	require.ErrorContains(t, "state and block are different version. 0 != 1", err)
 }

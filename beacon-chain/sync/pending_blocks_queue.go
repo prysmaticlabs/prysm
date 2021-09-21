@@ -9,16 +9,16 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -35,7 +35,7 @@ const maxBlocksPerSlot = 3
 func (s *Service) processPendingBlocksQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
-	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
+	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Could not process pending blocks")
@@ -315,7 +315,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if sszutil.DeepEqual(blk.Proto(), b.Proto()) {
+		if ssz.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
@@ -336,7 +336,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(slot types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(_ types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {

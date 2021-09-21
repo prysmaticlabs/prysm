@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -258,6 +258,13 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 // This is a lock free version.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+}
+
+// This returns the validator referenced by the provided index in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
 // Returns true if head state exists.
