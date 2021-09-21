@@ -196,7 +196,7 @@ func (s *Service) Start() {
 
 		// when a node pauses for some time and starts again, the deposits to finalize
 		// accumulates. we finalize them here before we are ready to receive a block.
-		// Otherwise, the first few block will not do their duties properly as we will
+		// Otherwise, the first few blocks will be slower to compute as we will
 		// hold the lock and be busy finalizing the deposits.
 		fRoot := bytesutil.ToBytes32(s.finalizedCheckpt.Root)
 		if err := s.insertFinalizedDeposits(s.ctx, fRoot); err != nil {
