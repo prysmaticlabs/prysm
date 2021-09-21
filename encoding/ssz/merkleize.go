@@ -1,5 +1,4 @@
-// Package htrutils defines HashTreeRoot utility functions.
-package htrutils
+package ssz
 
 import (
 	"github.com/prysmaticlabs/prysm/container/trie"

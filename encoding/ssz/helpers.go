@@ -1,5 +1,5 @@
-// Package htrutils defines HashTreeRoot utility functions.
-package htrutils
+// Package ssz defines HashTreeRoot utility functions.
+package ssz
 
 import (
 	"bytes"

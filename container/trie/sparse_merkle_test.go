@@ -50,18 +50,20 @@ func TestMarshalDepositWithProof(t *testing.T) {
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	h := hash.Hash([]byte("hi"))
-	m, err := trie.NewTrieWithBranches([][][]byte{
-		{
-			h[:],
+	m := trie.CreateTrieFromProto(&ethpb.SparseMerkleTrie{
+		Layers: []*ethpb.TrieLayer{
+			{
+				Layer: [][]byte{h[:]},
+			},
+			{
+				Layer: [][]byte{h[:]},
+			},
+			{
+				Layer: [][]byte{},
+			},
 		},
-		{
-			h[:],
-		},
-		{
-			[]byte{},
-		},
-	}, 4)
-	require.NoError(t, err)
+		Depth: 4,
+	})
 	if _, err := m.MerkleProof(6); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
