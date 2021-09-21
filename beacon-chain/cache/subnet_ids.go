@@ -8,8 +8,8 @@ import (
 	"github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type subnetIDs struct {
