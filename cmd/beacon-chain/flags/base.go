@@ -21,7 +21,7 @@ var (
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
-		Name:  "deposit",
+		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 		Value: params.BeaconConfig().DepositContractAddress,
 	}
