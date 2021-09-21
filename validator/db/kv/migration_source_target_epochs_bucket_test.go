@@ -87,14 +87,14 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 						for sourceEpoch := uint64(0); sourceEpoch < numEpochs-1; sourceEpoch++ {
 							sourceEpochBytes := butil.Uint64ToBytesBigEndian(sourceEpoch)
 							targetEpochBytes := sourceEpochsBucket.Get(sourceEpochBytes)
-							targetEpoch := bytes.BytesToUint64BigEndian(targetEpochBytes)
+							targetEpoch := butil.BytesToUint64BigEndian(targetEpochBytes)
 							require.Equal(t, sourceEpoch+1, targetEpoch)
 						}
 						// Verify we have (target epoch, source epoch) pairs.
 						for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
 							targetEpochBytes := butil.Uint64ToBytesBigEndian(targetEpoch)
 							sourceEpochBytes := targetEpochsBucket.Get(targetEpochBytes)
-							sourceEpoch := bytes.BytesToUint64BigEndian(sourceEpochBytes)
+							sourceEpoch := butil.BytesToUint64BigEndian(sourceEpochBytes)
 							require.Equal(t, targetEpoch-1, sourceEpoch)
 						}
 					}

@@ -42,7 +42,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 	numKeys := uint64(2048)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
-		pks = append(pks, butil.ToBytes48(butil.ToBytes4(i, 48)))
+		pks = append(pks, butil.ToBytes48(butil.ToBytes(i, 48)))
 	}
 	validatorDB := setupDB(t, pks)
 
@@ -91,7 +91,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	numKeys := uint64(8)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
-		pks = append(pks, butil.ToBytes48(butil.ToBytes4(i, 48)))
+		pks = append(pks, butil.ToBytes48(butil.ToBytes(i, 48)))
 	}
 	validatorDB := setupDB(b, pks)
 
