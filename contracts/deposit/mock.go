@@ -57,7 +57,7 @@ func Setup() (*TestAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 210000000000)
 
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, addr)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +79,13 @@ func LessThan1Eth() *big.Int {
 }
 
 // DeployDepositContract deploys a new Ethereum contract, binding an instance of DepositContract to it.
-func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend, _drain_address common.Address) (common.Address, *types.Transaction, *DepositContract, error) {
+func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *DepositContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(DepositContractABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(depositContractBin), backend, _drain_address)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(depositContractBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
