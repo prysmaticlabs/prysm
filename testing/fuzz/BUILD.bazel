@@ -62,7 +62,7 @@ go_fuzz_test(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//testing/fuzz/testing:go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
@@ -127,7 +127,7 @@ go_fuzz_test(
     importpath = IMPORT_PATH,
     deps = [
         "//beacon-chain/p2p/encoder:go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
     ] + COMMON_DEPS,
 )
@@ -147,7 +147,7 @@ go_fuzz_test(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core:go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
     ] + COMMON_DEPS,
 )
 
@@ -188,7 +188,7 @@ go_library(
         "//testing/fuzz/testing:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//config/features:go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "//crypto/rand:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_libp2p_go_libp2p_core//host:go_default_library",

@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/api/pagination",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
