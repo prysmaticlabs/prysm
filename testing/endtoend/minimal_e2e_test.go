@@ -57,7 +57,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
-		ev.APIGatewayV1VerifyIntegrity,
+		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 	}
 	// TODO(#9166): remove this block once v2 changes are live.

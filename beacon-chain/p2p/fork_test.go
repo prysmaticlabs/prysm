@@ -16,9 +16,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -219,7 +219,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
-	digest, err := p2putils.CreateForkDigest(genesisTime, make([]byte, 32))
+	digest, err := forks.CreateForkDigest(genesisTime, make([]byte, 32))
 	require.NoError(t, err)
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],

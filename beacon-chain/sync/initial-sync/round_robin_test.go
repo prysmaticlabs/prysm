@@ -7,14 +7,14 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/abool"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -313,7 +313,7 @@ func TestService_roundRobinSync(t *testing.T) {
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
-			missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -557,7 +557,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
-	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := slice.NotSlot(slice.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
@@ -626,7 +626,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
-	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := slice.NotSlot(slice.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}

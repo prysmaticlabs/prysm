@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -41,7 +41,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 		return nil
 	}
 
-	if fileutil.FileExists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
+	if file.FileExists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
 		return nil
 	}
 	if ctx.Bool(cmd.AcceptTosFlag.Name) {
@@ -49,7 +49,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 		return nil
 	}
 
-	input, err := promptutil.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
+	input, err := prompt.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
 	}
@@ -64,16 +64,16 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 // saveTosAccepted creates a file when Tos accepted.
 func saveTosAccepted(ctx *cli.Context) {
 	dataDir := ctx.String(cmd.DataDirFlag.Name)
-	dataDirExists, err := fileutil.HasDir(dataDir)
+	dataDirExists, err := file.HasDir(dataDir)
 	if err != nil {
 		log.WithError(err).Warnf("error checking directory: %s", dataDir)
 	}
 	if !dataDirExists {
-		if err := fileutil.MkdirAll(dataDir); err != nil {
+		if err := file.MkdirAll(dataDir); err != nil {
 			log.WithError(err).Warnf("error creating directory: %s", dataDir)
 		}
 	}
-	if err := fileutil.WriteFile(filepath.Join(dataDir, acceptTosFilename), []byte("")); err != nil {
+	if err := file.WriteFile(filepath.Join(dataDir, acceptTosFilename), []byte("")); err != nil {
 		log.WithError(err).Warnf("error writing %s to file: %s", cmd.AcceptTosFlag.Name,
 			filepath.Join(dataDir, acceptTosFilename))
 	}

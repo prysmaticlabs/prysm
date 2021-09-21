@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -207,10 +207,10 @@ var (
 		Value: "",
 	}
 	// ExitAllFlag allows stakers to select all validating keys for exit. This will still require the staker
-	// to confirm a prompt for this action given it is a dangerous one.
+	// to confirm a userprompt for this action given it is a dangerous one.
 	ExitAllFlag = &cli.BoolFlag{
 		Name:  "exit-all",
-		Usage: "Exit all validators. This will still require the staker to confirm a prompt for the action",
+		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
@@ -273,10 +273,10 @@ var (
 		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
-	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
+	// SkipDepositConfirmationFlag skips the y/n confirmation userprompt for sending a deposit to the deposit contract.
 	SkipDepositConfirmationFlag = &cli.BoolFlag{
 		Name:  "skip-deposit-confirmation",
-		Usage: "Skips the y/n confirmation prompt for sending a deposit to the deposit contract",
+		Usage: "Skips the y/n confirmation userprompt for sending a deposit to the deposit contract",
 		Value: false,
 	}
 	// EnableWebFlag enables controlling the validator client via the Prysm web ui. This is a work in progress.
@@ -308,7 +308,7 @@ var (
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {
 	// Try to place the data folder in the user's home dir
-	home := fileutil.HomeDir()
+	home := file.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")

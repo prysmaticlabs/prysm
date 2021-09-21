@@ -19,6 +19,6 @@ COPY --from=builder /workspace/bazel-bin/tools/interop/convert-keys/linux_amd64_
 
 RUN mkdir /launch
 
-COPY scripts/interop_start.sh /launch/start.sh
+COPY hack/interop_start.sh /launch/start.sh
 
 ENTRYPOINT ["start.sh"]

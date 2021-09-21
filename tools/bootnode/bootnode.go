@@ -32,15 +32,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,7 +69,7 @@ func main() {
 	flag.Parse()
 
 	if *logFileName != "" {
-		if err := logutil.ConfigurePersistentLogging(*logFileName); err != nil {
+		if err := logs.ConfigurePersistentLogging(*logFileName); err != nil {
 			log.WithError(err).Error("Failed to configuring logging to disk.")
 		}
 	}
@@ -98,7 +98,7 @@ func main() {
 		}
 		cfg.Bootnodes = []*enode.Node{node}
 	}
-	ipAddr, err := iputils.ExternalIP()
+	ipAddr, err := network.ExternalIP()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func main() {
 
 	// Update metrics once per slot.
 	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot)
-	runutil.RunEvery(context.Background(), slotDuration*time.Second, func() {
+	async.RunEvery(context.Background(), slotDuration*time.Second, func() {
 		updateMetrics(listener)
 	})
 

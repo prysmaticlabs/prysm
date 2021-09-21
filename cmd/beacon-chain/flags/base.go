@@ -153,10 +153,10 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
-	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation subnets or not.
+	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
-		Usage: "Subscribe to all possible attestation subnets.",
+		Usage: "Subscribe to all possible attestation and sync subnets.",
 	}
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
@@ -191,5 +191,11 @@ var (
 		Name: "genesis-state",
 		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
 			"eth2-clients/eth2-testnets repository on github.",
+	}
+	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
+	MinPeersPerSubnet = &cli.Uint64Flag{
+		Name:  "minimum-peers-per-subnet",
+		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
+		Value: 4,
 	}
 )

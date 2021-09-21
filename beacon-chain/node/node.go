@@ -16,6 +16,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -39,17 +41,15 @@ import (
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	sharedgateway "github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -63,7 +63,7 @@ type BeaconNode struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
-	services          *shared.ServiceRegistry
+	services          *runtime.ServiceRegistry
 	lock              sync.RWMutex
 	stop              chan struct{} // Channel to wait for termination notifications.
 	db                db.Database
@@ -100,7 +100,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
 
-	registry := shared.NewServiceRegistry()
+	registry := runtime.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
@@ -363,7 +363,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
-		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
+		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootstrapNodeAddrs,
 		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
 		DataDir:           dataDir,
@@ -376,7 +376,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
-		DenyListCIDR:      sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
+		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
@@ -667,7 +667,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, enableHTTPPrysmAPI, enableHTTPEthAPI)
-	muxs := make([]*sharedgateway.PbMux, 0)
+	muxs := make([]*apigateway.PbMux, 0)
 	if gatewayConfig.V1Alpha1PbMux != nil {
 		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
 	}
@@ -675,7 +675,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		muxs = append(muxs, gatewayConfig.V1PbMux)
 	}
 
-	g := sharedgateway.New(b.ctx, muxs, gatewayConfig.Handler, selfAddress, gatewayAddress).
+	g := apigateway.New(b.ctx, muxs, gatewayConfig.Handler, selfAddress, gatewayAddress).
 		WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
 		WithMaxCallRecvMsgSize(maxCallSize)

@@ -22,14 +22,14 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
-	home := fileutil.HomeDir()
+	home := file.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2")
@@ -52,17 +52,17 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	}
 
 	// Clean paths.
-	prevDataDir, err := fileutil.ExpandPath(prevDataDir)
+	prevDataDir, err := file.ExpandPath(prevDataDir)
 	if err != nil {
 		return err
 	}
-	curDataDir, err = fileutil.ExpandPath(curDataDir)
+	curDataDir, err = file.ExpandPath(curDataDir)
 	if err != nil {
 		return err
 	}
 
 	// See if shared directory is found (if it is -- we need to move it to non-shared destination).
-	prevDataDirExists, err := fileutil.HasDir(prevDataDir)
+	prevDataDirExists, err := file.HasDir(prevDataDir)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	if curDataDir == "" {
 		curDataDir = DefaultDataDir()
 	}
-	selectedDirExists, err := fileutil.HasDir(curDataDir)
+	selectedDirExists, err := file.HasDir(curDataDir)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 
 	log.Warnf("Outdated data directory is found: %s. "+
 		"Copying its contents to the new data folder: %s", prevDataDir, curDataDir)
-	if err := fileutil.CopyDir(prevDataDir, curDataDir); err != nil {
+	if err := file.CopyDir(prevDataDir, curDataDir); err != nil {
 		return err
 	}
 	log.Infof("All files from the outdated data directory %s have been moved to %s.", prevDataDir, curDataDir)
@@ -107,7 +107,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	if err != nil {
 		return err
 	}
-	if removeConfirmed && fileutil.DirsEqual(prevDataDir, curDataDir) {
+	if removeConfirmed && file.DirsEqual(prevDataDir, curDataDir) {
 		if err := os.RemoveAll(prevDataDir); err != nil {
 			return fmt.Errorf("cannot remove outdated directory or one of its files: %w", err)
 		}

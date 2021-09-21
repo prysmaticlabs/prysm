@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -58,7 +58,7 @@ func TestTranslateParticipation(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices, err := attestationutil.AttestingIndices(pendingAtts[0].AggregationBits, committee)
+	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
 		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyHeadFlagIndex))
