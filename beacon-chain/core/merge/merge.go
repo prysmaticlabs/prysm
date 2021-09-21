@@ -193,7 +193,7 @@ func ProcessExecutionPayload(st state.BeaconState, payload *ethpb.ExecutionPaylo
 	if payload.Timestamp != uint64(t.Unix()) {
 		return nil, errors.New("incorrect timestamp")
 	}
-	
+
 	// TODO@: Verify the execution payload is valid
 
 	header, err := payloadToHeader(payload)
@@ -237,15 +237,15 @@ func isValidGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPay
 	if payload.GasUsed > payload.GasLimit {
 		return false
 	}
-	if payload.GasUsed  < params.BeaconConfig().MinGasLimit {
+	if payload.GasUsed < params.BeaconConfig().MinGasLimit {
 		return false
 	}
 
 	parentGasLimit := parent.GasLimit
-	if payload.GasLimit >= parentGasLimit + parentGasLimit / params.BeaconConfig().GasLimitDenominator {
+	if payload.GasLimit >= parentGasLimit+parentGasLimit/params.BeaconConfig().GasLimitDenominator {
 		return false
 	}
-	if payload.GasLimit <  parentGasLimit - parentGasLimit / params.BeaconConfig().GasLimitDenominator {
+	if payload.GasLimit < parentGasLimit-parentGasLimit/params.BeaconConfig().GasLimitDenominator {
 		return false
 	}
 
@@ -265,12 +265,12 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		Random:        bytesutil.SafeCopyBytes(payload.Random),
-		BlockNumber:           payload.BlockNumber,
+		Random:           bytesutil.SafeCopyBytes(payload.Random),
+		BlockNumber:      payload.BlockNumber,
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
 		Timestamp:        payload.Timestamp,
-		BaseFeePerGas:        bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: txRoot[:],
 	}, nil
