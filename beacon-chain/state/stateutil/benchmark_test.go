@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -18,7 +18,7 @@ func BenchmarkMerkleize_Buffered(b *testing.B) {
 		leafIndexer := func(i uint64) []byte {
 			return chunks[i][:]
 		}
-		return htrutils.Merkleize(htrutils.NewHasherFunc(hash.CustomSHA256Hasher()), count, limit, leafIndexer), nil
+		return ssz.Merkleize(ssz.NewHasherFunc(hash.CustomSHA256Hasher()), count, limit, leafIndexer), nil
 	}
 
 	b.ResetTimer()

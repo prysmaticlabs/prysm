@@ -31,11 +31,11 @@ go_test(
     deps = [
         "//config/features:go_default_library",
         "//crypto/bls:go_default_library",
+        "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation/testing:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/sszutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
