@@ -1,9 +1,10 @@
-package blockutil
+package block_test
 
 import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,7 +44,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := BeaconBlockHeaderFromBlock(blk)
+	bh, err := block.BeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -80,7 +81,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := BeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0BeaconBlock(blk))
+	bh, err := block.BeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0BeaconBlock(blk))
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -93,7 +94,7 @@ func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
 	}
-	_, err := BeaconBlockHeaderFromBlock(blk)
+	_, err := block.BeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block body", err)
 }
 
@@ -133,7 +134,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		Signature: blk.Signature,
 	}
 
-	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
+	bh, err := block.SignedBeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -174,7 +175,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		Signature: blk.Signature,
 	}
 
-	bh, err := SignedBeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0SignedBeaconBlock(blk))
+	bh, err := block.SignedBeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -189,6 +190,6 @@ func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
-	_, err := SignedBeaconBlockHeaderFromBlock(blk)
+	_, err := block.SignedBeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block", err)
 }
