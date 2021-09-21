@@ -661,12 +661,11 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
-	enableHTTPPrysmAPI := !b.cliCtx.Bool(flags.DisableHTTPPrysmAPI.Name)
-	enableHTTPEthAPI := !b.cliCtx.Bool(flags.DisableHTTPEthAPI.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
 
-	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, enableHTTPPrysmAPI, enableHTTPEthAPI)
+	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
 	muxs := make([]*apigateway.PbMux, 0)
 	if gatewayConfig.V1Alpha1PbMux != nil {
 		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
@@ -679,7 +678,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
 		WithMaxCallRecvMsgSize(maxCallSize)
-	if enableHTTPEthAPI {
+	if flags.EnableHTTPEthAPI(httpModules) {
 		g.WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
 	}
 

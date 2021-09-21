@@ -3,6 +3,7 @@ package gateway
 import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -16,9 +17,9 @@ type MuxConfig struct {
 }
 
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
-func DefaultConfig(enableDebugRPCEndpoints, enableHTTPPrysmAPI, enableHTTPEthAPI bool) MuxConfig {
+func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 	var v1Alpha1PbHandler, v1PbHandler *gateway.PbMux
-	if enableHTTPPrysmAPI {
+	if flags.EnableHTTPPrysmAPI(httpModules) {
 		v1Alpha1Registrations := []gateway.PbHandlerRegistration{
 			ethpbalpha.RegisterNodeHandler,
 			ethpbalpha.RegisterBeaconChainHandler,
@@ -49,7 +50,7 @@ func DefaultConfig(enableDebugRPCEndpoints, enableHTTPPrysmAPI, enableHTTPEthAPI
 			Mux:           v1Alpha1Mux,
 		}
 	}
-	if enableHTTPEthAPI {
+	if flags.EnableHTTPEthAPI(httpModules) {
 		v1Registrations := []gateway.PbHandlerRegistration{
 			ethpbservice.RegisterBeaconNodeHandler,
 			ethpbservice.RegisterBeaconChainHandler,

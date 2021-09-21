@@ -3,6 +3,8 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli/v2"
 )
@@ -53,15 +55,11 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
-	// DisableHTTPPrysmAPI disables all HTTP endpoints of Prysm API.
-	DisableHTTPPrysmAPI = &cli.BoolFlag{
-		Name:  "disable-http-prysm-api",
-		Usage: "Disable all HTTP endpoints of Prysm API",
-	}
-	// DisableHTTPEthAPI disables all HTTP endpoints of the official Ethereum API.
-	DisableHTTPEthAPI = &cli.BoolFlag{
-		Name:  "disable-http-eth-api",
-		Usage: "Disable all HTTP endpoints of the official Ethereum API",
+	// HTTPModules define the set of enabled HTTP APIs.
+	HTTPModules = &cli.StringFlag{
+		Name:  "http-modules",
+		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
+		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
 	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{
