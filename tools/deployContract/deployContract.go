@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -148,18 +147,12 @@ func main() {
 			txOps.Context = context.Background()
 		}
 
-		drain := txOps.From
-		if drainAddress != "" {
-			drain = common.HexToAddress(drainAddress)
-		}
-
 		txOps.GasPrice = big.NewInt(10 * 1e9 /* 10 gwei */)
 
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			drain,
 		)
 
 		if err != nil {
