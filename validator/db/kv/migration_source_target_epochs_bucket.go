@@ -16,7 +16,7 @@ const (
 	publicKeyMigrationBatchSize = 100 // Batch update 100 public keys at a time.
 )
 
-func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
+func (s *Store) migrateSourceTargetEpochsBucketUp(_ context.Context) error {
 	// First, we extract the public keys we need to migrate data for.
 	publicKeyBytes := make([][]byte, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -95,7 +95,7 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 	})
 }
 
-func (s *Store) migrateSourceTargetEpochsBucketDown(ctx context.Context) error {
+func (s *Store) migrateSourceTargetEpochsBucketDown(_ context.Context) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		err := bkt.ForEach(func(k, _ []byte) error {

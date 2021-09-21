@@ -39,7 +39,7 @@ func NewTracingSink(endpoint string) *TracingSink {
 }
 
 // Start the tracing sink.
-func (ts *TracingSink) Start(ctx context.Context) error {
+func (ts *TracingSink) Start(_ context.Context) error {
 	go ts.initializeSink()
 	close(ts.started)
 	return nil
