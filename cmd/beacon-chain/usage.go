@@ -102,7 +102,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableGRPCGateway,
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,
-			flags.EthApiPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
 			flags.FallbackWeb3ProviderFlag,

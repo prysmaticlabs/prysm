@@ -39,7 +39,7 @@ var _ = github_com_prysmaticlabs_eth2_types.Epoch(0)
 var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
-func request_BeaconChain_GetGenesis_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetGenesis_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -48,7 +48,7 @@ func request_BeaconChain_GetGenesis_0(ctx context.Context, _ runtime.Marshaler, 
 
 }
 
-func local_request_BeaconChain_GetGenesis_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetGenesis_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -57,7 +57,7 @@ func local_request_BeaconChain_GetGenesis_0(ctx context.Context, _ runtime.Marsh
 
 }
 
-func request_BeaconChain_GetStateRoot_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetStateRoot_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -84,7 +84,7 @@ func request_BeaconChain_GetStateRoot_0(ctx context.Context, _ runtime.Marshaler
 
 }
 
-func local_request_BeaconChain_GetStateRoot_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetStateRoot_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -111,7 +111,7 @@ func local_request_BeaconChain_GetStateRoot_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func request_BeaconChain_GetStateFork_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetStateFork_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -138,7 +138,7 @@ func request_BeaconChain_GetStateFork_0(ctx context.Context, _ runtime.Marshaler
 
 }
 
-func local_request_BeaconChain_GetStateFork_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetStateFork_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -165,7 +165,7 @@ func local_request_BeaconChain_GetStateFork_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func request_BeaconChain_GetFinalityCheckpoints_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetFinalityCheckpoints_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -192,7 +192,7 @@ func request_BeaconChain_GetFinalityCheckpoints_0(ctx context.Context, _ runtime
 
 }
 
-func local_request_BeaconChain_GetFinalityCheckpoints_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetFinalityCheckpoints_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateRequest
 	var metadata runtime.ServerMetadata
 
@@ -223,7 +223,7 @@ var (
 	filter_BeaconChain_ListValidators_0 = &utilities.DoubleArray{Encoding: map[string]int{"state_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListValidators_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateValidatorsRequest
 	var metadata runtime.ServerMetadata
 
@@ -257,7 +257,7 @@ func request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.Marshal
 
 }
 
-func local_request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListValidators_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateValidatorsRequest
 	var metadata runtime.ServerMetadata
 
@@ -291,7 +291,7 @@ func local_request_BeaconChain_ListValidators_0(ctx context.Context, _ runtime.M
 
 }
 
-func request_BeaconChain_GetValidator_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetValidator_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateValidatorRequest
 	var metadata runtime.ServerMetadata
 
@@ -329,7 +329,7 @@ func request_BeaconChain_GetValidator_0(ctx context.Context, _ runtime.Marshaler
 
 }
 
-func local_request_BeaconChain_GetValidator_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetValidator_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateValidatorRequest
 	var metadata runtime.ServerMetadata
 
@@ -371,7 +371,7 @@ var (
 	filter_BeaconChain_ListValidatorBalances_0 = &utilities.DoubleArray{Encoding: map[string]int{"state_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
@@ -405,7 +405,7 @@ func request_BeaconChain_ListValidatorBalances_0(ctx context.Context, _ runtime.
 
 }
 
-func local_request_BeaconChain_ListValidatorBalances_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListValidatorBalances_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ValidatorBalancesRequest
 	var metadata runtime.ServerMetadata
 
@@ -443,7 +443,7 @@ var (
 	filter_BeaconChain_ListCommittees_0 = &utilities.DoubleArray{Encoding: map[string]int{"state_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconChain_ListCommittees_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListCommittees_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -477,7 +477,7 @@ func request_BeaconChain_ListCommittees_0(ctx context.Context, _ runtime.Marshal
 
 }
 
-func local_request_BeaconChain_ListCommittees_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListCommittees_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.StateCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -515,7 +515,7 @@ var (
 	filter_BeaconChain_ListSyncCommittees_0 = &utilities.DoubleArray{Encoding: map[string]int{"state_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -549,7 +549,7 @@ func request_BeaconChain_ListSyncCommittees_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func local_request_BeaconChain_ListSyncCommittees_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListSyncCommittees_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.StateSyncCommitteesRequest
 	var metadata runtime.ServerMetadata
 
@@ -587,7 +587,7 @@ var (
 	filter_BeaconChain_ListBlockHeaders_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListBlockHeaders_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBlockHeaders_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockHeadersRequest
 	var metadata runtime.ServerMetadata
 
@@ -603,7 +603,7 @@ func request_BeaconChain_ListBlockHeaders_0(ctx context.Context, _ runtime.Marsh
 
 }
 
-func local_request_BeaconChain_ListBlockHeaders_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBlockHeaders_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockHeadersRequest
 	var metadata runtime.ServerMetadata
 
@@ -619,7 +619,7 @@ func local_request_BeaconChain_ListBlockHeaders_0(ctx context.Context, _ runtime
 
 }
 
-func request_BeaconChain_GetBlockHeader_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlockHeader_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -646,7 +646,7 @@ func request_BeaconChain_GetBlockHeader_0(ctx context.Context, _ runtime.Marshal
 
 }
 
-func local_request_BeaconChain_GetBlockHeader_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlockHeader_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -673,7 +673,7 @@ func local_request_BeaconChain_GetBlockHeader_0(ctx context.Context, _ runtime.M
 
 }
 
-func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BeaconBlockContainer
 	var metadata runtime.ServerMetadata
 
@@ -690,7 +690,7 @@ func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BeaconBlockContainer
 	var metadata runtime.ServerMetadata
 
@@ -707,7 +707,7 @@ func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runt
 
 }
 
-func request_BeaconChain_GetBlockRoot_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlockRoot_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -734,7 +734,7 @@ func request_BeaconChain_GetBlockRoot_0(ctx context.Context, _ runtime.Marshaler
 
 }
 
-func local_request_BeaconChain_GetBlockRoot_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlockRoot_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -761,7 +761,7 @@ func local_request_BeaconChain_GetBlockRoot_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func request_BeaconChain_GetBlock_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -788,7 +788,7 @@ func request_BeaconChain_GetBlock_0(ctx context.Context, _ runtime.Marshaler, cl
 
 }
 
-func local_request_BeaconChain_GetBlock_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -815,7 +815,7 @@ func local_request_BeaconChain_GetBlock_0(ctx context.Context, _ runtime.Marshal
 
 }
 
-func request_BeaconChain_GetBlockSSZ_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlockSSZ_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -842,7 +842,7 @@ func request_BeaconChain_GetBlockSSZ_0(ctx context.Context, _ runtime.Marshaler,
 
 }
 
-func local_request_BeaconChain_GetBlockSSZ_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlockSSZ_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -869,7 +869,7 @@ func local_request_BeaconChain_GetBlockSSZ_0(ctx context.Context, _ runtime.Mars
 
 }
 
-func request_BeaconChain_GetBlockV2_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
@@ -896,7 +896,7 @@ func request_BeaconChain_GetBlockV2_0(ctx context.Context, _ runtime.Marshaler, 
 
 }
 
-func local_request_BeaconChain_GetBlockV2_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
@@ -923,7 +923,7 @@ func local_request_BeaconChain_GetBlockV2_0(ctx context.Context, _ runtime.Marsh
 
 }
 
-func request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
@@ -950,7 +950,7 @@ func request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, _ runtime.Marshale
 
 }
 
-func local_request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.BlockRequestV2
 	var metadata runtime.ServerMetadata
 
@@ -977,7 +977,7 @@ func local_request_BeaconChain_GetBlockSSZV2_0(ctx context.Context, _ runtime.Ma
 
 }
 
-func request_BeaconChain_ListBlockAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListBlockAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -1004,7 +1004,7 @@ func request_BeaconChain_ListBlockAttestations_0(ctx context.Context, _ runtime.
 
 }
 
-func local_request_BeaconChain_ListBlockAttestations_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListBlockAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.BlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -1035,7 +1035,7 @@ var (
 	filter_BeaconChain_ListPoolAttestations_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconChain_ListPoolAttestations_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListPoolAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AttestationsPoolRequest
 	var metadata runtime.ServerMetadata
 
@@ -1051,7 +1051,7 @@ func request_BeaconChain_ListPoolAttestations_0(ctx context.Context, _ runtime.M
 
 }
 
-func local_request_BeaconChain_ListPoolAttestations_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListPoolAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AttestationsPoolRequest
 	var metadata runtime.ServerMetadata
 
@@ -1067,7 +1067,7 @@ func local_request_BeaconChain_ListPoolAttestations_0(ctx context.Context, _ run
 
 }
 
-func request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1084,7 +1084,7 @@ func request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshaler run
 
 }
 
-func local_request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitAttestationsRequest
 	var metadata runtime.ServerMetadata
 
@@ -1101,7 +1101,7 @@ func local_request_BeaconChain_SubmitAttestations_0(ctx context.Context, marshal
 
 }
 
-func request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1110,7 +1110,7 @@ func request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, _ runt
 
 }
 
-func local_request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1119,7 +1119,7 @@ func local_request_BeaconChain_ListPoolAttesterSlashings_0(ctx context.Context, 
 
 }
 
-func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AttesterSlashing
 	var metadata runtime.ServerMetadata
 
@@ -1136,7 +1136,7 @@ func request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler
 
 }
 
-func local_request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AttesterSlashing
 	var metadata runtime.ServerMetadata
 
@@ -1153,7 +1153,7 @@ func local_request_BeaconChain_SubmitAttesterSlashing_0(ctx context.Context, mar
 
 }
 
-func request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1162,7 +1162,7 @@ func request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, _ runt
 
 }
 
-func local_request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1171,7 +1171,7 @@ func local_request_BeaconChain_ListPoolProposerSlashings_0(ctx context.Context, 
 
 }
 
-func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProposerSlashing
 	var metadata runtime.ServerMetadata
 
@@ -1188,7 +1188,7 @@ func request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler
 
 }
 
-func local_request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProposerSlashing
 	var metadata runtime.ServerMetadata
 
@@ -1205,7 +1205,7 @@ func local_request_BeaconChain_SubmitProposerSlashing_0(ctx context.Context, mar
 
 }
 
-func request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1214,7 +1214,7 @@ func request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, _ runtime
 
 }
 
-func local_request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1223,7 +1223,7 @@ func local_request_BeaconChain_ListPoolVoluntaryExits_0(ctx context.Context, _ r
 
 }
 
-func request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SignedVoluntaryExit
 	var metadata runtime.ServerMetadata
 
@@ -1240,7 +1240,7 @@ func request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marshaler ru
 
 }
 
-func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SignedVoluntaryExit
 	var metadata runtime.ServerMetadata
 
@@ -1257,7 +1257,7 @@ func local_request_BeaconChain_SubmitVoluntaryExit_0(ctx context.Context, marsha
 
 }
 
-func request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitPoolSyncCommitteeSignatures
 	var metadata runtime.ServerMetadata
 
@@ -1274,7 +1274,7 @@ func request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.Context
 
 }
 
-func local_request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitPoolSyncCommitteeSignatures
 	var metadata runtime.ServerMetadata
 
@@ -1291,7 +1291,7 @@ func local_request_BeaconChain_SubmitPoolSyncCommitteeSignatures_0(ctx context.C
 
 }
 
-func request_BeaconChain_GetForkSchedule_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetForkSchedule_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1300,7 +1300,7 @@ func request_BeaconChain_GetForkSchedule_0(ctx context.Context, _ runtime.Marsha
 
 }
 
-func local_request_BeaconChain_GetForkSchedule_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetForkSchedule_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1309,7 +1309,7 @@ func local_request_BeaconChain_GetForkSchedule_0(ctx context.Context, _ runtime.
 
 }
 
-func request_BeaconChain_GetSpec_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetSpec_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1318,7 +1318,7 @@ func request_BeaconChain_GetSpec_0(ctx context.Context, _ runtime.Marshaler, cli
 
 }
 
-func local_request_BeaconChain_GetSpec_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetSpec_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1327,7 +1327,7 @@ func local_request_BeaconChain_GetSpec_0(ctx context.Context, _ runtime.Marshale
 
 }
 
-func request_BeaconChain_GetDepositContract_0(ctx context.Context, _ runtime.Marshaler, client BeaconChainClient, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconChain_GetDepositContract_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1336,7 +1336,7 @@ func request_BeaconChain_GetDepositContract_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func local_request_BeaconChain_GetDepositContract_0(ctx context.Context, _ runtime.Marshaler, server BeaconChainServer, _ *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconChain_GetDepositContract_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -1349,7 +1349,7 @@ func local_request_BeaconChain_GetDepositContract_0(ctx context.Context, _ runti
 // UnaryRPC     :call BeaconChainServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconChainHandlerFromEndpoint instead.
-func RegisterBeaconChainHandlerServer(_ context.Context, mux *runtime.ServeMux, server BeaconChainServer) error {
+func RegisterBeaconChainHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconChainServer) error {
 
 	mux.Handle("GET", pattern_BeaconChain_GetGenesis_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -2080,7 +2080,7 @@ func RegisterBeaconChainHandler(ctx context.Context, mux *runtime.ServeMux, conn
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "BeaconChainClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "BeaconChainClient" to call the correct interceptors.
-func RegisterBeaconChainHandlerClient(_ context.Context, mux *runtime.ServeMux, client BeaconChainClient) error {
+func RegisterBeaconChainHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconChainClient) error {
 
 	mux.Handle("GET", pattern_BeaconChain_GetGenesis_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -2686,65 +2686,65 @@ func RegisterBeaconChainHandlerClient(_ context.Context, mux *runtime.ServeMux, 
 }
 
 var (
-	pattern_BeaconChain_GetGenesis_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "beacon", "genesis"}, ""))
+	pattern_BeaconChain_GetGenesis_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "beacon", "genesis"}, ""))
 
-	pattern_BeaconChain_GetStateRoot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "root"}, ""))
+	pattern_BeaconChain_GetStateRoot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "root"}, ""))
 
-	pattern_BeaconChain_GetStateFork_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "fork"}, ""))
+	pattern_BeaconChain_GetStateFork_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "fork"}, ""))
 
-	pattern_BeaconChain_GetFinalityCheckpoints_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "finality_checkpoints"}, ""))
+	pattern_BeaconChain_GetFinalityCheckpoints_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "finality_checkpoints"}, ""))
 
-	pattern_BeaconChain_ListValidators_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "validators"}, ""))
+	pattern_BeaconChain_ListValidators_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "validators"}, ""))
 
-	pattern_BeaconChain_GetValidator_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"eth", "v1", "beacon", "states", "state_id", "validators", "validator_id"}, ""))
+	pattern_BeaconChain_GetValidator_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6, 1, 0, 4, 1, 5, 7}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "validators", "validator_id"}, ""))
 
-	pattern_BeaconChain_ListValidatorBalances_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "validator_balances"}, ""))
+	pattern_BeaconChain_ListValidatorBalances_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "validator_balances"}, ""))
 
-	pattern_BeaconChain_ListCommittees_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "committees"}, ""))
+	pattern_BeaconChain_ListCommittees_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "committees"}, ""))
 
-	pattern_BeaconChain_ListSyncCommittees_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "states", "state_id", "sync_committees"}, ""))
+	pattern_BeaconChain_ListSyncCommittees_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "states", "state_id", "sync_committees"}, ""))
 
-	pattern_BeaconChain_ListBlockHeaders_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "beacon", "headers"}, ""))
+	pattern_BeaconChain_ListBlockHeaders_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "beacon", "headers"}, ""))
 
-	pattern_BeaconChain_GetBlockHeader_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "beacon", "headers", "block_id"}, ""))
+	pattern_BeaconChain_GetBlockHeader_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "beacon", "headers", "block_id"}, ""))
 
-	pattern_BeaconChain_SubmitBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "beacon", "blocks"}, ""))
+	pattern_BeaconChain_SubmitBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "beacon", "blocks"}, ""))
 
-	pattern_BeaconChain_GetBlockRoot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "blocks", "block_id", "root"}, ""))
+	pattern_BeaconChain_GetBlockRoot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "blocks", "block_id", "root"}, ""))
 
-	pattern_BeaconChain_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "beacon", "blocks", "block_id"}, ""))
+	pattern_BeaconChain_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "beacon", "blocks", "block_id"}, ""))
 
-	pattern_BeaconChain_GetBlockSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "blocks", "block_id", "ssz"}, ""))
+	pattern_BeaconChain_GetBlockSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "blocks", "block_id", "ssz"}, ""))
 
-	pattern_BeaconChain_GetBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v2", "beacon", "blocks", "block_id"}, ""))
+	pattern_BeaconChain_GetBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "beacon", "blocks", "block_id"}, ""))
 
-	pattern_BeaconChain_GetBlockSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v2", "beacon", "blocks", "block_id", "ssz"}, ""))
+	pattern_BeaconChain_GetBlockSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v2", "beacon", "blocks", "block_id", "ssz"}, ""))
 
-	pattern_BeaconChain_ListBlockAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"eth", "v1", "beacon", "blocks", "block_id", "attestations"}, ""))
+	pattern_BeaconChain_ListBlockAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "blocks", "block_id", "attestations"}, ""))
 
-	pattern_BeaconChain_ListPoolAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "attestations"}, ""))
+	pattern_BeaconChain_ListPoolAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "attestations"}, ""))
 
-	pattern_BeaconChain_SubmitAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "attestations"}, ""))
+	pattern_BeaconChain_SubmitAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "attestations"}, ""))
 
-	pattern_BeaconChain_ListPoolAttesterSlashings_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "attester_slashings"}, ""))
+	pattern_BeaconChain_ListPoolAttesterSlashings_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "attester_slashings"}, ""))
 
-	pattern_BeaconChain_SubmitAttesterSlashing_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "attester_slashings"}, ""))
+	pattern_BeaconChain_SubmitAttesterSlashing_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "attester_slashings"}, ""))
 
-	pattern_BeaconChain_ListPoolProposerSlashings_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "proposer_slashings"}, ""))
+	pattern_BeaconChain_ListPoolProposerSlashings_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "proposer_slashings"}, ""))
 
-	pattern_BeaconChain_SubmitProposerSlashing_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "proposer_slashings"}, ""))
+	pattern_BeaconChain_SubmitProposerSlashing_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "proposer_slashings"}, ""))
 
-	pattern_BeaconChain_ListPoolVoluntaryExits_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "voluntary_exits"}, ""))
+	pattern_BeaconChain_ListPoolVoluntaryExits_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "voluntary_exits"}, ""))
 
-	pattern_BeaconChain_SubmitVoluntaryExit_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "voluntary_exits"}, ""))
+	pattern_BeaconChain_SubmitVoluntaryExit_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "voluntary_exits"}, ""))
 
-	pattern_BeaconChain_SubmitPoolSyncCommitteeSignatures_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "beacon", "pool", "sync_committees"}, ""))
+	pattern_BeaconChain_SubmitPoolSyncCommitteeSignatures_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "beacon", "pool", "sync_committees"}, ""))
 
-	pattern_BeaconChain_GetForkSchedule_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "config", "fork_schedule"}, ""))
+	pattern_BeaconChain_GetForkSchedule_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "config", "fork_schedule"}, ""))
 
-	pattern_BeaconChain_GetSpec_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "config", "spec"}, ""))
+	pattern_BeaconChain_GetSpec_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "config", "spec"}, ""))
 
-	pattern_BeaconChain_GetDepositContract_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "config", "deposit_contract"}, ""))
+	pattern_BeaconChain_GetDepositContract_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "config", "deposit_contract"}, ""))
 )
 
 var (
