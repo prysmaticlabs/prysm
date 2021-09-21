@@ -11,6 +11,7 @@ import (
 	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/cmd"
 	accountcommands "github.com/prysmaticlabs/prysm/cmd/validator/accounts"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/validator/db"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -24,7 +25,6 @@ import (
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
