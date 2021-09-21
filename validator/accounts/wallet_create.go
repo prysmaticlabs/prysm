@@ -196,7 +196,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	return createWalletConfig, nil
 }
 
-func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
+func createImportedKeymanagerWallet(_ context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
