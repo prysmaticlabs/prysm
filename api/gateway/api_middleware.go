@@ -13,7 +13,6 @@ type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	ProxyAddress    string
 	EndpointCreator EndpointFactory
-	//router          *mux.Router
 }
 
 // EndpointFactory is responsible for creating new instances of Endpoint values.
@@ -71,15 +70,11 @@ type fieldProcessor struct {
 	f   func(value reflect.Value) error
 }
 
-// Run starts the proxy, registering all proxy endpoints on ApiProxyMiddleware.ProxyAddress.
+// Run starts the proxy, registering all proxy endpoints.
 func (m *ApiProxyMiddleware) Run(gatewayServer *http.ServeMux) {
-	//m.router = mux.NewRouter()
-
 	for _, path := range m.EndpointCreator.Paths() {
 		m.handleApiPath(gatewayServer, path, m.EndpointCreator)
 	}
-
-	//return http.ListenAndServe(m.ProxyAddress, m.router)
 }
 
 func (m *ApiProxyMiddleware) handleApiPath(gatewayServer *http.ServeMux, path string, endpointFactory EndpointFactory) {

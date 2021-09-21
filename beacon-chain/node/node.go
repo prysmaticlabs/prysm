@@ -668,7 +668,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 
 	g := gateway.New(
 		b.ctx,
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.EthPbMux},
 		gatewayConfig.Handler,
 		selfAddress,
 		gatewayAddress,

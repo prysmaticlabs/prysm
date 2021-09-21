@@ -11,7 +11,7 @@ import (
 // MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
 type MuxConfig struct {
 	Handler       gateway.MuxHandler
-	V1PbMux       gateway.PbMux
+	EthPbMux      gateway.PbMux
 	V1Alpha1PbMux gateway.PbMux
 }
 
@@ -23,7 +23,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 		ethpbalpha.RegisterBeaconNodeValidatorHandler,
 		ethpbalpha.RegisterHealthHandler,
 	}
-	v1Registrations := []gateway.PbHandlerRegistration{
+	ethRegistrations := []gateway.PbHandlerRegistration{
 		ethpbservice.RegisterBeaconNodeHandler,
 		ethpbservice.RegisterBeaconChainHandler,
 		ethpbservice.RegisterBeaconValidatorHandler,
@@ -31,7 +31,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 	}
 	if enableDebugRPCEndpoints {
 		v1Alpha1Registrations = append(v1Alpha1Registrations, ethpbalpha.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbservice.RegisterBeaconDebugHandler)
+		ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
 
 	}
 	v1Alpha1Mux := gwruntime.NewServeMux(
@@ -49,7 +49,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
 	)
-	v1Mux := gwruntime.NewServeMux(
+	ethMux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
@@ -67,14 +67,14 @@ func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
 		Patterns:      []string{"/eth/v1alpha1/"},
 		Mux:           v1Alpha1Mux,
 	}
-	v1PbHandler := gateway.PbMux{
-		Registrations: v1Registrations,
+	ethPbHandler := gateway.PbMux{
+		Registrations: ethRegistrations,
 		Patterns:      []string{"/internal/eth/v1/", "/internal/eth/v2/"},
-		Mux:           v1Mux,
+		Mux:           ethMux,
 	}
 
 	return MuxConfig{
-		V1PbMux:       v1PbHandler,
+		EthPbMux:      ethPbHandler,
 		V1Alpha1PbMux: v1Alpha1PbHandler,
 	}
 }

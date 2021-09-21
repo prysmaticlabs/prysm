@@ -42,7 +42,7 @@ func main() {
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.EthPbMux},
 		gatewayConfig.Handler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
