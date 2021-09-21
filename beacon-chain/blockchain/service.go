@@ -194,6 +194,15 @@ func (s *Service) Start() {
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 		}
 
+		// when a node pauses for some time and starts again, the deposits to finalize
+		// accumulates. we finalize them here before we are ready to receive a block.
+		// Otherwise, the first few block will not do their duties properly as we will
+		// hold the lock and be busy finalizing the deposits.
+		fRoot := bytesutil.ToBytes32(s.finalizedCheckpt.Root)
+		if err := s.insertFinalizedDeposits(s.ctx, fRoot); err != nil {
+			log.WithError(err).Error("Could not insert finalized deposits.")
+		}
+
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
