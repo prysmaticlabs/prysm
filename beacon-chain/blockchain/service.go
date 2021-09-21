@@ -200,7 +200,7 @@ func (s *Service) Start() {
 		// hold the lock and be busy finalizing the deposits.
 		fRoot := bytesutil.ToBytes32(s.finalizedCheckpt.Root)
 		if err := s.insertFinalizedDeposits(s.ctx, fRoot); err != nil {
-			log.WithError(err).Error("Could not insert finalized deposits.")
+			log.WithError(err).Error("Could not insert finalized deposits")
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
