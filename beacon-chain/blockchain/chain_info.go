@@ -298,7 +298,7 @@ func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]
 }
 
 // HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
-func (s *Service) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
+func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([48]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
