@@ -39,14 +39,14 @@ service BeaconDebug {
   // GetBeaconState returns full BeaconState object for given stateId.
   rpc GetBeaconState(v1.StateRequest) returns (v1.BeaconStateResponse) {
     option (google.api.http) = {
-      get: "/eth/v1/debug/beacon/states/{state_id}"
+      get: "/internal/eth/v1/debug/beacon/states/{state_id}"
     };
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
   rpc GetBeaconStateSSZ(v1.StateRequest) returns (v1.BeaconStateSSZResponse) {
     option (google.api.http) = {
-      get: "/eth/v1/debug/beacon/states/{state_id}/ssz"
+      get: "/internal/eth/v1/debug/beacon/states/{state_id}/ssz"
     };
   }
 
@@ -67,7 +67,7 @@ service BeaconDebug {
   // ListForkChoiceHeads retrieves all possible chain heads (leaves of fork choice tree).
   rpc ListForkChoiceHeads(google.protobuf.Empty) returns (v1.ForkChoiceHeadsResponse) {
     option (google.api.http) = {
-      get: "/eth/v1/debug/beacon/heads"
+      get: "/internal/eth/v1/debug/beacon/heads"
     };
   }
 }

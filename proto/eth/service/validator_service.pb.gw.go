@@ -109,7 +109,7 @@ func local_request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, mars
 
 }
 
-func request_BeaconValidator_GetProposerDuties_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_GetProposerDuties_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProposerDutiesRequest
 	var metadata runtime.ServerMetadata
 
@@ -136,7 +136,7 @@ func request_BeaconValidator_GetProposerDuties_0(ctx context.Context, _ runtime.
 
 }
 
-func local_request_BeaconValidator_GetProposerDuties_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, _ *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_GetProposerDuties_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProposerDutiesRequest
 	var metadata runtime.ServerMetadata
 
@@ -237,7 +237,7 @@ var (
 	filter_BeaconValidator_ProduceBlock_0 = &utilities.DoubleArray{Encoding: map[string]int{"slot": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconValidator_ProduceBlock_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -271,7 +271,7 @@ func request_BeaconValidator_ProduceBlock_0(ctx context.Context, _ runtime.Marsh
 
 }
 
-func local_request_BeaconValidator_ProduceBlock_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -309,7 +309,7 @@ var (
 	filter_BeaconValidator_ProduceBlockV2_0 = &utilities.DoubleArray{Encoding: map[string]int{"slot": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -343,7 +343,7 @@ func request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, _ runtime.Mar
 
 }
 
-func local_request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
@@ -381,7 +381,7 @@ var (
 	filter_BeaconValidator_ProduceAttestationData_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceAttestationDataRequest
 	var metadata runtime.ServerMetadata
 
@@ -397,7 +397,7 @@ func request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, _ run
 
 }
 
-func local_request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.ProduceAttestationDataRequest
 	var metadata runtime.ServerMetadata
 
@@ -417,7 +417,7 @@ var (
 	filter_BeaconValidator_GetAggregateAttestation_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AggregateAttestationRequest
 	var metadata runtime.ServerMetadata
 
@@ -433,7 +433,7 @@ func request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context, _ ru
 
 }
 
-func local_request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.AggregateAttestationRequest
 	var metadata runtime.ServerMetadata
 
@@ -449,7 +449,7 @@ func local_request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context
 
 }
 
-func request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitAggregateAndProofsRequest
 	var metadata runtime.ServerMetadata
 
@@ -466,7 +466,7 @@ func request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, mar
 
 }
 
-func local_request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitAggregateAndProofsRequest
 	var metadata runtime.ServerMetadata
 
@@ -483,7 +483,7 @@ func local_request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Contex
 
 }
 
-func request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitBeaconCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -500,7 +500,7 @@ func request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Con
 
 }
 
-func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq v1.SubmitBeaconCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -517,7 +517,7 @@ func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx conte
 
 }
 
-func request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitSyncCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -534,7 +534,7 @@ func request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Conte
 
 }
 
-func local_request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_SubmitSyncCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitSyncCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
@@ -555,7 +555,7 @@ var (
 	filter_BeaconValidator_ProduceSyncCommitteeContribution_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, _ runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.ProduceSyncCommitteeContributionRequest
 	var metadata runtime.ServerMetadata
 
@@ -571,7 +571,7 @@ func request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Cont
 
 }
 
-func local_request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, _ runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.ProduceSyncCommitteeContributionRequest
 	var metadata runtime.ServerMetadata
 
@@ -587,7 +587,7 @@ func local_request_BeaconValidator_ProduceSyncCommitteeContribution_0(ctx contex
 
 }
 
-func request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitContributionAndProofsRequest
 	var metadata runtime.ServerMetadata
 
@@ -604,7 +604,7 @@ func request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, 
 
 }
 
-func local_request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, _ map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq eth.SubmitContributionAndProofsRequest
 	var metadata runtime.ServerMetadata
 
@@ -625,7 +625,7 @@ func local_request_BeaconValidator_SubmitContributionAndProofs_0(ctx context.Con
 // UnaryRPC     :call BeaconValidatorServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconValidatorHandlerFromEndpoint instead.
-func RegisterBeaconValidatorHandlerServer(_ context.Context, mux *runtime.ServeMux, server BeaconValidatorServer) error {
+func RegisterBeaconValidatorHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconValidatorServer) error {
 
 	mux.Handle("POST", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -942,7 +942,7 @@ func RegisterBeaconValidatorHandler(ctx context.Context, mux *runtime.ServeMux, 
 // Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "BeaconValidatorClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "BeaconValidatorClient" to call the correct interceptors.
-func RegisterBeaconValidatorHandlerClient(_ context.Context, mux *runtime.ServeMux, client BeaconValidatorClient) error {
+func RegisterBeaconValidatorHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconValidatorClient) error {
 
 	mux.Handle("POST", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1188,29 +1188,29 @@ func RegisterBeaconValidatorHandlerClient(_ context.Context, mux *runtime.ServeM
 }
 
 var (
-	pattern_BeaconValidator_GetAttesterDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "attester", "epoch"}, ""))
+	pattern_BeaconValidator_GetAttesterDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "attester", "epoch"}, ""))
 
-	pattern_BeaconValidator_GetProposerDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "proposer", "epoch"}, ""))
+	pattern_BeaconValidator_GetProposerDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "proposer", "epoch"}, ""))
 
-	pattern_BeaconValidator_GetSyncCommitteeDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "sync", "epoch"}, ""))
+	pattern_BeaconValidator_GetSyncCommitteeDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "validator", "duties", "sync", "epoch"}, ""))
 
-	pattern_BeaconValidator_ProduceBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "validator", "blocks", "slot"}, ""))
+	pattern_BeaconValidator_ProduceBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "validator", "blocks", "slot"}, ""))
 
 	pattern_BeaconValidator_ProduceBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v2", "validator", "blocks", "slot"}, ""))
 
-	pattern_BeaconValidator_ProduceAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "attestation_data"}, ""))
+	pattern_BeaconValidator_ProduceAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "attestation_data"}, ""))
 
-	pattern_BeaconValidator_GetAggregateAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "aggregate_attestation"}, ""))
+	pattern_BeaconValidator_GetAggregateAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "aggregate_attestation"}, ""))
 
-	pattern_BeaconValidator_SubmitAggregateAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "aggregate_and_proofs"}, ""))
+	pattern_BeaconValidator_SubmitAggregateAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "aggregate_and_proofs"}, ""))
 
-	pattern_BeaconValidator_SubmitBeaconCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "beacon_committee_subscriptions"}, ""))
+	pattern_BeaconValidator_SubmitBeaconCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "beacon_committee_subscriptions"}, ""))
 
-	pattern_BeaconValidator_SubmitSyncCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "sync_committee_subscriptions"}, ""))
+	pattern_BeaconValidator_SubmitSyncCommitteeSubscription_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "sync_committee_subscriptions"}, ""))
 
-	pattern_BeaconValidator_ProduceSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "sync_committee_contribution"}, ""))
+	pattern_BeaconValidator_ProduceSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "sync_committee_contribution"}, ""))
 
-	pattern_BeaconValidator_SubmitContributionAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "contribution_and_proofs"}, ""))
+	pattern_BeaconValidator_SubmitContributionAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "contribution_and_proofs"}, ""))
 )
 
 var (
