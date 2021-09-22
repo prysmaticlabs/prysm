@@ -68,7 +68,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
-	vp, bp, err := altair.InitializeEpochValidators(ctx, preBeaconState)
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, preBeaconState)
 	require.NoError(t, err)
 	vp, bp, err = altair.ProcessEpochParticipation(ctx, preBeaconState, bp, vp)
 	require.NoError(t, err)
