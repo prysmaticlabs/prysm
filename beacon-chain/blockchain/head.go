@@ -95,10 +95,6 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if headRoot == bytesutil.ToBytes32(r) {
 		return nil
 	}
-	oldHeadblock, err := s.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
@@ -149,7 +145,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, oldHeadblock); err != nil {
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
 			return err
 		}
 
@@ -381,9 +377,14 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
-func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedBlk block.SignedBeaconBlock) error {
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
 	if !features.Get().CorrectlyInsertOrphanedAtts {
 		return nil
+	}
+
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
 	}
 
 	if orphanedBlk == nil || orphanedBlk.IsNil() {

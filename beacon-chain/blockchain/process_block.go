@@ -101,6 +101,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
 	if features.Get().UpdateHeadTimely {
 		if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
@@ -117,10 +122,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			s.finalizedCheckpt = postState.FinalizedCheckpoint()
 		}
 
-		if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
-			return err
-		}
-
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
 		}
@@ -135,10 +136,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				Verified:    true,
 			},
 		})
-	}
-
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
 	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
@@ -424,10 +421,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
-	if !features.Get().UpdateHeadTimely {
-		if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
-			return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
-		}
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
+		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
 	}
 	return nil
 }
