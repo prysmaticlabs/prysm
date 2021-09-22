@@ -213,6 +213,10 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 		}
 	}
 
+	if features.Get().UpdateHeadTimely {
+		return nil
+	}
+
 	return s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 

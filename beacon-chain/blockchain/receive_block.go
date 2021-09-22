@@ -49,10 +49,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 			log.WithError(err).Warn("Could not update head")
 		}
 
-		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
-			return err
-		}
-
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -63,6 +59,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 				Verified:    true,
 			},
 		})
+	}
+
+	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
+		return err
 	}
 
 	// Handle post block operations such as attestations and exits.

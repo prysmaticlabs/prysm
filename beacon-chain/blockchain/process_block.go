@@ -91,7 +91,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.New("nil block")
 	}
 	b := signed.Block()
-
+	start := time.Now()
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		return err
@@ -100,6 +100,46 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
+	}
+	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+	if features.Get().UpdateHeadTimely {
+		if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+			if err := s.updateJustified(ctx, postState); err != nil {
+				return err
+			}
+		}
+		newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+		if newFinalized {
+			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save new justified")
+			}
+			s.prevFinalizedCheckpt = s.finalizedCheckpt
+			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		}
+
+		if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+			return err
+		}
+
+		since := time.Since(start)
+		log.Info("Time to update head ", since)
+		start = time.Now()
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
+		since = time.Since(start)
+		log.Info("Time finish update head ", since)
+
+		// Send notification of the processed block to the state feed.
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:        signed.Block().Slot(),
+				BlockRoot:   blockRoot,
+				SignedBlock: signed,
+				Verified:    true,
+			},
+		})
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
@@ -122,39 +162,15 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
-		}
-	}
-
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
-	if features.Get().UpdateHeadTimely {
-		if newFinalized {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
+		if !features.Get().UpdateHeadTimely {
+			if err := s.updateJustified(ctx, postState); err != nil {
+				return err
 			}
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		} else {
+			if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+				return err
+			}
 		}
-
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-
-		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
-			return err
-		}
-
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        signed.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: signed,
-				Verified:    true,
-			},
-		})
 	}
 
 	// Update finalized check point.
@@ -413,8 +429,10 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
-		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
+	if !features.Get().UpdateHeadTimely {
+		if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
+			return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
+		}
 	}
 	return nil
 }
