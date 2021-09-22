@@ -131,7 +131,12 @@ func prepareSSZRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gatewa
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
 	req.URL.Path = sszPath
-	return gateway.HandleURLParameters(endpoint.Path, req, []string{})
+	if errJson := gateway.HandleURLParameters(endpoint.Path, req, []string{}); errJson != nil {
+		return errJson
+	}
+	// We have to add the prefix after handling parameters because adding the prefix changes URL segment indexing.
+	req.URL.Path = "/internal" + req.URL.Path
+	return nil
 }
 
 func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson gateway.ErrorJson) {
@@ -176,7 +181,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 }
 
 func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	sseClient := sse.NewClient("http://" + m.GatewayAddress + req.URL.RequestURI())
+	sseClient := sse.NewClient("http://" + m.GatewayAddress + "/internal" + req.URL.RequestURI())
 	eventChan := make(chan *sse.Event)
 
 	// We use grpc-gateway as the server side of events, not the sse library.
