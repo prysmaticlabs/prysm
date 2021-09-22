@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
@@ -148,7 +148,7 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 					bits.SetBitAt(i%subCommitteeSize, true)
 					sig, err := bls.SignatureFromBytes(msg.Signature)
 					if err != nil {
-						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytes")
+						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytesutil")
 					}
 					sigs = append(sigs, sig)
 				}

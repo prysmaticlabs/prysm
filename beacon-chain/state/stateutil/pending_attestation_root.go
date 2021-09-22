@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -40,8 +40,8 @@ func PendingAttRootWithHasher(hasher ssz.HashFn, att *ethpb.PendingAttestation) 
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// PendingAttEncKey returns the encoded key in bytes of input `pendingAttestation`,
-// the returned key bytes can be used for caching purposes.
+// PendingAttEncKey returns the encoded key in bytesutil of input `pendingAttestation`,
+// the returned key bytesutil can be used for caching purposes.
 func PendingAttEncKey(att *ethpb.PendingAttestation) []byte {
 	enc := make([]byte, 2192)
 

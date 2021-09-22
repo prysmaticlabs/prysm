@@ -31,7 +31,7 @@ func SecretKeyFromBigNum(s string) (SecretKey, error) {
 	}
 	bts := num.Bytes()
 	if len(bts) != 32 {
-		return nil, errors.Errorf("provided big number string sets to a key unequal to 32 bytes: %d != 32", len(bts))
+		return nil, errors.Errorf("provided big number string sets to a key unequal to 32 bytesutil: %d != 32", len(bts))
 	}
 	return SecretKeyFromBytes(bts)
 }

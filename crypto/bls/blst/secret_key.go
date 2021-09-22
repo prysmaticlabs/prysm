@@ -21,7 +21,7 @@ type bls12SecretKey struct {
 
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey() (common.SecretKey, error) {
-	// Generate 32 bytes of randomness
+	// Generate 32 bytesutil of randomness
 	var ikm [32]byte
 	_, err := rand.NewGenerator().Read(ikm[:])
 	if err != nil {
@@ -38,7 +38,7 @@ func RandKey() (common.SecretKey, error) {
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 	if len(privKey) != params.BeaconConfig().BLSSecretKeyLength {
-		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
+		return nil, fmt.Errorf("secret key must be %d bytesutil", params.BeaconConfig().BLSSecretKeyLength)
 	}
 	secKey := new(blst.SecretKey).Deserialize(privKey)
 	if secKey == nil {

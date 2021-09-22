@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 type syncSubnetIDs struct {

@@ -113,7 +113,7 @@ func (km *Keymanager) attemptDecryptKeystore(
 	} else {
 		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
 		if err != nil {
-			return nil, nil, "", errors.Wrap(err, "could not initialize private key from bytes")
+			return nil, nil, "", errors.Wrap(err, "could not initialize private key from bytesutil")
 		}
 		pubKeyBytes = privKey.PublicKey().Marshal()
 	}

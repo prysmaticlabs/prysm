@@ -262,7 +262,7 @@ func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
 	return l
 }
 
-// Determines the number of bytes that are used
+// Determines the number of bytesutil that are used
 // to represent the provided number of bits.
 func byteCount(bitCount int) int {
 	numOfBytes := bitCount / 8

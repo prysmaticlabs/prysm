@@ -187,9 +187,9 @@ type Genesis struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	GenesisTime            *timestamp.Timestamp `protobuf:"bytes,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	DepositContractAddress []byte               `protobuf:"bytes,2,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
-	GenesisValidatorsRoot  []byte               `protobuf:"bytes,3,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
+	GenesisTime            *timestamp.Timestamp `protobuf:"bytesutil,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	DepositContractAddress []byte               `protobuf:"bytesutil,2,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	GenesisValidatorsRoot  []byte               `protobuf:"bytesutil,3,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
 }
 
 func (x *Genesis) Reset() {
@@ -250,8 +250,8 @@ type Version struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version  string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	Metadata string `protobuf:"bytes,2,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Version  string `protobuf:"bytesutil,1,opt,name=version,proto3" json:"version,omitempty"`
+	Metadata string `protobuf:"bytesutil,2,opt,name=metadata,proto3" json:"metadata,omitempty"`
 }
 
 func (x *Version) Reset() {
@@ -305,7 +305,7 @@ type ImplementedServices struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Services []string `protobuf:"bytes,1,rep,name=services,proto3" json:"services,omitempty"`
+	Services []string `protobuf:"bytesutil,1,rep,name=services,proto3" json:"services,omitempty"`
 }
 
 func (x *ImplementedServices) Reset() {
@@ -352,7 +352,7 @@ type PeerRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PeerId string `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	PeerId string `protobuf:"bytesutil,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
 }
 
 func (x *PeerRequest) Reset() {
@@ -399,7 +399,7 @@ type Peers struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Peers []*Peer `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
+	Peers []*Peer `protobuf:"bytesutil,1,rep,name=peers,proto3" json:"peers,omitempty"`
 }
 
 func (x *Peers) Reset() {
@@ -446,11 +446,11 @@ type Peer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Address         string          `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Address         string          `protobuf:"bytesutil,1,opt,name=address,proto3" json:"address,omitempty"`
 	Direction       PeerDirection   `protobuf:"varint,2,opt,name=direction,proto3,enum=ethereum.eth.v1alpha1.PeerDirection" json:"direction,omitempty"`
 	ConnectionState ConnectionState `protobuf:"varint,3,opt,name=connection_state,json=connectionState,proto3,enum=ethereum.eth.v1alpha1.ConnectionState" json:"connection_state,omitempty"`
-	PeerId          string          `protobuf:"bytes,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Enr             string          `protobuf:"bytes,5,opt,name=enr,proto3" json:"enr,omitempty"`
+	PeerId          string          `protobuf:"bytesutil,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr             string          `protobuf:"bytesutil,5,opt,name=enr,proto3" json:"enr,omitempty"`
 }
 
 func (x *Peer) Reset() {
@@ -525,9 +525,9 @@ type HostData struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Addresses []string `protobuf:"bytes,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
-	PeerId    string   `protobuf:"bytes,2,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Enr       string   `protobuf:"bytes,3,opt,name=enr,proto3" json:"enr,omitempty"`
+	Addresses []string `protobuf:"bytesutil,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	PeerId    string   `protobuf:"bytesutil,2,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr       string   `protobuf:"bytesutil,3,opt,name=enr,proto3" json:"enr,omitempty"`
 }
 
 func (x *HostData) Reset() {

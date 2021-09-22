@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"

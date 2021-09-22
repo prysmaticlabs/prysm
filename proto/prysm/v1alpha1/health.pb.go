@@ -37,7 +37,7 @@ type LogsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Logs []string `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
+	Logs []string `protobuf:"bytesutil,1,rep,name=logs,proto3" json:"logs,omitempty"`
 }
 
 func (x *LogsResponse) Reset() {

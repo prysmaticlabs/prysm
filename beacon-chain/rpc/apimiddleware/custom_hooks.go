@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
@@ -140,7 +140,7 @@ func wrapSignedContributionAndProofsArray(endpoint gateway.Endpoint, _ http.Resp
 	return nil
 }
 
-// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
+// Posted graffiti needs to have length of 32 bytesutil, but client is allowed to send data of any length.
 func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.Request) gateway.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
 		b := butil.ToBytes32([]byte(block.Message.Body.Graffiti))

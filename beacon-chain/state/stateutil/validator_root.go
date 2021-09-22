@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -89,8 +89,8 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
 }
 
-// ValidatorEncKey returns the encoded key in bytes of input `validator`,
-// the returned key bytes can be used for caching purposes.
+// ValidatorEncKey returns the encoded key in bytesutil of input `validator`,
+// the returned key bytesutil can be used for caching purposes.
 func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	if validator == nil {
 		return nil

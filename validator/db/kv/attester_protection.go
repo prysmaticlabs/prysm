@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
@@ -543,7 +543,7 @@ func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [48]byte)
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
 		lowestSignedSourceBytes := bucket.Get(publicKey[:])
-		// 8 because butil.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
+		// 8 because butil.BytesToEpochBigEndian will return 0 if input is less than 8 bytesutil.
 		if len(lowestSignedSourceBytes) < 8 {
 			return nil
 		}
@@ -566,7 +566,7 @@ func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [48]byte)
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedTargetBucket)
 		lowestSignedTargetBytes := bucket.Get(publicKey[:])
-		// 8 because butil.BytesToEpochBigEndian will return 0 if input is less than 8 bytes.
+		// 8 because butil.BytesToEpochBigEndian will return 0 if input is less than 8 bytesutil.
 		if len(lowestSignedTargetBytes) < 8 {
 			return nil
 		}

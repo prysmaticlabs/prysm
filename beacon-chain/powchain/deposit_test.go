@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -19,7 +19,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-const pubKeyErr = "could not convert bytes to public key"
+const pubKeyErr = "could not convert bytesutil to public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
@@ -138,7 +138,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytes to signature")
+	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytesutil to signature")
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {

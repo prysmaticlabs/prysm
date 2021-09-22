@@ -21,7 +21,7 @@ go_library(
         "//async/event:go_default_library",
         "//config/features:go_default_library",
         "//crypto/bls:go_default_library",
-        "//encoding/bytes:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
@@ -52,7 +52,7 @@ go_test(
     deps = [
         "//async/event:go_default_library",
         "//crypto/bls:go_default_library",
-        "//encoding/bytes:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

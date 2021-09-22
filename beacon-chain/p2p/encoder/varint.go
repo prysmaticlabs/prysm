@@ -9,10 +9,10 @@ import (
 
 const maxVarintLength = 10
 
-var errExcessMaxLength = errors.Errorf("provided header exceeds the max varint length of %d bytes", maxVarintLength)
+var errExcessMaxLength = errors.Errorf("provided header exceeds the max varint length of %d bytesutil", maxVarintLength)
 
 // readVarint at the beginning of a byte slice. This varint may be used to indicate
-// the length of the remaining bytes in the reader.
+// the length of the remaining bytesutil in the reader.
 func readVarint(r io.Reader) (uint64, error) {
 	b := make([]byte, 0, maxVarintLength)
 	for i := 0; i < maxVarintLength; i++ {
@@ -31,7 +31,7 @@ func readVarint(r io.Reader) (uint64, error) {
 			break
 		}
 
-		// If the varint is larger than 10 bytes, it is invalid as it would
+		// If the varint is larger than 10 bytesutil, it is invalid as it would
 		// exceed the size of MaxUint64.
 		if i+1 >= maxVarintLength {
 			return 0, errExcessMaxLength

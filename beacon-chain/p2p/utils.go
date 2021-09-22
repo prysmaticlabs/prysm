@@ -39,7 +39,7 @@ func SerializeENR(record *enr.Record) (string, error) {
 	}
 	buf := bytes.NewBuffer([]byte{})
 	if err := record.EncodeRLP(buf); err != nil {
-		return "", errors.Wrap(err, "could not encode ENR record to bytes")
+		return "", errors.Wrap(err, "could not encode ENR record to bytesutil")
 	}
 	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	return enrString, nil

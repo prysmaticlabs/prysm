@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -1114,7 +1114,7 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	return b.inactivityScores(), nil
 }
 
-// MarshalSSZ marshals the underlying beacon state to bytes.
+// MarshalSSZ marshals the underlying beacon state to bytesutil.
 func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, errors.New("nil beacon state")

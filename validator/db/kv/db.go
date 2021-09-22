@@ -189,7 +189,7 @@ func (s *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
 	})
 }
 
-// Size returns the db size in bytes.
+// Size returns the db size in bytesutil.
 func (s *Store) Size() (int64, error) {
 	var size int64
 	err := s.db.View(func(tx *bolt.Tx) error {

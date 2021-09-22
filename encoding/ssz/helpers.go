@@ -103,7 +103,7 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		// indices determined above.
 		chunks = append(chunks, orderedItems[i:j])
 	}
-	// Right-pad the last chunk with zero bytes if it does not
+	// Right-pad the last chunk with zero bytesutil if it does not
 	// have length bytesPerChunk.
 	lastChunk := chunks[len(chunks)-1]
 	for len(lastChunk) < bytesPerChunk {

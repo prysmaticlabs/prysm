@@ -186,11 +186,11 @@ func allDepositContractAddresses(client *ethclient.Client) ([]common.Address, er
 
 	// Hash of deposit log signature
 	// DepositEvent: event({
-	//    pubkey: bytes[48],
-	//    withdrawal_credentials: bytes[32],
-	//    amount: bytes[8],
-	//    signature: bytes[96],
-	//    index: bytes[8],
+	//    pubkey: bytesutil[48],
+	//    withdrawal_credentials: bytesutil[32],
+	//    amount: bytesutil[8],
+	//    signature: bytesutil[96],
+	//    index: bytesutil[8],
 	// })
 	depositTopicHash := common.HexToHash("0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5")
 	fmt.Println(depositTopicHash.Hex())

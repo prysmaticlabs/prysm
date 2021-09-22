@@ -93,7 +93,7 @@ func (i *InputBlockWithPrestate) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the InputBlockWithPrestate object
+// SizeSSZ returns the ssz encoded size in bytesutil for the InputBlockWithPrestate object
 func (i *InputBlockWithPrestate) SizeSSZ() (size int) {
 	size = 8
 

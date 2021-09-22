@@ -116,7 +116,7 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 
-	p.t.Logf("Wrote %d bytes", n)
+	p.t.Logf("Wrote %d bytesutil", n)
 }
 
 // ReceivePubSub simulates an incoming message over pubsub on a given topic.

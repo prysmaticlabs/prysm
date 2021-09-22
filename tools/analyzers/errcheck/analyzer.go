@@ -30,20 +30,20 @@ var exclusions = make(map[string]bool)
 
 func init() {
 	for _, exc := range [...]string{
-		// bytes
-		"(*bytes.Buffer).Write",
-		"(*bytes.Buffer).WriteByte",
-		"(*bytes.Buffer).WriteRune",
-		"(*bytes.Buffer).WriteString",
+		// bytesutil
+		"(*bytesutil.Buffer).Write",
+		"(*bytesutil.Buffer).WriteByte",
+		"(*bytesutil.Buffer).WriteRune",
+		"(*bytesutil.Buffer).WriteString",
 
 		// fmt
 		"fmt.Errorf",
 		"fmt.Print",
 		"fmt.Printf",
 		"fmt.Println",
-		"fmt.Fprint(*bytes.Buffer)",
-		"fmt.Fprintf(*bytes.Buffer)",
-		"fmt.Fprintln(*bytes.Buffer)",
+		"fmt.Fprint(*bytesutil.Buffer)",
+		"fmt.Fprintf(*bytesutil.Buffer)",
+		"fmt.Fprintln(*bytesutil.Buffer)",
 		"fmt.Fprint(*strings.Builder)",
 		"fmt.Fprintf(*strings.Builder)",
 		"fmt.Fprintln(*strings.Builder)",

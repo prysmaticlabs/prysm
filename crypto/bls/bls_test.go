@@ -36,7 +36,7 @@ func TestValidateSecretKeyString(t *testing.T) {
 	t.Run("blst", func(t *testing.T) {
 		zeroNum := new(big.Int).SetUint64(0)
 		_, err := SecretKeyFromBigNum(zeroNum.String())
-		assert.ErrorContains(t, "provided big number string sets to a key unequal to 32 bytes", err)
+		assert.ErrorContains(t, "provided big number string sets to a key unequal to 32 bytesutil", err)
 
 		rGen := rand.NewDeterministicGenerator()
 
@@ -48,7 +48,7 @@ func TestValidateSecretKeyString(t *testing.T) {
 
 		// Expect larger than expected key size to fail.
 		_, err = SecretKeyFromBigNum(rBigNum.String())
-		assert.ErrorContains(t, "provided big number string sets to a key unequal to 32 bytes", err)
+		assert.ErrorContains(t, "provided big number string sets to a key unequal to 32 bytesutil", err)
 
 		key, err := RandKey()
 		assert.NoError(t, err)

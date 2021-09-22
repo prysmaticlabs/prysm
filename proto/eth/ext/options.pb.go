@@ -32,7 +32,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         50000,
 		Name:          "ethereum.eth.ext.cast_type",
-		Tag:           "bytes,50000,opt,name=cast_type",
+		Tag:           "bytesutil,50000,opt,name=cast_type",
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
@@ -40,7 +40,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         50001,
 		Name:          "ethereum.eth.ext.ssz_size",
-		Tag:           "bytes,50001,opt,name=ssz_size",
+		Tag:           "bytesutil,50001,opt,name=ssz_size",
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
@@ -48,7 +48,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         50002,
 		Name:          "ethereum.eth.ext.ssz_max",
-		Tag:           "bytes,50002,opt,name=ssz_max",
+		Tag:           "bytesutil,50002,opt,name=ssz_max",
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
@@ -56,7 +56,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         50003,
 		Name:          "ethereum.eth.ext.spec_name",
-		Tag:           "bytes,50003,opt,name=spec_name",
+		Tag:           "bytesutil,50003,opt,name=spec_name",
 		Filename:      "proto/eth/ext/options.proto",
 	},
 }

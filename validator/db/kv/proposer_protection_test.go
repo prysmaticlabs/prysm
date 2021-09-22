@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -171,7 +171,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		for _, slot := range tt.storedSlots {
 			root, ok := signingRootsBySlot[slot]
 			require.Equal(t, true, ok)
-			require.DeepEqual(t, signedRoot, root, "Unexpected difference in bytes for epoch %d", slot)
+			require.DeepEqual(t, signedRoot, root, "Unexpected difference in bytesutil for epoch %d", slot)
 		}
 		require.NoError(t, db.Close(), "Failed to close database")
 	}

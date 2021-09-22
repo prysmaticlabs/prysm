@@ -35,9 +35,9 @@ type Attestation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AggregationBits github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=aggregation_bits,json=aggregationBits,proto3" json:"aggregation_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist" ssz-max:"2048"`
-	Data            *AttestationData                             `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	Signature       []byte                                       `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	AggregationBits github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytesutil,1,opt,name=aggregation_bits,json=aggregationBits,proto3" json:"aggregation_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist" ssz-max:"2048"`
+	Data            *AttestationData                             `protobuf:"bytesutil,2,opt,name=data,proto3" json:"data,omitempty"`
+	Signature       []byte                                       `protobuf:"bytesutil,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *Attestation) Reset() {
@@ -99,8 +99,8 @@ type AggregateAttestationAndProof struct {
 	unknownFields protoimpl.UnknownFields
 
 	AggregatorIndex github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,1,opt,name=aggregator_index,json=aggregatorIndex,proto3" json:"aggregator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	Aggregate       *Attestation                                       `protobuf:"bytes,3,opt,name=aggregate,proto3" json:"aggregate,omitempty"`
-	SelectionProof  []byte                                             `protobuf:"bytes,2,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
+	Aggregate       *Attestation                                       `protobuf:"bytesutil,3,opt,name=aggregate,proto3" json:"aggregate,omitempty"`
+	SelectionProof  []byte                                             `protobuf:"bytesutil,2,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
 }
 
 func (x *AggregateAttestationAndProof) Reset() {
@@ -161,8 +161,8 @@ type SignedAggregateAttestationAndProof struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *AggregateAttestationAndProof `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte                        `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Message   *AggregateAttestationAndProof `protobuf:"bytesutil,1,opt,name=message,proto3" json:"message,omitempty"`
+	Signature []byte                        `protobuf:"bytesutil,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedAggregateAttestationAndProof) Reset() {
@@ -218,9 +218,9 @@ type AttestationData struct {
 
 	Slot            github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Index           github_com_prysmaticlabs_eth2_types.CommitteeIndex `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.CommitteeIndex"`
-	BeaconBlockRoot []byte                                             `protobuf:"bytes,3,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
-	Source          *Checkpoint                                        `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	Target          *Checkpoint                                        `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`
+	BeaconBlockRoot []byte                                             `protobuf:"bytesutil,3,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
+	Source          *Checkpoint                                        `protobuf:"bytesutil,4,opt,name=source,proto3" json:"source,omitempty"`
+	Target          *Checkpoint                                        `protobuf:"bytesutil,5,opt,name=target,proto3" json:"target,omitempty"`
 }
 
 func (x *AttestationData) Reset() {
@@ -296,7 +296,7 @@ type Checkpoint struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	Root  []byte                                    `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Root  []byte                                    `protobuf:"bytesutil,2,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
 }
 
 func (x *Checkpoint) Reset() {

@@ -88,13 +88,13 @@ type CreateWalletRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Keymanager      KeymanagerKind `protobuf:"varint,1,opt,name=keymanager,proto3,enum=ethereum.validator.accounts.v2.KeymanagerKind" json:"keymanager,omitempty"`
-	WalletPassword  string         `protobuf:"bytes,2,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
-	Mnemonic        string         `protobuf:"bytes,3,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	WalletPassword  string         `protobuf:"bytesutil,2,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
+	Mnemonic        string         `protobuf:"bytesutil,3,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
 	NumAccounts     uint64         `protobuf:"varint,4,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
-	RemoteAddr      string         `protobuf:"bytes,5,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
-	RemoteCrtPath   string         `protobuf:"bytes,6,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
-	RemoteKeyPath   string         `protobuf:"bytes,7,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
-	RemoteCaCrtPath string         `protobuf:"bytes,8,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
+	RemoteAddr      string         `protobuf:"bytesutil,5,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
+	RemoteCrtPath   string         `protobuf:"bytesutil,6,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
+	RemoteKeyPath   string         `protobuf:"bytesutil,7,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
+	RemoteCaCrtPath string         `protobuf:"bytesutil,8,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
 }
 
 func (x *CreateWalletRequest) Reset() {
@@ -190,7 +190,7 @@ type CreateWalletResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Wallet *WalletResponse `protobuf:"bytes,1,opt,name=wallet,proto3" json:"wallet,omitempty"`
+	Wallet *WalletResponse `protobuf:"bytesutil,1,opt,name=wallet,proto3" json:"wallet,omitempty"`
 }
 
 func (x *CreateWalletResponse) Reset() {
@@ -237,10 +237,10 @@ type EditWalletConfigRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RemoteAddr      string `protobuf:"bytes,1,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
-	RemoteCrtPath   string `protobuf:"bytes,2,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
-	RemoteKeyPath   string `protobuf:"bytes,3,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
-	RemoteCaCrtPath string `protobuf:"bytes,4,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
+	RemoteAddr      string `protobuf:"bytesutil,1,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
+	RemoteCrtPath   string `protobuf:"bytesutil,2,opt,name=remote_crt_path,json=remoteCrtPath,proto3" json:"remote_crt_path,omitempty"`
+	RemoteKeyPath   string `protobuf:"bytesutil,3,opt,name=remote_key_path,json=remoteKeyPath,proto3" json:"remote_key_path,omitempty"`
+	RemoteCaCrtPath string `protobuf:"bytesutil,4,opt,name=remote_ca_crt_path,json=remoteCaCrtPath,proto3" json:"remote_ca_crt_path,omitempty"`
 }
 
 func (x *EditWalletConfigRequest) Reset() {
@@ -308,7 +308,7 @@ type GenerateMnemonicResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Mnemonic string `protobuf:"bytes,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	Mnemonic string `protobuf:"bytesutil,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
 }
 
 func (x *GenerateMnemonicResponse) Reset() {
@@ -355,7 +355,7 @@ type WalletResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	WalletPath     string         `protobuf:"bytes,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
+	WalletPath     string         `protobuf:"bytesutil,1,opt,name=wallet_path,json=walletPath,proto3" json:"wallet_path,omitempty"`
 	KeymanagerKind KeymanagerKind `protobuf:"varint,2,opt,name=keymanager_kind,json=keymanagerKind,proto3,enum=ethereum.validator.accounts.v2.KeymanagerKind" json:"keymanager_kind,omitempty"`
 }
 
@@ -410,11 +410,11 @@ type RecoverWalletRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Mnemonic         string `protobuf:"bytes,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
+	Mnemonic         string `protobuf:"bytesutil,1,opt,name=mnemonic,proto3" json:"mnemonic,omitempty"`
 	NumAccounts      uint64 `protobuf:"varint,2,opt,name=num_accounts,json=numAccounts,proto3" json:"num_accounts,omitempty"`
-	WalletPassword   string `protobuf:"bytes,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
-	Language         string `protobuf:"bytes,4,opt,name=language,proto3" json:"language,omitempty"`
-	Mnemonic25ThWord string `protobuf:"bytes,5,opt,name=mnemonic25th_word,json=mnemonic25thWord,proto3" json:"mnemonic25th_word,omitempty"`
+	WalletPassword   string `protobuf:"bytesutil,3,opt,name=wallet_password,json=walletPassword,proto3" json:"wallet_password,omitempty"`
+	Language         string `protobuf:"bytesutil,4,opt,name=language,proto3" json:"language,omitempty"`
+	Mnemonic25ThWord string `protobuf:"bytesutil,5,opt,name=mnemonic25th_word,json=mnemonic25thWord,proto3" json:"mnemonic25th_word,omitempty"`
 }
 
 func (x *RecoverWalletRequest) Reset() {
@@ -491,7 +491,7 @@ type ListAccountsRequest struct {
 
 	GetDepositTxData bool   `protobuf:"varint,1,opt,name=get_deposit_tx_data,json=getDepositTxData,proto3" json:"get_deposit_tx_data,omitempty"`
 	PageSize         int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken        string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken        string `protobuf:"bytesutil,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	All              bool   `protobuf:"varint,4,opt,name=all,proto3" json:"all,omitempty"`
 }
 
@@ -560,8 +560,8 @@ type ListAccountsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Accounts      []*Account `protobuf:"bytes,1,rep,name=accounts,proto3" json:"accounts,omitempty"`
-	NextPageToken string     `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Accounts      []*Account `protobuf:"bytesutil,1,rep,name=accounts,proto3" json:"accounts,omitempty"`
+	NextPageToken string     `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32      `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -623,10 +623,10 @@ type Account struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ValidatingPublicKey []byte `protobuf:"bytes,1,opt,name=validating_public_key,json=validatingPublicKey,proto3" json:"validating_public_key,omitempty"`
-	AccountName         string `protobuf:"bytes,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
-	DepositTxData       []byte `protobuf:"bytes,3,opt,name=deposit_tx_data,json=depositTxData,proto3" json:"deposit_tx_data,omitempty"`
-	DerivationPath      string `protobuf:"bytes,4,opt,name=derivation_path,json=derivationPath,proto3" json:"derivation_path,omitempty"`
+	ValidatingPublicKey []byte `protobuf:"bytesutil,1,opt,name=validating_public_key,json=validatingPublicKey,proto3" json:"validating_public_key,omitempty"`
+	AccountName         string `protobuf:"bytesutil,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
+	DepositTxData       []byte `protobuf:"bytesutil,3,opt,name=deposit_tx_data,json=depositTxData,proto3" json:"deposit_tx_data,omitempty"`
+	DerivationPath      string `protobuf:"bytesutil,4,opt,name=derivation_path,json=derivationPath,proto3" json:"derivation_path,omitempty"`
 }
 
 func (x *Account) Reset() {
@@ -694,7 +694,7 @@ type AccountRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys [][]byte `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	Indices    []uint64 `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
 }
 
@@ -749,8 +749,8 @@ type AuthRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Password             string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
-	PasswordConfirmation string `protobuf:"bytes,2,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
+	Password             string `protobuf:"bytesutil,1,opt,name=password,proto3" json:"password,omitempty"`
+	PasswordConfirmation string `protobuf:"bytesutil,2,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
 }
 
 func (x *AuthRequest) Reset() {
@@ -804,7 +804,7 @@ type AuthResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Token           string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Token           string `protobuf:"bytesutil,1,opt,name=token,proto3" json:"token,omitempty"`
 	TokenExpiration uint64 `protobuf:"varint,2,opt,name=token_expiration,json=tokenExpiration,proto3" json:"token_expiration,omitempty"`
 }
 
@@ -859,11 +859,11 @@ type NodeConnectionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BeaconNodeEndpoint     string `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
+	BeaconNodeEndpoint     string `protobuf:"bytesutil,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
 	Connected              bool   `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
 	Syncing                bool   `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
 	GenesisTime            uint64 `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	DepositContractAddress []byte `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	DepositContractAddress []byte `protobuf:"bytesutil,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
 }
 
 func (x *NodeConnectionResponse) Reset() {
@@ -938,8 +938,8 @@ type LogsEndpointResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ValidatorLogsEndpoint string `protobuf:"bytes,1,opt,name=validator_logs_endpoint,json=validatorLogsEndpoint,proto3" json:"validator_logs_endpoint,omitempty"`
-	BeaconLogsEndpoint    string `protobuf:"bytes,2,opt,name=beacon_logs_endpoint,json=beaconLogsEndpoint,proto3" json:"beacon_logs_endpoint,omitempty"`
+	ValidatorLogsEndpoint string `protobuf:"bytesutil,1,opt,name=validator_logs_endpoint,json=validatorLogsEndpoint,proto3" json:"validator_logs_endpoint,omitempty"`
+	BeaconLogsEndpoint    string `protobuf:"bytesutil,2,opt,name=beacon_logs_endpoint,json=beaconLogsEndpoint,proto3" json:"beacon_logs_endpoint,omitempty"`
 }
 
 func (x *LogsEndpointResponse) Reset() {
@@ -993,8 +993,8 @@ type VersionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Beacon    string `protobuf:"bytes,1,opt,name=beacon,proto3" json:"beacon,omitempty"`
-	Validator string `protobuf:"bytes,2,opt,name=validator,proto3" json:"validator,omitempty"`
+	Beacon    string `protobuf:"bytesutil,1,opt,name=beacon,proto3" json:"beacon,omitempty"`
+	Validator string `protobuf:"bytesutil,2,opt,name=validator,proto3" json:"validator,omitempty"`
 }
 
 func (x *VersionResponse) Reset() {
@@ -1048,9 +1048,9 @@ type ChangePasswordRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CurrentPassword      string `protobuf:"bytes,1,opt,name=current_password,json=currentPassword,proto3" json:"current_password,omitempty"`
-	Password             string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	PasswordConfirmation string `protobuf:"bytes,3,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
+	CurrentPassword      string `protobuf:"bytesutil,1,opt,name=current_password,json=currentPassword,proto3" json:"current_password,omitempty"`
+	Password             string `protobuf:"bytesutil,2,opt,name=password,proto3" json:"password,omitempty"`
+	PasswordConfirmation string `protobuf:"bytesutil,3,opt,name=password_confirmation,json=passwordConfirmation,proto3" json:"password_confirmation,omitempty"`
 }
 
 func (x *ChangePasswordRequest) Reset() {
@@ -1158,8 +1158,8 @@ type ImportKeystoresRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	KeystoresImported []string `protobuf:"bytes,1,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
-	KeystoresPassword string   `protobuf:"bytes,2,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
+	KeystoresImported []string `protobuf:"bytesutil,1,rep,name=keystores_imported,json=keystoresImported,proto3" json:"keystores_imported,omitempty"`
+	KeystoresPassword string   `protobuf:"bytesutil,2,opt,name=keystores_password,json=keystoresPassword,proto3" json:"keystores_password,omitempty"`
 }
 
 func (x *ImportKeystoresRequest) Reset() {
@@ -1213,7 +1213,7 @@ type ImportKeystoresResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ImportedPublicKeys [][]byte `protobuf:"bytes,1,rep,name=imported_public_keys,json=importedPublicKeys,proto3" json:"imported_public_keys,omitempty"`
+	ImportedPublicKeys [][]byte `protobuf:"bytesutil,1,rep,name=imported_public_keys,json=importedPublicKeys,proto3" json:"imported_public_keys,omitempty"`
 }
 
 func (x *ImportKeystoresResponse) Reset() {
@@ -1315,12 +1315,12 @@ type BeaconStatusResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BeaconNodeEndpoint     string              `protobuf:"bytes,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
+	BeaconNodeEndpoint     string              `protobuf:"bytesutil,1,opt,name=beacon_node_endpoint,json=beaconNodeEndpoint,proto3" json:"beacon_node_endpoint,omitempty"`
 	Connected              bool                `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
 	Syncing                bool                `protobuf:"varint,3,opt,name=syncing,proto3" json:"syncing,omitempty"`
 	GenesisTime            uint64              `protobuf:"varint,4,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	DepositContractAddress []byte              `protobuf:"bytes,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
-	ChainHead              *v1alpha1.ChainHead `protobuf:"bytes,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
+	DepositContractAddress []byte              `protobuf:"bytesutil,5,opt,name=deposit_contract_address,json=depositContractAddress,proto3" json:"deposit_contract_address,omitempty"`
+	ChainHead              *v1alpha1.ChainHead `protobuf:"bytesutil,6,opt,name=chain_head,json=chainHead,proto3" json:"chain_head,omitempty"`
 }
 
 func (x *BeaconStatusResponse) Reset() {
@@ -1402,7 +1402,7 @@ type VoluntaryExitRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys [][]byte `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 }
 
 func (x *VoluntaryExitRequest) Reset() {
@@ -1449,7 +1449,7 @@ type VoluntaryExitResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ExitedKeys [][]byte `protobuf:"bytes,1,rep,name=exited_keys,json=exitedKeys,proto3" json:"exited_keys,omitempty"`
+	ExitedKeys [][]byte `protobuf:"bytesutil,1,rep,name=exited_keys,json=exitedKeys,proto3" json:"exited_keys,omitempty"`
 }
 
 func (x *VoluntaryExitResponse) Reset() {
@@ -1496,8 +1496,8 @@ type BackupAccountsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys     [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
-	BackupPassword string   `protobuf:"bytes,2,opt,name=backup_password,json=backupPassword,proto3" json:"backup_password,omitempty"`
+	PublicKeys     [][]byte `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	BackupPassword string   `protobuf:"bytesutil,2,opt,name=backup_password,json=backupPassword,proto3" json:"backup_password,omitempty"`
 }
 
 func (x *BackupAccountsRequest) Reset() {
@@ -1551,7 +1551,7 @@ type BackupAccountsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ZipFile []byte `protobuf:"bytes,1,opt,name=zip_file,json=zipFile,proto3" json:"zip_file,omitempty"`
+	ZipFile []byte `protobuf:"bytesutil,1,opt,name=zip_file,json=zipFile,proto3" json:"zip_file,omitempty"`
 }
 
 func (x *BackupAccountsResponse) Reset() {
@@ -1598,7 +1598,7 @@ type DeleteAccountsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeysToDelete [][]byte `protobuf:"bytes,1,rep,name=public_keys_to_delete,json=publicKeysToDelete,proto3" json:"public_keys_to_delete,omitempty"`
+	PublicKeysToDelete [][]byte `protobuf:"bytesutil,1,rep,name=public_keys_to_delete,json=publicKeysToDelete,proto3" json:"public_keys_to_delete,omitempty"`
 }
 
 func (x *DeleteAccountsRequest) Reset() {
@@ -1645,7 +1645,7 @@ type DeleteAccountsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	DeletedKeys [][]byte `protobuf:"bytes,1,rep,name=deleted_keys,json=deletedKeys,proto3" json:"deleted_keys,omitempty"`
+	DeletedKeys [][]byte `protobuf:"bytesutil,1,rep,name=deleted_keys,json=deletedKeys,proto3" json:"deleted_keys,omitempty"`
 }
 
 func (x *DeleteAccountsResponse) Reset() {
@@ -1692,7 +1692,7 @@ type ExportSlashingProtectionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	File string `protobuf:"bytes,1,opt,name=file,proto3" json:"file,omitempty"`
+	File string `protobuf:"bytesutil,1,opt,name=file,proto3" json:"file,omitempty"`
 }
 
 func (x *ExportSlashingProtectionResponse) Reset() {
@@ -1739,7 +1739,7 @@ type ImportSlashingProtectionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SlashingProtectionJson string `protobuf:"bytes,1,opt,name=slashing_protection_json,json=slashingProtectionJson,proto3" json:"slashing_protection_json,omitempty"`
+	SlashingProtectionJson string `protobuf:"bytesutil,1,opt,name=slashing_protection_json,json=slashingProtectionJson,proto3" json:"slashing_protection_json,omitempty"`
 }
 
 func (x *ImportSlashingProtectionRequest) Reset() {

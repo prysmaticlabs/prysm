@@ -31,8 +31,8 @@ type FinalizedBlockRootContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ParentRoot []byte `protobuf:"bytes,1,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty"`
-	ChildRoot  []byte `protobuf:"bytes,2,opt,name=child_root,json=childRoot,proto3" json:"child_root,omitempty"`
+	ParentRoot []byte `protobuf:"bytesutil,1,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty"`
+	ChildRoot  []byte `protobuf:"bytesutil,2,opt,name=child_root,json=childRoot,proto3" json:"child_root,omitempty"`
 }
 
 func (x *FinalizedBlockRootContainer) Reset() {

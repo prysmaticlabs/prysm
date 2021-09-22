@@ -13,7 +13,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -814,7 +814,7 @@ func TestSignBlock(t *testing.T) {
 	defer finish()
 
 	secretKey, err := bls.SecretKeyFromBytes(butil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
+	require.NoError(t, err, "Failed to generate key from bytesutil")
 	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
@@ -847,7 +847,7 @@ func TestSignAltairBlock(t *testing.T) {
 	defer finish()
 
 	secretKey, err := bls.SecretKeyFromBytes(butil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
+	require.NoError(t, err, "Failed to generate key from bytesutil")
 	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().

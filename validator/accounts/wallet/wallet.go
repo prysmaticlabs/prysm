@@ -427,7 +427,7 @@ func InputPassword(
 		passwordFilePathInput := cliCtx.String(passwordFileFlag.Name)
 		data, err := file.ReadFileAsBytes(passwordFilePathInput)
 		if err != nil {
-			return "", errors.Wrap(err, "could not read file as bytes")
+			return "", errors.Wrap(err, "could not read file as bytesutil")
 		}
 		enteredPassword := strings.TrimRight(string(data), "\r\n")
 		if err := passwordValidator(enteredPassword); err != nil {

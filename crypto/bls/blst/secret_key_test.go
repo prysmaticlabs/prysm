@@ -11,7 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -36,22 +36,22 @@ func TestSecretKeyFromBytes(t *testing.T) {
 	}{
 		{
 			name: "Nil",
-			err:  errors.New("secret key must be 32 bytes"),
+			err:  errors.New("secret key must be 32 bytesutil"),
 		},
 		{
 			name:  "Empty",
 			input: []byte{},
-			err:   errors.New("secret key must be 32 bytes"),
+			err:   errors.New("secret key must be 32 bytesutil"),
 		},
 		{
 			name:  "Short",
 			input: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			err:   errors.New("secret key must be 32 bytes"),
+			err:   errors.New("secret key must be 32 bytesutil"),
 		},
 		{
 			name:  "Long",
 			input: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			err:   errors.New("secret key must be 32 bytes"),
+			err:   errors.New("secret key must be 32 bytesutil"),
 		},
 		{
 			name:  "Bad",

@@ -111,7 +111,7 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
+		return errors.Wrap(err, "could not convert bytesutil to signature")
 	}
 
 	voted := len(indices) > 0

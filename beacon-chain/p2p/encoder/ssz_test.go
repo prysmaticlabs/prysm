@@ -156,7 +156,7 @@ type badSnappyStream struct {
 	i      int
 	// count how many times it was read
 	counter int
-	// count bytes read so far
+	// count bytesutil read so far
 	total int
 }
 
@@ -196,7 +196,7 @@ func newBadSnappyStream() *badSnappyStream {
 }
 
 func (b *badSnappyStream) Read(p []byte) (n int, err error) {
-	// Stream out varint bytes first to make test happy.
+	// Stream out varint bytesutil first to make test happy.
 	if len(b.varint) > 0 {
 		copy(p, b.varint[:1])
 		b.varint = b.varint[1:]
@@ -207,7 +207,7 @@ func (b *badSnappyStream) Read(p []byte) (n int, err error) {
 		b.total += n
 	}()
 	if len(b.repeat) == 0 {
-		panic("no bytes to repeat")
+		panic("no bytesutil to repeat")
 	}
 	if len(b.header) > 0 {
 		n = copy(p, b.header)

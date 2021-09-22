@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -155,7 +155,7 @@ func (s *Store) LowestSignedProposal(ctx context.Context, publicKey [48]byte) (t
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedProposalsBucket)
 		lowestSignedProposalBytes := bucket.Get(publicKey[:])
-		// 8 because bytes.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytesutil.
 		if len(lowestSignedProposalBytes) < 8 {
 			return nil
 		}
@@ -178,7 +178,7 @@ func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [48]byte) (
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(highestSignedProposalsBucket)
 		highestSignedProposalBytes := bucket.Get(publicKey[:])
-		// 8 because bytes.BytesToUint64BigEndian will return 0 if input is less than 8 bytes.
+		// 8 because bytesutil.BytesToUint64BigEndian will return 0 if input is less than 8 bytesutil.
 		if len(highestSignedProposalBytes) < 8 {
 			return nil
 		}

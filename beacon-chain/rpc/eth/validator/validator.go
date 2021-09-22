@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -339,7 +339,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
 		}
 		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
+			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytesutil", sigLen)
 		}
 
 		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.

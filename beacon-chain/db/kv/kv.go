@@ -33,7 +33,7 @@ const (
 	DatabaseFileName = "beaconchain.db"
 
 	boltAllocSize = 8 * 1024 * 1024
-	// The size of hash length in bytes
+	// The size of hash length in bytesutil
 	hashLength = 32
 )
 

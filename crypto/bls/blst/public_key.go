@@ -31,7 +31,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 		return &PublicKey{}, nil
 	}
 	if len(pubKey) != params.BeaconConfig().BLSPubkeyLength {
-		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
+		return nil, fmt.Errorf("public key must be %d bytesutil", params.BeaconConfig().BLSPubkeyLength)
 	}
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy(), nil
@@ -39,7 +39,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	// Subgroup check NOT done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
-		return nil, errors.New("could not unmarshal bytes into public key")
+		return nil, errors.New("could not unmarshal bytesutil into public key")
 	}
 	// Subgroup and infinity check
 	if !p.KeyValidate() {

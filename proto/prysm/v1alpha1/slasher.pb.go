@@ -39,7 +39,7 @@ type AttesterSlashingResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AttesterSlashings []*AttesterSlashing `protobuf:"bytes,1,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty"`
+	AttesterSlashings []*AttesterSlashing `protobuf:"bytesutil,1,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty"`
 }
 
 func (x *AttesterSlashingResponse) Reset() {
@@ -86,7 +86,7 @@ type ProposerSlashingResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ProposerSlashings []*ProposerSlashing `protobuf:"bytes,1,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty"`
+	ProposerSlashings []*ProposerSlashing `protobuf:"bytesutil,1,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty"`
 }
 
 func (x *ProposerSlashingResponse) Reset() {
@@ -180,7 +180,7 @@ type HighestAttestationResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Attestations []*HighestAttestation `protobuf:"bytes,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
+	Attestations []*HighestAttestation `protobuf:"bytesutil,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
 }
 
 func (x *HighestAttestationResponse) Reset() {
@@ -291,7 +291,7 @@ type ProposalHistory struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Deprecated: Do not use.
-	EpochBits github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist"`
+	EpochBits github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytesutil,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist"`
 	// Deprecated: Do not use.
 	LatestEpochWritten github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
@@ -399,7 +399,7 @@ type AttestationHistory struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Deprecated: Do not use.
-	TargetToSource map[uint64]uint64 `protobuf:"bytes,1,rep,name=target_to_source,json=targetToSource,proto3" json:"target_to_source,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	TargetToSource map[uint64]uint64 `protobuf:"bytesutil,1,rep,name=target_to_source,json=targetToSource,proto3" json:"target_to_source,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	// Deprecated: Do not use.
 	LatestEpochWritten github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }

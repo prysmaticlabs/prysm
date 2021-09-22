@@ -31,11 +31,11 @@ type ETH1ChainData struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CurrentEth1Data   *LatestETH1Data     `protobuf:"bytes,1,opt,name=current_eth1_data,json=currentEth1Data,proto3" json:"current_eth1_data,omitempty"`
-	ChainstartData    *ChainStartData     `protobuf:"bytes,2,opt,name=chainstart_data,json=chainstartData,proto3" json:"chainstart_data,omitempty"`
-	BeaconState       *BeaconState        `protobuf:"bytes,3,opt,name=beacon_state,json=beaconState,proto3" json:"beacon_state,omitempty"`
-	Trie              *SparseMerkleTrie   `protobuf:"bytes,4,opt,name=trie,proto3" json:"trie,omitempty"`
-	DepositContainers []*DepositContainer `protobuf:"bytes,5,rep,name=deposit_containers,json=depositContainers,proto3" json:"deposit_containers,omitempty"`
+	CurrentEth1Data   *LatestETH1Data     `protobuf:"bytesutil,1,opt,name=current_eth1_data,json=currentEth1Data,proto3" json:"current_eth1_data,omitempty"`
+	ChainstartData    *ChainStartData     `protobuf:"bytesutil,2,opt,name=chainstart_data,json=chainstartData,proto3" json:"chainstart_data,omitempty"`
+	BeaconState       *BeaconState        `protobuf:"bytesutil,3,opt,name=beacon_state,json=beaconState,proto3" json:"beacon_state,omitempty"`
+	Trie              *SparseMerkleTrie   `protobuf:"bytesutil,4,opt,name=trie,proto3" json:"trie,omitempty"`
+	DepositContainers []*DepositContainer `protobuf:"bytesutil,5,rep,name=deposit_containers,json=depositContainers,proto3" json:"deposit_containers,omitempty"`
 }
 
 func (x *ETH1ChainData) Reset() {
@@ -112,7 +112,7 @@ type LatestETH1Data struct {
 
 	BlockHeight        uint64 `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
 	BlockTime          uint64 `protobuf:"varint,3,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	BlockHash          []byte `protobuf:"bytes,4,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
+	BlockHash          []byte `protobuf:"bytesutil,4,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
 	LastRequestedBlock uint64 `protobuf:"varint,5,opt,name=last_requested_block,json=lastRequestedBlock,proto3" json:"last_requested_block,omitempty"`
 }
 
@@ -184,8 +184,8 @@ type ChainStartData struct {
 	Chainstarted       bool       `protobuf:"varint,1,opt,name=chainstarted,proto3" json:"chainstarted,omitempty"`
 	GenesisTime        uint64     `protobuf:"varint,2,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
 	GenesisBlock       uint64     `protobuf:"varint,3,opt,name=genesis_block,json=genesisBlock,proto3" json:"genesis_block,omitempty"`
-	Eth1Data           *Eth1Data  `protobuf:"bytes,4,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	ChainstartDeposits []*Deposit `protobuf:"bytes,5,rep,name=chainstart_deposits,json=chainstartDeposits,proto3" json:"chainstart_deposits,omitempty"`
+	Eth1Data           *Eth1Data  `protobuf:"bytesutil,4,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
+	ChainstartDeposits []*Deposit `protobuf:"bytesutil,5,rep,name=chainstart_deposits,json=chainstartDeposits,proto3" json:"chainstart_deposits,omitempty"`
 }
 
 func (x *ChainStartData) Reset() {
@@ -261,8 +261,8 @@ type SparseMerkleTrie struct {
 	unknownFields protoimpl.UnknownFields
 
 	Depth         uint64       `protobuf:"varint,1,opt,name=depth,proto3" json:"depth,omitempty"`
-	Layers        []*TrieLayer `protobuf:"bytes,2,rep,name=layers,proto3" json:"layers,omitempty"`
-	OriginalItems [][]byte     `protobuf:"bytes,3,rep,name=original_items,json=originalItems,proto3" json:"original_items,omitempty"`
+	Layers        []*TrieLayer `protobuf:"bytesutil,2,rep,name=layers,proto3" json:"layers,omitempty"`
+	OriginalItems [][]byte     `protobuf:"bytesutil,3,rep,name=original_items,json=originalItems,proto3" json:"original_items,omitempty"`
 }
 
 func (x *SparseMerkleTrie) Reset() {
@@ -323,7 +323,7 @@ type TrieLayer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Layer [][]byte `protobuf:"bytes,1,rep,name=layer,proto3" json:"layer,omitempty"`
+	Layer [][]byte `protobuf:"bytesutil,1,rep,name=layer,proto3" json:"layer,omitempty"`
 }
 
 func (x *TrieLayer) Reset() {
@@ -372,8 +372,8 @@ type DepositContainer struct {
 
 	Index           int64    `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
 	Eth1BlockHeight uint64   `protobuf:"varint,2,opt,name=eth1_block_height,json=eth1BlockHeight,proto3" json:"eth1_block_height,omitempty"`
-	Deposit         *Deposit `protobuf:"bytes,3,opt,name=deposit,proto3" json:"deposit,omitempty"`
-	DepositRoot     []byte   `protobuf:"bytes,4,opt,name=deposit_root,json=depositRoot,proto3" json:"deposit_root,omitempty"`
+	Deposit         *Deposit `protobuf:"bytesutil,3,opt,name=deposit,proto3" json:"deposit,omitempty"`
+	DepositRoot     []byte   `protobuf:"bytesutil,4,opt,name=deposit_root,json=depositRoot,proto3" json:"deposit_root,omitempty"`
 }
 
 func (x *DepositContainer) Reset() {

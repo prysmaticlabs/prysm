@@ -258,7 +258,7 @@ type BeaconStateRequest_Slot struct {
 }
 
 type BeaconStateRequest_BlockRoot struct {
-	BlockRoot []byte `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3,oneof"`
+	BlockRoot []byte `protobuf:"bytesutil,2,opt,name=block_root,json=blockRoot,proto3,oneof"`
 }
 
 func (*BeaconStateRequest_Slot) isBeaconStateRequest_QueryFilter() {}
@@ -270,7 +270,7 @@ type BlockRequestByRoot struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockRoot []byte `protobuf:"bytes,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
+	BlockRoot []byte `protobuf:"bytesutil,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
 }
 
 func (x *BlockRequestByRoot) Reset() {
@@ -317,7 +317,7 @@ type SSZResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Encoded []byte `protobuf:"bytes,1,opt,name=encoded,proto3" json:"encoded,omitempty"`
+	Encoded []byte `protobuf:"bytesutil,1,opt,name=encoded,proto3" json:"encoded,omitempty"`
 }
 
 func (x *SSZResponse) Reset() {
@@ -414,8 +414,8 @@ type ProtoArrayForkChoiceResponse struct {
 	PruneThreshold  uint64                                    `protobuf:"varint,1,opt,name=prune_threshold,json=pruneThreshold,proto3" json:"prune_threshold,omitempty"`
 	JustifiedEpoch  github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 	FinalizedEpoch  github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	ProtoArrayNodes []*ProtoArrayNode                         `protobuf:"bytes,4,rep,name=proto_array_nodes,json=protoArrayNodes,proto3" json:"proto_array_nodes,omitempty"`
-	Indices         map[string]uint64                         `protobuf:"bytes,5,rep,name=indices,proto3" json:"indices,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	ProtoArrayNodes []*ProtoArrayNode                         `protobuf:"bytesutil,4,rep,name=proto_array_nodes,json=protoArrayNodes,proto3" json:"proto_array_nodes,omitempty"`
+	Indices         map[string]uint64                         `protobuf:"bytesutil,5,rep,name=indices,proto3" json:"indices,omitempty" protobuf_key:"bytesutil,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 }
 
 func (x *ProtoArrayForkChoiceResponse) Reset() {
@@ -491,7 +491,7 @@ type ProtoArrayNode struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot           github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	Root           []byte                                    `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
+	Root           []byte                                    `protobuf:"bytesutil,2,opt,name=root,proto3" json:"root,omitempty"`
 	Parent         uint64                                    `protobuf:"varint,3,opt,name=parent,proto3" json:"parent,omitempty"`
 	JustifiedEpoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,4,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 	FinalizedEpoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
@@ -593,7 +593,7 @@ type DebugPeerResponses struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Responses []*DebugPeerResponse `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
+	Responses []*DebugPeerResponse `protobuf:"bytesutil,1,rep,name=responses,proto3" json:"responses,omitempty"`
 }
 
 func (x *DebugPeerResponses) Reset() {
@@ -640,15 +640,15 @@ type DebugPeerResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ListeningAddresses []string                    `protobuf:"bytes,1,rep,name=listening_addresses,json=listeningAddresses,proto3" json:"listening_addresses,omitempty"`
+	ListeningAddresses []string                    `protobuf:"bytesutil,1,rep,name=listening_addresses,json=listeningAddresses,proto3" json:"listening_addresses,omitempty"`
 	Direction          PeerDirection               `protobuf:"varint,2,opt,name=direction,proto3,enum=ethereum.eth.v1alpha1.PeerDirection" json:"direction,omitempty"`
 	ConnectionState    ConnectionState             `protobuf:"varint,3,opt,name=connection_state,json=connectionState,proto3,enum=ethereum.eth.v1alpha1.ConnectionState" json:"connection_state,omitempty"`
-	PeerId             string                      `protobuf:"bytes,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Enr                string                      `protobuf:"bytes,5,opt,name=enr,proto3" json:"enr,omitempty"`
-	PeerInfo           *DebugPeerResponse_PeerInfo `protobuf:"bytes,6,opt,name=peer_info,json=peerInfo,proto3" json:"peer_info,omitempty"`
-	PeerStatus         *Status                     `protobuf:"bytes,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
+	PeerId             string                      `protobuf:"bytesutil,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr                string                      `protobuf:"bytesutil,5,opt,name=enr,proto3" json:"enr,omitempty"`
+	PeerInfo           *DebugPeerResponse_PeerInfo `protobuf:"bytesutil,6,opt,name=peer_info,json=peerInfo,proto3" json:"peer_info,omitempty"`
+	PeerStatus         *Status                     `protobuf:"bytesutil,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
 	LastUpdated        uint64                      `protobuf:"varint,8,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
-	ScoreInfo          *ScoreInfo                  `protobuf:"bytes,9,opt,name=score_info,json=scoreInfo,proto3" json:"score_info,omitempty"`
+	ScoreInfo          *ScoreInfo                  `protobuf:"bytesutil,9,opt,name=score_info,json=scoreInfo,proto3" json:"score_info,omitempty"`
 }
 
 func (x *DebugPeerResponse) Reset() {
@@ -754,10 +754,10 @@ type ScoreInfo struct {
 	OverallScore       float32                        `protobuf:"fixed32,1,opt,name=overall_score,json=overallScore,proto3" json:"overall_score,omitempty"`
 	ProcessedBlocks    uint64                         `protobuf:"varint,2,opt,name=processed_blocks,json=processedBlocks,proto3" json:"processed_blocks,omitempty"`
 	BlockProviderScore float32                        `protobuf:"fixed32,3,opt,name=block_provider_score,json=blockProviderScore,proto3" json:"block_provider_score,omitempty"`
-	TopicScores        map[string]*TopicScoreSnapshot `protobuf:"bytes,4,rep,name=topic_scores,json=topicScores,proto3" json:"topic_scores,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	TopicScores        map[string]*TopicScoreSnapshot `protobuf:"bytesutil,4,rep,name=topic_scores,json=topicScores,proto3" json:"topic_scores,omitempty" protobuf_key:"bytesutil,1,opt,name=key,proto3" protobuf_val:"bytesutil,2,opt,name=value,proto3"`
 	GossipScore        float32                        `protobuf:"fixed32,5,opt,name=gossip_score,json=gossipScore,proto3" json:"gossip_score,omitempty"`
 	BehaviourPenalty   float32                        `protobuf:"fixed32,6,opt,name=behaviour_penalty,json=behaviourPenalty,proto3" json:"behaviour_penalty,omitempty"`
-	ValidationError    string                         `protobuf:"bytes,7,opt,name=validation_error,json=validationError,proto3" json:"validation_error,omitempty"`
+	ValidationError    string                         `protobuf:"bytesutil,7,opt,name=validation_error,json=validationError,proto3" json:"validation_error,omitempty"`
 }
 
 func (x *ScoreInfo) Reset() {
@@ -917,12 +917,12 @@ type DebugPeerResponse_PeerInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MetadataV0      *MetaDataV0 `protobuf:"bytes,1,opt,name=metadataV0,proto3" json:"metadataV0,omitempty"`
-	MetadataV1      *MetaDataV1 `protobuf:"bytes,2,opt,name=metadataV1,proto3" json:"metadataV1,omitempty"`
-	Protocols       []string    `protobuf:"bytes,3,rep,name=protocols,proto3" json:"protocols,omitempty"`
+	MetadataV0      *MetaDataV0 `protobuf:"bytesutil,1,opt,name=metadataV0,proto3" json:"metadataV0,omitempty"`
+	MetadataV1      *MetaDataV1 `protobuf:"bytesutil,2,opt,name=metadataV1,proto3" json:"metadataV1,omitempty"`
+	Protocols       []string    `protobuf:"bytesutil,3,rep,name=protocols,proto3" json:"protocols,omitempty"`
 	FaultCount      uint64      `protobuf:"varint,4,opt,name=fault_count,json=faultCount,proto3" json:"fault_count,omitempty"`
-	ProtocolVersion string      `protobuf:"bytes,5,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
-	AgentVersion    string      `protobuf:"bytes,6,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	ProtocolVersion string      `protobuf:"bytesutil,5,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	AgentVersion    string      `protobuf:"bytesutil,6,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
 	PeerLatency     uint64      `protobuf:"varint,7,opt,name=peer_latency,json=peerLatency,proto3" json:"peer_latency,omitempty"`
 }
 

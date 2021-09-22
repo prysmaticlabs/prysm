@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -164,7 +164,7 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
-	// its raw bytes.
+	// its raw bytesutil.
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, dr.wallet.Password())
 	require.NoError(t, err)

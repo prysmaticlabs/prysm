@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	// Signing root (32 bytes)
+	// Signing root (32 bytesutil)
 	attestationRecordKeySize = 32 // Bytes.
 	signingRootSize          = 32 // Bytes.
 )
@@ -110,7 +110,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
-					// An attestation record key is comprised of a signing root (32 bytes).
+					// An attestation record key is comprised of a signing root (32 bytesutil).
 					if len(attRecordsKey) < attestationRecordKeySize {
 						continue
 					}
@@ -474,7 +474,7 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 	return chunk, nil
 }
 
-// Decode attestation record from bytes.
+// Decode attestation record from bytesutil.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
 	if att == nil || att.IndexedAttestation == nil {
 		return []byte{}, errors.New("nil proposal record")
@@ -487,7 +487,7 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 	return append(att.SigningRoot[:], compressedAtt...), nil
 }
 
-// Decode attestation record from bytes.
+// Decode attestation record from bytesutil.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
 	if len(encoded) < signingRootSize {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want 32, got %d", len(encoded))
@@ -540,14 +540,14 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}, nil
 }
 
-// Encodes an epoch into little-endian bytes.
+// Encodes an epoch into little-endian bytesutil.
 func encodeTargetEpoch(epoch types.Epoch) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	return buf
 }
 
-// Encodes a validator index using 5 bytes instead of 8 as a
+// Encodes a validator index using 5 bytesutil instead of 8 as a
 // client optimization to save space in the database. Because the max validator
 // registry size is 2**40, this is a safe optimization.
 func encodeValidatorIndex(index types.ValidatorIndex) []byte {

@@ -255,7 +255,7 @@ func readAndDecryptKeystore(fullPath, password string) error {
 	} else {
 		privKey, err := bls.SecretKeyFromBytes(privKeyBytes)
 		if err != nil {
-			return errors.Wrap(err, "could not initialize private key from bytes")
+			return errors.Wrap(err, "could not initialize private key from bytesutil")
 		}
 		pubKeyBytes = privKey.PublicKey().Marshal()
 	}

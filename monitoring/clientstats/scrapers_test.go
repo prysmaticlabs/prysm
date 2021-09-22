@@ -225,7 +225,7 @@ var prometheusTestBody = `
 # HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
 # TYPE process_cpu_seconds_total counter
 process_cpu_seconds_total 225.09
-# HELP process_resident_memory_bytes Resident memory size in bytes.
+# HELP process_resident_memory_bytes Resident memory size in bytesutil.
 # TYPE process_resident_memory_bytes gauge
 process_resident_memory_bytes 1.166630912e+09
 # HELP prysm_version
@@ -245,7 +245,7 @@ beacon_head_slot 256552
 # HELP beacon_clock_time_slot The current slot based on the genesis time and current clock
 # TYPE beacon_clock_time_slot gauge
 beacon_clock_time_slot 256552
-# HELP bcnode_disk_beaconchain_bytes_total Total hard disk space used by the beaconchain database, in bytes. May include mmap.
+# HELP bcnode_disk_beaconchain_bytes_total Total hard disk space used by the beaconchain database, in bytesutil. May include mmap.
 # TYPE bcnode_disk_beaconchain_bytes_total gauge
 bcnode_disk_beaconchain_bytes_total 7.365341184e+09
 # HELP p2p_peer_count The number of peers in a given state.

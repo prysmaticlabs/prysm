@@ -33,7 +33,7 @@ type SubmitSyncCommitteeSignaturesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*SyncCommitteeMessage `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*SyncCommitteeMessage `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SubmitSyncCommitteeSignaturesRequest) Reset() {
@@ -80,8 +80,8 @@ type SyncCommittee struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Pubkeys         [][]byte `protobuf:"bytes,1,rep,name=pubkeys,proto3" json:"pubkeys,omitempty" ssz-size:"512,48"`
-	AggregatePubkey []byte   `protobuf:"bytes,2,opt,name=aggregate_pubkey,json=aggregatePubkey,proto3" json:"aggregate_pubkey,omitempty" ssz-size:"48"`
+	Pubkeys         [][]byte `protobuf:"bytesutil,1,rep,name=pubkeys,proto3" json:"pubkeys,omitempty" ssz-size:"512,48"`
+	AggregatePubkey []byte   `protobuf:"bytesutil,2,opt,name=aggregate_pubkey,json=aggregatePubkey,proto3" json:"aggregate_pubkey,omitempty" ssz-size:"48"`
 }
 
 func (x *SyncCommittee) Reset() {
@@ -135,7 +135,7 @@ type SubmitPoolSyncCommitteeSignatures struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*SyncCommitteeMessage `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*SyncCommitteeMessage `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SubmitPoolSyncCommitteeSignatures) Reset() {
@@ -183,9 +183,9 @@ type SyncCommitteeMessage struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot            github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	BeaconBlockRoot []byte                                             `protobuf:"bytes,2,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
+	BeaconBlockRoot []byte                                             `protobuf:"bytesutil,2,opt,name=beacon_block_root,json=beaconBlockRoot,proto3" json:"beacon_block_root,omitempty" ssz-size:"32"`
 	ValidatorIndex  github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	Signature       []byte                                             `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Signature       []byte                                             `protobuf:"bytesutil,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SyncCommitteeMessage) Reset() {
@@ -253,7 +253,7 @@ type StateSyncCommitteesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId []byte                                     `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	StateId []byte                                     `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
 	Epoch   *github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=epoch,proto3,oneof" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
 
@@ -308,7 +308,7 @@ type StateSyncCommitteesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *SyncCommitteeValidators `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *SyncCommitteeValidators `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateSyncCommitteesResponse) Reset() {
@@ -356,7 +356,7 @@ type SyncCommitteeValidators struct {
 	unknownFields protoimpl.UnknownFields
 
 	Validators          []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,1,rep,packed,name=validators,proto3" json:"validators,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	ValidatorAggregates []*SyncSubcommitteeValidators                        `protobuf:"bytes,2,rep,name=validator_aggregates,json=validatorAggregates,proto3" json:"validator_aggregates,omitempty"`
+	ValidatorAggregates []*SyncSubcommitteeValidators                        `protobuf:"bytesutil,2,rep,name=validator_aggregates,json=validatorAggregates,proto3" json:"validator_aggregates,omitempty"`
 }
 
 func (x *SyncCommitteeValidators) Reset() {

@@ -35,9 +35,9 @@ type SyncCommitteeMessage struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot           github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	BlockRoot      []byte                                             `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
+	BlockRoot      []byte                                             `protobuf:"bytesutil,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
 	ValidatorIndex github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	Signature      []byte                                             `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Signature      []byte                                             `protobuf:"bytesutil,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SyncCommitteeMessage) Reset() {
@@ -106,10 +106,10 @@ type SyncCommitteeContribution struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot              github_com_prysmaticlabs_eth2_types.Slot          `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	BlockRoot         []byte                                            `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
+	BlockRoot         []byte                                            `protobuf:"bytesutil,2,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
 	SubcommitteeIndex uint64                                            `protobuf:"varint,3,opt,name=subcommittee_index,json=subcommitteeIndex,proto3" json:"subcommittee_index,omitempty"`
-	AggregationBits   github_com_prysmaticlabs_go_bitfield.Bitvector128 `protobuf:"bytes,4,opt,name=aggregation_bits,json=aggregationBits,proto3" json:"aggregation_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector128" ssz-size:"16"`
-	Signature         []byte                                            `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	AggregationBits   github_com_prysmaticlabs_go_bitfield.Bitvector128 `protobuf:"bytesutil,4,opt,name=aggregation_bits,json=aggregationBits,proto3" json:"aggregation_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector128" ssz-size:"16"`
+	Signature         []byte                                            `protobuf:"bytesutil,5,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SyncCommitteeContribution) Reset() {
@@ -185,8 +185,8 @@ type ContributionAndProof struct {
 	unknownFields protoimpl.UnknownFields
 
 	AggregatorIndex github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,1,opt,name=aggregator_index,json=aggregatorIndex,proto3" json:"aggregator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	Contribution    *SyncCommitteeContribution                         `protobuf:"bytes,2,opt,name=contribution,proto3" json:"contribution,omitempty"`
-	SelectionProof  []byte                                             `protobuf:"bytes,3,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
+	Contribution    *SyncCommitteeContribution                         `protobuf:"bytesutil,2,opt,name=contribution,proto3" json:"contribution,omitempty"`
+	SelectionProof  []byte                                             `protobuf:"bytesutil,3,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
 }
 
 func (x *ContributionAndProof) Reset() {
@@ -247,8 +247,8 @@ type SignedContributionAndProof struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *ContributionAndProof `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte                `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Message   *ContributionAndProof `protobuf:"bytesutil,1,opt,name=message,proto3" json:"message,omitempty"`
+	Signature []byte                `protobuf:"bytesutil,4,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedContributionAndProof) Reset() {

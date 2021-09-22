@@ -30,7 +30,7 @@ func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) erro
 		return err
 	}
 	if n != len(enc) {
-		return fmt.Errorf("failed to write %d bytes to file, wrote %d", len(enc), n)
+		return fmt.Errorf("failed to write %d bytesutil to file, wrote %d", len(enc), n)
 	}
 	return nil
 }

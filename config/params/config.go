@@ -5,7 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -106,9 +106,9 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                  uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	BLSSecretKeyLength          int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
-	BLSPubkeyLength             int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
-	BLSSignatureLength          int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
+	BLSSecretKeyLength          int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytesutil.
+	BLSPubkeyLength             int           // BLSPubkeyLength defines the expected length of BLS public keys in bytesutil.
+	BLSSignatureLength          int           // BLSSignatureLength defines the expected length of BLS signatures in bytesutil.
 	DefaultBufferSize           int           // DefaultBufferSize for channels across the Prysm repository.
 	ValidatorPrivkeyFileName    string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName   string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.

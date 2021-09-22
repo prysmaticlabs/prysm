@@ -19,13 +19,13 @@ Remote sign requests are defined by the following protobuf schema:
  message SignRequest {
      // 48 byte public key corresponding to an associated private key
      // being requested to sign data.
-     bytes public_key = 1;
+     bytesutil public_key = 1;
 
-     // Raw bytes signing root the client is requesting to sign. The client is
-	 // expected to determine these raw bytes from the appropriate BLS
+     // Raw bytesutil signing root the client is requesting to sign. The client is
+	 // expected to determine these raw bytesutil from the appropriate BLS
      // signing domain as well as the signing root of the data structure
-	 // the bytes represent.
-     bytes signing_root = 2;
+	 // the bytesutil represent.
+     bytesutil signing_root = 2;
  }
 
 Remote signing responses will contain a BLS12-381 signature along with the
@@ -41,7 +41,7 @@ request either failed, was denied, or completed successfully.
      }
 
      // BLS12-381 signature for the data specified in the request.
-     bytes signature = 1;
+     bytesutil signature = 1;
  }
 
 The remote keymanager can be customized via a keymanageropts.json file

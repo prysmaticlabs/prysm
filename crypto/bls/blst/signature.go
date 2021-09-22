@@ -32,11 +32,11 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 		return &Signature{}, nil
 	}
 	if len(sig) != params.BeaconConfig().BLSSignatureLength {
-		return nil, fmt.Errorf("signature must be %d bytes", params.BeaconConfig().BLSSignatureLength)
+		return nil, fmt.Errorf("signature must be %d bytesutil", params.BeaconConfig().BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
-		return nil, errors.New("could not unmarshal bytes into signature")
+		return nil, errors.New("could not unmarshal bytesutil into signature")
 	}
 	// Group check signature. Do not check for infinity since an aggregated signature
 	// could be infinite.

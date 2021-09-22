@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -562,7 +562,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block block.BeaconBlock) m
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns
-// a map with a single key-value pair: "block-parent-root-indices” -> parentRoot (array of bytes).
+// a map with a single key-value pair: "block-parent-root-indices” -> parentRoot (array of bytesutil).
 //
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to
@@ -593,7 +593,7 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 	return indicesByBucket, nil
 }
 
-// unmarshal block from marshaled proto beacon block bytes to versioned beacon block struct type.
+// unmarshal block from marshaled proto beacon block bytesutil to versioned beacon block struct type.
 func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
@@ -602,7 +602,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 	}
 	switch {
 	case hasAltairKey(enc):
-		// Marshal block bytes to altair beacon block.
+		// Marshal block bytesutil to altair beacon block.
 		rawBlock := &ethpb.SignedBeaconBlockAltair{}
 		err := rawBlock.UnmarshalSSZ(enc[len(altairKey):])
 		if err != nil {
@@ -610,7 +610,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 		}
 		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
 	default:
-		// Marshal block bytes to phase 0 beacon block.
+		// Marshal block bytesutil to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}
 		err = rawBlock.UnmarshalSSZ(enc)
 		if err != nil {
@@ -620,7 +620,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 	}
 }
 
-// marshal versioned beacon block from struct type down to bytes.
+// marshal versioned beacon block from struct type down to bytesutil.
 func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error) {
 	obj, err := blk.MarshalSSZ()
 	if err != nil {

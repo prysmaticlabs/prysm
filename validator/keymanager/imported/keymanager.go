@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -267,7 +267,7 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	}
 	// We extract the validator signing private key from the keystore
 	// by utilizing the password and initialize a new BLS secret key from
-	// its raw bytes.
+	// its raw bytesutil.
 	password := km.wallet.Password()
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)

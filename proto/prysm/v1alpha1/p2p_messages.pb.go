@@ -35,10 +35,10 @@ type Status struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ForkDigest     []byte                                    `protobuf:"bytes,1,opt,name=fork_digest,json=forkDigest,proto3" json:"fork_digest,omitempty" ssz-size:"4"`
-	FinalizedRoot  []byte                                    `protobuf:"bytes,2,opt,name=finalized_root,json=finalizedRoot,proto3" json:"finalized_root,omitempty" ssz-size:"32"`
+	ForkDigest     []byte                                    `protobuf:"bytesutil,1,opt,name=fork_digest,json=forkDigest,proto3" json:"fork_digest,omitempty" ssz-size:"4"`
+	FinalizedRoot  []byte                                    `protobuf:"bytesutil,2,opt,name=finalized_root,json=finalizedRoot,proto3" json:"finalized_root,omitempty" ssz-size:"32"`
 	FinalizedEpoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	HeadRoot       []byte                                    `protobuf:"bytes,4,opt,name=head_root,json=headRoot,proto3" json:"head_root,omitempty" ssz-size:"32"`
+	HeadRoot       []byte                                    `protobuf:"bytesutil,4,opt,name=head_root,json=headRoot,proto3" json:"head_root,omitempty" ssz-size:"32"`
 	HeadSlot       github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,5,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 }
 
@@ -177,8 +177,8 @@ type ENRForkID struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CurrentForkDigest []byte                                    `protobuf:"bytes,1,opt,name=current_fork_digest,json=currentForkDigest,proto3" json:"current_fork_digest,omitempty" ssz-size:"4"`
-	NextForkVersion   []byte                                    `protobuf:"bytes,2,opt,name=next_fork_version,json=nextForkVersion,proto3" json:"next_fork_version,omitempty" ssz-size:"4"`
+	CurrentForkDigest []byte                                    `protobuf:"bytesutil,1,opt,name=current_fork_digest,json=currentForkDigest,proto3" json:"current_fork_digest,omitempty" ssz-size:"4"`
+	NextForkVersion   []byte                                    `protobuf:"bytesutil,2,opt,name=next_fork_version,json=nextForkVersion,proto3" json:"next_fork_version,omitempty" ssz-size:"4"`
 	NextForkEpoch     github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=next_fork_epoch,json=nextForkEpoch,proto3" json:"next_fork_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
 
@@ -241,7 +241,7 @@ type MetaDataV0 struct {
 	unknownFields protoimpl.UnknownFields
 
 	SeqNumber uint64                                           `protobuf:"varint,1,opt,name=seq_number,json=seqNumber,proto3" json:"seq_number,omitempty"`
-	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytes,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
+	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytesutil,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
 }
 
 func (x *MetaDataV0) Reset() {
@@ -296,8 +296,8 @@ type MetaDataV1 struct {
 	unknownFields protoimpl.UnknownFields
 
 	SeqNumber uint64                                           `protobuf:"varint,1,opt,name=seq_number,json=seqNumber,proto3" json:"seq_number,omitempty"`
-	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytes,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
-	Syncnets  github_com_prysmaticlabs_go_bitfield.Bitvector4  `protobuf:"bytes,3,opt,name=syncnets,proto3" json:"syncnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
+	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytesutil,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
+	Syncnets  github_com_prysmaticlabs_go_bitfield.Bitvector4  `protobuf:"bytesutil,3,opt,name=syncnets,proto3" json:"syncnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
 }
 
 func (x *MetaDataV1) Reset() {

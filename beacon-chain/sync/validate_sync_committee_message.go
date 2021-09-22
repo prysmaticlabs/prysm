@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -232,7 +232,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 			return pubsub.ValidationReject
 		}
 
-		// Ignore a malformed public key from bytes according to the p2p specification.
+		// Ignore a malformed public key from bytesutil according to the p2p specification.
 		pKey, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -251,7 +251,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 			return s.validateWithBatchVerifier(ctx, "sync committee message", set)
 		}
 
-		// We reject a malformed signature from bytes according to the p2p specification.
+		// We reject a malformed signature from bytesutil according to the p2p specification.
 		blsSig, err := bls.SignatureFromBytes(m.Signature)
 		if err != nil {
 			tracing.AnnotateError(span, err)

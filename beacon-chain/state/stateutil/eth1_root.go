@@ -7,13 +7,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// Eth1DataEncKey returns the encoded key in bytes of input `eth1Data`,
-// the returned key bytes can be used for caching purposes.
+// Eth1DataEncKey returns the encoded key in bytesutil of input `eth1Data`,
+// the returned key bytesutil can be used for caching purposes.
 func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 	enc := make([]byte, 0, 96)
 	if eth1Data != nil {
@@ -62,8 +62,8 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 	return root, nil
 }
 
-// Eth1DatasEncKey returns the encoded key in bytes of input `eth1Data`s,
-// the returned key bytes can be used for caching purposes.
+// Eth1DatasEncKey returns the encoded key in bytesutil of input `eth1Data`s,
+// the returned key bytesutil can be used for caching purposes.
 func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	enc := make([]byte, len(eth1Datas)*32)

@@ -52,7 +52,7 @@ func SlotFromString(str string) (types.Slot, error) {
 	return types.Slot(s), nil
 }
 
-// PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.
+// PubKeyFromHex takes in a hex string, verifies its length as 48 bytesutil, and converts that representation.
 func PubKeyFromHex(str string) ([48]byte, error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
@@ -66,7 +66,7 @@ func PubKeyFromHex(str string) ([48]byte, error) {
 	return pk, nil
 }
 
-// RootFromHex takes in a hex string, verifies its length as 32 bytes, and converts that representation.
+// RootFromHex takes in a hex string, verifies its length as 32 bytesutil, and converts that representation.
 func RootFromHex(str string) ([32]byte, error) {
 	rootHexBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {

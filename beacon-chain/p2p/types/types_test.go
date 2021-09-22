@@ -29,7 +29,7 @@ func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 
 func TestErrorResponse_Limit(t *testing.T) {
 	errorMessage := make([]byte, 0)
-	// Provide a message of size 6400 bytes.
+	// Provide a message of size 6400 bytesutil.
 	for i := uint64(0); i < 200; i++ {
 		byteArr := [32]byte{byte(i)}
 		errorMessage = append(errorMessage, byteArr[:]...)

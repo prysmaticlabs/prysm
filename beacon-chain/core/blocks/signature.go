@@ -21,7 +21,7 @@ import (
 func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to public key")
+		return nil, errors.Wrap(err, "could not convert bytesutil to public key")
 	}
 	signingData := &ethpb.SigningData{
 		ObjectRoot: signedData,

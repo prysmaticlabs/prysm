@@ -37,8 +37,8 @@ func participationBitsRoot(bits []byte) ([32]byte, error) {
 	return ssz.MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-// packParticipationBits into chunks. It'll pad the last chunk with zero bytes if
-// it does not have length bytes per chunk.
+// packParticipationBits into chunks. It'll pad the last chunk with zero bytesutil if
+// it does not have length bytesutil per chunk.
 func packParticipationBits(bytes []byte) ([][]byte, error) {
 	numItems := len(bytes)
 	var chunks [][]byte
@@ -58,8 +58,8 @@ func packParticipationBits(bytes []byte) ([][]byte, error) {
 		return chunks, nil
 	}
 
-	// Right-pad the last chunk with zero bytes if it does not
-	// have length bytes.
+	// Right-pad the last chunk with zero bytesutil if it does not
+	// have length bytesutil.
 	lastChunk := chunks[len(chunks)-1]
 	for len(lastChunk) < 32 {
 		lastChunk = append(lastChunk, 0)

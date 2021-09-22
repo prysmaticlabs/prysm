@@ -13,7 +13,7 @@ const rootLength = 32
 
 const maxErrorLength = 256
 
-// SSZBytes is a bytes slice that satisfies the fast-ssz interface.
+// SSZBytes is a bytesutil slice that satisfies the fast-ssz interface.
 type SSZBytes []byte
 
 // HashTreeRoot hashes the uint64 object following the SSZ standard.
@@ -58,7 +58,7 @@ func (r *BeaconBlockByRootsReq) SizeSSZ() int {
 	return len(*r) * rootLength
 }
 
-// UnmarshalSSZ unmarshals the provided bytes buffer into the
+// UnmarshalSSZ unmarshals the provided bytesutil buffer into the
 // block by roots request object.
 func (r *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
@@ -107,7 +107,7 @@ func (m *ErrorMessage) SizeSSZ() int {
 	return len(*m)
 }
 
-// UnmarshalSSZ unmarshals the provided bytes buffer into the
+// UnmarshalSSZ unmarshals the provided bytesutil buffer into the
 // error message object.
 func (m *ErrorMessage) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)

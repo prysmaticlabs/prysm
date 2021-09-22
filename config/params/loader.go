@@ -20,7 +20,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	}
 	// Default to using mainnet.
 	conf := MainnetConfig().Copy()
-	// Convert 0x hex inputs to fixed bytes arrays
+	// Convert 0x hex inputs to fixed bytesutil arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
 		// No need to convert the deposit contract address to byte array (as config expects a string).

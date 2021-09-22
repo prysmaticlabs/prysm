@@ -107,7 +107,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	root2, err2 := hash.HashProto(pbstate)
 
 	if err1 != nil || err2 != nil {
-		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)
+		t.Fatalf("Failed to marshal state to bytesutil: %v %v", err1, err2)
 	}
 	require.DeepEqual(t, root1, root2, "Tree hash of two genesis states should be equal, received %#x == %#x", root1, root2)
 }

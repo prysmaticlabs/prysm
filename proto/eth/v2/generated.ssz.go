@@ -79,7 +79,7 @@ func (s *SignedBeaconBlockAltair) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedBeaconBlockAltair object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SignedBeaconBlockAltair object
 func (s *SignedBeaconBlockAltair) SizeSSZ() (size int) {
 	size = 100
 
@@ -213,7 +213,7 @@ func (b *BeaconBlockAltair) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockAltair object
+// SizeSSZ returns the ssz encoded size in bytesutil for the BeaconBlockAltair object
 func (b *BeaconBlockAltair) SizeSSZ() (size int) {
 	size = 84
 
@@ -570,7 +570,7 @@ func (b *BeaconBlockBodyAltair) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockBodyAltair object
+// SizeSSZ returns the ssz encoded size in bytesutil for the BeaconBlockBodyAltair object
 func (b *BeaconBlockBodyAltair) SizeSSZ() (size int) {
 	size = 380
 

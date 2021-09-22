@@ -11,7 +11,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -256,7 +256,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	bodyRoot, err := block.Block.Body.HashTreeRoot()
-	require.NoError(t, err, "Failed to hash block bytes got")
+	require.NoError(t, err, "Failed to hash block bytesutil got")
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err)

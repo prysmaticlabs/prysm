@@ -10,7 +10,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/protobuf/proto"
 )

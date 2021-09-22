@@ -4,7 +4,7 @@ import (
 	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // UseMinimalConfig for beacon chain services.

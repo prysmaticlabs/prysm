@@ -35,7 +35,7 @@ type GenesisResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *GenesisResponse_Genesis `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *GenesisResponse_Genesis `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *GenesisResponse) Reset() {
@@ -82,7 +82,7 @@ type StateRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId []byte `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	StateId []byte `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
 }
 
 func (x *StateRequest) Reset() {
@@ -129,7 +129,7 @@ type StateRootResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *StateRootResponse_StateRoot `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *StateRootResponse_StateRoot `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateRootResponse) Reset() {
@@ -176,7 +176,7 @@ type StateForkResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *Fork `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *Fork `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateForkResponse) Reset() {
@@ -223,7 +223,7 @@ type StateFinalityCheckpointResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *StateFinalityCheckpointResponse_StateFinalityCheckpoint `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *StateFinalityCheckpointResponse_StateFinalityCheckpoint `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateFinalityCheckpointResponse) Reset() {
@@ -270,8 +270,8 @@ type StateValidatorsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId []byte            `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
-	Id      [][]byte          `protobuf:"bytes,2,rep,name=id,proto3" json:"id,omitempty"`
+	StateId []byte            `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	Id      [][]byte          `protobuf:"bytesutil,2,rep,name=id,proto3" json:"id,omitempty"`
 	Status  []ValidatorStatus `protobuf:"varint,3,rep,packed,name=status,proto3,enum=ethereum.eth.v1.ValidatorStatus" json:"status,omitempty"`
 }
 
@@ -333,8 +333,8 @@ type ValidatorBalancesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId []byte   `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
-	Id      [][]byte `protobuf:"bytes,2,rep,name=id,proto3" json:"id,omitempty"`
+	StateId []byte   `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	Id      [][]byte `protobuf:"bytesutil,2,rep,name=id,proto3" json:"id,omitempty"`
 }
 
 func (x *ValidatorBalancesRequest) Reset() {
@@ -388,7 +388,7 @@ type StateValidatorsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*ValidatorContainer `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*ValidatorContainer `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateValidatorsResponse) Reset() {
@@ -435,7 +435,7 @@ type ValidatorBalancesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*ValidatorBalance `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*ValidatorBalance `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *ValidatorBalancesResponse) Reset() {
@@ -537,8 +537,8 @@ type StateValidatorRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId     []byte `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
-	ValidatorId []byte `protobuf:"bytes,2,opt,name=validator_id,json=validatorId,proto3" json:"validator_id,omitempty"`
+	StateId     []byte `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	ValidatorId []byte `protobuf:"bytesutil,2,opt,name=validator_id,json=validatorId,proto3" json:"validator_id,omitempty"`
 }
 
 func (x *StateValidatorRequest) Reset() {
@@ -592,7 +592,7 @@ type StateValidatorResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *ValidatorContainer `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *ValidatorContainer `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateValidatorResponse) Reset() {
@@ -639,7 +639,7 @@ type StateCommitteesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StateId []byte                                              `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	StateId []byte                                              `protobuf:"bytesutil,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
 	Epoch   *github_com_prysmaticlabs_eth2_types.Epoch          `protobuf:"varint,2,opt,name=epoch,proto3,oneof" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 	Index   *github_com_prysmaticlabs_eth2_types.CommitteeIndex `protobuf:"varint,3,opt,name=index,proto3,oneof" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.CommitteeIndex"`
 	Slot    *github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,4,opt,name=slot,proto3,oneof" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
@@ -710,7 +710,7 @@ type StateCommitteesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Committee `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Committee `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *StateCommitteesResponse) Reset() {
@@ -757,7 +757,7 @@ type BlockAttestationsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Attestation `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Attestation `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockAttestationsResponse) Reset() {
@@ -804,7 +804,7 @@ type BlockRootContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Root []byte `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Root []byte `protobuf:"bytesutil,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
 }
 
 func (x *BlockRootContainer) Reset() {
@@ -851,7 +851,7 @@ type BlockRootResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *BlockRootContainer `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *BlockRootContainer `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockRootResponse) Reset() {
@@ -899,7 +899,7 @@ type BlockHeadersRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot       *github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3,oneof" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	ParentRoot []byte                                    `protobuf:"bytes,2,opt,name=parent_root,json=parentRoot,proto3,oneof" json:"parent_root,omitempty" ssz-size:"32"`
+	ParentRoot []byte                                    `protobuf:"bytesutil,2,opt,name=parent_root,json=parentRoot,proto3,oneof" json:"parent_root,omitempty" ssz-size:"32"`
 }
 
 func (x *BlockHeadersRequest) Reset() {
@@ -953,7 +953,7 @@ type BlockHeadersResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*BlockHeaderContainer `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*BlockHeaderContainer `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockHeadersResponse) Reset() {
@@ -1000,7 +1000,7 @@ type BlockRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockId []byte `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	BlockId []byte `protobuf:"bytesutil,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
 }
 
 func (x *BlockRequest) Reset() {
@@ -1047,7 +1047,7 @@ type BlockHeaderResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *BlockHeaderContainer `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *BlockHeaderContainer `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockHeaderResponse) Reset() {
@@ -1094,9 +1094,9 @@ type BlockHeaderContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Root      []byte                      `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Root      []byte                      `protobuf:"bytesutil,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
 	Canonical bool                        `protobuf:"varint,2,opt,name=canonical,proto3" json:"canonical,omitempty"`
-	Header    *BeaconBlockHeaderContainer `protobuf:"bytes,3,opt,name=header,proto3" json:"header,omitempty"`
+	Header    *BeaconBlockHeaderContainer `protobuf:"bytesutil,3,opt,name=header,proto3" json:"header,omitempty"`
 }
 
 func (x *BlockHeaderContainer) Reset() {
@@ -1157,8 +1157,8 @@ type BeaconBlockHeaderContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *BeaconBlockHeader `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Message   *BeaconBlockHeader `protobuf:"bytesutil,1,opt,name=message,proto3" json:"message,omitempty"`
+	Signature []byte             `protobuf:"bytesutil,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *BeaconBlockHeaderContainer) Reset() {
@@ -1212,7 +1212,7 @@ type BlockResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *BeaconBlockContainer `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *BeaconBlockContainer `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockResponse) Reset() {
@@ -1259,7 +1259,7 @@ type BlockSSZResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data []byte `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockSSZResponse) Reset() {
@@ -1306,8 +1306,8 @@ type BeaconBlockContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *BeaconBlock `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte       `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Message   *BeaconBlock `protobuf:"bytesutil,1,opt,name=message,proto3" json:"message,omitempty"`
+	Signature []byte       `protobuf:"bytesutil,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *BeaconBlockContainer) Reset() {
@@ -1416,7 +1416,7 @@ type SubmitAttestationsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Attestation `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Attestation `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SubmitAttestationsRequest) Reset() {
@@ -1463,7 +1463,7 @@ type AttestationsPoolResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Attestation `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Attestation `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *AttestationsPoolResponse) Reset() {
@@ -1510,7 +1510,7 @@ type AttesterSlashingsPoolResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*AttesterSlashing `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*AttesterSlashing `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *AttesterSlashingsPoolResponse) Reset() {
@@ -1557,7 +1557,7 @@ type ProposerSlashingPoolResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*ProposerSlashing `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*ProposerSlashing `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *ProposerSlashingPoolResponse) Reset() {
@@ -1604,7 +1604,7 @@ type VoluntaryExitsPoolResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*SignedVoluntaryExit `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*SignedVoluntaryExit `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *VoluntaryExitsPoolResponse) Reset() {
@@ -1651,7 +1651,7 @@ type ForkScheduleResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Fork `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Fork `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *ForkScheduleResponse) Reset() {
@@ -1698,7 +1698,7 @@ type SpecResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data map[string]string `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Data map[string]string `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytesutil,1,opt,name=key,proto3" protobuf_val:"bytesutil,2,opt,name=value,proto3"`
 }
 
 func (x *SpecResponse) Reset() {
@@ -1745,7 +1745,7 @@ type DepositContractResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *DepositContract `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *DepositContract `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *DepositContractResponse) Reset() {
@@ -1793,7 +1793,7 @@ type DepositContract struct {
 	unknownFields protoimpl.UnknownFields
 
 	ChainId uint64 `protobuf:"varint,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	Address string `protobuf:"bytesutil,2,opt,name=address,proto3" json:"address,omitempty"`
 }
 
 func (x *DepositContract) Reset() {
@@ -1847,9 +1847,9 @@ type GenesisResponse_Genesis struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	GenesisTime           *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	GenesisValidatorsRoot []byte                 `protobuf:"bytes,2,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
-	GenesisForkVersion    []byte                 `protobuf:"bytes,3,opt,name=genesis_fork_version,json=genesisForkVersion,proto3" json:"genesis_fork_version,omitempty" ssz-size:"4"`
+	GenesisTime           *timestamppb.Timestamp `protobuf:"bytesutil,1,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	GenesisValidatorsRoot []byte                 `protobuf:"bytesutil,2,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
+	GenesisForkVersion    []byte                 `protobuf:"bytesutil,3,opt,name=genesis_fork_version,json=genesisForkVersion,proto3" json:"genesis_fork_version,omitempty" ssz-size:"4"`
 }
 
 func (x *GenesisResponse_Genesis) Reset() {
@@ -1910,7 +1910,7 @@ type StateRootResponse_StateRoot struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Root []byte `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Root []byte `protobuf:"bytesutil,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
 }
 
 func (x *StateRootResponse_StateRoot) Reset() {
@@ -1957,9 +1957,9 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpoint struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PreviousJustified *Checkpoint `protobuf:"bytes,1,opt,name=previous_justified,json=previousJustified,proto3" json:"previous_justified,omitempty"`
-	CurrentJustified  *Checkpoint `protobuf:"bytes,2,opt,name=current_justified,json=currentJustified,proto3" json:"current_justified,omitempty"`
-	Finalized         *Checkpoint `protobuf:"bytes,3,opt,name=finalized,proto3" json:"finalized,omitempty"`
+	PreviousJustified *Checkpoint `protobuf:"bytesutil,1,opt,name=previous_justified,json=previousJustified,proto3" json:"previous_justified,omitempty"`
+	CurrentJustified  *Checkpoint `protobuf:"bytesutil,2,opt,name=current_justified,json=currentJustified,proto3" json:"current_justified,omitempty"`
+	Finalized         *Checkpoint `protobuf:"bytesutil,3,opt,name=finalized,proto3" json:"finalized,omitempty"`
 }
 
 func (x *StateFinalityCheckpointResponse_StateFinalityCheckpoint) Reset() {

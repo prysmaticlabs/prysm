@@ -92,7 +92,7 @@ type ListPublicKeysResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ValidatingPublicKeys [][]byte `protobuf:"bytes,2,rep,name=validating_public_keys,json=validatingPublicKeys,proto3" json:"validating_public_keys,omitempty"`
+	ValidatingPublicKeys [][]byte `protobuf:"bytesutil,2,rep,name=validating_public_keys,json=validatingPublicKeys,proto3" json:"validating_public_keys,omitempty"`
 }
 
 func (x *ListPublicKeysResponse) Reset() {
@@ -139,9 +139,9 @@ type SignRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey       []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	SigningRoot     []byte `protobuf:"bytes,2,opt,name=signing_root,json=signingRoot,proto3" json:"signing_root,omitempty"`
-	SignatureDomain []byte `protobuf:"bytes,3,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
+	PublicKey       []byte `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	SigningRoot     []byte `protobuf:"bytesutil,2,opt,name=signing_root,json=signingRoot,proto3" json:"signing_root,omitempty"`
+	SignatureDomain []byte `protobuf:"bytesutil,3,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
 	// Types that are assignable to Object:
 	//	*SignRequest_Block
 	//	*SignRequest_AttestationData
@@ -267,19 +267,19 @@ type isSignRequest_Object interface {
 }
 
 type SignRequest_Block struct {
-	Block *v1alpha1.BeaconBlock `protobuf:"bytes,101,opt,name=block,proto3,oneof"`
+	Block *v1alpha1.BeaconBlock `protobuf:"bytesutil,101,opt,name=block,proto3,oneof"`
 }
 
 type SignRequest_AttestationData struct {
-	AttestationData *v1alpha1.AttestationData `protobuf:"bytes,102,opt,name=attestation_data,json=attestationData,proto3,oneof"`
+	AttestationData *v1alpha1.AttestationData `protobuf:"bytesutil,102,opt,name=attestation_data,json=attestationData,proto3,oneof"`
 }
 
 type SignRequest_AggregateAttestationAndProof struct {
-	AggregateAttestationAndProof *v1alpha1.AggregateAttestationAndProof `protobuf:"bytes,103,opt,name=aggregate_attestation_and_proof,json=aggregateAttestationAndProof,proto3,oneof"`
+	AggregateAttestationAndProof *v1alpha1.AggregateAttestationAndProof `protobuf:"bytesutil,103,opt,name=aggregate_attestation_and_proof,json=aggregateAttestationAndProof,proto3,oneof"`
 }
 
 type SignRequest_Exit struct {
-	Exit *v1alpha1.VoluntaryExit `protobuf:"bytes,104,opt,name=exit,proto3,oneof"`
+	Exit *v1alpha1.VoluntaryExit `protobuf:"bytesutil,104,opt,name=exit,proto3,oneof"`
 }
 
 type SignRequest_Slot struct {
@@ -291,7 +291,7 @@ type SignRequest_Epoch struct {
 }
 
 type SignRequest_BlockV2 struct {
-	BlockV2 *v1alpha1.BeaconBlockAltair `protobuf:"bytes,107,opt,name=blockV2,proto3,oneof"`
+	BlockV2 *v1alpha1.BeaconBlockAltair `protobuf:"bytesutil,107,opt,name=blockV2,proto3,oneof"`
 }
 
 func (*SignRequest_Block) isSignRequest_Object() {}
@@ -313,7 +313,7 @@ type SignResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Signature []byte              `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	Signature []byte              `protobuf:"bytesutil,1,opt,name=signature,proto3" json:"signature,omitempty"`
 	Status    SignResponse_Status `protobuf:"varint,2,opt,name=status,proto3,enum=ethereum.validator.accounts.v2.SignResponse_Status" json:"status,omitempty"`
 }
 

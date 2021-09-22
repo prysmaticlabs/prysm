@@ -79,7 +79,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not unpack log")
 	require.LogsDoNotContain(t, hook, "Could not save in trie")
 	require.LogsDoNotContain(t, hook, "could not deserialize validator public key")
-	require.LogsDoNotContain(t, hook, "could not convert bytes to signature")
+	require.LogsDoNotContain(t, hook, "could not convert bytesutil to signature")
 	require.LogsDoNotContain(t, hook, "could not sign root for deposit data")
 	require.LogsDoNotContain(t, hook, "deposit signature did not verify")
 	require.LogsDoNotContain(t, hook, "could not tree hash deposit data")

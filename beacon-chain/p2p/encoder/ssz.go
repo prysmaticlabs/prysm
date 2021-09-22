@@ -43,7 +43,7 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int
 		return 0, err
 	}
 	if uint64(len(b)) > MaxGossipSize {
-		return 0, errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
+		return 0, errors.Errorf("gossip message exceeds max gossip size: %d bytesutil > %d bytesutil", len(b), MaxGossipSize)
 	}
 	b = snappy.Encode(nil /*dst*/, b)
 	return w.Write(b)
@@ -78,7 +78,7 @@ func (e SszNetworkEncoder) doDecode(b []byte, to fastssz.Unmarshaler) error {
 	return to.UnmarshalSSZ(b)
 }
 
-// DecodeGossip decodes the bytes to the protobuf gossip message provided.
+// DecodeGossip decodes the bytesutil to the protobuf gossip message provided.
 func (e SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
 	b, err := DecodeSnappy(b, MaxGossipSize)
 	if err != nil {
@@ -94,7 +94,7 @@ func DecodeSnappy(msg []byte, maxSize uint64) ([]byte, error) {
 		return nil, err
 	}
 	if uint64(size) > maxSize {
-		return nil, errors.Errorf("snappy message exceeds max size: %d bytes > %d bytes", size, maxSize)
+		return nil, errors.Errorf("snappy message exceeds max size: %d bytesutil > %d bytesutil", size, maxSize)
 	}
 	msg, err = snappy.Decode(nil /*dst*/, msg)
 	if err != nil {
@@ -103,7 +103,7 @@ func DecodeSnappy(msg []byte, maxSize uint64) ([]byte, error) {
 	return msg, nil
 }
 
-// DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
+// DecodeWithMaxLength the bytesutil from io.Reader to the protobuf message provided.
 // This checks that the decoded message isn't larger than the provided max limit.
 func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshaler) error {
 	msgLen, err := readVarint(r)
@@ -112,7 +112,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshal
 	}
 	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
 		return fmt.Errorf(
-			"remaining bytes %d goes over the provided max limit of %d",
+			"remaining bytesutil %d goes over the provided max limit of %d",
 			msgLen,
 			params.BeaconNetworkConfig().MaxChunkSize,
 		)
@@ -126,7 +126,7 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshal
 	defer bufReaderPool.Put(r)
 
 	buf := make([]byte, msgLen)
-	// Returns an error if less than msgLen bytes
+	// Returns an error if less than msgLen bytesutil
 	// are read. This ensures we read exactly the
 	// required amount.
 	_, err = io.ReadFull(r, buf)
@@ -155,7 +155,7 @@ func (e SszNetworkEncoder) MaxLength(length uint64) (int, error) {
 	return maxLen, nil
 }
 
-// Writes a bytes value through a snappy buffered writer.
+// Writes a bytesutil value through a snappy buffered writer.
 func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
 	bufWriter := newBufferedWriter(w)
 	defer bufWriterPool.Put(bufWriter)

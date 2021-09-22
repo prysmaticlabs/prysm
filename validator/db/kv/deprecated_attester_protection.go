@@ -6,11 +6,11 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const (
-	// The size of each data entry in bytes for the source epoch (8 bytes) and signing root (32 bytes).
+	// The size of each data entry in bytesutil for the source epoch (8 bytesutil) and signing root (32 bytesutil).
 	uint64Size             = 8
 	latestEpochWrittenSize = uint64Size
 	targetSize             = uint64Size

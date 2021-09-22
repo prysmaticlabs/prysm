@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -46,7 +46,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	}
 	_, err := b.Write(pubKey[:])
 	if err != nil {
-		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		log.WithError(err).Error("Could not write pubkey bytesutil for lock key")
 		tracing.AnnotateError(span, err)
 		return
 	}

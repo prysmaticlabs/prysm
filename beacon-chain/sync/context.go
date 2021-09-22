@@ -32,7 +32,7 @@ func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain
 	return err
 }
 
-// reads any attached context-bytes to the payload.
+// reads any attached context-bytesutil to the payload.
 func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {

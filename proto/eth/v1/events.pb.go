@@ -34,7 +34,7 @@ type StreamEventsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Topics []string `protobuf:"bytes,1,rep,name=topics,proto3" json:"topics,omitempty"`
+	Topics []string `protobuf:"bytesutil,1,rep,name=topics,proto3" json:"topics,omitempty"`
 }
 
 func (x *StreamEventsRequest) Reset() {
@@ -82,11 +82,11 @@ type EventHead struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot                      github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	Block                     []byte                                   `protobuf:"bytes,2,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
-	State                     []byte                                   `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty" ssz-size:"32"`
+	Block                     []byte                                   `protobuf:"bytesutil,2,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
+	State                     []byte                                   `protobuf:"bytesutil,3,opt,name=state,proto3" json:"state,omitempty" ssz-size:"32"`
 	EpochTransition           bool                                     `protobuf:"varint,4,opt,name=epoch_transition,json=epochTransition,proto3" json:"epoch_transition,omitempty"`
-	PreviousDutyDependentRoot []byte                                   `protobuf:"bytes,5,opt,name=previous_duty_dependent_root,json=previousDutyDependentRoot,proto3" json:"previous_duty_dependent_root,omitempty" ssz-size:"32"`
-	CurrentDutyDependentRoot  []byte                                   `protobuf:"bytes,6,opt,name=current_duty_dependent_root,json=currentDutyDependentRoot,proto3" json:"current_duty_dependent_root,omitempty" ssz-size:"32"`
+	PreviousDutyDependentRoot []byte                                   `protobuf:"bytesutil,5,opt,name=previous_duty_dependent_root,json=previousDutyDependentRoot,proto3" json:"previous_duty_dependent_root,omitempty" ssz-size:"32"`
+	CurrentDutyDependentRoot  []byte                                   `protobuf:"bytesutil,6,opt,name=current_duty_dependent_root,json=currentDutyDependentRoot,proto3" json:"current_duty_dependent_root,omitempty" ssz-size:"32"`
 }
 
 func (x *EventHead) Reset() {
@@ -169,7 +169,7 @@ type EventBlock struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot  github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	Block []byte                                   `protobuf:"bytes,2,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
+	Block []byte                                   `protobuf:"bytesutil,2,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
 }
 
 func (x *EventBlock) Reset() {
@@ -225,10 +225,10 @@ type EventChainReorg struct {
 
 	Slot         github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Depth        uint64                                    `protobuf:"varint,2,opt,name=depth,proto3" json:"depth,omitempty"`
-	OldHeadBlock []byte                                    `protobuf:"bytes,3,opt,name=old_head_block,json=oldHeadBlock,proto3" json:"old_head_block,omitempty" ssz-size:"32"`
-	NewHeadBlock []byte                                    `protobuf:"bytes,4,opt,name=new_head_block,json=newHeadBlock,proto3" json:"new_head_block,omitempty" ssz-size:"32"`
-	OldHeadState []byte                                    `protobuf:"bytes,5,opt,name=old_head_state,json=oldHeadState,proto3" json:"old_head_state,omitempty" ssz-size:"32"`
-	NewHeadState []byte                                    `protobuf:"bytes,6,opt,name=new_head_state,json=newHeadState,proto3" json:"new_head_state,omitempty" ssz-size:"32"`
+	OldHeadBlock []byte                                    `protobuf:"bytesutil,3,opt,name=old_head_block,json=oldHeadBlock,proto3" json:"old_head_block,omitempty" ssz-size:"32"`
+	NewHeadBlock []byte                                    `protobuf:"bytesutil,4,opt,name=new_head_block,json=newHeadBlock,proto3" json:"new_head_block,omitempty" ssz-size:"32"`
+	OldHeadState []byte                                    `protobuf:"bytesutil,5,opt,name=old_head_state,json=oldHeadState,proto3" json:"old_head_state,omitempty" ssz-size:"32"`
+	NewHeadState []byte                                    `protobuf:"bytesutil,6,opt,name=new_head_state,json=newHeadState,proto3" json:"new_head_state,omitempty" ssz-size:"32"`
 	Epoch        github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,7,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
 
@@ -318,8 +318,8 @@ type EventFinalizedCheckpoint struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Block []byte                                    `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
-	State []byte                                    `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty" ssz-size:"32"`
+	Block []byte                                    `protobuf:"bytesutil,1,opt,name=block,proto3" json:"block,omitempty" ssz-size:"32"`
+	State []byte                                    `protobuf:"bytesutil,2,opt,name=state,proto3" json:"state,omitempty" ssz-size:"32"`
 	Epoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
 

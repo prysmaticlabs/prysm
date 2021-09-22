@@ -191,7 +191,7 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 	return found, fpath, nil
 }
 
-// ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
+// ReadFileAsBytes expands a file name's absolute path and reads it as bytesutil from disk.
 func ReadFileAsBytes(filename string) ([]byte, error) {
 	filePath, err := ExpandPath(filename)
 	if err != nil {

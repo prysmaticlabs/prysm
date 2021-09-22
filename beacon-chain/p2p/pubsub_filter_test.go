@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -158,7 +158,7 @@ func Test_scanfcheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "formatting, incompatible bytes",
+			name: "formatting, incompatible bytesutil",
 			args: args{
 				input:  "/foo/bar/zzzzzz/topic_11",
 				format: "/foo/bar/%x/topic_%d",

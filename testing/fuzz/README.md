@@ -41,7 +41,7 @@ libfuzzer, but might be useful for other applications such as
 func MyExampleFuzz(b []byte) {
     input := &MyFuzzInputData{}
     if err := ssz.Unmarshal(b, input); err != nil {
-       return // Input bytes doesn't serialize to input object.
+       return // Input bytesutil doesn't serialize to input object.
     }
     
     result, err := somePackage.MethodUnderTest(input)

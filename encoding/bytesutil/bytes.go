@@ -1,5 +1,5 @@
-// Package bytes defines helper methods for converting integers to byte slices.
-package bytes
+// Package bytesutil defines helper methods for converting integers to byte slices.
+package bytesutil
 
 import (
 	"encoding/binary"
@@ -13,8 +13,8 @@ import (
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
 
-// ToBytes returns integer x to bytes in little-endian format at the specified length.
-// Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
+// ToBytes returns integer x to bytesutil in little-endian format at the specified length.
+// Spec defines similar method uint_to_bytes(n: uint) -> bytesutil, which is equivalent to ToBytes(n, 8).
 func ToBytes(x uint64, length int) []byte {
 	makeLength := length
 	if length < 8 {
@@ -25,42 +25,42 @@ func ToBytes(x uint64, length int) []byte {
 	return bytes[:length]
 }
 
-// Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'little').
+// Bytes1 returns integer x to bytesutil in little-endian format, x.to_bytes(1, 'little').
 func Bytes1(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:1]
 }
 
-// Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'little').
+// Bytes2 returns integer x to bytesutil in little-endian format, x.to_bytes(2, 'little').
 func Bytes2(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:2]
 }
 
-// Bytes3 returns integer x to bytes in little-endian format, x.to_bytes(3, 'little').
+// Bytes3 returns integer x to bytesutil in little-endian format, x.to_bytes(3, 'little').
 func Bytes3(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:3]
 }
 
-// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'little').
+// Bytes4 returns integer x to bytesutil in little-endian format, x.to_bytes(4, 'little').
 func Bytes4(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:4]
 }
 
-// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
+// Bytes8 returns integer x to bytesutil in little-endian format, x.to_bytes(8, 'little').
 func Bytes8(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes
 }
 
-// Bytes32 returns integer x to bytes in little-endian format, x.to_bytes(32, 'little').
+// Bytes32 returns integer x to bytesutil in little-endian format, x.to_bytes(32, 'little').
 func Bytes32(x uint64) []byte {
 	bytes := make([]byte, 32)
 	binary.LittleEndian.PutUint64(bytes, x)
@@ -82,7 +82,7 @@ func FromBytes8(x []byte) uint64 {
 
 // ToBytes4 is a convenience method for converting a byte slice to a fix
 // sized 4 byte array. This method will truncate the input if it is larger
-// than 4 bytes.
+// than 4 bytesutil.
 func ToBytes4(x []byte) [4]byte {
 	var y [4]byte
 	copy(y[:], x)
@@ -91,7 +91,7 @@ func ToBytes4(x []byte) [4]byte {
 
 // ToBytes32 is a convenience method for converting a byte slice to a fix
 // sized 32 byte array. This method will truncate the input if it is larger
-// than 32 bytes.
+// than 32 bytesutil.
 func ToBytes32(x []byte) [32]byte {
 	var y [32]byte
 	copy(y[:], x)
@@ -100,7 +100,7 @@ func ToBytes32(x []byte) [32]byte {
 
 // ToBytes48 is a convenience method for converting a byte slice to a fix
 // sized 48 byte array. This method will truncate the input if it is larger
-// than 48 bytes.
+// than 48 bytesutil.
 func ToBytes48(x []byte) [48]byte {
 	var y [48]byte
 	copy(y[:], x)
@@ -109,7 +109,7 @@ func ToBytes48(x []byte) [48]byte {
 
 // ToBytes64 is a convenience method for converting a byte slice to a fix
 // sized 64 byte array. This method will truncate the input if it is larger
-// than 64 bytes.
+// than 64 bytesutil.
 func ToBytes64(x []byte) [64]byte {
 	var y [64]byte
 	copy(y[:], x)
@@ -118,7 +118,7 @@ func ToBytes64(x []byte) [64]byte {
 
 // ToBytes96 is a convenience method for converting a byte slice to a fix
 // sized 96 byte array. This method will truncate the input if it is larger
-// than 96 bytes.
+// than 96 bytesutil.
 func ToBytes96(x []byte) [96]byte {
 	var y [96]byte
 	copy(y[:], x)
@@ -162,7 +162,7 @@ func FromBytes48Array(x [][48]byte) [][]byte {
 	return y
 }
 
-// Trunc truncates the byte slices to 6 bytes.
+// Trunc truncates the byte slices to 6 bytesutil.
 func Trunc(x []byte) []byte {
 	if len(x) > 6 {
 		return x[:6]
@@ -170,7 +170,7 @@ func Trunc(x []byte) []byte {
 	return x
 }
 
-// ToLowInt64 returns the lowest 8 bytes interpreted as little endian.
+// ToLowInt64 returns the lowest 8 bytesutil interpreted as little endian.
 func ToLowInt64(x []byte) int64 {
 	if len(x) > 8 {
 		x = x[:8]
@@ -325,7 +325,7 @@ func Uint64ToBytesBigEndian(i uint64) []byte {
 	return buf
 }
 
-// BytesToUint64BigEndian conversion. Returns 0 if empty bytes or byte slice with length less
+// BytesToUint64BigEndian conversion. Returns 0 if empty bytesutil or byte slice with length less
 // than 8.
 func BytesToUint64BigEndian(b []byte) uint64 {
 	if len(b) < 8 { // This will panic otherwise.

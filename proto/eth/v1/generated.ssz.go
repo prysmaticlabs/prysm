@@ -94,7 +94,7 @@ func (a *Attestation) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Attestation object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Attestation object
 func (a *Attestation) SizeSSZ() (size int) {
 	size = 228
 
@@ -213,7 +213,7 @@ func (a *AggregateAttestationAndProof) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the AggregateAttestationAndProof object
+// SizeSSZ returns the ssz encoded size in bytesutil for the AggregateAttestationAndProof object
 func (a *AggregateAttestationAndProof) SizeSSZ() (size int) {
 	size = 108
 
@@ -325,7 +325,7 @@ func (s *SignedAggregateAttestationAndProof) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedAggregateAttestationAndProof object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SignedAggregateAttestationAndProof object
 func (s *SignedAggregateAttestationAndProof) SizeSSZ() (size int) {
 	size = 100
 
@@ -443,7 +443,7 @@ func (a *AttestationData) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the AttestationData object
+// SizeSSZ returns the ssz encoded size in bytesutil for the AttestationData object
 func (a *AttestationData) SizeSSZ() (size int) {
 	size = 128
 	return
@@ -527,7 +527,7 @@ func (c *Checkpoint) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Checkpoint object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Checkpoint object
 func (c *Checkpoint) SizeSSZ() (size int) {
 	size = 40
 	return
@@ -652,7 +652,7 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlock object
+// SizeSSZ returns the ssz encoded size in bytesutil for the BeaconBlock object
 func (b *BeaconBlock) SizeSSZ() (size int) {
 	size = 84
 
@@ -774,7 +774,7 @@ func (s *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedBeaconBlock object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SignedBeaconBlock object
 func (s *SignedBeaconBlock) SizeSSZ() (size int) {
 	size = 100
 
@@ -1102,7 +1102,7 @@ func (b *BeaconBlockBody) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockBody object
+// SizeSSZ returns the ssz encoded size in bytesutil for the BeaconBlockBody object
 func (b *BeaconBlockBody) SizeSSZ() (size int) {
 	size = 220
 
@@ -1297,7 +1297,7 @@ func (p *ProposerSlashing) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the ProposerSlashing object
+// SizeSSZ returns the ssz encoded size in bytesutil for the ProposerSlashing object
 func (p *ProposerSlashing) SizeSSZ() (size int) {
 	size = 416
 	return
@@ -1412,7 +1412,7 @@ func (a *AttesterSlashing) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the AttesterSlashing object
+// SizeSSZ returns the ssz encoded size in bytesutil for the AttesterSlashing object
 func (a *AttesterSlashing) SizeSSZ() (size int) {
 	size = 8
 
@@ -1515,7 +1515,7 @@ func (d *Deposit) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Deposit object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Deposit object
 func (d *Deposit) SizeSSZ() (size int) {
 	size = 1240
 	return
@@ -1591,7 +1591,7 @@ func (v *VoluntaryExit) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the VoluntaryExit object
+// SizeSSZ returns the ssz encoded size in bytesutil for the VoluntaryExit object
 func (v *VoluntaryExit) SizeSSZ() (size int) {
 	size = 16
 	return
@@ -1668,7 +1668,7 @@ func (s *SignedVoluntaryExit) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedVoluntaryExit object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SignedVoluntaryExit object
 func (s *SignedVoluntaryExit) SizeSSZ() (size int) {
 	size = 112
 	return
@@ -1754,7 +1754,7 @@ func (e *Eth1Data) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Eth1Data object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Eth1Data object
 func (e *Eth1Data) SizeSSZ() (size int) {
 	size = 72
 	return
@@ -1864,7 +1864,7 @@ func (b *BeaconBlockHeader) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockHeader object
+// SizeSSZ returns the ssz encoded size in bytesutil for the BeaconBlockHeader object
 func (b *BeaconBlockHeader) SizeSSZ() (size int) {
 	size = 112
 	return
@@ -1962,7 +1962,7 @@ func (s *SignedBeaconBlockHeader) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedBeaconBlockHeader object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SignedBeaconBlockHeader object
 func (s *SignedBeaconBlockHeader) SizeSSZ() (size int) {
 	size = 208
 	return
@@ -2083,7 +2083,7 @@ func (i *IndexedAttestation) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the IndexedAttestation object
+// SizeSSZ returns the ssz encoded size in bytesutil for the IndexedAttestation object
 func (i *IndexedAttestation) SizeSSZ() (size int) {
 	size = 228
 
@@ -2182,7 +2182,7 @@ func (s *SyncAggregate) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SyncAggregate object
+// SizeSSZ returns the ssz encoded size in bytesutil for the SyncAggregate object
 func (s *SyncAggregate) SizeSSZ() (size int) {
 	size = 160
 	return
@@ -2283,7 +2283,7 @@ func (d *Deposit_Data) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Deposit_Data object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Deposit_Data object
 func (d *Deposit_Data) SizeSSZ() (size int) {
 	size = 184
 	return
@@ -2411,7 +2411,7 @@ func (v *Validator) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the Validator object
+// SizeSSZ returns the ssz encoded size in bytesutil for the Validator object
 func (v *Validator) SizeSSZ() (size int) {
 	size = 121
 	return

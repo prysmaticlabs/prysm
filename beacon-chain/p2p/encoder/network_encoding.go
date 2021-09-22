@@ -10,7 +10,7 @@ import (
 type NetworkEncoding interface {
 	// DecodeGossip to the provided gossip message. The interface must be a pointer to the decoding destination.
 	DecodeGossip([]byte, ssz.Unmarshaler) error
-	// DecodeWithMaxLength a bytes from a reader with a varint length prefix. The interface must be a pointer to the
+	// DecodeWithMaxLength a bytesutil from a reader with a varint length prefix. The interface must be a pointer to the
 	// decoding destination. The length of the message should not be more than the provided limit.
 	DecodeWithMaxLength(io.Reader, ssz.Unmarshaler) error
 	// EncodeGossip an arbitrary gossip message to the provided writer. The interface must be a pointer object to encode.

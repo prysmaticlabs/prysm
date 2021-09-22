@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -80,11 +80,11 @@ func ComputeDomainVerifySigningRoot(st state.BeaconState, index types.ValidatorI
 func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
+		return errors.Wrap(err, "could not convert bytesutil to public key")
 	}
 	sig, err := bls.SignatureFromBytes(signature)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
+		return errors.Wrap(err, "could not convert bytesutil to signature")
 	}
 	root, err := ComputeSigningRoot(obj, domain)
 	if err != nil {
@@ -122,7 +122,7 @@ func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]
 func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not convert bytes to public key")
+		return nil, errors.Wrap(err, "could not convert bytesutil to public key")
 	}
 	// utilize custom block hashing function
 	root, err := signingData(rootFunc, domain)
@@ -140,11 +140,11 @@ func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte,
 func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signature, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
+		return errors.Wrap(err, "could not convert bytesutil to public key")
 	}
 	sig, err := bls.SignatureFromBytes(signature)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
+		return errors.Wrap(err, "could not convert bytesutil to signature")
 	}
 	root, err := signingData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
@@ -166,7 +166,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 //    if fork_version is None:
 //        fork_version = GENESIS_FORK_VERSION
 //    if genesis_validators_root is None:
-//        genesis_validators_root = Root()  # all bytes zero by default
+//        genesis_validators_root = Root()  # all bytesutil zero by default
 //    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
 //    return Domain(domain_type + fork_data_root[:28])
 func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValidatorsRoot []byte) ([]byte, error) {
@@ -226,7 +226,7 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 //    """
 //    Return the 4-byte fork digest for the ``current_version`` and ``genesis_validators_root``.
 //    This is a digest primarily used for domain separation on the p2p layer.
-//    4-bytes suffices for practical separation of forks/chains.
+//    4-bytesutil suffices for practical separation of forks/chains.
 //    """
 //    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
 func ComputeForkDigest(version, genesisValidatorsRoot []byte) ([4]byte, error) {

@@ -17,7 +17,7 @@ func newBeaconNodePromCollector(dbPath string) (*bcnodeCollector, error) {
 	c := &bcnodeCollector{
 		DiskBeaconchainBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "disk_beaconchain_bytes_total"),
-			"Total hard disk space used by the beaconchain database, in bytes.",
+			"Total hard disk space used by the beaconchain database, in bytesutil.",
 			nil,
 			nil,
 		),

@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const seedSize = int8(32)
@@ -92,7 +92,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 	posBuffer := make([]byte, 8)
 	hashfunc := hash.CustomSHA256Hasher()
 
-	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
+	// Seed is always the first 32 bytesutil of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
@@ -112,7 +112,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 		copy(buf[pivotViewSize:], posBuffer[:4])
 		source := hashfunc(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
-		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
+		// and use it to retrieve one of the 32 (= 2^5) bytesutil of the hash.
 		byteV := source[(position&0xff)>>3]
 		// Using the last 3 bits of the position-byte, determine which bit to get from the hash-byte (note: 8 bits = 2^3)
 		bitV := (byteV >> (position & 0x7)) & 0x1
@@ -140,7 +140,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
 //  improvements:
-//   - seed is always the first 32 bytes of the hash input, we just copy it into the buffer one time.
+//   - seed is always the first 32 bytesutil of the hash input, we just copy it into the buffer one time.
 //   - add round byte to seed and hash that part of the buffer.
 //   - split up the for-loop in two:
 //    1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2).
@@ -214,7 +214,7 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 	return input, nil
 }
 
-// swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value
+// swapOrNot describes the main algorithm behind the shuffle where we swap bytesutil in the inputted value
 // depending on if the conditions are met.
 func swapOrNot(buf []byte, byteV byte, i types.ValidatorIndex, input []types.ValidatorIndex,
 	j types.ValidatorIndex, source [32]byte, hashFunc func([]byte) [32]byte) (byte, [32]byte) {

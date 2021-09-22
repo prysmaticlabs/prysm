@@ -133,7 +133,7 @@ type IdentityResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *Identity `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *Identity `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *IdentityResponse) Reset() {
@@ -180,11 +180,11 @@ type Identity struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PeerId             string    `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Enr                string    `protobuf:"bytes,2,opt,name=enr,proto3" json:"enr,omitempty"`
-	P2PAddresses       []string  `protobuf:"bytes,3,rep,name=p2p_addresses,json=p2pAddresses,proto3" json:"p2p_addresses,omitempty"`
-	DiscoveryAddresses []string  `protobuf:"bytes,4,rep,name=discovery_addresses,json=discoveryAddresses,proto3" json:"discovery_addresses,omitempty"`
-	Metadata           *Metadata `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	PeerId             string    `protobuf:"bytesutil,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr                string    `protobuf:"bytesutil,2,opt,name=enr,proto3" json:"enr,omitempty"`
+	P2PAddresses       []string  `protobuf:"bytesutil,3,rep,name=p2p_addresses,json=p2pAddresses,proto3" json:"p2p_addresses,omitempty"`
+	DiscoveryAddresses []string  `protobuf:"bytesutil,4,rep,name=discovery_addresses,json=discoveryAddresses,proto3" json:"discovery_addresses,omitempty"`
+	Metadata           *Metadata `protobuf:"bytesutil,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
 }
 
 func (x *Identity) Reset() {
@@ -260,7 +260,7 @@ type Metadata struct {
 	unknownFields protoimpl.UnknownFields
 
 	SeqNumber uint64                                           `protobuf:"varint,1,opt,name=seq_number,json=seqNumber,proto3" json:"seq_number,omitempty"`
-	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytes,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
+	Attnets   github_com_prysmaticlabs_go_bitfield.Bitvector64 `protobuf:"bytesutil,2,opt,name=attnets,proto3" json:"attnets,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector64" ssz-size:"8"`
 }
 
 func (x *Metadata) Reset() {
@@ -314,7 +314,7 @@ type PeerRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PeerId string `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	PeerId string `protobuf:"bytesutil,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
 }
 
 func (x *PeerRequest) Reset() {
@@ -416,8 +416,8 @@ type PeerResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *Peer              `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	Meta *PeerResponse_Meta `protobuf:"bytes,2,opt,name=meta,proto3" json:"meta,omitempty"`
+	Data *Peer              `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
+	Meta *PeerResponse_Meta `protobuf:"bytesutil,2,opt,name=meta,proto3" json:"meta,omitempty"`
 }
 
 func (x *PeerResponse) Reset() {
@@ -471,7 +471,7 @@ type PeersResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data []*Peer `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*Peer `protobuf:"bytesutil,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *PeersResponse) Reset() {
@@ -518,7 +518,7 @@ type PeerCountResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *PeerCountResponse_PeerCount `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *PeerCountResponse_PeerCount `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *PeerCountResponse) Reset() {
@@ -565,9 +565,9 @@ type Peer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PeerId             string          `protobuf:"bytes,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Enr                string          `protobuf:"bytes,2,opt,name=enr,proto3" json:"enr,omitempty"`
-	LastSeenP2PAddress string          `protobuf:"bytes,3,opt,name=last_seen_p2p_address,json=lastSeenP2pAddress,proto3" json:"last_seen_p2p_address,omitempty"`
+	PeerId             string          `protobuf:"bytesutil,1,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr                string          `protobuf:"bytesutil,2,opt,name=enr,proto3" json:"enr,omitempty"`
+	LastSeenP2PAddress string          `protobuf:"bytesutil,3,opt,name=last_seen_p2p_address,json=lastSeenP2pAddress,proto3" json:"last_seen_p2p_address,omitempty"`
 	State              ConnectionState `protobuf:"varint,4,opt,name=state,proto3,enum=ethereum.eth.v1.ConnectionState" json:"state,omitempty"`
 	Direction          PeerDirection   `protobuf:"varint,5,opt,name=direction,proto3,enum=ethereum.eth.v1.PeerDirection" json:"direction,omitempty"`
 }
@@ -644,7 +644,7 @@ type VersionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *Version `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *Version `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *VersionResponse) Reset() {
@@ -691,7 +691,7 @@ type Version struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version string `protobuf:"bytesutil,1,opt,name=version,proto3" json:"version,omitempty"`
 }
 
 func (x *Version) Reset() {
@@ -738,7 +738,7 @@ type SyncingResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data *SyncInfo `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Data *SyncInfo `protobuf:"bytesutil,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SyncingResponse) Reset() {

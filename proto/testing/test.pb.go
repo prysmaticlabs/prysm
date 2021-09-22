@@ -82,8 +82,8 @@ type TestMessage struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Foo string `protobuf:"bytes,1,opt,name=foo,proto3" json:"foo,omitempty"`
-	Bar string `protobuf:"bytes,2,opt,name=bar,proto3" json:"bar,omitempty" spec-name:"foo" ssz-size:"32"`
+	Foo string `protobuf:"bytesutil,1,opt,name=foo,proto3" json:"foo,omitempty"`
+	Bar string `protobuf:"bytesutil,2,opt,name=bar,proto3" json:"bar,omitempty" spec-name:"foo" ssz-size:"32"`
 }
 
 func (x *TestMessage) Reset() {
@@ -137,8 +137,8 @@ type TestNestedMessage struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Fuzz string       `protobuf:"bytes,1,opt,name=fuzz,proto3" json:"fuzz,omitempty"`
-	Msg  *TestMessage `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Fuzz string       `protobuf:"bytesutil,1,opt,name=fuzz,proto3" json:"fuzz,omitempty"`
+	Msg  *TestMessage `protobuf:"bytesutil,2,opt,name=msg,proto3" json:"msg,omitempty"`
 }
 
 func (x *TestNestedMessage) Reset() {
@@ -192,8 +192,8 @@ type Puzzle struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Challenge string `protobuf:"bytes,1,opt,name=challenge,proto3" json:"challenge,omitempty"`
-	Answer    string `protobuf:"bytes,2,opt,name=answer,proto3" json:"answer,omitempty"`
+	Challenge string `protobuf:"bytesutil,1,opt,name=challenge,proto3" json:"challenge,omitempty"`
+	Answer    string `protobuf:"bytesutil,2,opt,name=answer,proto3" json:"answer,omitempty"`
 }
 
 func (x *Puzzle) Reset() {
@@ -247,11 +247,11 @@ type Person struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name        string                `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name        string                `protobuf:"bytesutil,1,opt,name=name,proto3" json:"name,omitempty"`
 	Id          int32                 `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`
-	Email       string                `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	Phones      []*Person_PhoneNumber `protobuf:"bytes,4,rep,name=phones,proto3" json:"phones,omitempty"`
-	LastUpdated *timestamp.Timestamp  `protobuf:"bytes,5,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	Email       string                `protobuf:"bytesutil,3,opt,name=email,proto3" json:"email,omitempty"`
+	Phones      []*Person_PhoneNumber `protobuf:"bytesutil,4,rep,name=phones,proto3" json:"phones,omitempty"`
+	LastUpdated *timestamp.Timestamp  `protobuf:"bytesutil,5,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
 }
 
 func (x *Person) Reset() {
@@ -326,7 +326,7 @@ type AddressBook struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	People []*Person `protobuf:"bytes,1,rep,name=people,proto3" json:"people,omitempty"`
+	People []*Person `protobuf:"bytesutil,1,rep,name=people,proto3" json:"people,omitempty"`
 }
 
 func (x *AddressBook) Reset() {
@@ -373,7 +373,7 @@ type TestSimpleMessage struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Foo []byte `protobuf:"bytes,1,opt,name=foo,proto3" json:"foo,omitempty"`
+	Foo []byte `protobuf:"bytesutil,1,opt,name=foo,proto3" json:"foo,omitempty"`
 	Bar uint64 `protobuf:"varint,2,opt,name=bar,proto3" json:"bar,omitempty"`
 }
 
@@ -428,7 +428,7 @@ type Person_PhoneNumber struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Number string           `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
+	Number string           `protobuf:"bytesutil,1,opt,name=number,proto3" json:"number,omitempty"`
 	Type   Person_PhoneType `protobuf:"varint,2,opt,name=type,proto3,enum=testing.Person_PhoneType" json:"type,omitempty"`
 }
 
@@ -484,7 +484,7 @@ var file_proto_testing_test_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         60001,
 		Name:          "testing.ssz_size",
-		Tag:           "bytes,60001,opt,name=ssz_size",
+		Tag:           "bytesutil,60001,opt,name=ssz_size",
 		Filename:      "proto/testing/test.proto",
 	},
 	{
@@ -492,7 +492,7 @@ var file_proto_testing_test_proto_extTypes = []protoimpl.ExtensionInfo{
 		ExtensionType: (*string)(nil),
 		Field:         60003,
 		Name:          "testing.spec_name",
-		Tag:           "bytes,60003,opt,name=spec_name",
+		Tag:           "bytesutil,60003,opt,name=spec_name",
 		Filename:      "proto/testing/test.proto",
 	},
 }

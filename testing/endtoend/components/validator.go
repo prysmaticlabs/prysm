@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -219,7 +219,7 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 	return nil
 }
 
-// sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
+// sendDeposits uses the passed in web3 and keystore bytesutil to send the requested deposits.
 func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
 	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), "" /*password*/, big.NewInt(1337))
 	if err != nil {

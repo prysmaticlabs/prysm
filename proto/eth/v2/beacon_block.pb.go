@@ -34,7 +34,7 @@ type BlockRequestV2 struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockId []byte `protobuf:"bytes,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
+	BlockId []byte `protobuf:"bytesutil,1,opt,name=block_id,json=blockId,proto3" json:"block_id,omitempty"`
 }
 
 func (x *BlockRequestV2) Reset() {
@@ -82,7 +82,7 @@ type BlockResponseV2 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Version Version                       `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    *SignedBeaconBlockContainerV2 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Data    *SignedBeaconBlockContainerV2 `protobuf:"bytesutil,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockResponseV2) Reset() {
@@ -137,7 +137,7 @@ type BlockSSZResponseV2 struct {
 	unknownFields protoimpl.UnknownFields
 
 	Version Version `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    []byte  `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Data    []byte  `protobuf:"bytesutil,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *BlockSSZResponseV2) Reset() {
@@ -255,11 +255,11 @@ type isBeaconBlockContainerV2_Block interface {
 }
 
 type BeaconBlockContainerV2_Phase0Block struct {
-	Phase0Block *v1.BeaconBlock `protobuf:"bytes,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
+	Phase0Block *v1.BeaconBlock `protobuf:"bytesutil,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
 }
 
 type BeaconBlockContainerV2_AltairBlock struct {
-	AltairBlock *BeaconBlockAltair `protobuf:"bytes,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
+	AltairBlock *BeaconBlockAltair `protobuf:"bytesutil,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
 }
 
 func (*BeaconBlockContainerV2_Phase0Block) isBeaconBlockContainerV2_Block() {}
@@ -275,7 +275,7 @@ type SignedBeaconBlockContainerV2 struct {
 	//	*SignedBeaconBlockContainerV2_Phase0Block
 	//	*SignedBeaconBlockContainerV2_AltairBlock
 	Block     isSignedBeaconBlockContainerV2_Block `protobuf_oneof:"block"`
-	Signature []byte                               `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Signature []byte                               `protobuf:"bytesutil,3,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedBeaconBlockContainerV2) Reset() {
@@ -343,11 +343,11 @@ type isSignedBeaconBlockContainerV2_Block interface {
 }
 
 type SignedBeaconBlockContainerV2_Phase0Block struct {
-	Phase0Block *v1.BeaconBlock `protobuf:"bytes,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
+	Phase0Block *v1.BeaconBlock `protobuf:"bytesutil,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
 }
 
 type SignedBeaconBlockContainerV2_AltairBlock struct {
-	AltairBlock *BeaconBlockAltair `protobuf:"bytes,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
+	AltairBlock *BeaconBlockAltair `protobuf:"bytesutil,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
 }
 
 func (*SignedBeaconBlockContainerV2_Phase0Block) isSignedBeaconBlockContainerV2_Block() {}
@@ -359,8 +359,8 @@ type SignedBeaconBlockAltair struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *BeaconBlockAltair `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Message   *BeaconBlockAltair `protobuf:"bytesutil,1,opt,name=message,proto3" json:"message,omitempty"`
+	Signature []byte             `protobuf:"bytesutil,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedBeaconBlockAltair) Reset() {
@@ -416,9 +416,9 @@ type BeaconBlockAltair struct {
 
 	Slot          github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	ProposerIndex github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	ParentRoot    []byte                                             `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
-	StateRoot     []byte                                             `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BeaconBlockBodyAltair                             `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	ParentRoot    []byte                                             `protobuf:"bytesutil,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
+	StateRoot     []byte                                             `protobuf:"bytesutil,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
+	Body          *BeaconBlockBodyAltair                             `protobuf:"bytesutil,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
 func (x *BeaconBlockAltair) Reset() {
@@ -493,15 +493,15 @@ type BeaconBlockBodyAltair struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RandaoReveal      []byte                    `protobuf:"bytes,1,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"96"`
-	Eth1Data          *v1.Eth1Data              `protobuf:"bytes,2,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	Graffiti          []byte                    `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
-	ProposerSlashings []*v1.ProposerSlashing    `protobuf:"bytes,4,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty" ssz-max:"16"`
-	AttesterSlashings []*v1.AttesterSlashing    `protobuf:"bytes,5,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty" ssz-max:"2"`
-	Attestations      []*v1.Attestation         `protobuf:"bytes,6,rep,name=attestations,proto3" json:"attestations,omitempty" ssz-max:"128"`
-	Deposits          []*v1.Deposit             `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
-	VoluntaryExits    []*v1.SignedVoluntaryExit `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
-	SyncAggregate     *v1.SyncAggregate         `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
+	RandaoReveal      []byte                    `protobuf:"bytesutil,1,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"96"`
+	Eth1Data          *v1.Eth1Data              `protobuf:"bytesutil,2,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
+	Graffiti          []byte                    `protobuf:"bytesutil,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
+	ProposerSlashings []*v1.ProposerSlashing    `protobuf:"bytesutil,4,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty" ssz-max:"16"`
+	AttesterSlashings []*v1.AttesterSlashing    `protobuf:"bytesutil,5,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty" ssz-max:"2"`
+	Attestations      []*v1.Attestation         `protobuf:"bytesutil,6,rep,name=attestations,proto3" json:"attestations,omitempty" ssz-max:"128"`
+	Deposits          []*v1.Deposit             `protobuf:"bytesutil,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
+	VoluntaryExits    []*v1.SignedVoluntaryExit `protobuf:"bytesutil,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
+	SyncAggregate     *v1.SyncAggregate         `protobuf:"bytesutil,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
 }
 
 func (x *BeaconBlockBodyAltair) Reset() {

@@ -30,7 +30,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -1443,7 +1443,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		}
 		_, err := vs.SubmitAggregateAndProofs(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
+		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytesutil", err)
 		assert.Equal(t, false, broadcaster.BroadcastCalled)
 
 		req = &ethpbv1.SubmitAggregateAndProofsRequest{
@@ -1476,7 +1476,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		}
 		_, err = vs.SubmitAggregateAndProofs(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
+		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytesutil", err)
 		assert.Equal(t, false, broadcaster.BroadcastCalled)
 	})
 

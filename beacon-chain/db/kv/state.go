@@ -15,7 +15,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytes"
+	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -376,7 +376,7 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	return nil
 }
 
-// unmarshal state from marshaled proto state bytes to versioned state struct type.
+// unmarshal state from marshaled proto state bytesutil to versioned state struct type.
 func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
@@ -386,7 +386,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 
 	switch {
 	case hasAltairKey(enc):
-		// Marshal state bytes to altair beacon state.
+		// Marshal state bytesutil to altair beacon state.
 		protoState := &ethpb.BeaconStateAltair{}
 		if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
@@ -400,7 +400,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		return v2.InitializeFromProtoUnsafe(protoState)
 	default:
-		// Marshal state bytes to phase 0 beacon state.
+		// Marshal state bytesutil to phase 0 beacon state.
 		protoState := &ethpb.BeaconState{}
 		if err := protoState.UnmarshalSSZ(enc); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -416,7 +416,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 }
 
-// marshal versioned state from struct type down to bytes.
+// marshal versioned state from struct type down to bytesutil.
 func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, error) {
 	switch st.InnerStateUnsafe().(type) {
 	case *ethpb.BeaconState:
@@ -477,7 +477,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
-			// get the entry bytes from the cache or from the DB.
+			// get the entry bytesutil from the cache or from the DB.
 			v, ok := s.validatorEntryCache.Get(key)
 			if ok {
 				valEntry, vType := v.(*ethpb.Validator)

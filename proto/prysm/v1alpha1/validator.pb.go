@@ -106,7 +106,7 @@ type SyncMessageBlockRootResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Root []byte `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Root []byte `protobuf:"bytesutil,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
 }
 
 func (x *SyncMessageBlockRootResponse) Reset() {
@@ -153,7 +153,7 @@ type SyncSubcommitteeIndexRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey []byte                                   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey []byte                                   `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 	Slot      github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 }
 
@@ -209,7 +209,7 @@ type SyncCommitteeContributionRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot      github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	PublicKey []byte                                   `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
+	PublicKey []byte                                   `protobuf:"bytesutil,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
 	SubnetId  uint64                                   `protobuf:"varint,3,opt,name=subnet_id,json=subnetId,proto3" json:"subnet_id,omitempty"`
 }
 
@@ -382,11 +382,11 @@ type isStreamBlocksResponse_Block interface {
 }
 
 type StreamBlocksResponse_Phase0Block struct {
-	Phase0Block *SignedBeaconBlock `protobuf:"bytes,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
+	Phase0Block *SignedBeaconBlock `protobuf:"bytesutil,1,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
 }
 
 type StreamBlocksResponse_AltairBlock struct {
-	AltairBlock *SignedBeaconBlockAltair `protobuf:"bytes,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
+	AltairBlock *SignedBeaconBlockAltair `protobuf:"bytesutil,2,opt,name=altair_block,json=altairBlock,proto3,oneof"`
 }
 
 func (*StreamBlocksResponse_Phase0Block) isStreamBlocksResponse_Block() {}
@@ -399,7 +399,7 @@ type DomainRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch  github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	Domain []byte                                    `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	Domain []byte                                    `protobuf:"bytesutil,2,opt,name=domain,proto3" json:"domain,omitempty"`
 }
 
 func (x *DomainRequest) Reset() {
@@ -453,7 +453,7 @@ type DomainResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SignatureDomain []byte `protobuf:"bytes,1,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
+	SignatureDomain []byte `protobuf:"bytesutil,1,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
 }
 
 func (x *DomainResponse) Reset() {
@@ -500,7 +500,7 @@ type ValidatorActivationRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys [][]byte `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 }
 
 func (x *ValidatorActivationRequest) Reset() {
@@ -547,7 +547,7 @@ type ValidatorActivationResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Statuses []*ValidatorActivationResponse_Status `protobuf:"bytes,1,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	Statuses []*ValidatorActivationResponse_Status `protobuf:"bytesutil,1,rep,name=statuses,proto3" json:"statuses,omitempty"`
 }
 
 func (x *ValidatorActivationResponse) Reset() {
@@ -596,7 +596,7 @@ type ChainStartResponse struct {
 
 	Started               bool   `protobuf:"varint,1,opt,name=started,proto3" json:"started,omitempty"`
 	GenesisTime           uint64 `protobuf:"varint,2,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
-	GenesisValidatorsRoot []byte `protobuf:"bytes,3,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
+	GenesisValidatorsRoot []byte `protobuf:"bytesutil,3,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
 }
 
 func (x *ChainStartResponse) Reset() {
@@ -712,7 +712,7 @@ type ValidatorIndexRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey []byte `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 }
 
 func (x *ValidatorIndexRequest) Reset() {
@@ -806,7 +806,7 @@ type ValidatorStatusRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey []byte `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 }
 
 func (x *ValidatorStatusRequest) Reset() {
@@ -932,7 +932,7 @@ type MultipleValidatorStatusRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys [][]byte `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 	Indices    []int64  `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty"`
 }
 
@@ -987,8 +987,8 @@ type MultipleValidatorStatusResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKeys [][]byte                                             `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
-	Statuses   []*ValidatorStatusResponse                           `protobuf:"bytes,2,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	PublicKeys [][]byte                                             `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	Statuses   []*ValidatorStatusResponse                           `protobuf:"bytesutil,2,rep,name=statuses,proto3" json:"statuses,omitempty"`
 	Indices    []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -1051,7 +1051,7 @@ type DutiesRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch      github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	PublicKeys [][]byte                                  `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys [][]byte                                  `protobuf:"bytesutil,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 }
 
 func (x *DutiesRequest) Reset() {
@@ -1106,9 +1106,9 @@ type DutiesResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Deprecated: Do not use.
-	Duties             []*DutiesResponse_Duty `protobuf:"bytes,1,rep,name=duties,proto3" json:"duties,omitempty"`
-	CurrentEpochDuties []*DutiesResponse_Duty `protobuf:"bytes,2,rep,name=current_epoch_duties,json=currentEpochDuties,proto3" json:"current_epoch_duties,omitempty"`
-	NextEpochDuties    []*DutiesResponse_Duty `protobuf:"bytes,3,rep,name=next_epoch_duties,json=nextEpochDuties,proto3" json:"next_epoch_duties,omitempty"`
+	Duties             []*DutiesResponse_Duty `protobuf:"bytesutil,1,rep,name=duties,proto3" json:"duties,omitempty"`
+	CurrentEpochDuties []*DutiesResponse_Duty `protobuf:"bytesutil,2,rep,name=current_epoch_duties,json=currentEpochDuties,proto3" json:"current_epoch_duties,omitempty"`
+	NextEpochDuties    []*DutiesResponse_Duty `protobuf:"bytesutil,3,rep,name=next_epoch_duties,json=nextEpochDuties,proto3" json:"next_epoch_duties,omitempty"`
 }
 
 func (x *DutiesResponse) Reset() {
@@ -1171,8 +1171,8 @@ type BlockRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Slot         github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	RandaoReveal []byte                                   `protobuf:"bytes,2,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"48"`
-	Graffiti     []byte                                   `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
+	RandaoReveal []byte                                   `protobuf:"bytesutil,2,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"48"`
+	Graffiti     []byte                                   `protobuf:"bytesutil,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
 }
 
 func (x *BlockRequest) Reset() {
@@ -1233,7 +1233,7 @@ type ProposeResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockRoot []byte `protobuf:"bytes,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
+	BlockRoot []byte `protobuf:"bytesutil,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty" ssz-size:"32"`
 }
 
 func (x *ProposeResponse) Reset() {
@@ -1280,7 +1280,7 @@ type ProposeExitResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ExitRoot []byte `protobuf:"bytes,1,opt,name=exit_root,json=exitRoot,proto3" json:"exit_root,omitempty" ssz-size:"32"`
+	ExitRoot []byte `protobuf:"bytesutil,1,opt,name=exit_root,json=exitRoot,proto3" json:"exit_root,omitempty" ssz-size:"32"`
 }
 
 func (x *ProposeExitResponse) Reset() {
@@ -1382,7 +1382,7 @@ type AttestResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AttestationDataRoot []byte `protobuf:"bytes,1,opt,name=attestation_data_root,json=attestationDataRoot,proto3" json:"attestation_data_root,omitempty" ssz-size:"32"`
+	AttestationDataRoot []byte `protobuf:"bytesutil,1,opt,name=attestation_data_root,json=attestationDataRoot,proto3" json:"attestation_data_root,omitempty" ssz-size:"32"`
 }
 
 func (x *AttestResponse) Reset() {
@@ -1431,8 +1431,8 @@ type AggregateSelectionRequest struct {
 
 	Slot           github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	CommitteeIndex github_com_prysmaticlabs_eth2_types.CommitteeIndex `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.CommitteeIndex"`
-	PublicKey      []byte                                             `protobuf:"bytes,3,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
-	SlotSignature  []byte                                             `protobuf:"bytes,4,opt,name=slot_signature,json=slotSignature,proto3" json:"slot_signature,omitempty" ssz-size:"96"`
+	PublicKey      []byte                                             `protobuf:"bytesutil,3,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
+	SlotSignature  []byte                                             `protobuf:"bytesutil,4,opt,name=slot_signature,json=slotSignature,proto3" json:"slot_signature,omitempty" ssz-size:"96"`
 }
 
 func (x *AggregateSelectionRequest) Reset() {
@@ -1500,7 +1500,7 @@ type AggregateSelectionResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AggregateAndProof *AggregateAttestationAndProof `protobuf:"bytes,1,opt,name=aggregate_and_proof,json=aggregateAndProof,proto3" json:"aggregate_and_proof,omitempty"`
+	AggregateAndProof *AggregateAttestationAndProof `protobuf:"bytesutil,1,opt,name=aggregate_and_proof,json=aggregateAndProof,proto3" json:"aggregate_and_proof,omitempty"`
 }
 
 func (x *AggregateSelectionResponse) Reset() {
@@ -1547,7 +1547,7 @@ type SignedAggregateSubmitRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SignedAggregateAndProof *SignedAggregateAttestationAndProof `protobuf:"bytes,1,opt,name=signed_aggregate_and_proof,json=signedAggregateAndProof,proto3" json:"signed_aggregate_and_proof,omitempty"`
+	SignedAggregateAndProof *SignedAggregateAttestationAndProof `protobuf:"bytesutil,1,opt,name=signed_aggregate_and_proof,json=signedAggregateAndProof,proto3" json:"signed_aggregate_and_proof,omitempty"`
 }
 
 func (x *SignedAggregateSubmitRequest) Reset() {
@@ -1594,7 +1594,7 @@ type SignedAggregateSubmitResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AttestationDataRoot []byte `protobuf:"bytes,1,opt,name=attestation_data_root,json=attestationDataRoot,proto3" json:"attestation_data_root,omitempty" ssz-size:"32"`
+	AttestationDataRoot []byte `protobuf:"bytesutil,1,opt,name=attestation_data_root,json=attestationDataRoot,proto3" json:"attestation_data_root,omitempty" ssz-size:"32"`
 }
 
 func (x *SignedAggregateSubmitResponse) Reset() {
@@ -1704,8 +1704,8 @@ type Validator struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey                  []byte                                    `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
-	WithdrawalCredentials      []byte                                    `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
+	PublicKey                  []byte                                    `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
+	WithdrawalCredentials      []byte                                    `protobuf:"bytesutil,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
 	EffectiveBalance           uint64                                    `protobuf:"varint,3,opt,name=effective_balance,json=effectiveBalance,proto3" json:"effective_balance,omitempty"`
 	Slashed                    bool                                      `protobuf:"varint,4,opt,name=slashed,proto3" json:"slashed,omitempty"`
 	ActivationEligibilityEpoch github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,5,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
@@ -1932,7 +1932,7 @@ type ValidatorInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey           []byte                                             `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	PublicKey           []byte                                             `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	Index               github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	Epoch               github_com_prysmaticlabs_eth2_types.Epoch          `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 	Status              ValidatorStatus                                    `protobuf:"varint,4,opt,name=status,proto3,enum=ethereum.eth.v1alpha1.ValidatorStatus" json:"status,omitempty"`
@@ -2027,7 +2027,7 @@ type DoppelGangerRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ValidatorRequests []*DoppelGangerRequest_ValidatorRequest `protobuf:"bytes,1,rep,name=validator_requests,json=validatorRequests,proto3" json:"validator_requests,omitempty"`
+	ValidatorRequests []*DoppelGangerRequest_ValidatorRequest `protobuf:"bytesutil,1,rep,name=validator_requests,json=validatorRequests,proto3" json:"validator_requests,omitempty"`
 }
 
 func (x *DoppelGangerRequest) Reset() {
@@ -2074,7 +2074,7 @@ type DoppelGangerResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Responses []*DoppelGangerResponse_ValidatorResponse `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
+	Responses []*DoppelGangerResponse_ValidatorResponse `protobuf:"bytesutil,1,rep,name=responses,proto3" json:"responses,omitempty"`
 }
 
 func (x *DoppelGangerResponse) Reset() {
@@ -2168,8 +2168,8 @@ type ValidatorActivationResponse_Status struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey []byte                                             `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	Status    *ValidatorStatusResponse                           `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	PublicKey []byte                                             `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Status    *ValidatorStatusResponse                           `protobuf:"bytesutil,2,opt,name=status,proto3" json:"status,omitempty"`
 	Index     github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -2235,7 +2235,7 @@ type DutiesResponse_Duty struct {
 	CommitteeIndex  github_com_prysmaticlabs_eth2_types.CommitteeIndex   `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.CommitteeIndex"`
 	AttesterSlot    github_com_prysmaticlabs_eth2_types.Slot             `protobuf:"varint,3,opt,name=attester_slot,json=attesterSlot,proto3" json:"attester_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	ProposerSlots   []github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,4,rep,packed,name=proposer_slots,json=proposerSlots,proto3" json:"proposer_slots,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
-	PublicKey       []byte                                               `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey       []byte                                               `protobuf:"bytesutil,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 	Status          ValidatorStatus                                      `protobuf:"varint,6,opt,name=status,proto3,enum=ethereum.eth.v1alpha1.ValidatorStatus" json:"status,omitempty"`
 	ValidatorIndex  github_com_prysmaticlabs_eth2_types.ValidatorIndex   `protobuf:"varint,7,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	IsSyncCommittee bool                                                 `protobuf:"varint,8,opt,name=is_sync_committee,json=isSyncCommittee,proto3" json:"is_sync_committee,omitempty"`
@@ -2334,9 +2334,9 @@ type DoppelGangerRequest_ValidatorRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey  []byte                                    `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
+	PublicKey  []byte                                    `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
 	Epoch      github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	SignedRoot []byte                                    `protobuf:"bytes,2,opt,name=signed_root,json=signedRoot,proto3" json:"signed_root,omitempty" ssz-size:"32"`
+	SignedRoot []byte                                    `protobuf:"bytesutil,2,opt,name=signed_root,json=signedRoot,proto3" json:"signed_root,omitempty" ssz-size:"32"`
 }
 
 func (x *DoppelGangerRequest_ValidatorRequest) Reset() {
@@ -2397,7 +2397,7 @@ type DoppelGangerResponse_ValidatorResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey       []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
+	PublicKey       []byte `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
 	DuplicateExists bool   `protobuf:"varint,2,opt,name=duplicate_exists,json=duplicateExists,proto3" json:"duplicate_exists,omitempty"`
 }
 

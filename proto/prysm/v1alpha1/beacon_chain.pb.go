@@ -89,7 +89,7 @@ type ValidatorChangeSet struct {
 	unknownFields protoimpl.UnknownFields
 
 	Action     SetAction `protobuf:"varint,1,opt,name=action,proto3,enum=ethereum.eth.v1alpha1.SetAction" json:"action,omitempty"`
-	PublicKeys [][]byte  `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys [][]byte  `protobuf:"bytesutil,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 }
 
 func (x *ValidatorChangeSet) Reset() {
@@ -148,7 +148,7 @@ type ListIndexedAttestationsRequest struct {
 	//	*ListIndexedAttestationsRequest_GenesisEpoch
 	QueryFilter isListIndexedAttestationsRequest_QueryFilter `protobuf_oneof:"query_filter"`
 	PageSize    int32                                        `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                                       `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken   string                                       `protobuf:"bytesutil,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *ListIndexedAttestationsRequest) Reset() {
@@ -244,7 +244,7 @@ type ListAttestationsRequest struct {
 	//	*ListAttestationsRequest_GenesisEpoch
 	QueryFilter isListAttestationsRequest_QueryFilter `protobuf_oneof:"query_filter"`
 	PageSize    int32                                 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                                `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken   string                                `protobuf:"bytesutil,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *ListAttestationsRequest) Reset() {
@@ -335,8 +335,8 @@ type ListAttestationsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Attestations  []*Attestation `protobuf:"bytes,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
-	NextPageToken string         `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Attestations  []*Attestation `protobuf:"bytesutil,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
+	NextPageToken string         `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32          `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -398,8 +398,8 @@ type ListIndexedAttestationsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	IndexedAttestations []*IndexedAttestation `protobuf:"bytes,1,rep,name=indexed_attestations,json=indexedAttestations,proto3" json:"indexed_attestations,omitempty"`
-	NextPageToken       string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	IndexedAttestations []*IndexedAttestation `protobuf:"bytesutil,1,rep,name=indexed_attestations,json=indexedAttestations,proto3" json:"indexed_attestations,omitempty"`
+	NextPageToken       string                `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize           int32                 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -468,7 +468,7 @@ type ListBlocksRequest struct {
 	//	*ListBlocksRequest_Genesis
 	QueryFilter isListBlocksRequest_QueryFilter `protobuf_oneof:"query_filter"`
 	PageSize    int32                           `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                          `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken   string                          `protobuf:"bytesutil,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *ListBlocksRequest) Reset() {
@@ -557,7 +557,7 @@ type isListBlocksRequest_QueryFilter interface {
 }
 
 type ListBlocksRequest_Root struct {
-	Root []byte `protobuf:"bytes,1,opt,name=root,proto3,oneof"`
+	Root []byte `protobuf:"bytesutil,1,opt,name=root,proto3,oneof"`
 }
 
 type ListBlocksRequest_Slot struct {
@@ -585,8 +585,8 @@ type ListBlocksResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockContainers []*BeaconBlockContainer `protobuf:"bytes,1,rep,name=blockContainers,proto3" json:"blockContainers,omitempty"`
-	NextPageToken   string                  `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	BlockContainers []*BeaconBlockContainer `protobuf:"bytesutil,1,rep,name=blockContainers,proto3" json:"blockContainers,omitempty"`
+	NextPageToken   string                  `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize       int32                   `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -648,8 +648,8 @@ type ListBeaconBlocksResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockContainers []*BeaconBlockContainer `protobuf:"bytes,1,rep,name=block_containers,json=blockContainers,proto3" json:"block_containers,omitempty"`
-	NextPageToken   string                  `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	BlockContainers []*BeaconBlockContainer `protobuf:"bytesutil,1,rep,name=block_containers,json=blockContainers,proto3" json:"block_containers,omitempty"`
+	NextPageToken   string                  `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize       int32                   `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -711,7 +711,7 @@ type BeaconBlockContainer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockRoot []byte `protobuf:"bytes,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
+	BlockRoot []byte `protobuf:"bytesutil,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
 	Canonical bool   `protobuf:"varint,2,opt,name=canonical,proto3" json:"canonical,omitempty"`
 	// Types that are assignable to Block:
 	//	*BeaconBlockContainer_Phase0Block
@@ -791,11 +791,11 @@ type isBeaconBlockContainer_Block interface {
 }
 
 type BeaconBlockContainer_Phase0Block struct {
-	Phase0Block *SignedBeaconBlock `protobuf:"bytes,3,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
+	Phase0Block *SignedBeaconBlock `protobuf:"bytesutil,3,opt,name=phase0_block,json=phase0Block,proto3,oneof"`
 }
 
 type BeaconBlockContainer_AltairBlock struct {
-	AltairBlock *SignedBeaconBlockAltair `protobuf:"bytes,4,opt,name=altair_block,json=altairBlock,proto3,oneof"`
+	AltairBlock *SignedBeaconBlockAltair `protobuf:"bytesutil,4,opt,name=altair_block,json=altairBlock,proto3,oneof"`
 }
 
 func (*BeaconBlockContainer_Phase0Block) isBeaconBlockContainer_Block() {}
@@ -809,16 +809,16 @@ type ChainHead struct {
 
 	HeadSlot                   github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,1,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	HeadEpoch                  github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=head_epoch,json=headEpoch,proto3" json:"head_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	HeadBlockRoot              []byte                                    `protobuf:"bytes,3,opt,name=head_block_root,json=headBlockRoot,proto3" json:"head_block_root,omitempty" ssz-size:"32"`
+	HeadBlockRoot              []byte                                    `protobuf:"bytesutil,3,opt,name=head_block_root,json=headBlockRoot,proto3" json:"head_block_root,omitempty" ssz-size:"32"`
 	FinalizedSlot              github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,4,opt,name=finalized_slot,json=finalizedSlot,proto3" json:"finalized_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	FinalizedEpoch             github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	FinalizedBlockRoot         []byte                                    `protobuf:"bytes,6,opt,name=finalized_block_root,json=finalizedBlockRoot,proto3" json:"finalized_block_root,omitempty" ssz-size:"32"`
+	FinalizedBlockRoot         []byte                                    `protobuf:"bytesutil,6,opt,name=finalized_block_root,json=finalizedBlockRoot,proto3" json:"finalized_block_root,omitempty" ssz-size:"32"`
 	JustifiedSlot              github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,7,opt,name=justified_slot,json=justifiedSlot,proto3" json:"justified_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	JustifiedEpoch             github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,8,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	JustifiedBlockRoot         []byte                                    `protobuf:"bytes,9,opt,name=justified_block_root,json=justifiedBlockRoot,proto3" json:"justified_block_root,omitempty" ssz-size:"32"`
+	JustifiedBlockRoot         []byte                                    `protobuf:"bytesutil,9,opt,name=justified_block_root,json=justifiedBlockRoot,proto3" json:"justified_block_root,omitempty" ssz-size:"32"`
 	PreviousJustifiedSlot      github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,10,opt,name=previous_justified_slot,json=previousJustifiedSlot,proto3" json:"previous_justified_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	PreviousJustifiedEpoch     github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,11,opt,name=previous_justified_epoch,json=previousJustifiedEpoch,proto3" json:"previous_justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	PreviousJustifiedBlockRoot []byte                                    `protobuf:"bytes,12,opt,name=previous_justified_block_root,json=previousJustifiedBlockRoot,proto3" json:"previous_justified_block_root,omitempty" ssz-size:"32"`
+	PreviousJustifiedBlockRoot []byte                                    `protobuf:"bytesutil,12,opt,name=previous_justified_block_root,json=previousJustifiedBlockRoot,proto3" json:"previous_justified_block_root,omitempty" ssz-size:"32"`
 }
 
 func (x *ChainHead) Reset() {
@@ -1023,7 +1023,7 @@ type BeaconCommittees struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch                github_com_prysmaticlabs_eth2_types.Epoch   `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	Committees           map[uint64]*BeaconCommittees_CommitteesList `protobuf:"bytes,2,rep,name=committees,proto3" json:"committees,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Committees           map[uint64]*BeaconCommittees_CommitteesList `protobuf:"bytesutil,2,rep,name=committees,proto3" json:"committees,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytesutil,2,opt,name=value,proto3"`
 	ActiveValidatorCount uint64                                      `protobuf:"varint,3,opt,name=active_validator_count,json=activeValidatorCount,proto3" json:"active_validator_count,omitempty"`
 }
 
@@ -1089,10 +1089,10 @@ type ListValidatorBalancesRequest struct {
 	//	*ListValidatorBalancesRequest_Epoch
 	//	*ListValidatorBalancesRequest_Genesis
 	QueryFilter isListValidatorBalancesRequest_QueryFilter           `protobuf_oneof:"query_filter"`
-	PublicKeys  [][]byte                                             `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys  [][]byte                                             `protobuf:"bytesutil,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 	Indices     []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,4,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	PageSize    int32                                                `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                                               `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken   string                                               `protobuf:"bytesutil,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *ListValidatorBalancesRequest) Reset() {
@@ -1198,8 +1198,8 @@ type ValidatorBalances struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch         github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	Balances      []*ValidatorBalances_Balance              `protobuf:"bytes,2,rep,name=balances,proto3" json:"balances,omitempty"`
-	NextPageToken string                                    `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Balances      []*ValidatorBalances_Balance              `protobuf:"bytesutil,2,rep,name=balances,proto3" json:"balances,omitempty"`
+	NextPageToken string                                    `protobuf:"bytesutil,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32                                     `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -1274,8 +1274,8 @@ type ListValidatorsRequest struct {
 	QueryFilter isListValidatorsRequest_QueryFilter                  `protobuf_oneof:"query_filter"`
 	Active      bool                                                 `protobuf:"varint,3,opt,name=active,proto3" json:"active,omitempty"`
 	PageSize    int32                                                `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                                               `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	PublicKeys  [][]byte                                             `protobuf:"bytes,6,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PageToken   string                                               `protobuf:"bytesutil,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PublicKeys  [][]byte                                             `protobuf:"bytesutil,6,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	Indices     []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,7,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -1456,7 +1456,7 @@ type GetValidatorRequest_Index struct {
 }
 
 type GetValidatorRequest_PublicKey struct {
-	PublicKey []byte `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3,oneof" ssz-size:"48"`
+	PublicKey []byte `protobuf:"bytesutil,2,opt,name=public_key,json=publicKey,proto3,oneof" ssz-size:"48"`
 }
 
 func (*GetValidatorRequest_Index) isGetValidatorRequest_QueryFilter() {}
@@ -1469,8 +1469,8 @@ type Validators struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch         github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	ValidatorList []*Validators_ValidatorContainer          `protobuf:"bytes,2,rep,name=validator_list,json=validatorList,proto3" json:"validator_list,omitempty"`
-	NextPageToken string                                    `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	ValidatorList []*Validators_ValidatorContainer          `protobuf:"bytesutil,2,rep,name=validator_list,json=validatorList,proto3" json:"validator_list,omitempty"`
+	NextPageToken string                                    `protobuf:"bytesutil,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32                                     `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -1622,13 +1622,13 @@ type ActiveSetChanges struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch               github_com_prysmaticlabs_eth2_types.Epoch            `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	ActivatedPublicKeys [][]byte                                             `protobuf:"bytes,2,rep,name=activated_public_keys,json=activatedPublicKeys,proto3" json:"activated_public_keys,omitempty" ssz-size:"?,48"`
+	ActivatedPublicKeys [][]byte                                             `protobuf:"bytesutil,2,rep,name=activated_public_keys,json=activatedPublicKeys,proto3" json:"activated_public_keys,omitempty" ssz-size:"?,48"`
 	ActivatedIndices    []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,rep,packed,name=activated_indices,json=activatedIndices,proto3" json:"activated_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	ExitedPublicKeys    [][]byte                                             `protobuf:"bytes,4,rep,name=exited_public_keys,json=exitedPublicKeys,proto3" json:"exited_public_keys,omitempty" ssz-size:"?,48"`
+	ExitedPublicKeys    [][]byte                                             `protobuf:"bytesutil,4,rep,name=exited_public_keys,json=exitedPublicKeys,proto3" json:"exited_public_keys,omitempty" ssz-size:"?,48"`
 	ExitedIndices       []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,5,rep,packed,name=exited_indices,json=exitedIndices,proto3" json:"exited_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	SlashedPublicKeys   [][]byte                                             `protobuf:"bytes,6,rep,name=slashed_public_keys,json=slashedPublicKeys,proto3" json:"slashed_public_keys,omitempty" ssz-size:"?,48"`
+	SlashedPublicKeys   [][]byte                                             `protobuf:"bytesutil,6,rep,name=slashed_public_keys,json=slashedPublicKeys,proto3" json:"slashed_public_keys,omitempty" ssz-size:"?,48"`
 	SlashedIndices      []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,7,rep,packed,name=slashed_indices,json=slashedIndices,proto3" json:"slashed_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	EjectedPublicKeys   [][]byte                                             `protobuf:"bytes,8,rep,name=ejected_public_keys,json=ejectedPublicKeys,proto3" json:"ejected_public_keys,omitempty" ssz-size:"?,48"`
+	EjectedPublicKeys   [][]byte                                             `protobuf:"bytesutil,8,rep,name=ejected_public_keys,json=ejectedPublicKeys,proto3" json:"ejected_public_keys,omitempty" ssz-size:"?,48"`
 	EjectedIndices      []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,9,rep,packed,name=ejected_indices,json=ejectedIndices,proto3" json:"ejected_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -1733,7 +1733,7 @@ type ValidatorPerformanceRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Deprecated: Do not use.
-	PublicKeys [][]byte                                             `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys [][]byte                                             `protobuf:"bytesutil,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	Indices    []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,2,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -1797,9 +1797,9 @@ type ValidatorPerformanceResponse struct {
 	CorrectlyVotedHead            []bool                                     `protobuf:"varint,6,rep,packed,name=correctly_voted_head,json=correctlyVotedHead,proto3" json:"correctly_voted_head,omitempty"`
 	BalancesBeforeEpochTransition []uint64                                   `protobuf:"varint,7,rep,packed,name=balances_before_epoch_transition,json=balancesBeforeEpochTransition,proto3" json:"balances_before_epoch_transition,omitempty"`
 	BalancesAfterEpochTransition  []uint64                                   `protobuf:"varint,8,rep,packed,name=balances_after_epoch_transition,json=balancesAfterEpochTransition,proto3" json:"balances_after_epoch_transition,omitempty"`
-	MissingValidators             [][]byte                                   `protobuf:"bytes,9,rep,name=missing_validators,json=missingValidators,proto3" json:"missing_validators,omitempty"`
+	MissingValidators             [][]byte                                   `protobuf:"bytesutil,9,rep,name=missing_validators,json=missingValidators,proto3" json:"missing_validators,omitempty"`
 	AverageActiveValidatorBalance float32                                    `protobuf:"fixed32,10,opt,name=average_active_validator_balance,json=averageActiveValidatorBalance,proto3" json:"average_active_validator_balance,omitempty"`
-	PublicKeys                    [][]byte                                   `protobuf:"bytes,11,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys                    [][]byte                                   `protobuf:"bytesutil,11,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 }
 
 func (x *ValidatorPerformanceResponse) Reset() {
@@ -1918,9 +1918,9 @@ type ValidatorQueue struct {
 
 	ChurnLimit uint64 `protobuf:"varint,1,opt,name=churn_limit,json=churnLimit,proto3" json:"churn_limit,omitempty"`
 	// Deprecated: Do not use.
-	ActivationPublicKeys [][]byte `protobuf:"bytes,2,rep,name=activation_public_keys,json=activationPublicKeys,proto3" json:"activation_public_keys,omitempty" ssz-size:"?,48"`
+	ActivationPublicKeys [][]byte `protobuf:"bytesutil,2,rep,name=activation_public_keys,json=activationPublicKeys,proto3" json:"activation_public_keys,omitempty" ssz-size:"?,48"`
 	// Deprecated: Do not use.
-	ExitPublicKeys             [][]byte                                             `protobuf:"bytes,3,rep,name=exit_public_keys,json=exitPublicKeys,proto3" json:"exit_public_keys,omitempty" ssz-size:"?,48"`
+	ExitPublicKeys             [][]byte                                             `protobuf:"bytesutil,3,rep,name=exit_public_keys,json=exitPublicKeys,proto3" json:"exit_public_keys,omitempty" ssz-size:"?,48"`
 	ActivationValidatorIndices []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,4,rep,packed,name=activation_validator_indices,json=activationValidatorIndices,proto3" json:"activation_validator_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	ExitValidatorIndices       []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,5,rep,packed,name=exit_validator_indices,json=exitValidatorIndices,proto3" json:"exit_validator_indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
@@ -2003,10 +2003,10 @@ type ListValidatorAssignmentsRequest struct {
 	//	*ListValidatorAssignmentsRequest_Epoch
 	//	*ListValidatorAssignmentsRequest_Genesis
 	QueryFilter isListValidatorAssignmentsRequest_QueryFilter        `protobuf_oneof:"query_filter"`
-	PublicKeys  [][]byte                                             `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
+	PublicKeys  [][]byte                                             `protobuf:"bytesutil,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 	Indices     []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,4,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	PageSize    int32                                                `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken   string                                               `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken   string                                               `protobuf:"bytesutil,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *ListValidatorAssignmentsRequest) Reset() {
@@ -2112,8 +2112,8 @@ type ValidatorAssignments struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch         github_com_prysmaticlabs_eth2_types.Epoch   `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	Assignments   []*ValidatorAssignments_CommitteeAssignment `protobuf:"bytes,2,rep,name=assignments,proto3" json:"assignments,omitempty"`
-	NextPageToken string                                      `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Assignments   []*ValidatorAssignments_CommitteeAssignment `protobuf:"bytesutil,2,rep,name=assignments,proto3" json:"assignments,omitempty"`
+	NextPageToken string                                      `protobuf:"bytesutil,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32                                       `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -2264,7 +2264,7 @@ type ValidatorParticipationResponse struct {
 
 	Epoch         github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 	Finalized     bool                                      `protobuf:"varint,2,opt,name=finalized,proto3" json:"finalized,omitempty"`
-	Participation *ValidatorParticipation                   `protobuf:"bytes,3,opt,name=participation,proto3" json:"participation,omitempty"`
+	Participation *ValidatorParticipation                   `protobuf:"bytesutil,3,opt,name=participation,proto3" json:"participation,omitempty"`
 }
 
 func (x *ValidatorParticipationResponse) Reset() {
@@ -2326,7 +2326,7 @@ type AttestationPoolRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	PageSize  int32  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytesutil,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
 func (x *AttestationPoolRequest) Reset() {
@@ -2380,8 +2380,8 @@ type AttestationPoolResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Attestations  []*Attestation `protobuf:"bytes,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
-	NextPageToken string         `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Attestations  []*Attestation `protobuf:"bytesutil,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
+	NextPageToken string         `protobuf:"bytesutil,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	TotalSize     int32          `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 }
 
@@ -2443,7 +2443,7 @@ type BeaconConfig struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Config map[string]string `protobuf:"bytes,1,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Config map[string]string `protobuf:"bytesutil,1,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytesutil,1,opt,name=key,proto3" protobuf_val:"bytesutil,2,opt,name=value,proto3"`
 }
 
 func (x *BeaconConfig) Reset() {
@@ -2538,7 +2538,7 @@ type IndividualVotesRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch      github_com_prysmaticlabs_eth2_types.Epoch            `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	PublicKeys [][]byte                                             `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys [][]byte                                             `protobuf:"bytesutil,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	Indices    []github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -2600,7 +2600,7 @@ type IndividualVotesRespond struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	IndividualVotes []*IndividualVotesRespond_IndividualVote `protobuf:"bytes,1,rep,name=individual_votes,json=individualVotes,proto3" json:"individual_votes,omitempty"`
+	IndividualVotes []*IndividualVotesRespond_IndividualVote `protobuf:"bytesutil,1,rep,name=individual_votes,json=individualVotes,proto3" json:"individual_votes,omitempty"`
 }
 
 func (x *IndividualVotesRespond) Reset() {
@@ -2647,8 +2647,8 @@ type WeakSubjectivityCheckpoint struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockRoot []byte                                    `protobuf:"bytes,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
-	StateRoot []byte                                    `protobuf:"bytes,2,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
+	BlockRoot []byte                                    `protobuf:"bytesutil,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
+	StateRoot []byte                                    `protobuf:"bytesutil,2,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
 	Epoch     github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
 }
 
@@ -2757,7 +2757,7 @@ type BeaconCommittees_CommitteesList struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Committees []*BeaconCommittees_CommitteeItem `protobuf:"bytes,1,rep,name=committees,proto3" json:"committees,omitempty"`
+	Committees []*BeaconCommittees_CommitteeItem `protobuf:"bytesutil,1,rep,name=committees,proto3" json:"committees,omitempty"`
 }
 
 func (x *BeaconCommittees_CommitteesList) Reset() {
@@ -2804,10 +2804,10 @@ type ValidatorBalances_Balance struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PublicKey []byte                                             `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey []byte                                             `protobuf:"bytesutil,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 	Index     github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	Balance   uint64                                             `protobuf:"varint,3,opt,name=balance,proto3" json:"balance,omitempty"`
-	Status    string                                             `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Status    string                                             `protobuf:"bytesutil,4,opt,name=status,proto3" json:"status,omitempty"`
 }
 
 func (x *ValidatorBalances_Balance) Reset() {
@@ -2876,7 +2876,7 @@ type Validators_ValidatorContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	Index     github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
-	Validator *Validator                                         `protobuf:"bytes,2,opt,name=validator,proto3" json:"validator,omitempty"`
+	Validator *Validator                                         `protobuf:"bytesutil,2,opt,name=validator,proto3" json:"validator,omitempty"`
 }
 
 func (x *Validators_ValidatorContainer) Reset() {
@@ -2935,7 +2935,7 @@ type ValidatorAssignments_CommitteeAssignment struct {
 	AttesterSlot     github_com_prysmaticlabs_eth2_types.Slot             `protobuf:"varint,3,opt,name=attester_slot,json=attesterSlot,proto3" json:"attester_slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	ProposerSlots    []github_com_prysmaticlabs_eth2_types.Slot           `protobuf:"varint,4,rep,packed,name=proposer_slots,json=proposerSlots,proto3" json:"proposer_slots,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	// Deprecated: Do not use.
-	PublicKey      []byte                                             `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
+	PublicKey      []byte                                             `protobuf:"bytesutil,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 	ValidatorIndex github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,6,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 }
 
@@ -3020,7 +3020,7 @@ type IndividualVotesRespond_IndividualVote struct {
 	unknownFields protoimpl.UnknownFields
 
 	Epoch                            github_com_prysmaticlabs_eth2_types.Epoch          `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Epoch"`
-	PublicKey                        []byte                                             `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	PublicKey                        []byte                                             `protobuf:"bytesutil,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	ValidatorIndex                   github_com_prysmaticlabs_eth2_types.ValidatorIndex `protobuf:"varint,3,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.ValidatorIndex"`
 	IsSlashed                        bool                                               `protobuf:"varint,4,opt,name=is_slashed,json=isSlashed,proto3" json:"is_slashed,omitempty"`
 	IsWithdrawableInCurrentEpoch     bool                                               `protobuf:"varint,5,opt,name=is_withdrawable_in_current_epoch,json=isWithdrawableInCurrentEpoch,proto3" json:"is_withdrawable_in_current_epoch,omitempty"`
