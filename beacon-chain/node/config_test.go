@@ -67,7 +67,7 @@ func TestConfigureProofOfWork(t *testing.T) {
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
-	assert.Equal(t, "deposit", params.BeaconConfig().DepositContractAddress)
+	assert.Equal(t, "deposit-contract", params.BeaconConfig().DepositContractAddress)
 }
 
 func TestConfigureNetwork(t *testing.T) {
