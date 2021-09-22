@@ -91,7 +91,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.New("nil block")
 	}
 	b := signed.Block()
-	start := time.Now()
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		return err
@@ -121,14 +120,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			return err
 		}
 
-		since := time.Since(start)
-		log.Info("Time to update head ", since)
-		start = time.Now()
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
 		}
-		since = time.Since(start)
-		log.Info("Time finish update head ", since)
 
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
