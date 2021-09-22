@@ -2019,6 +2019,7 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 		},
 	}
 	require.NoError(t, headState.SetValidators(validators))
+	require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{

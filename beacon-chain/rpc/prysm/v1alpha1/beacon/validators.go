@@ -537,7 +537,7 @@ func (bs *Server) GetValidatorParticipation(
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
 	case version.Altair:
-		v, b, err = altair.InitializeEpochValidators(ctx, beaconState)
+		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
 		}
@@ -697,7 +697,7 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		validatorSummary = vp
 	case version.Altair:
-		vp, bp, err := altair.InitializeEpochValidators(ctx, headState)
+		vp, bp, err := altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return nil, err
 		}
