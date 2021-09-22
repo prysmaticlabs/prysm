@@ -31,6 +31,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//contracts/deposit:__subpackages__",
+        "//proto/migration:__subpackages__",
         "//proto/testing:__subpackages__",
         "//runtime/interop:__subpackages__",
         "//shared/aggregation:__subpackages__",
@@ -52,7 +53,6 @@ go_library(
         "//container/slice:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/ssz:go_default_library",
-        "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "//shared/bytesutil:go_default_library",
