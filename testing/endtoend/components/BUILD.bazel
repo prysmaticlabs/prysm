@@ -19,7 +19,7 @@ go_library(
         "//cmd/validator/flags:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
-        "//contracts/deposit-contract:go_default_library",
+        "//contracts/deposit:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//testing/endtoend/helpers:go_default_library",
