@@ -113,7 +113,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return err
 			}
 		}
-		newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
 		if newFinalized {
 			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 				return errors.Wrap(err, "could not save new justified")
