@@ -1,5 +1,3 @@
-// Package mputil contains useful helpers for converting
-// multi-processor computation.
 package async
 
 import (
