@@ -12,13 +12,13 @@ import (
 // MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
 type MuxConfig struct {
 	Handler       gateway.MuxHandler
-	V1PbMux       *gateway.PbMux
+	EthPbMux      *gateway.PbMux
 	V1Alpha1PbMux *gateway.PbMux
 }
 
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
 func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
-	var v1Alpha1PbHandler, v1PbHandler *gateway.PbMux
+	var v1Alpha1PbHandler, ethPbHandler *gateway.PbMux
 	if flags.EnableHTTPPrysmAPI(httpModules) {
 		v1Alpha1Registrations := []gateway.PbHandlerRegistration{
 			ethpbalpha.RegisterNodeHandler,
@@ -28,6 +28,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 		}
 		if enableDebugRPCEndpoints {
 			v1Alpha1Registrations = append(v1Alpha1Registrations, ethpbalpha.RegisterDebugHandler)
+
 		}
 		v1Alpha1Mux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -51,16 +52,17 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 		}
 	}
 	if flags.EnableHTTPEthAPI(httpModules) {
-		v1Registrations := []gateway.PbHandlerRegistration{
+		ethRegistrations := []gateway.PbHandlerRegistration{
 			ethpbservice.RegisterBeaconNodeHandler,
 			ethpbservice.RegisterBeaconChainHandler,
 			ethpbservice.RegisterBeaconValidatorHandler,
 			ethpbservice.RegisterEventsHandler,
 		}
 		if enableDebugRPCEndpoints {
-			v1Registrations = append(v1Registrations, ethpbservice.RegisterBeaconDebugHandler)
+			ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
+
 		}
-		v1Mux := gwruntime.NewServeMux(
+		ethMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 				Marshaler: &gwruntime.JSONPb{
 					MarshalOptions: protojson.MarshalOptions{
@@ -73,15 +75,15 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 				},
 			}),
 		)
-		v1PbHandler = &gateway.PbMux{
-			Registrations: v1Registrations,
-			Patterns:      []string{"/eth/v1/"},
-			Mux:           v1Mux,
+		ethPbHandler = &gateway.PbMux{
+			Registrations: ethRegistrations,
+			Patterns:      []string{"/internal/eth/v1/", "/internal/eth/v2/"},
+			Mux:           ethMux,
 		}
 	}
 
 	return MuxConfig{
-		V1PbMux:       v1PbHandler,
+		EthPbMux:      ethPbHandler,
 		V1Alpha1PbMux: v1Alpha1PbHandler,
 	}
 }

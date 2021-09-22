@@ -39,8 +39,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
@@ -48,8 +50,6 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -653,12 +653,10 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		return nil
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	ethApiPort := b.cliCtx.Int(flags.EthApiPort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
@@ -670,16 +668,21 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	if gatewayConfig.V1Alpha1PbMux != nil {
 		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
 	}
-	if gatewayConfig.V1PbMux != nil {
-		muxs = append(muxs, gatewayConfig.V1PbMux)
+	if gatewayConfig.EthPbMux != nil {
+		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
 
-	g := apigateway.New(b.ctx, muxs, gatewayConfig.Handler, selfAddress, gatewayAddress).
-		WithAllowedOrigins(allowedOrigins).
+	g := apigateway.New(
+		b.ctx,
+		muxs,
+		gatewayConfig.Handler,
+		selfAddress,
+		gatewayAddress,
+	).WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
 		WithMaxCallRecvMsgSize(maxCallSize)
 	if flags.EnableHTTPEthAPI(httpModules) {
-		g.WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
+		g.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
 	}
 
 	return b.services.RegisterService(g)

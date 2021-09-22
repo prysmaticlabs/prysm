@@ -5,10 +5,10 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/urfave/cli/v2"
 )
 
@@ -103,7 +103,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableGRPCGateway,
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,
-			flags.EthApiPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
 			flags.FallbackWeb3ProviderFlag,

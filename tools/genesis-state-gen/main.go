@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for

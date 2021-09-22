@@ -5,7 +5,7 @@ package flags
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -77,13 +77,6 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
-	}
-	// EthApiPort specifies the port which runs the official Ethereum REST API.
-	// Serves JSON values conforming to the specification: https://ethereum.github.io/beacon-apis/
-	EthApiPort = &cli.IntFlag{
-		Name:  "eth-api-port",
-		Usage: "The port which exposes a REST API conforming to the official Ethereum API specification.",
-		Value: 3501,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{

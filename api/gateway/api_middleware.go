@@ -13,9 +13,7 @@ import (
 //   - gRPC responses can be returned as spec-compliant Ethereum consensus API responses
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
-	ProxyAddress    string
 	EndpointCreator EndpointFactory
-	router          *mux.Router
 }
 
 // EndpointFactory is responsible for creating new instances of Endpoint values.
@@ -73,19 +71,15 @@ type fieldProcessor struct {
 	f   func(value reflect.Value) error
 }
 
-// Run starts the proxy, registering all proxy endpoints on ApiProxyMiddleware.ProxyAddress.
-func (m *ApiProxyMiddleware) Run() error {
-	m.router = mux.NewRouter()
-
+// Run starts the proxy, registering all proxy endpoints.
+func (m *ApiProxyMiddleware) Run(gatewayRouter *mux.Router) {
 	for _, path := range m.EndpointCreator.Paths() {
-		m.handleApiPath(path, m.EndpointCreator)
+		m.handleApiPath(gatewayRouter, path, m.EndpointCreator)
 	}
-
-	return http.ListenAndServe(m.ProxyAddress, m.router)
 }
 
-func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory EndpointFactory) {
-	m.router.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
+func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path string, endpointFactory EndpointFactory) {
+	gatewayRouter.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
 		endpoint, err := endpointFactory.Create(path)
 		if err != nil {
 			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
