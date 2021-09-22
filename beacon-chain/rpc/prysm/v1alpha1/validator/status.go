@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -61,7 +61,7 @@ func (vs *Server) MultipleValidatorStatus(
 	filtered[[48]byte{}] = true // Filter out keys with all zeros.
 	// Filter out duplicate public keys.
 	for _, pubKey := range req.PublicKeys {
-		pubkeyBytes := butil.ToBytes48(pubKey)
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
 		if !filtered[pubkeyBytes] {
 			pubKeys = append(pubKeys, pubKey)
 			filtered[pubkeyBytes] = true
@@ -141,7 +141,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 				})
 			continue
 		}
-		valIndex, ok := olderState.ValidatorIndexByPubkey(butil.ToBytes48(v.PublicKey))
+		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
 		if !ok {
 			// Ignore if validator pubkey doesn't exist.
 			continue
@@ -259,7 +259,7 @@ func (vs *Server) validatorStatus(
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
-		deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+		dep, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
@@ -272,13 +272,13 @@ func (vs *Server) validatorStatus(
 			log.Warn("Could not compute domain")
 			return resp, nonExistentIndex
 		}
-		if err := depositutil.VerifyDepositSignature(deposit.Data, domain); err != nil {
+		if err := deposit.VerifyDepositSignature(dep.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
 			log.Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
 		}
 		// Set validator deposit status if their deposit is visible.
-		resp.Status = depositStatus(deposit.Data.Amount)
+		resp.Status = depositStatus(dep.Data.Amount)
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 		return resp, nonExistentIndex
@@ -322,7 +322,7 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
-	idx, ok := headState.ValidatorIndexByPubkey(butil.ToBytes48(pubKey))
+	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok || uint64(idx) >= uint64(headState.NumValidators()) {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}

@@ -23,7 +23,7 @@ go_test(
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
-        "//contracts/deposit-contract:go_default_library",
+        "//contracts/deposit:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

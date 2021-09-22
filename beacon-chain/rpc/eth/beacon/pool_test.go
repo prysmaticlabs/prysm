@@ -20,10 +20,10 @@ import (
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpb_v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -34,117 +34,117 @@ import (
 func TestListPoolAttestations(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	att1 := &ethpb_v1alpha1.Attestation{
+	att1 := &ethpbv1alpha1.Attestation{
 		AggregationBits: []byte{1, 10},
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 1,
-				Root:  butil.PadTo([]byte("sourceroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 10,
-				Root:  butil.PadTo([]byte("targetroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature1"), 96),
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
 	}
-	att2 := &ethpb_v1alpha1.Attestation{
+	att2 := &ethpbv1alpha1.Attestation{
 		AggregationBits: []byte{4, 40},
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            4,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot4"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 4,
-				Root:  butil.PadTo([]byte("sourceroot4"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 40,
-				Root:  butil.PadTo([]byte("targetroot4"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature4"), 96),
+		Signature: bytesutil.PadTo([]byte("signature4"), 96),
 	}
-	att3 := &ethpb_v1alpha1.Attestation{
+	att3 := &ethpbv1alpha1.Attestation{
 		AggregationBits: []byte{2, 20},
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  butil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature2"), 96),
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
-	att4 := &ethpb_v1alpha1.Attestation{
+	att4 := &ethpbv1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            4,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  butil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature2"), 96),
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
-	att5 := &ethpb_v1alpha1.Attestation{
+	att5 := &ethpbv1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  butil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature1"), 96),
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
 	}
-	att6 := &ethpb_v1alpha1.Attestation{
+	att6 := &ethpbv1alpha1.Attestation{
 		AggregationBits: bitfield.NewBitlist(8),
-		Data: &ethpb_v1alpha1.AttestationData{
+		Data: &ethpbv1alpha1.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
-			Source: &ethpb_v1alpha1.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &ethpbv1alpha1.Checkpoint{
 				Epoch: 2,
-				Root:  butil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
-			Target: &ethpb_v1alpha1.Checkpoint{
+			Target: &ethpbv1alpha1.Checkpoint{
 				Epoch: 20,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
-		Signature: butil.PadTo([]byte("signature2"), 96),
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 	s := &Server{
 		ChainInfoFetcher: &chainMock.ChainService{State: state},
 		AttestationsPool: attestations.NewPool(),
 	}
-	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*ethpb_v1alpha1.Attestation{att1, att2, att3}))
-	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]*ethpb_v1alpha1.Attestation{att4, att5, att6}))
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*ethpbv1alpha1.Attestation{att1, att2, att3}))
+	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]*ethpbv1alpha1.Attestation{att4, att5, att6}))
 
 	t.Run("empty request", func(t *testing.T) {
-		req := &ethpb.AttestationsPoolRequest{}
+		req := &ethpbv1.AttestationsPoolRequest{}
 		resp, err := s.ListPoolAttestations(context.Background(), req)
 		require.NoError(t, err)
 		require.Equal(t, 6, len(resp.Data))
@@ -152,7 +152,7 @@ func TestListPoolAttestations(t *testing.T) {
 
 	t.Run("slot request", func(t *testing.T) {
 		slot := eth2types.Slot(2)
-		req := &ethpb.AttestationsPoolRequest{
+		req := &ethpbv1.AttestationsPoolRequest{
 			Slot: &slot,
 		}
 		resp, err := s.ListPoolAttestations(context.Background(), req)
@@ -165,7 +165,7 @@ func TestListPoolAttestations(t *testing.T) {
 
 	t.Run("index request", func(t *testing.T) {
 		index := eth2types.CommitteeIndex(4)
-		req := &ethpb.AttestationsPoolRequest{
+		req := &ethpbv1.AttestationsPoolRequest{
 			CommitteeIndex: &index,
 		}
 		resp, err := s.ListPoolAttestations(context.Background(), req)
@@ -179,7 +179,7 @@ func TestListPoolAttestations(t *testing.T) {
 	t.Run("both slot + index request", func(t *testing.T) {
 		slot := eth2types.Slot(2)
 		index := eth2types.CommitteeIndex(4)
-		req := &ethpb.AttestationsPoolRequest{
+		req := &ethpbv1.AttestationsPoolRequest{
 			Slot:           &slot,
 			CommitteeIndex: &index,
 		}
@@ -196,82 +196,82 @@ func TestListPoolAttestations(t *testing.T) {
 func TestListPoolAttesterSlashings(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	slashing1 := &ethpb_v1alpha1.AttesterSlashing{
-		Attestation_1: &ethpb_v1alpha1.IndexedAttestation{
+	slashing1 := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{1, 10},
-			Data: &ethpb_v1alpha1.AttestationData{
+			Data: &ethpbv1alpha1.AttestationData{
 				Slot:            1,
 				CommitteeIndex:  1,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpb_v1alpha1.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
 					Epoch: 1,
-					Root:  butil.PadTo([]byte("sourceroot1"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 				},
-				Target: &ethpb_v1alpha1.Checkpoint{
+				Target: &ethpbv1alpha1.Checkpoint{
 					Epoch: 10,
-					Root:  butil.PadTo([]byte("targetroot1"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
-			Signature: butil.PadTo([]byte("signature1"), 96),
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
 		},
-		Attestation_2: &ethpb_v1alpha1.IndexedAttestation{
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{2, 20},
-			Data: &ethpb_v1alpha1.AttestationData{
+			Data: &ethpbv1alpha1.AttestationData{
 				Slot:            2,
 				CommitteeIndex:  2,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpb_v1alpha1.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
 					Epoch: 2,
-					Root:  butil.PadTo([]byte("sourceroot2"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 				},
-				Target: &ethpb_v1alpha1.Checkpoint{
+				Target: &ethpbv1alpha1.Checkpoint{
 					Epoch: 20,
-					Root:  butil.PadTo([]byte("targetroot2"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
-			Signature: butil.PadTo([]byte("signature2"), 96),
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
 		},
 	}
-	slashing2 := &ethpb_v1alpha1.AttesterSlashing{
-		Attestation_1: &ethpb_v1alpha1.IndexedAttestation{
+	slashing2 := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{3, 30},
-			Data: &ethpb_v1alpha1.AttestationData{
+			Data: &ethpbv1alpha1.AttestationData{
 				Slot:            3,
 				CommitteeIndex:  3,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot3"), 32),
-				Source: &ethpb_v1alpha1.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
 					Epoch: 3,
-					Root:  butil.PadTo([]byte("sourceroot3"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
 				},
-				Target: &ethpb_v1alpha1.Checkpoint{
+				Target: &ethpbv1alpha1.Checkpoint{
 					Epoch: 30,
-					Root:  butil.PadTo([]byte("targetroot3"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
 				},
 			},
-			Signature: butil.PadTo([]byte("signature3"), 96),
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
 		},
-		Attestation_2: &ethpb_v1alpha1.IndexedAttestation{
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
 			AttestingIndices: []uint64{4, 40},
-			Data: &ethpb_v1alpha1.AttestationData{
+			Data: &ethpbv1alpha1.AttestationData{
 				Slot:            4,
 				CommitteeIndex:  4,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot4"), 32),
-				Source: &ethpb_v1alpha1.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
 					Epoch: 4,
-					Root:  butil.PadTo([]byte("sourceroot4"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
 				},
-				Target: &ethpb_v1alpha1.Checkpoint{
+				Target: &ethpbv1alpha1.Checkpoint{
 					Epoch: 40,
-					Root:  butil.PadTo([]byte("targetroot4"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
 				},
 			},
-			Signature: butil.PadTo([]byte("signature4"), 96),
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
 		},
 	}
 
 	s := &Server{
 		ChainInfoFetcher: &chainMock.ChainService{State: state},
-		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*ethpb_v1alpha1.AttesterSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
 	}
 
 	resp, err := s.ListPoolAttesterSlashings(context.Background(), &emptypb.Empty{})
@@ -284,54 +284,54 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 func TestListPoolProposerSlashings(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	slashing1 := &ethpb_v1alpha1.ProposerSlashing{
-		Header_1: &ethpb_v1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpb_v1alpha1.BeaconBlockHeader{
+	slashing1 := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 1,
-				ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 			},
-			Signature: butil.PadTo([]byte("signature1"), 96),
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
 		},
-		Header_2: &ethpb_v1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpb_v1alpha1.BeaconBlockHeader{
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
 				Slot:          2,
 				ProposerIndex: 2,
-				ParentRoot:    butil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot2"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
 			},
-			Signature: butil.PadTo([]byte("signature2"), 96),
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
 		},
 	}
-	slashing2 := &ethpb_v1alpha1.ProposerSlashing{
-		Header_1: &ethpb_v1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpb_v1alpha1.BeaconBlockHeader{
+	slashing2 := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
 				Slot:          3,
 				ProposerIndex: 3,
-				ParentRoot:    butil.PadTo([]byte("parentroot3"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot3"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot3"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot3"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
 			},
-			Signature: butil.PadTo([]byte("signature3"), 96),
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
 		},
-		Header_2: &ethpb_v1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpb_v1alpha1.BeaconBlockHeader{
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
 				Slot:          4,
 				ProposerIndex: 4,
-				ParentRoot:    butil.PadTo([]byte("parentroot4"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot4"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot4"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot4"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
 			},
-			Signature: butil.PadTo([]byte("signature4"), 96),
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
 		},
 	}
 
 	s := &Server{
 		ChainInfoFetcher: &chainMock.ChainService{State: state},
-		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*ethpb_v1alpha1.ProposerSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
 	}
 
 	resp, err := s.ListPoolProposerSlashings(context.Background(), &emptypb.Empty{})
@@ -344,24 +344,24 @@ func TestListPoolProposerSlashings(t *testing.T) {
 func TestListPoolVoluntaryExits(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	exit1 := &ethpb_v1alpha1.SignedVoluntaryExit{
-		Exit: &ethpb_v1alpha1.VoluntaryExit{
+	exit1 := &ethpbv1alpha1.SignedVoluntaryExit{
+		Exit: &ethpbv1alpha1.VoluntaryExit{
 			Epoch:          1,
 			ValidatorIndex: 1,
 		},
-		Signature: butil.PadTo([]byte("signature1"), 96),
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
 	}
-	exit2 := &ethpb_v1alpha1.SignedVoluntaryExit{
-		Exit: &ethpb_v1alpha1.VoluntaryExit{
+	exit2 := &ethpbv1alpha1.SignedVoluntaryExit{
+		Exit: &ethpbv1alpha1.VoluntaryExit{
 			Epoch:          2,
 			ValidatorIndex: 2,
 		},
-		Signature: butil.PadTo([]byte("signature2"), 96),
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 
 	s := &Server{
 		ChainInfoFetcher:   &chainMock.ChainService{State: state},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpb_v1alpha1.SignedVoluntaryExit{exit1, exit2}},
+		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
 	}
 
 	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
@@ -376,53 +376,53 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validator := &ethpb_v1alpha1.Validator{
+	validator := &ethpbv1alpha1.Validator{
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
-		state.Validators = []*ethpb_v1alpha1.Validator{validator}
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
 	require.NoError(t, err)
 
-	slashing := &ethpb.AttesterSlashing{
-		Attestation_1: &ethpb.IndexedAttestation{
+	slashing := &ethpbv1.AttesterSlashing{
+		Attestation_1: &ethpbv1.IndexedAttestation{
 			AttestingIndices: []uint64{0},
-			Data: &ethpb.AttestationData{
+			Data: &ethpbv1.AttestationData{
 				Slot:            1,
 				Index:           1,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpb.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1.Checkpoint{
 					Epoch: 1,
-					Root:  butil.PadTo([]byte("sourceroot1"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 				},
-				Target: &ethpb.Checkpoint{
+				Target: &ethpbv1.Checkpoint{
 					Epoch: 10,
-					Root:  butil.PadTo([]byte("targetroot1"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
 			Signature: make([]byte, 96),
 		},
-		Attestation_2: &ethpb.IndexedAttestation{
+		Attestation_2: &ethpbv1.IndexedAttestation{
 			AttestingIndices: []uint64{0},
-			Data: &ethpb.AttestationData{
+			Data: &ethpbv1.AttestationData{
 				Slot:            1,
 				Index:           1,
-				BeaconBlockRoot: butil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpb.Checkpoint{
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1.Checkpoint{
 					Epoch: 1,
-					Root:  butil.PadTo([]byte("sourceroot2"), 32),
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 				},
-				Target: &ethpb.Checkpoint{
+				Target: &ethpbv1.Checkpoint{
 					Epoch: 10,
-					Root:  butil.PadTo([]byte("targetroot2"), 32),
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
 			Signature: make([]byte, 96),
 		},
 	}
 
-	for _, att := range []*ethpb.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+	for _, att := range []*ethpbv1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
 		sb, err := helpers.ComputeDomainAndSign(state, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
@@ -450,25 +450,25 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 
-	attestation := &ethpb.IndexedAttestation{
+	attestation := &ethpbv1.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            1,
 			Index:           1,
-			BeaconBlockRoot: butil.PadTo([]byte("blockroot1"), 32),
-			Source: &ethpb.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &ethpbv1.Checkpoint{
 				Epoch: 1,
-				Root:  butil.PadTo([]byte("sourceroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 			},
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 10,
-				Root:  butil.PadTo([]byte("targetroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
 	}
 
-	slashing := &ethpb.AttesterSlashing{
+	slashing := &ethpbv1.AttesterSlashing{
 		Attestation_1: attestation,
 		Attestation_2: attestation,
 	}
@@ -490,40 +490,40 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validator := &ethpb_v1alpha1.Validator{
+	validator := &ethpbv1alpha1.Validator{
 		PublicKey:         keys[0].PublicKey().Marshal(),
 		WithdrawableEpoch: eth2types.Epoch(1),
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
-		state.Validators = []*ethpb_v1alpha1.Validator{validator}
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
 	require.NoError(t, err)
 
-	slashing := &ethpb.ProposerSlashing{
-		SignedHeader_1: &ethpb.SignedBeaconBlockHeader{
-			Message: &ethpb.BeaconBlockHeader{
+	slashing := &ethpbv1.ProposerSlashing{
+		SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+			Message: &ethpbv1.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
-				ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 			},
 			Signature: make([]byte, 96),
 		},
-		SignedHeader_2: &ethpb.SignedBeaconBlockHeader{
-			Message: &ethpb.BeaconBlockHeader{
+		SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+			Message: &ethpbv1.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
-				ParentRoot:    butil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     butil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      butil.PadTo([]byte("bodyroot2"), 32),
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
 			},
 			Signature: make([]byte, 96),
 		},
 	}
 
-	for _, h := range []*ethpb.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
+	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
 			core.SlotToEpoch(h.Message.Slot),
@@ -557,18 +557,18 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 
-	header := &ethpb.SignedBeaconBlockHeader{
-		Message: &ethpb.BeaconBlockHeader{
+	header := &ethpbv1.SignedBeaconBlockHeader{
+		Message: &ethpbv1.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 0,
-			ParentRoot:    butil.PadTo([]byte("parentroot1"), 32),
-			StateRoot:     butil.PadTo([]byte("stateroot1"), 32),
-			BodyRoot:      butil.PadTo([]byte("bodyroot1"), 32),
+			ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+			StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+			BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 		},
 		Signature: make([]byte, 96),
 	}
 
-	slashing := &ethpb.ProposerSlashing{
+	slashing := &ethpbv1.ProposerSlashing{
 		SignedHeader_1: header,
 		SignedHeader_2: header,
 	}
@@ -590,20 +590,20 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validator := &ethpb_v1alpha1.Validator{
+	validator := &ethpbv1alpha1.Validator{
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
-		state.Validators = []*ethpb_v1alpha1.Validator{validator}
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		// Satisfy activity time required before exiting.
 		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
 		return nil
 	})
 	require.NoError(t, err)
 
-	exit := &ethpb.SignedVoluntaryExit{
-		Message: &ethpb.VoluntaryExit{
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 0,
 		},
@@ -636,18 +636,18 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validator := &ethpb_v1alpha1.Validator{
+	validator := &ethpbv1alpha1.Validator{
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
-		state.Validators = []*ethpb_v1alpha1.Validator{validator}
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
 	require.NoError(t, err)
 
-	exit := &ethpb.SignedVoluntaryExit{
-		Message: &ethpb.VoluntaryExit{
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 99,
 		},
@@ -671,18 +671,18 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validator := &ethpb_v1alpha1.Validator{
+	validator := &ethpbv1alpha1.Validator{
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
-		state.Validators = []*ethpb_v1alpha1.Validator{validator}
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
 	require.NoError(t, err)
 
-	exit := &ethpb.SignedVoluntaryExit{
-		Message: &ethpb.VoluntaryExit{
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 0,
 		},
@@ -711,18 +711,18 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validators := []*ethpb_v1alpha1.Validator{
+	validators := []*ethpbv1alpha1.Validator{
 		{
 			PublicKey: keys[0].PublicKey().Marshal(),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
-		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
+		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  butil.PadTo([]byte("sourceroot1"), 32),
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
@@ -730,40 +730,40 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
 
-	sourceCheckpoint := &ethpb.Checkpoint{
+	sourceCheckpoint := &ethpbv1.Checkpoint{
 		Epoch: 0,
-		Root:  butil.PadTo([]byte("sourceroot1"), 32),
+		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 	}
-	att1 := &ethpb.Attestation{
+	att1 := &ethpbv1.Attestation{
 		AggregationBits: b,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot1"), 32),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 0,
-				Root:  butil.PadTo([]byte("targetroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
 	}
-	att2 := &ethpb.Attestation{
+	att2 := &ethpbv1.Attestation{
 		AggregationBits: b,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 0,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
 	}
 
-	for _, att := range []*ethpb.Attestation{att1, att2} {
+	for _, att := range []*ethpbv1.Attestation{att1, att2} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
 			core.SlotToEpoch(att.Data.Slot),
@@ -787,8 +787,8 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
-	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{att1, att2},
+	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
+		Data: []*ethpbv1.Attestation{att1, att2},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -817,54 +817,54 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validators := []*ethpb_v1alpha1.Validator{
+	validators := []*ethpbv1alpha1.Validator{
 		{
 			PublicKey: keys[0].PublicKey().Marshal(),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
-		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
+		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  butil.PadTo([]byte("sourceroot1"), 32),
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
 
 	require.NoError(t, err)
 
-	sourceCheckpoint := &ethpb.Checkpoint{
+	sourceCheckpoint := &ethpbv1.Checkpoint{
 		Epoch: 0,
-		Root:  butil.PadTo([]byte("sourceroot1"), 32),
+		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 	}
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
-	attValid := &ethpb.Attestation{
+	attValid := &ethpbv1.Attestation{
 		AggregationBits: b,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot1"), 32),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 0,
-				Root:  butil.PadTo([]byte("targetroot1"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
 	}
-	attInvalidSignature := &ethpb.Attestation{
+	attInvalidSignature := &ethpbv1.Attestation{
 		AggregationBits: b,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 0,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -893,8 +893,8 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		OperationNotifier: &notifiermock.MockOperationNotifier{},
 	}
 
-	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{attValid, attInvalidSignature},
+	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
+		Data: []*ethpbv1.Attestation{attValid, attInvalidSignature},
 	})
 	require.ErrorContains(t, "One or more attestations failed validation", err)
 	expectedAtt, err := attValid.HashTreeRoot()
@@ -917,18 +917,18 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	validators := []*ethpb_v1alpha1.Validator{
+	validators := []*ethpbv1alpha1.Validator{
 		{
 			PublicKey: keys[0].PublicKey().Marshal(),
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *ethpb_v1alpha1.BeaconState) error {
+	state, err := testutil.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
-		state.PreviousJustifiedCheckpoint = &ethpb_v1alpha1.Checkpoint{
+		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
 			Epoch: 0,
-			Root:  butil.PadTo([]byte("sourceroot1"), 32),
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 		}
 		return nil
 	})
@@ -937,19 +937,19 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
-	att := &ethpb.Attestation{
+	att := &ethpbv1.Attestation{
 		AggregationBits: b,
-		Data: &ethpb.AttestationData{
+		Data: &ethpbv1.AttestationData{
 			Slot:            0,
 			Index:           0,
-			BeaconBlockRoot: butil.PadTo([]byte("beaconblockroot2"), 32),
-			Source: &ethpb.Checkpoint{
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			Source: &ethpbv1.Checkpoint{
 				Epoch: 0,
-				Root:  butil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
-			Target: &ethpb.Checkpoint{
+			Target: &ethpbv1.Checkpoint{
 				Epoch: 1,
-				Root:  butil.PadTo([]byte("targetroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
 		Signature: nil,
@@ -965,8 +965,8 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		HeadFetcher:       chain,
 	}
 
-	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{att},
+	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
+		Data: []*ethpbv1.Attestation{att},
 	})
 	require.ErrorContains(t, "One or more attestations failed validation", err)
 	sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)

@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -408,7 +408,7 @@ func TestProduceBlock(t *testing.T) {
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
@@ -498,7 +498,7 @@ func TestProduceBlockV2(t *testing.T) {
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 
-		genesis := b.NewGenesisBlock(stateRoot[:])
+		genesis := blocks.NewGenesisBlock(stateRoot[:])
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 		parentRoot, err := genesis.Block.HashTreeRoot()

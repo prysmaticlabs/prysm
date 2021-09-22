@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	butil "github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -42,7 +42,7 @@ func (e *blockIdParseError) Error() string {
 
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
@@ -82,7 +82,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 
 // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
 func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeadersRequest) (*ethpbv1.BlockHeadersResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockHeaders")
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockHeaders")
 	defer span.End()
 
 	var err error
@@ -145,7 +145,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
 func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
 	blk := req.Message
@@ -162,7 +162,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockConta
 
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", butil.Trunc(root[:]))).Debugf(
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 			"Block proposal received via RPC")
 		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
@@ -184,7 +184,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockConta
 
 // GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
@@ -207,7 +207,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 
 // GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
 func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
@@ -307,7 +307,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockRoot")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
 	defer span.End()
 
 	var root []byte
@@ -339,11 +339,11 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
-			block, err := bs.BeaconDB.Block(ctx, butil.ToBytes32(req.BlockId))
+			blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if block == nil || block.IsNil() {
+			if blk == nil || blk.IsNil() {
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
 
@@ -387,7 +387,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 
 // ListBlockAttestations retrieves attestation included in requested block.
 func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockAttestationsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockAttestations")
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockAttestations")
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
@@ -446,7 +446,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 		}
 	case "finalized":
 		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
-		finalizedRoot := butil.ToBytes32(finalized.Root)
+		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
 			return nil, errors.New("could not get finalized block from db")
@@ -458,7 +458,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 		}
 	default:
 		if len(blockId) == 32 {
-			blk, err = bs.BeaconDB.Block(ctx, butil.ToBytes32(blockId))
+			blk, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve block")
 			}
@@ -485,13 +485,13 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 			if numBlks == 1 {
 				break
 			}
-			for i, block := range blks {
+			for i, b := range blks {
 				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 				}
 				if canonical {
-					blk = block
+					blk = b
 					break
 				}
 			}

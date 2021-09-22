@@ -1,6 +1,6 @@
 // Package depositutil contains useful functions for dealing
 // with Ethereum deposit inputs.
-package depositutil
+package deposit
 
 import (
 	"github.com/pkg/errors"
