@@ -246,7 +246,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 			return err
 		}
 	case version.Altair:
-		v, b, err = altair.InitializeEpochValidators(ctx, headState)
+		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
 		}
