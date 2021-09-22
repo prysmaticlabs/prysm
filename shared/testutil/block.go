@@ -3,7 +3,12 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"math/big"
 
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -502,4 +507,33 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 		}
 	}
 	return b
+}
+
+// getDummyBlock method creates a brand new block with extraData
+func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, common.Hash, *pandora.ExtraData) {
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	extraData := pandora.ExtraData{
+		Slot:          uint64(slot),
+		Epoch:         uint64(epoch),
+		ProposerIndex: proposerIndex,
+	}
+	extraDataByte, _ := rlp.EncodeToBytes(extraData)
+	block := gethTypes.NewBlock(&gethTypes.Header{
+		ParentHash:  gethTypes.EmptyRootHash,
+		UncleHash:   gethTypes.EmptyUncleHash,
+		Coinbase:    common.HexToAddress("8888f1f195afa192cfee860698584c030f4c9db1"),
+		Root:        common.HexToHash("ef1552a40b7165c3cd773806b9e0c165b75356e0314bf0706f279c729f51e017"),
+		TxHash:      gethTypes.EmptyRootHash,
+		ReceiptHash: gethTypes.EmptyRootHash,
+		Difficulty:  big.NewInt(131072),
+		Number:      big.NewInt(314),
+		GasLimit:    uint64(3141592),
+		GasUsed:     uint64(21000),
+		Time:        uint64(1426516743),
+		Extra:       extraDataByte,
+		MixDigest:   gethTypes.EmptyRootHash,
+		Nonce:       gethTypes.BlockNonce{0x01, 0x02, 0x03},
+	}, nil, nil, nil, nil)
+
+	return block.Header(), block.Hash(), &extraData
 }

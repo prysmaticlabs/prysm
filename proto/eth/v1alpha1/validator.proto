@@ -229,6 +229,13 @@ service BeaconNodeValidator {
         };
     }
 
+    // UpdateStateRoot re-computes state root and update state root
+    rpc UpdateStateRoot(BeaconBlock) returns (BeaconBlock) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/vanguard/update_state_root"
+        };
+    }
+
 }
 
 message DomainRequest {

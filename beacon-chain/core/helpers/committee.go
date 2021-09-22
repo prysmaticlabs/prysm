@@ -416,3 +416,38 @@ func precomputeProposerIndices(state iface.ReadOnlyBeaconState, activeIndices []
 
 	return proposerIndices, nil
 }
+
+
+// ProposerAssignments returns a map of proposer validator indices to corresponding slots for the next epoch.
+// This method is especially implemented for Orchestrator.
+func ProposerAssignments(
+	state *stateTrie.BeaconState,
+	epoch types.Epoch,
+) (map[types.ValidatorIndex][]types.Slot, error) {
+
+	// We determine the slots in which proposers are supposed to act.
+	// Some validators may need to propose multiple times per epoch, so
+	// we use a map of proposer idx -> []slot to keep track of this possibility.
+	startSlot, err := StartSlot(epoch)
+	if err != nil {
+		return nil, err
+	}
+	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
+
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		// Skip proposer assignment for genesis slot.
+		if slot == 0 {
+			continue
+		}
+		if err := state.SetSlot(slot); err != nil {
+			return nil, err
+		}
+		i, err := BeaconProposerIndex(state)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
+		}
+		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
+	}
+
+	return proposerIndexToSlots, nil
+}

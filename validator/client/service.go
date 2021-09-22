@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -14,23 +15,22 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // SyncChecker is able to determine if a beacon node is currently
@@ -62,13 +62,14 @@ type ValidatorService struct {
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             iface.Validator
-	protector             slashingiface.Protector
+	validator             Validator
+	protector             iface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 	graffitiStruct        *graffiti.Graffiti
+	pandoraService        pandora.PandoraService
 }
 
 // Config for the validator service.
@@ -81,9 +82,9 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingiface.Protector
+	Protector                  iface.Protector
 	Endpoint                   string
-	Validator                  iface.Validator
+	Validator                  Validator
 	ValDB                      db.Database
 	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
@@ -91,6 +92,7 @@ type Config struct {
 	DataDir                    string
 	GrpcHeadersFlag            string
 	GraffitiStruct             *graffiti.Graffiti
+	PandoraService             pandora.PandoraService
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -118,6 +120,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
+		pandoraService:        cfg.PandoraService,
 	}, nil
 }
 
@@ -200,6 +203,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
+		pandoraService:                 v.pandoraService,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
@@ -312,7 +316,7 @@ func ConstructDialOptions(
 // Syncing returns whether or not the beacon node is currently synchronizing the chain.
 func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	resp, err := nc.GetSyncStatus(ctx, &emptypb.Empty{})
+	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
 		return false, err
 	}
@@ -323,7 +327,7 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 // the genesis time along with the validator deposit contract address.
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	return nc.GetGenesis(ctx, &emptypb.Empty{})
+	return nc.GetGenesis(ctx, &ptypes.Empty{})
 }
 
 // to accounts changes in the keymanager, then updates those keys'

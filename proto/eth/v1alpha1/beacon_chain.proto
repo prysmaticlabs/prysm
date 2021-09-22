@@ -17,6 +17,7 @@ package ethereum.eth.v1alpha1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/duration.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1alpha1/attestation.proto";
@@ -266,6 +267,21 @@ service BeaconChain {
     rpc GetIndividualVotes(IndividualVotesRequest) returns (IndividualVotesRespond) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/individual_votes"
+        };
+    }
+
+    // Server-side stream of minimal consensus info.
+    rpc StreamMinimalConsensusInfo(MinimalConsensusInfoRequest) returns (stream MinimalConsensusInfo) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/vanguard/consensus/info/stream"
+        };
+    }
+
+    // Server-side stream of all unconfirmed blocks as they are received by
+    // the beacon chain node.
+    rpc StreamNewPendingBlocks(google.protobuf.Empty) returns (stream BeaconBlock) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/vanguard/pending_blocks/stream"
         };
     }
 }
@@ -876,4 +892,21 @@ message WeakSubjectivityCheckpoint {
     bytes state_root = 2;
     // The epoch of weak subjectivity checkpoint.
     uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+
+message MinimalConsensusInfoRequest {
+    // The fromEpoch provided in minimal consensus request.
+    uint64 from_epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+message MinimalConsensusInfo {
+    // The epoch of the minimal consensus request.
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    // A map (list) of validators.
+    repeated string validator_list = 2;
+    // The epoch of the minimal consensus request.
+    uint64 epoch_time_start = 3;
+    // The slot time duration of the requested epoch.
+    google.protobuf.Duration slot_time_duration = 4;
 }
