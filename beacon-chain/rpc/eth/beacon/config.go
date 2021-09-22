@@ -30,7 +30,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 	}
 
 	versions := forks.SortedForkVersions(schedule)
-	forks := make([]*ethpb.Fork, len(schedule))
+	chainForks := make([]*ethpb.Fork, len(schedule))
 	var previous, current []byte
 	for i, v := range versions {
 		if i == 0 {
@@ -40,7 +40,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 		}
 		copyV := v
 		current = copyV[:]
-		forks[i] = &ethpb.Fork{
+		chainForks[i] = &ethpb.Fork{
 			PreviousVersion: previous,
 			CurrentVersion:  current,
 			Epoch:           schedule[v],
@@ -48,7 +48,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 	}
 
 	return &ethpb.ForkScheduleResponse{
-		Data: forks,
+		Data: chainForks,
 	}, nil
 }
 

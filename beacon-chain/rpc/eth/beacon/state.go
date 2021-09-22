@@ -85,16 +85,16 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	defer span.End()
 
 	var (
-		state state.BeaconState
-		err   error
+		st  state.BeaconState
+		err error
 	)
 
-	state, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	fork := state.Fork()
+	fork := st.Fork()
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
@@ -111,11 +111,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	defer span.End()
 
 	var (
-		state state.BeaconState
-		err   error
+		st  state.BeaconState
+		err error
 	)
 
-	state, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
@@ -127,9 +127,9 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
-			PreviousJustified: checkpoint(state.PreviousJustifiedCheckpoint()),
-			CurrentJustified:  checkpoint(state.CurrentJustifiedCheckpoint()),
-			Finalized:         checkpoint(state.FinalizedCheckpoint()),
+			PreviousJustified: checkpoint(st.PreviousJustifiedCheckpoint()),
+			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
+			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
 	}, nil
 }

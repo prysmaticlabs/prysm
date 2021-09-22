@@ -339,11 +339,11 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
-			block, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
+			blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if block == nil || block.IsNil() {
+			if blk == nil || blk.IsNil() {
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
 
@@ -485,13 +485,13 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 			if numBlks == 1 {
 				break
 			}
-			for i, block := range blks {
+			for i, b := range blks {
 				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 				}
 				if canonical {
-					blk = block
+					blk = b
 					break
 				}
 			}

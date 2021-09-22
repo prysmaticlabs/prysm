@@ -63,7 +63,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 		discoveryAddresses[i] = sourceDisc[i].String()
 	}
 
-	metadata := &ethpb.Metadata{
+	meta := &ethpb.Metadata{
 		SeqNumber: ns.MetadataProvider.MetadataSeq(),
 		Attnets:   ns.MetadataProvider.Metadata().AttnetsBitfield(),
 	}
@@ -74,7 +74,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 			Enr:                enr,
 			P2PAddresses:       p2pAddresses,
 			DiscoveryAddresses: discoveryAddresses,
-			Metadata:           metadata,
+			Metadata:           meta,
 		},
 	}, nil
 }
