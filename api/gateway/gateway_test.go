@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -32,11 +33,10 @@ func (*mockEndpointFactory) IsNil() bool {
 }
 
 func TestGateway_Customized(t *testing.T) {
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
 	cert := "cert"
 	origins := []string{"origin"}
 	size := uint64(100)
-	middlewareAddr := "middleware"
 	endpointFactory := &mockEndpointFactory{}
 
 	g := New(
@@ -47,18 +47,17 @@ func TestGateway_Customized(t *testing.T) {
 		},
 		"",
 		"",
-	).WithMux(mux).
+	).WithRouter(r).
 		WithRemoteCert(cert).
 		WithAllowedOrigins(origins).
 		WithMaxCallRecvMsgSize(size).
-		WithApiMiddleware(middlewareAddr, endpointFactory)
+		WithApiMiddleware(endpointFactory)
 
-	assert.Equal(t, mux, g.mux)
+	assert.Equal(t, r, g.router)
 	assert.Equal(t, cert, g.remoteCert)
 	require.Equal(t, 1, len(g.allowedOrigins))
 	assert.Equal(t, origins[0], g.allowedOrigins[0])
 	assert.Equal(t, size, g.maxCallRecvMsgSize)
-	assert.Equal(t, middlewareAddr, g.apiMiddlewareAddr)
 	assert.Equal(t, endpointFactory, g.apiMiddlewareEndpointFactory)
 }
 
@@ -115,6 +114,6 @@ func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	)
 
 	writer := httptest.NewRecorder()
-	g.mux.ServeHTTP(writer, &http.Request{Method: "GET", Host: "localhost", URL: &url.URL{Path: "/foo"}})
+	g.router.ServeHTTP(writer, &http.Request{Method: "GET", Host: "localhost", URL: &url.URL{Path: "/foo"}})
 	assert.Equal(t, http.StatusNotFound, writer.Code)
 }

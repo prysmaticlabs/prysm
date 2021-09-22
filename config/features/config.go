@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

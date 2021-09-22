@@ -12,6 +12,7 @@ import (
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/cmd"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -22,7 +23,6 @@ import (
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -39,7 +39,6 @@ var appFlags = []cli.Flag{
 	flags.DisableGRPCGateway,
 	flags.GRPCGatewayHost,
 	flags.GRPCGatewayPort,
-	flags.EthApiPort,
 	flags.GPRCGatewayCorsDomain,
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
@@ -62,6 +61,7 @@ var appFlags = []cli.Flag{
 	flags.WeakSubjectivityCheckpt,
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
+	flags.MinPeersPerSubnet,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
