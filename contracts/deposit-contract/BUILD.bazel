@@ -32,9 +32,9 @@ go_test(
     ],
     deps = [
         ":go_default_library",
+        "//config/params:go_default_library",
         "//container/trie:go_default_library",
-        "//shared/interop:go_default_library",
-        "//shared/params:go_default_library",
+        "//runtime/interop:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
