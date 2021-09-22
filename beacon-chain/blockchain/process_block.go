@@ -91,6 +91,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.New("nil block")
 	}
 	b := signed.Block()
+
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		return err

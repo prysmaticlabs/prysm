@@ -223,16 +223,13 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now()
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, service.saveOrphanedAtts(ctx, r))
+	require.NoError(t, service.saveOrphanedAtts(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 
 	require.Equal(t, len(b.Block.Body.Attestations), service.cfg.AttPool.AggregatedAttestationCount())
 	savedAtts := service.cfg.AttPool.AggregatedAttestations()
@@ -249,16 +246,13 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	genesis, keys := testutil.DeterministicGenesisState(t, 64)
 	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch+1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, service.saveOrphanedAtts(ctx, r))
+	require.NoError(t, service.saveOrphanedAtts(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 	savedAtts := service.cfg.AttPool.AggregatedAttestations()
