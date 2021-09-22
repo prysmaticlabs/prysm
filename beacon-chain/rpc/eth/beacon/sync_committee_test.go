@@ -166,13 +166,17 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 	}
 
 	t.Run("Ok", func(t *testing.T) {
-		_, err := s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
+		root, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 64))
+		require.NoError(t, err)
+		sig, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 192))
+		require.NoError(t, err)
+		_, err = s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
 			Data: []*ethpbv2.SyncCommitteeMessage{
 				{
 					Slot:            0,
-					BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+					BeaconBlockRoot: root,
 					ValidatorIndex:  0,
-					Signature:       []byte("0x" + strings.Repeat("0", 192)),
+					Signature:       sig,
 				},
 			},
 		})
