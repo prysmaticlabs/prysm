@@ -37,6 +37,7 @@ type Flags struct {
 	// Testnet Flags.
 	ToledoTestnet  bool // ToledoTestnet defines the flag through which we can enable the node to run on the Toledo testnet.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
+	L15TestNet     bool // L15Testnet defines the flag for LUKSO L15 test net
 
 	// Feature related flags.
 	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
@@ -128,6 +129,10 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
 		cfg.PyrmontTestnet = true
+	} else if ctx.Bool(L15TestNet.Name) {
+		log.Warn("Running on the L15 LUKSO Testnet")
+		params.UseL15Config()
+		params.UseL15NetworkConfig()
 	} else if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()

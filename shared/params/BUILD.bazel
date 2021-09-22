@@ -15,6 +15,7 @@ go_library(
         "testnet_prater_config.go",
         "testnet_pyrmont_config.go",
         "testnet_toledo_config.go",
+        "testnet_l15_config.go",
         "testutils.go",
         "values.go",
         "van_types.go",

@@ -2,6 +2,7 @@ package debug
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -144,6 +145,10 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		BehaviourPenalty:   float32(bPenalty),
 		ValidationError:    errorToString(peers.Scorers().ValidationError(pid)),
 	}
+	log.WithField("scoreInfo", scoreInfo.OverallScore).
+		WithField("pid", pid).
+		Warn("Score info of particular peer")
+
 	return &pbrpc.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
 		Direction:          pbDirection,
