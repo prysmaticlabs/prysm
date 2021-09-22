@@ -29,16 +29,15 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
-	if usePrysmSh {
-		// If using prysm.sh, run for 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = 6
-	}
-
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
+	}
+	if usePrysmSh {
+		// If using prysm.sh, run for only 6 epochs.
+		// TODO(#9166): remove this block once v2 changes are live.
+		epochsToRun = 6
 	}
 	const tracingEndpoint = "127.0.0.1:9411"
 	evals := []types.Evaluator{
