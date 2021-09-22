@@ -202,7 +202,7 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,
-			[]string{"{\"failures\":[{\"index\":0,\"message\":\"invalid block root format\"}]}"},
+			[]string{"{\"failures\":[{\"index\":0,\"message\":\"invalid block root length\"}]}"},
 			v,
 		)
 	})
