@@ -745,14 +745,14 @@ type eventChainReorgJson struct {
 // Error handling.
 // ---------------
 
-// submitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
-type submitAttestationsErrorJson struct {
+// indexedVerificationFailureErrorJson is a JSON representation of the error returned when verifying an indexed object.
+type indexedVerificationFailureErrorJson struct {
 	gateway.DefaultErrorJson
-	Failures []*singleAttestationVerificationFailureJson `json:"failures"`
+	Failures []*singleIndexedVerificationFailureJson `json:"failures"`
 }
 
-// singleAttestationVerificationFailureJson is a JSON representation of a failure when verifying a single submitted attestation.
-type singleAttestationVerificationFailureJson struct {
+// singleIndexedVerificationFailureJson is a JSON representation of a an issue when verifying a single indexed object e.g. an item in an array.
+type singleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }

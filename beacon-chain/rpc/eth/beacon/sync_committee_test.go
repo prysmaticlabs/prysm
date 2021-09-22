@@ -20,6 +20,7 @@ import (
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"google.golang.org/grpc"
 )
 
@@ -204,12 +205,16 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 }
 
 func TestValidateSyncCommitteeMessage(t *testing.T) {
+	root, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 64))
+	require.NoError(t, err)
+	sig, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 192))
+	require.NoError(t, err)
 	t.Run("valid", func(t *testing.T) {
 		msg := &ethpbv2.SyncCommitteeMessage{
 			Slot:            0,
-			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			BeaconBlockRoot: root,
 			ValidatorIndex:  0,
-			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+			Signature:       sig,
 		}
 		err := validateSyncCommitteeMessage(msg)
 		assert.NoError(t, err)
@@ -219,21 +224,21 @@ func TestValidateSyncCommitteeMessage(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: []byte("invalid"),
 			ValidatorIndex:  0,
-			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+			Signature:       sig,
 		}
 		err := validateSyncCommitteeMessage(msg)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid block root format", err)
+		assert.ErrorContains(t, "invalid block root length", err)
 	})
 	t.Run("invalid block root", func(t *testing.T) {
 		msg := &ethpbv2.SyncCommitteeMessage{
 			Slot:            0,
-			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			BeaconBlockRoot: root,
 			ValidatorIndex:  0,
 			Signature:       []byte("invalid"),
 		}
 		err := validateSyncCommitteeMessage(msg)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid signature format", err)
+		assert.ErrorContains(t, "invalid signature length", err)
 	})
 }
