@@ -1,6 +1,3 @@
-// Package state implements the whole state transition
-// function which consists of per slot, per-epoch transitions, and
-// bootstrapping the genesis state according to the Ethereum Beacon chain spec.
 package transition
 
 import (
