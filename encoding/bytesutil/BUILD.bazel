@@ -17,7 +17,7 @@ go_test(
     srcs = ["bytes_test.go"],
     deps = [
         ":go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

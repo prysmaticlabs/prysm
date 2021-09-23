@@ -15,12 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 }
 
 func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 }
 
 func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 }
 
 func TestProcessSyncCommittee_FilterSyncCommitteeVotes(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestProcessSyncCommittee_FilterSyncCommitteeVotes(t *testing.T) {
 }
 
 func Test_VerifySyncCommitteeSig(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -238,7 +238,7 @@ func Test_VerifySyncCommitteeSig(t *testing.T) {
 }
 
 func Test_ApplySyncRewardsPenalties(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	beaconState, err := altair.ApplySyncRewardsPenalties(beaconState,
 		[]types.ValidatorIndex{0, 1}, // voted
 		[]types.ValidatorIndex{2, 3}) // didn't vote

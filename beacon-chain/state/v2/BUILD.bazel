@@ -36,8 +36,8 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
-        "//shared/testutil:__pkg__",
         "//testing/spectest:__subpackages__",
+        "//testing/util:__pkg__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
@@ -83,8 +83,8 @@ go_test(
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

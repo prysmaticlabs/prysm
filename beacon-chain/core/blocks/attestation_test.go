@@ -16,14 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	data := testutil.HydrateAttestationData(&ethpb.AttestationData{
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	data := util.HydrateAttestationData(&ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 	})
@@ -81,9 +81,9 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 }
 
 func TestVerifyAttestationNoVerifySignature_IncorrectSlotTargetEpoch(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
+	beaconState, _ := util.DeterministicGenesisState(t, 1)
 
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   params.BeaconConfig().SlotsPerEpoch,
 			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -97,7 +97,7 @@ func TestVerifyAttestationNoVerifySignature_IncorrectSlotTargetEpoch(t *testing.
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
@@ -128,7 +128,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 	// Attestation with an empty signature
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
@@ -157,7 +157,7 @@ func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 }
 
 func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
 	var mockRoot [32]byte
@@ -216,7 +216,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 	var sig [96]byte
 	copy(sig[:], "signed")
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := util.HydrateAttestation(&ethpb.Attestation{
 		Signature: sig[:],
 	})
 	for _, tt := range tests {
@@ -238,7 +238,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -263,7 +263,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		attestation *ethpb.IndexedAttestation
 	}{
 		{attestation: &ethpb.IndexedAttestation{
-			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Data: util.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 2,
 				},
@@ -273,7 +273,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Data: util.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
 				},
@@ -282,7 +282,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Data: util.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 4,
 				},
@@ -291,7 +291,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, 96),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: testutil.HydrateAttestationData(&ethpb.AttestationData{
+			Data: util.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 7,
 				},
@@ -340,7 +340,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 }
 
 func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
-	beaconState, keys := testutil.DeterministicGenesisState(t, 128)
+	beaconState, keys := util.DeterministicGenesisState(t, 128)
 
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b11111}
@@ -385,7 +385,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	// In this test, att1 is from the prior fork and att2 is from the new fork.
 	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -395,7 +395,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		}
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(35))
 	require.NoError(t, st.SetValidators(validators))
@@ -407,7 +407,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att1 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -426,7 +426,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1*params.BeaconConfig().SlotsPerEpoch+1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att2 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -449,7 +449,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	ctx := context.Background()
 	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -459,14 +459,14 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 		}
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(5))
 	require.NoError(t, st.SetValidators(validators))
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att1 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -485,7 +485,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att2 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1,
@@ -512,7 +512,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	ctx := context.Background()
 	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -522,7 +522,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 		}
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(5))
 	require.NoError(t, st.SetValidators(validators))
@@ -530,7 +530,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att1 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -549,7 +549,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
+	att2 := util.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1,

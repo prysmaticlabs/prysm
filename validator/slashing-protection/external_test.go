@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
