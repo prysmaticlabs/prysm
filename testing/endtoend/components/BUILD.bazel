@@ -20,7 +20,7 @@ go_library(
         "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//contracts/deposit:go_default_library",
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//testing/endtoend/helpers:go_default_library",
         "//testing/endtoend/params:go_default_library",
