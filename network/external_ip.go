@@ -1,4 +1,4 @@
-// Package iputils contains useful functions for ip address formatting.
+// Package network contains useful functions for ip address formatting.
 package network
 
 import (
