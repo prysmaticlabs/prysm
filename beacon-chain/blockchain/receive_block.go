@@ -42,10 +42,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 		return err
 	}
 
-	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
-		return err
-	}
-
 	// Handle post block operations such as attestations and exits.
 	if err := s.handlePostBlockOperations(blockCopy.Block()); err != nil {
 		return err

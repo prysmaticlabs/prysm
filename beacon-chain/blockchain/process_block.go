@@ -106,11 +106,13 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
+
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
 	if newFinalized {
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
@@ -122,6 +124,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+
+	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+		return err
 	}
 
 	// Send notification of the processed block to the state feed.
