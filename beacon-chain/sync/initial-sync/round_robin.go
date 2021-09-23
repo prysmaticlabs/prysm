@@ -13,8 +13,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
 

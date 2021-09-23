@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 

@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
