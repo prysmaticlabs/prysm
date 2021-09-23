@@ -20,8 +20,8 @@ import (
 )
 
 var CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
-Name: "committee_cache_in_progress_hit",
-Help: "The number of committee requests that are present in the cache.",
+	Name: "committee_cache_in_progress_hit",
+	Help: "The number of committee requests that are present in the cache.",
 })
 
 // IsActiveValidator returns the boolean value on whether the validator
