@@ -128,34 +128,32 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
-	if features.Get().UpdateHeadTimely {
-		if newFinalized {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+	if newFinalized {
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save new justified")
 		}
-
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-
-		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
-			return err
-		}
-
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        signed.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: signed,
-				Verified:    true,
-			},
-		})
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
+
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.WithError(err).Warn("Could not update head")
+	}
+
+	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+		return err
+	}
+
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        signed.Block().Slot(),
+			BlockRoot:   blockRoot,
+			SignedBlock: signed,
+			Verified:    true,
+		},
+	})
 
 	// Update finalized check point.
 	if newFinalized {
@@ -165,11 +163,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
-		}
-		if !features.Get().UpdateHeadTimely {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
@@ -309,10 +302,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		if features.Get().UpdateHeadTimely {
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = fCheckpoint
-		}
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = fCheckpoint
 	}
 	return nil
 }
