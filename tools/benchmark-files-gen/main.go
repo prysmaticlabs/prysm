@@ -137,7 +137,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
 		return err
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	if err != nil {
 		return err
 	}
