@@ -3,7 +3,7 @@ package benchmark
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestPreGenFullBlock(t *testing.T) {

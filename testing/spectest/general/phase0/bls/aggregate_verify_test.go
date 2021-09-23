@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestAggregateVerify(t *testing.T) {
@@ -24,7 +24,7 @@ func testAggregateVerify(t *testing.T) {
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := util.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &AggregateVerifyTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
