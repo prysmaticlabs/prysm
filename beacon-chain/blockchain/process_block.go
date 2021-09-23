@@ -106,36 +106,34 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
-	if features.Get().UpdateHeadTimely {
-		if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-			if err := s.updateJustified(ctx, postState); err != nil {
-				return err
-			}
+	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
-		if newFinalized {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = postState.FinalizedCheckpoint()
-		}
-
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        signed.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: signed,
-				Verified:    true,
-			},
-		})
 	}
+	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+	if newFinalized {
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save new justified")
+		}
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+	}
+
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.WithError(err).Warn("Could not update head")
+	}
+
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        signed.Block().Slot(),
+			BlockRoot:   blockRoot,
+			SignedBlock: signed,
+			Verified:    true,
+		},
+	})
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	if features.Get().EnableNextSlotStateCache {
@@ -151,16 +149,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}()
 	}
 
-	// Update justified check point.
+	// Save justified check point to db.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-		if !features.Get().UpdateHeadTimely {
-			if err := s.updateJustified(ctx, postState); err != nil {
-				return err
-			}
-		} else {
-			if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
-				return err
-			}
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+			return err
 		}
 	}
 
@@ -172,11 +164,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
-		}
-		if !features.Get().UpdateHeadTimely {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
@@ -316,10 +303,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		if features.Get().UpdateHeadTimely {
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = fCheckpoint
-		}
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = fCheckpoint
 	}
 	return nil
 }
