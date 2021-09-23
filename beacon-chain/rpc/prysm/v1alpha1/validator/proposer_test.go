@@ -2348,7 +2348,7 @@ func BenchmarkGetBlock(b *testing.B) {
 	proposerServer, beaconState, privKeys := setupGetBlock(b)
 	ctx := context.Background()
 	for n := 1; n < b.N; n++ {
-		getBlock(b, ctx, proposerServer, beaconState, privKeys, n)
+		runGetBlock(ctx, b, proposerServer, beaconState, privKeys, n)
 	}
 }
 
@@ -2361,11 +2361,11 @@ func BenchmarkOptimisedGetBlock(b *testing.B) {
 	proposerServer, beaconState, privKeys := setupGetBlock(b)
 	ctx := context.Background()
 	for n := 1; n < b.N; n++ {
-		getBlock(b, ctx, proposerServer, beaconState, privKeys, n)
+		runGetBlock(ctx, b, proposerServer, beaconState, privKeys, n)
 	}
 }
 
-func getBlock(b *testing.B, ctx context.Context, proposerServer *Server, beaconState state.BeaconState, privKeys []bls.SecretKey, counter int) {
+func runGetBlock(ctx context.Context, b *testing.B, proposerServer *Server, beaconState state.BeaconState, privKeys []bls.SecretKey, counter int) {
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(b, err)
 
@@ -2438,8 +2438,5 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
 		require.NoError(bm, err)
 	}
-	//_, err = proposerServer.GetBlock(ctx, req)
-	//require.NoError(bm, err)
-
 	return proposerServer, beaconState, privKeys
 }
