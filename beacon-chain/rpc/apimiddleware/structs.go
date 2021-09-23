@@ -1,6 +1,8 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/api/gateway"
+import (
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+)
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
@@ -739,7 +741,7 @@ type eventChainReorgJson struct {
 
 // submitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
 type submitAttestationsErrorJson struct {
-	gateway.DefaultErrorJson
+	apimiddleware.DefaultErrorJson
 	Failures []*singleAttestationVerificationFailureJson `json:"failures"`
 }
 
