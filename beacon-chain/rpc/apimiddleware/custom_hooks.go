@@ -265,13 +265,13 @@ func serializeV2State(response interface{}) (bool, []byte, gateway.ErrorJson) {
 }
 
 type phase0ProduceBlockResponseJson struct {
-	Version string                    `json:"version"`
-	Data    *beaconBlockContainerJson `json:"data"`
+	Version string           `json:"version"`
+	Data    *beaconBlockJson `json:"data"`
 }
 
 type altairProduceBlockResponseJson struct {
-	Version string                          `json:"version"`
-	Data    *beaconBlockAltairContainerJson `json:"data"`
+	Version string                 `json:"version"`
+	Data    *beaconBlockAltairJson `json:"data"`
 }
 
 func serializeProducedV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
@@ -284,16 +284,12 @@ func serializeProducedV2Block(response interface{}) (bool, []byte, gateway.Error
 	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
 		actualRespContainer = &phase0ProduceBlockResponseJson{
 			Version: respContainer.Version,
-			Data: &beaconBlockContainerJson{
-				Message: respContainer.Data.Phase0Block,
-			},
+			Data:    respContainer.Data.Phase0Block,
 		}
 	} else {
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
-			Data: &beaconBlockAltairContainerJson{
-				Message: respContainer.Data.AltairBlock,
-			},
+			Data:    respContainer.Data.AltairBlock,
 		}
 	}
 
