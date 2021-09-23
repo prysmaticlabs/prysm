@@ -443,7 +443,7 @@ func TestDomain_OK(t *testing.T) {
 
 // Test basic functionality of ActiveValidatorIndices without caching. This test will need to be
 // rewritten when releasing some cache flag.
-func TestActiveValidatorIndices( t *testing.T) {
+func TestActiveValidatorIndices(t *testing.T) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	type args struct {
 		state *ethpb.BeaconState

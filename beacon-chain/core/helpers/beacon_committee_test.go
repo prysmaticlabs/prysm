@@ -95,7 +95,7 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 		Slot: 0, // Epoch 0.
 	})
 	require.NoError(t, err)
-	_, _, err = CommitteeAssignments(context.Background(),  state, epoch+1)
+	_, _, err = CommitteeAssignments(context.Background(), state, epoch+1)
 	assert.ErrorContains(t, "can't be greater than next epoch", err)
 }
 
@@ -118,7 +118,7 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	})
 	require.NoError(t, err)
 	ClearCache()
-	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(),  state, 0)
+	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, 0)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 	for _, slots := range proposerIndexToSlots {
 		for _, s := range slots {
@@ -190,7 +190,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
-			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(context.Background(),  state, core.SlotToEpoch(tt.slot))
+			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, core.SlotToEpoch(tt.slot))
 			require.NoError(t, err, "Failed to determine CommitteeAssignments")
 			cac := validatorIndexToCommittee[tt.index]
 			assert.Equal(t, tt.committeeIndex, cac.CommitteeIndex, "Unexpected committeeIndex for validator index %d", tt.index)
@@ -225,11 +225,11 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	_, proposerIndxs, err := CommitteeAssignments(context.Background(),  state, core.CurrentEpoch(state))
+	_, proposerIndxs, err := CommitteeAssignments(context.Background(), state, core.CurrentEpoch(state))
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
 
-	_, proposerIndxs, err = CommitteeAssignments(context.Background(),  state, core.CurrentEpoch(state)+1)
+	_, proposerIndxs, err = CommitteeAssignments(context.Background(), state, core.CurrentEpoch(state)+1)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(proposerIndxs), "wanted empty proposer index set")
 }
@@ -251,7 +251,7 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	require.NoError(t, err)
 	ClearCache()
 	epoch := types.Epoch(1)
-	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(),  state, epoch)
+	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, epoch)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 
 	slotsWithProposers := make(map[types.Slot]bool)

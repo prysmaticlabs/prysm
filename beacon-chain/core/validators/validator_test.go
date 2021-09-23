@@ -319,7 +319,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activeCount, err := helpers.ActiveValidatorCount(context.Background(),  s, core.PrevEpoch(s))
+		activeCount, err := helpers.ActiveValidatorCount(context.Background(), s, core.PrevEpoch(s))
 		require.NoError(t, err)
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)
