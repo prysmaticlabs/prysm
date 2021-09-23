@@ -212,11 +212,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 		}
 	}
 
-	if features.Get().UpdateHeadTimely {
-		return nil
-	}
-
-	return s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+	return nil
 }
 
 // This caches input checkpoint as justified for the service struct. It rotates current justified to previous justified,
