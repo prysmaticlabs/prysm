@@ -122,7 +122,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 		endpoint.GetResponse = &attestationsPoolResponseJson{}
 		endpoint.PostRequest = &submitAttestationRequestJson{}
-		endpoint.Err = &submitAttestationsErrorJson{}
+		endpoint.Err = &indexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapAttestationsArray,
 		}
@@ -137,6 +137,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/sync_committees":
 		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Err = &indexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
 		}
