@@ -70,8 +70,8 @@ go_test(
     deps = [
         "//network:go_default_library",
         "//runtime/maxprocs:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
         "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",

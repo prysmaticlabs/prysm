@@ -11,8 +11,8 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -27,7 +27,7 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
-	st, _ := testutil.DeterministicGenesisStateAltair(t, 10)
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
