@@ -480,10 +480,10 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 
 			b, err := helpers.TotalActiveBalance(beaconState)
 			require.NoError(t, err)
-			st, err := altair.SetParticipationAndRewardProposer(beaconState, test.epoch, test.indices, test.participatedFlags, b)
+			st, err := altair.SetParticipationAndRewardProposer(ctx, beaconState, test.epoch, test.indices, test.participatedFlags, b)
 			require.NoError(t, err)
 
-			i, err := helpers.BeaconProposerIndex(st)
+			i, err := helpers.BeaconProposerIndex(ctx, st)
 			require.NoError(t, err)
 			b, err = beaconState.BalanceAtIndex(i)
 			require.NoError(t, err)
@@ -587,7 +587,7 @@ func TestRewardProposer(t *testing.T) {
 	}
 	for _, test := range tests {
 		require.NoError(t, altair.RewardProposer(beaconState, test.rewardNumerator))
-		i, err := helpers.BeaconProposerIndex(beaconState)
+		i, err := helpers.BeaconProposerIndex(ctx, beaconState)
 		require.NoError(t, err)
 		b, err := beaconState.BalanceAtIndex(i)
 		require.NoError(t, err)

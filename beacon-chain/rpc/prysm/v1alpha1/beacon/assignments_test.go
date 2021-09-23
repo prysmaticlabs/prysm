@@ -208,7 +208,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
 	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
 	require.NoError(t, err)
@@ -277,7 +277,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
 	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
 	require.NoError(t, err)
@@ -342,7 +342,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	// Construct the wanted assignments.
 	var assignments []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
 	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
 	require.NoError(t, err)

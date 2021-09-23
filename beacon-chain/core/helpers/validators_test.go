@@ -270,7 +270,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	for _, tt := range tests {
 		ClearCache()
 		require.NoError(t, state.SetSlot(tt.slot))
-		result, err := BeaconProposerIndex(state)
+		result, err := BeaconProposerIndex(ctx, state)
 		require.NoError(t, err, "Failed to get shard and committees at slot")
 		assert.Equal(t, tt.index, result, "Result index was an unexpected value")
 	}
@@ -304,7 +304,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	// Set a very high slot, so that retrieved block root will be
 	// non existent for the proposer cache.
 	require.NoError(t, state.SetSlot(100))
-	_, err = BeaconProposerIndex(state)
+	_, err = BeaconProposerIndex(ctx, state)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
 }
@@ -323,7 +323,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	indices, err := ActiveValidatorIndices(state, 0)
+	indices, err := ActiveValidatorIndices(ctx, state, 0)
 	require.NoError(t, err)
 
 	var proposerIndices []types.ValidatorIndex
@@ -442,7 +442,7 @@ func TestDomain_OK(t *testing.T) {
 
 // Test basic functionality of ActiveValidatorIndices without caching. This test will need to be
 // rewritten when releasing some cache flag.
-func TestActiveValidatorIndices(t *testing.T) {
+func TestActiveValidatorIndices(ctx, t *testing.T) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	type args struct {
 		state *ethpb.BeaconState
@@ -591,7 +591,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := v1.InitializeFromProto(tt.args.state)
 			require.NoError(t, err)
-			got, err := ActiveValidatorIndices(s, tt.args.epoch)
+			got, err := ActiveValidatorIndices(ctx, s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return

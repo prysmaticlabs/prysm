@@ -323,7 +323,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -341,7 +341,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(postState, core.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
 			return err
 		}
 	}
@@ -363,7 +363,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	}
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(st, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return err
 		}

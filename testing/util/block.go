@@ -154,7 +154,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 
-	idx, err := helpers.BeaconProposerIndex(bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, bState)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +376,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(ctx, bState, core.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}

@@ -20,7 +20,7 @@ import (
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	epoch := types.Epoch(0)
 	buf := make([]byte, 32)

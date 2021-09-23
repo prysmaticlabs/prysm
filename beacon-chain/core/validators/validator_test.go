@@ -121,7 +121,7 @@ func TestSlashValidator_OK(t *testing.T) {
 
 	slashedIdx := types.ValidatorIndex(2)
 
-	proposer, err := helpers.BeaconProposerIndex(state)
+	proposer, err := helpers.BeaconProposerIndex(ctx, state)
 	require.NoError(t, err, "Could not get proposer")
 	proposerBal, err := state.BalanceAtIndex(proposer)
 	require.NoError(t, err)
@@ -318,7 +318,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activeCount, err := helpers.ActiveValidatorCount(s, core.PrevEpoch(s))
+		activeCount, err := helpers.ActiveValidatorCount(ctx, s, core.PrevEpoch(s))
 		require.NoError(t, err)
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)

@@ -76,7 +76,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, nextSlotState)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
@@ -333,7 +333,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, copied.SetSlot(beaconState.Slot()+1))
 	randaoReveal, err := util.RandaoReveal(copied, currentEpoch, privKeys)
 	require.NoError(t, err)
-	proposerIndex, err := helpers.BeaconProposerIndex(copied)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
 	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{

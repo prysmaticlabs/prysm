@@ -311,7 +311,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal

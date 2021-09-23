@@ -47,7 +47,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 1)
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -173,7 +173,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 
 	wanted, err := computeCommittees(0, activeIndices, seed)

@@ -117,7 +117,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		},
 		Signature: []byte{'B'},
 	}
-	valCount, err := helpers.ActiveValidatorCount(state, core.SlotToEpoch(att.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(ctx, state, core.SlotToEpoch(att.Data.Slot))
 	require.NoError(t, err)
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")

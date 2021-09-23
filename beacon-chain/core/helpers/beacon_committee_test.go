@@ -44,7 +44,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	require.NoError(t, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(t, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -410,7 +410,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	require.NoError(b, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(b, err)
@@ -444,7 +444,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 	require.NoError(b, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(b, err)
@@ -478,7 +478,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 	require.NoError(b, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(b, err)
@@ -513,7 +513,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 	require.NoError(b, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(b, err)
@@ -548,7 +548,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 	require.NoError(b, err)
 
 	epoch := core.CurrentEpoch(state)
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
 	require.NoError(b, err)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(b, err)
@@ -609,7 +609,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	indices, err := ActiveValidatorIndices(state, 0)
+	indices, err := ActiveValidatorIndices(ctx, state, 0)
 	require.NoError(t, err)
 
 	proposerIndices, err := precomputeProposerIndices(state, indices)

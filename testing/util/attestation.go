@@ -119,7 +119,7 @@ func GenerateAttestations(
 		headRoot = b
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, bState, currentEpoch)
 	if err != nil {
 		return nil, err
 	}

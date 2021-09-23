@@ -27,7 +27,7 @@ import (
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
-	_ context.Context,
+	ctx context.Context,
 	beaconState state.BeaconState,
 	b block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
@@ -35,7 +35,7 @@ func ProcessRandao(
 		return nil, err
 	}
 	body := b.Block().Body()
-	buf, proposerPub, domain, err := randaoSigningData(beaconState)
+	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}

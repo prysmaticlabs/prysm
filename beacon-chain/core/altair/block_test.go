@@ -71,7 +71,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	require.Equal(t, true, balances[indices[0]] > balances[nonSyncIndex])
 
 	// Proposer should be more profitable than rest of the sync committee
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	require.Equal(t, true, balances[proposerIndex] > balances[indices[0]])
 
@@ -248,7 +248,7 @@ func Test_ApplySyncRewardsPenalties(t *testing.T) {
 	require.Equal(t, balances[0], balances[1])
 	require.Equal(t, uint64(31999999012), balances[2])
 	require.Equal(t, balances[2], balances[3])
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	require.Equal(t, uint64(32000000282), balances[proposerIndex])
 }

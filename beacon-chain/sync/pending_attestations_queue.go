@@ -109,7 +109,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
-						valCount, err := helpers.ActiveValidatorCount(preState, core.SlotToEpoch(att.Aggregate.Data.Slot))
+						valCount, err := helpers.ActiveValidatorCount(ctx, preState, core.SlotToEpoch(att.Aggregate.Data.Slot))
 						if err != nil {
 							log.WithError(err).Debug("Could not retrieve active validator count")
 							continue
