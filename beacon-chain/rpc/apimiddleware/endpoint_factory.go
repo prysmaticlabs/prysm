@@ -122,7 +122,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.RequestQueryParams = []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 		endpoint.GetResponse = &attestationsPoolResponseJson{}
 		endpoint.PostRequest = &submitAttestationRequestJson{}
-		endpoint.Err = &submitAttestationsErrorJson{}
+		endpoint.Err = &indexedVerificationFailureErrorJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapAttestationsArray},
 		}
@@ -137,6 +137,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/sync_committees":
 		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Err = &indexedVerificationFailureErrorJson{}
 		endpoint.Hooks = gateway.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: []gateway.Hook{wrapSyncCommitteeSignaturesArray},
 		}
