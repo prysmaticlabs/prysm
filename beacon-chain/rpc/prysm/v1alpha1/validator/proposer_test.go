@@ -1908,7 +1908,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
 					})
-					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
 					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
 					require.NoError(t, err)

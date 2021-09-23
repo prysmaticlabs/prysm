@@ -52,7 +52,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
 	block := util.NewBeaconBlockAltair()
 	block.Block.ProposerIndex = proposerIdx
@@ -139,7 +139,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
 	block := util.NewBeaconBlockAltair()
 	block.Block.ProposerIndex = proposerIdx

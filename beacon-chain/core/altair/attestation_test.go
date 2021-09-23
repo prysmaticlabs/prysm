@@ -211,7 +211,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	cfc.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 	p, err := beaconState.CurrentEpochParticipation()
 	require.NoError(t, err)
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
@@ -388,7 +388,6 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconStateAltair{}
 	b := &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}}
-	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(b)
@@ -399,7 +398,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 		require.NoError(t, err)
-		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, wsb)
+		r, err := altair.ProcessAttestationsNoVerifySignature(context.Background(), s, wsb)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -480,10 +479,10 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 
 			b, err := helpers.TotalActiveBalance(beaconState)
 			require.NoError(t, err)
-			st, err := altair.SetParticipationAndRewardProposer(ctx, beaconState, test.epoch, test.indices, test.participatedFlags, b)
+			st, err := altair.SetParticipationAndRewardProposer(context.Background(), beaconState, test.epoch, test.indices, test.participatedFlags, b)
 			require.NoError(t, err)
 
-			i, err := helpers.BeaconProposerIndex(ctx, st)
+			i, err := helpers.BeaconProposerIndex(context.Background(), st)
 			require.NoError(t, err)
 			b, err = beaconState.BalanceAtIndex(i)
 			require.NoError(t, err)
@@ -586,8 +585,8 @@ func TestRewardProposer(t *testing.T) {
 		{rewardNumerator: 1000000000000, want: 34234377253},
 	}
 	for _, test := range tests {
-		require.NoError(t, altair.RewardProposer(beaconState, test.rewardNumerator))
-		i, err := helpers.BeaconProposerIndex(ctx, beaconState)
+		require.NoError(t, altair.RewardProposer(context.Background(), beaconState, test.rewardNumerator))
+		i, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 		require.NoError(t, err)
 		b, err := beaconState.BalanceAtIndex(i)
 		require.NoError(t, err)

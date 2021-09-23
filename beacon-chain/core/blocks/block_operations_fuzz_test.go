@@ -125,7 +125,7 @@ func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(block)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeaderNoVerify(s, block.Slot, block.ProposerIndex, block.ParentRoot, []byte{})
+		_, err = ProcessBlockHeaderNoVerify(context.Background(), s, block.Slot, block.ProposerIndex, block.ParentRoot, []byte{})
 		_ = err
 	}
 }

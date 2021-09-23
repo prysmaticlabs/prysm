@@ -204,7 +204,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	require.NoError(t, copied.SetSlot(1))
-	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), copied)
 	require.NoError(t, err)
 	msg := util.NewBeaconBlock()
 	msg.Block.ParentRoot = bRoot[:]

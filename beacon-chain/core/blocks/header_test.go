@@ -50,7 +50,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(ctx, state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
@@ -60,7 +60,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
@@ -82,7 +82,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	lbhdr, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 
 	block := util.NewBeaconBlock()
@@ -165,7 +165,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	pID, err := helpers.BeaconProposerIndex(ctx, state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
@@ -207,7 +207,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	require.NoError(t, err)
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
-	pID, err := helpers.BeaconProposerIndex(ctx, state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
@@ -246,7 +246,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(ctx, state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
@@ -258,7 +258,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	require.NoError(t, err, "Failed to hash block bytes got")
 
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
@@ -305,7 +305,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(ctx, state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
@@ -314,7 +314,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()

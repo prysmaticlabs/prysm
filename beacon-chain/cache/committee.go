@@ -145,7 +145,6 @@ func (c *CommitteeCache) ActiveIndicesCount(ctx context.Context, seed [32]byte) 
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
-		fmt.Println("cache miss active indices count")
 		CommitteeCacheMiss.Inc()
 		return 0, nil
 	}
