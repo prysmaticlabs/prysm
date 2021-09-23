@@ -1,4 +1,4 @@
-package depositcontract_test
+package deposit_test
 
 import (
 	"strconv"
@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
-	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
