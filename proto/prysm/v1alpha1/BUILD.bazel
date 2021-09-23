@@ -159,7 +159,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",

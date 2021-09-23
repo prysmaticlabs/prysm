@@ -10,9 +10,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
     ],
 )
 
@@ -25,8 +25,8 @@ go_test(
         "//config/params:go_default_library",
         "//contracts/deposit:go_default_library",
         "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
     ],
