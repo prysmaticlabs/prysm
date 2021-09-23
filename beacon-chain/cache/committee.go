@@ -72,7 +72,6 @@ func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [3
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
-		fmt.Println("cache miss committee")
 		CommitteeCacheMiss.Inc()
 		return nil, nil
 	}
