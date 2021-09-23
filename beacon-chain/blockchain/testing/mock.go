@@ -57,6 +57,7 @@ type ChainService struct {
 	SyncContributionProofDomain []byte
 	PublicKey                   [48]byte
 	SyncCommitteePubkeys        [][]byte
+	InitSyncBlockRoots          map[[32]byte]bool
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -360,8 +361,11 @@ func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) 
 }
 
 // HasInitSyncBlock mocks the same method in the chain service.
-func (s *ChainService) HasInitSyncBlock(_ [32]byte) bool {
-	return false
+func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
+	if s.InitSyncBlockRoots == nil {
+		return false
+	}
+	return s.InitSyncBlockRoots[rt]
 }
 
 // HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
