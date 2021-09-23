@@ -24,10 +24,11 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -433,6 +434,11 @@ func Test_wrapAndReportValidation(t *testing.T) {
 }
 
 func TestFilterSubnetPeers(t *testing.T) {
+	gFlags := new(flags.GlobalFlags)
+	gFlags.MinimumPeersPerSubnet = 4
+	flags.Init(gFlags)
+	// Reset config.
+	defer flags.Init(new(flags.GlobalFlags))
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	currSlot := types.Slot(100)
@@ -481,7 +487,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 	// Try with only peers from subnet 20.
 	wantedPeers = []peer.ID{p2.BHost.ID()}
 	// Connect an excess amount of peers in the particular subnet.
-	for i := uint64(1); i <= params.BeaconNetworkConfig().MinimumPeersInSubnet; i++ {
+	for i := 1; i <= flags.Get().MinimumPeersPerSubnet; i++ {
 		nPeer := createPeer(t, subnet20)
 		p.Connect(nPeer)
 		wantedPeers = append(wantedPeers, nPeer.BHost.ID())

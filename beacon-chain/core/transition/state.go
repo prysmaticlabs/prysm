@@ -1,6 +1,3 @@
-// Package state implements the whole state transition
-// function which consists of per slot, per-epoch transitions, and
-// bootstrapping the genesis state according to the Ethereum Beacon chain spec.
 package transition
 
 import (
@@ -11,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GenesisBeaconState gets called when MinGenesisActiveValidatorCount count of

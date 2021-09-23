@@ -63,7 +63,7 @@
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
-      "shared/params/config.go": "This config struct needs to be organized for now",
+      "config/params/config.go": "This config struct needs to be organized for now",
       "shared/featureconfig/config.go": "This config struct needs to be organized for now",
       "proto/.*": "Excluding protobuf objects for now"
     }

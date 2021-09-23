@@ -28,6 +28,13 @@ func NewTrie(depth uint64) (*SparseMerkleTrie, error) {
 	return GenerateTrieFromItems(items, depth)
 }
 
+// NewTrieWithBranches returns a new merkle trie filled with branches to use.
+func NewTrieWithBranches(branches [][][]byte, depth uint64) (*SparseMerkleTrie, error) {
+	var zeroBytes [32]byte
+	items := [][]byte{zeroBytes[:]}
+	return GenerateTrieFromItems(items, depth)
+}
+
 // CreateTrieFromProto creates a Sparse Merkle Trie from its corresponding merkle trie.
 func CreateTrieFromProto(trieObj *protodb.SparseMerkleTrie) *SparseMerkleTrie {
 	trie := &SparseMerkleTrie{

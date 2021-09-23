@@ -6,7 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
@@ -35,7 +36,7 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 			return nil, err
 		}
 		if err := helpers.UpdateSyncCommitteeCache(beaconState); err != nil {
-			return nil, err
+			log.WithError(err).Error("Could not update sync committee cache")
 		}
 	}
 	return beaconState, nil

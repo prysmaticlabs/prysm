@@ -19,8 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -133,7 +133,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	txOpts.Context = context.Background()
-	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
+	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3)
 	if err != nil {
 		return fmt.Errorf("failed to deploy deposit contract: %w", err)
 	}
