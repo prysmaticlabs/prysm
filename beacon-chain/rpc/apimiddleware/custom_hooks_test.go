@@ -403,7 +403,13 @@ func TestSerializeV2Block(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 				Signature:   "sig",
 			},
@@ -412,7 +418,16 @@ func TestSerializeV2Block(t *testing.T) {
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0BlockResponseJson{}))
+		resp := &phase0BlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -420,15 +435,30 @@ func TestSerializeV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
-				Signature:   "sig",
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
+				Signature: "sig",
 			},
 		}
 		ok, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairBlockResponseJson{}))
+		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
@@ -486,7 +516,13 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &beaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 			},
 		}
@@ -494,7 +530,16 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0ProduceBlockResponseJson{}))
+		resp := &phase0ProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -502,14 +547,29 @@ func TestSerializeProduceV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
 			},
 		}
 		ok, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairProduceBlockResponseJson{}))
+		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
