@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/r3labs/sse"
@@ -82,7 +82,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"204"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"204"},
 			},
 		}
 		responseSsz := []byte("ssz")
@@ -128,7 +128,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"invalid"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"invalid"},
 			},
 		}
 		responseSsz := []byte("ssz")

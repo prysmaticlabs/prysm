@@ -9,9 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
 )
 
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
@@ -32,15 +32,15 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	return nil
 }
 
-// https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with an 'index' field.
+// Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
 func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
-	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
+	if _, ok := endpoint.PostRequest.(*dutiesRequestJson); ok {
 		indices := make([]string, 0)
 		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &attesterDutiesRequestJson{Index: indices}
+		j := &dutiesRequestJson{Index: indices}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -77,6 +77,24 @@ func wrapBeaconCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.Res
 			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
 		}
 		j := &submitBeaconCommitteeSubscriptionsRequestJson{Data: data}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
+// https://ethereum.github.io/beacon-APIs/#/Validator/prepareSyncCommitteeSubnets expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapSyncCommitteeSubscriptionsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSubscriptionRequestJson); ok {
+		data := make([]*syncCommitteeSubscriptionJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode body")
+		}
+		j := &submitSyncCommitteeSubscriptionRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -124,7 +142,7 @@ func wrapSignedContributionAndProofsArray(endpoint gateway.Endpoint, _ http.Resp
 
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
 func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.Request) gateway.ErrorJson {
-	if block, ok := endpoint.PostRequest.(*beaconBlockContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
 		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
 		block.Message.Body.Graffiti = hexutil.Encode(b[:])
 	}
@@ -169,13 +187,13 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (boo
 }
 
 type phase0BlockResponseJson struct {
-	Version string                    `json:"version"`
-	Data    *beaconBlockContainerJson `json:"data"`
+	Version string                          `json:"version"`
+	Data    *signedBeaconBlockContainerJson `json:"data"`
 }
 
 type altairBlockResponseJson struct {
-	Version string                          `json:"version"`
-	Data    *beaconBlockAltairContainerJson `json:"data"`
+	Version string                                `json:"version"`
+	Data    *signedBeaconBlockAltairContainerJson `json:"data"`
 }
 
 func serializeV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
@@ -188,7 +206,7 @@ func serializeV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
 	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
 		actualRespContainer = &phase0BlockResponseJson{
 			Version: respContainer.Version,
-			Data: &beaconBlockContainerJson{
+			Data: &signedBeaconBlockContainerJson{
 				Message:   respContainer.Data.Phase0Block,
 				Signature: respContainer.Data.Signature,
 			},
@@ -196,9 +214,85 @@ func serializeV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
 	} else {
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
-			Data: &beaconBlockAltairContainerJson{
+			Data: &signedBeaconBlockAltairContainerJson{
 				Message:   respContainer.Data.AltairBlock,
 				Signature: respContainer.Data.Signature,
+			},
+		}
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, gateway.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return true, j, nil
+}
+
+type phase0StateResponseJson struct {
+	Version string           `json:"version"`
+	Data    *beaconStateJson `json:"data"`
+}
+
+type altairStateResponseJson struct {
+	Version string             `json:"version"`
+	Data    *beaconStateV2Json `json:"data"`
+}
+
+func serializeV2State(response interface{}) (bool, []byte, gateway.ErrorJson) {
+	respContainer, ok := response.(*beaconStateV2ResponseJson)
+	if !ok {
+		return false, nil, gateway.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+		actualRespContainer = &phase0StateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.Phase0State,
+		}
+	} else {
+		actualRespContainer = &altairStateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.AltairState,
+		}
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, gateway.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return true, j, nil
+}
+
+type phase0ProduceBlockResponseJson struct {
+	Version string                    `json:"version"`
+	Data    *beaconBlockContainerJson `json:"data"`
+}
+
+type altairProduceBlockResponseJson struct {
+	Version string                          `json:"version"`
+	Data    *beaconBlockAltairContainerJson `json:"data"`
+}
+
+func serializeProducedV2Block(response interface{}) (bool, []byte, gateway.ErrorJson) {
+	respContainer, ok := response.(*produceBlockResponseV2Json)
+	if !ok {
+		return false, nil, gateway.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+		actualRespContainer = &phase0ProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &beaconBlockContainerJson{
+				Message: respContainer.Data.Phase0Block,
+			},
+		}
+	} else {
+		actualRespContainer = &altairProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &beaconBlockAltairContainerJson{
+				Message: respContainer.Data.AltairBlock,
 			},
 		}
 	}

@@ -4,13 +4,13 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -170,7 +170,7 @@ func (b *BeaconState) balancesLength() int {
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of Ethereum.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
+	if features.Get().EnableSSZCache {
 		return cachedHasher.arraysRoot(vals, length, fieldName)
 	}
 	return nocachedHasher.arraysRoot(vals, length, fieldName)
@@ -179,9 +179,9 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
-		depth := htrutils.Depth(length)
+		depth := ssz.Depth(length)
 		layersCache[fieldName] = make([][][32]byte, depth+1)
 	}
 
@@ -289,7 +289,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		return leaves[0]
 	}
 	hashLayer := leaves
-	layers := make([][][32]byte, htrutils.Depth(length)+1)
+	layers := make([][][32]byte, ssz.Depth(length)+1)
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items

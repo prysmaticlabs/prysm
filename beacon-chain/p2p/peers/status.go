@@ -38,11 +38,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 const (
@@ -320,7 +320,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.ChainStateLastUpdated, nil
 	}
-	return timeutils.Now(), peerdata.ErrPeerUnknown
+	return prysmTime.Now(), peerdata.ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
@@ -339,7 +339,7 @@ func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.NextValidTime, nil
 	}
-	return timeutils.Now(), peerdata.ErrPeerUnknown
+	return prysmTime.Now(), peerdata.ErrPeerUnknown
 }
 
 // SetNextValidTime sets the earliest possible time we are

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/api/gateway"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -57,7 +57,7 @@ func TestWrapAttestationArray(t *testing.T) {
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
-			PostRequest: &attesterDutiesRequestJson{},
+			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
 		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
@@ -70,7 +70,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 		errJson := wrapValidatorIndicesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
-		wrappedIndices := &attesterDutiesRequestJson{}
+		wrappedIndices := &dutiesRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
 		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
 		assert.Equal(t, "1", wrappedIndices.Index[0])
@@ -158,6 +158,59 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
 		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
+}
+
+func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
+		}
+		unwrappedSubs := []*syncCommitteeSubscriptionJson{
+			{
+				ValidatorIndex:       "1",
+				SyncCommitteeIndices: []string{"1", "2"},
+				UntilEpoch:           "1",
+			},
+			{
+				ValidatorIndex:       "2",
+				SyncCommitteeIndices: []string{"3", "4"},
+				UntilEpoch:           "2",
+			},
+		}
+		unwrappedSubsJson, err := json.Marshal(unwrappedSubs)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedSubsJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrappedSubs := &submitSyncCommitteeSubscriptionRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
+		require.Equal(t, 2, len(wrappedSubs.Data), "wrong number of wrapped items")
+		assert.Equal(t, "1", wrappedSubs.Data[0].ValidatorIndex)
+		require.Equal(t, 2, len(wrappedSubs.Data[0].SyncCommitteeIndices), "wrong number of committee indices")
+		assert.Equal(t, "1", wrappedSubs.Data[0].SyncCommitteeIndices[0])
+		assert.Equal(t, "2", wrappedSubs.Data[0].SyncCommitteeIndices[1])
+		assert.Equal(t, "1", wrappedSubs.Data[0].UntilEpoch)
+	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
@@ -279,7 +332,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 
 func TestPrepareGraffiti(t *testing.T) {
 	endpoint := gateway.Endpoint{
-		PostRequest: &beaconBlockContainerJson{
+		PostRequest: &signedBeaconBlockContainerJson{
 			Message: &beaconBlockJson{
 				Body: &beaconBlockBodyJson{},
 			},
@@ -287,35 +340,35 @@ func TestPrepareGraffiti(t *testing.T) {
 	}
 
 	t.Run("32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 
 	t.Run("less_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = "foo"
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = "foo"
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 
 	t.Run("more_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
+		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
 
 		prepareGraffiti(endpoint, nil, nil)
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti,
+			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
 		)
 	})
 }
@@ -349,7 +402,7 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
-			Data: &beaconBlockContainerV2Json{
+			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: &beaconBlockJson{},
 				AltairBlock: nil,
 				Signature:   "sig",
@@ -365,7 +418,7 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
-			Data: &beaconBlockContainerV2Json{
+			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{},
 				Signature:   "sig",
@@ -381,6 +434,87 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
 		ok, j, errJson := serializeV2Block(response)
+		require.Equal(t, false, ok)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+}
+
+func TestSerializeV2State(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &beaconStateContainerV2Json{
+				Phase0State: &beaconStateJson{},
+				AltairState: nil,
+			},
+		}
+		ok, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &phase0StateResponseJson{}))
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &beaconStateContainerV2Json{
+				Phase0State: nil,
+				AltairState: &beaconStateV2Json{},
+			},
+		}
+		ok, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &altairStateResponseJson{}))
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		ok, j, errJson := serializeV2State(&types.Empty{})
+		require.Equal(t, false, ok)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+}
+
+func TestSerializeProduceV2Block(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &beaconBlockContainerV2Json{
+				Phase0Block: &beaconBlockJson{},
+				AltairBlock: nil,
+			},
+		}
+		ok, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &phase0ProduceBlockResponseJson{}))
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &beaconBlockContainerV2Json{
+				Phase0Block: nil,
+				AltairBlock: &beaconBlockAltairJson{},
+			},
+		}
+		ok, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, true, ok)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &altairProduceBlockResponseJson{}))
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		response := &types.Empty{}
+		ok, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, false, ok)
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)

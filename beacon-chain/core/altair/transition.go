@@ -7,7 +7,7 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
 
@@ -35,7 +35,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconStateAltair) (state.Bea
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	vp, bp, err := InitializeEpochValidators(ctx, state)
+	vp, bp, err := InitializePrecomputeValidators(ctx, state)
 	if err != nil {
 		return nil, err
 	}

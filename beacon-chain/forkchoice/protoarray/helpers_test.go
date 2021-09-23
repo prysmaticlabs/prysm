@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -245,5 +245,5 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 func indexToHash(i uint64) [32]byte {
 	var b [8]byte
 	binary.LittleEndian.PutUint64(b[:], i)
-	return hashutil.Hash(b[:])
+	return hash.Hash(b[:])
 }

@@ -21,15 +21,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -1571,7 +1571,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
 		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
@@ -1649,7 +1649,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
 		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
@@ -1714,7 +1714,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
 		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second),
+			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
@@ -2019,6 +2019,7 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 		},
 	}
 	require.NoError(t, headState.SetValidators(validators))
+	require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{

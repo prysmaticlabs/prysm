@@ -15,11 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -42,7 +43,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
@@ -73,7 +74,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// processing tolerance.
 	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime(),
 		earlyAttestationProcessingTolerance); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
@@ -91,7 +92,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
 	seen, err := s.cfg.AttPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	if seen {
@@ -122,19 +123,19 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
 	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
 	if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
 	if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	bs, err := s.cfg.Chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
@@ -147,21 +148,21 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		}
 		bs, err = transition.ProcessSlots(ctx, bs, startSlot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
 		}
 	}
 
 	// Verify validator index is within the beacon committee.
 	if err := validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
+		tracing.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
 		return pubsub.ValidationReject
 	}
 
 	// Verify selection proof reflects to the right validator.
 	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
+		tracing.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationReject
 	}
 
@@ -169,26 +170,29 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// We use batch verify here to save compute.
 	aggregatorSigSet, err := aggSigSet(bs, signed)
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex))
+		tracing.AnnotateError(span, errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationIgnore
 	}
 	attSigSet, err := blocks.AttestationSignatureSet(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
+		tracing.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
 		return pubsub.ValidationIgnore
 	}
 	set := bls.NewSet()
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
+
+	if features.Get().EnableBatchVerification {
+		return s.validateWithBatchVerifier(ctx, "aggregate", set)
+	}
 	valid, err := set.Verify()
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Errorf("Could not join signature set"))
+		tracing.AnnotateError(span, errors.Errorf("Could not join signature set"))
 		return pubsub.ValidationIgnore
 	}
 	if !valid {
-		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
+		tracing.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
 		return pubsub.ValidationReject
 	}
-
 	return pubsub.ValidationAccept
 }
 

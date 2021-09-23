@@ -13,12 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var (
@@ -127,7 +127,7 @@ func BeaconCommittee(
 
 	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
 
-	indexOffset, err := mathutil.Add64(uint64(committeeIndex), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot)))
+	indexOffset, err := math.Add64(uint64(committeeIndex), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot)))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add calculate index offset")
 	}
@@ -389,8 +389,8 @@ func computeCommittee(
 	index, count uint64,
 ) ([]types.ValidatorIndex, error) {
 	validatorCount := uint64(len(indices))
-	start := sliceutil.SplitOffset(validatorCount, count, index)
-	end := sliceutil.SplitOffset(validatorCount, count, index+1)
+	start := slice.SplitOffset(validatorCount, count, index)
+	end := slice.SplitOffset(validatorCount, count, index+1)
 
 	if start > validatorCount || end > validatorCount {
 		return nil, errors.New("index out of range")
@@ -413,7 +413,7 @@ func computeCommittee(
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
 func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []types.ValidatorIndex) ([]types.ValidatorIndex, error) {
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]types.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 
 	e := core.CurrentEpoch(state)

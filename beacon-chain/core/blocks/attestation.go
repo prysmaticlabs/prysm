@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -114,12 +114,12 @@ func VerifyAttestationNoVerifySignature(
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return err
 	}
 
-	return attestationutil.IsValidAttestationIndices(ctx, indexedAtt)
+	return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 }
 
 // ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
@@ -173,7 +173,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
-	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+	if err := attestation.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
 	domain, err := helpers.Domain(
@@ -222,5 +222,5 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 		}
 		pubkeys = append(pubkeys, pk)
 	}
-	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
+	return attestation.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 }

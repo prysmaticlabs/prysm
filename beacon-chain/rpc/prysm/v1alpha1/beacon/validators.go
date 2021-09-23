@@ -7,6 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -14,12 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -537,7 +537,7 @@ func (bs *Server) GetValidatorParticipation(
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
 	case version.Altair:
-		v, b, err = altair.InitializeEpochValidators(ctx, beaconState)
+		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
 		}
@@ -697,7 +697,7 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		validatorSummary = vp
 	case version.Altair:
-		vp, bp, err := altair.InitializeEpochValidators(ctx, headState)
+		vp, bp, err := altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return nil, err
 		}

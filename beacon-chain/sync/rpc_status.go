@@ -11,17 +11,17 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +29,7 @@ import (
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-	runutil.RunEvery(s.ctx, interval, func() {
+	async.RunEvery(s.ctx, interval, func() {
 		wg := new(sync.WaitGroup)
 		for _, pid := range s.cfg.P2P.Peers().Connected() {
 			wg.Add(1)
@@ -56,7 +56,7 @@ func (s *Service) maintainPeerStatuses() {
 					// Peer has vanished; nothing to do.
 					return
 				}
-				if timeutils.Now().After(lastUpdated.Add(interval)) {
+				if prysmTime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Debug("Could not revalidate peer")
 						s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(id)
@@ -83,7 +83,7 @@ func (s *Service) resyncIfBehind() {
 	millisecondsPerEpoch := int64(params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot))
 	// Run sixteen times per epoch.
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
-	runutil.RunEvery(s.ctx, interval, func() {
+	async.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot())
 			// Factor number of expected minimum sync peers, to make sure that enough peers are
@@ -286,7 +286,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	}
 	genesis := s.cfg.Chain.GenesisTime()
 	finalizedEpoch := s.cfg.Chain.FinalizedCheckpt().Epoch
-	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
+	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := types.Epoch(0)

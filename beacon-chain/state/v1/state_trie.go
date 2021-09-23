@@ -12,13 +12,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -226,140 +225,6 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
-// ToProto returns a protobuf *v1.BeaconState representation of the state.
-func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
-	sourceFork := b.Fork()
-	sourceLatestBlockHeader := b.LatestBlockHeader()
-	sourceEth1Data := b.Eth1Data()
-	sourceEth1DataVotes := b.Eth1DataVotes()
-	sourceValidators := b.Validators()
-	sourcePrevEpochAtts, err := b.PreviousEpochAttestations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get previous epoch attestations")
-	}
-	sourceCurrEpochAtts, err := b.CurrentEpochAttestations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current epoch attestations")
-	}
-	sourcePrevJustifiedCheckpoint := b.PreviousJustifiedCheckpoint()
-	sourceCurrJustifiedCheckpoint := b.CurrentJustifiedCheckpoint()
-	sourceFinalizedCheckpoint := b.FinalizedCheckpoint()
-
-	resultEth1DataVotes := make([]*v1.Eth1Data, len(sourceEth1DataVotes))
-	for i, vote := range sourceEth1DataVotes {
-		resultEth1DataVotes[i] = &v1.Eth1Data{
-			DepositRoot:  vote.DepositRoot,
-			DepositCount: vote.DepositCount,
-			BlockHash:    vote.BlockHash,
-		}
-	}
-	resultValidators := make([]*v1.Validator, len(sourceValidators))
-	for i, validator := range sourceValidators {
-		resultValidators[i] = &v1.Validator{
-			Pubkey:                     validator.PublicKey,
-			WithdrawalCredentials:      validator.WithdrawalCredentials,
-			EffectiveBalance:           validator.EffectiveBalance,
-			Slashed:                    validator.Slashed,
-			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
-			ActivationEpoch:            validator.ActivationEpoch,
-			ExitEpoch:                  validator.ExitEpoch,
-			WithdrawableEpoch:          validator.WithdrawableEpoch,
-		}
-	}
-	resultPrevEpochAtts := make([]*v1.PendingAttestation, len(sourcePrevEpochAtts))
-	for i, att := range sourcePrevEpochAtts {
-		data := att.Data
-		resultPrevEpochAtts[i] = &v1.PendingAttestation{
-			AggregationBits: att.AggregationBits,
-			Data: &v1.AttestationData{
-				Slot:            data.Slot,
-				Index:           data.CommitteeIndex,
-				BeaconBlockRoot: data.BeaconBlockRoot,
-				Source: &v1.Checkpoint{
-					Epoch: data.Source.Epoch,
-					Root:  data.Source.Root,
-				},
-				Target: &v1.Checkpoint{
-					Epoch: data.Target.Epoch,
-					Root:  data.Target.Root,
-				},
-			},
-			InclusionDelay: att.InclusionDelay,
-			ProposerIndex:  att.ProposerIndex,
-		}
-	}
-	resultCurrEpochAtts := make([]*v1.PendingAttestation, len(sourceCurrEpochAtts))
-	for i, att := range sourceCurrEpochAtts {
-		data := att.Data
-		resultCurrEpochAtts[i] = &v1.PendingAttestation{
-			AggregationBits: att.AggregationBits,
-			Data: &v1.AttestationData{
-				Slot:            data.Slot,
-				Index:           data.CommitteeIndex,
-				BeaconBlockRoot: data.BeaconBlockRoot,
-				Source: &v1.Checkpoint{
-					Epoch: data.Source.Epoch,
-					Root:  data.Source.Root,
-				},
-				Target: &v1.Checkpoint{
-					Epoch: data.Target.Epoch,
-					Root:  data.Target.Root,
-				},
-			},
-			InclusionDelay: att.InclusionDelay,
-			ProposerIndex:  att.ProposerIndex,
-		}
-	}
-	result := &v1.BeaconState{
-		GenesisTime:           b.GenesisTime(),
-		GenesisValidatorsRoot: b.GenesisValidatorRoot(),
-		Slot:                  b.Slot(),
-		Fork: &v1.Fork{
-			PreviousVersion: sourceFork.PreviousVersion,
-			CurrentVersion:  sourceFork.CurrentVersion,
-			Epoch:           sourceFork.Epoch,
-		},
-		LatestBlockHeader: &v1.BeaconBlockHeader{
-			Slot:          sourceLatestBlockHeader.Slot,
-			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
-			ParentRoot:    sourceLatestBlockHeader.ParentRoot,
-			StateRoot:     sourceLatestBlockHeader.StateRoot,
-			BodyRoot:      sourceLatestBlockHeader.BodyRoot,
-		},
-		BlockRoots:      b.BlockRoots(),
-		StateRoots:      b.StateRoots(),
-		HistoricalRoots: b.HistoricalRoots(),
-		Eth1Data: &v1.Eth1Data{
-			DepositRoot:  sourceEth1Data.DepositRoot,
-			DepositCount: sourceEth1Data.DepositCount,
-			BlockHash:    sourceEth1Data.BlockHash,
-		},
-		Eth1DataVotes:             resultEth1DataVotes,
-		Eth1DepositIndex:          b.Eth1DepositIndex(),
-		Validators:                resultValidators,
-		Balances:                  b.Balances(),
-		RandaoMixes:               b.RandaoMixes(),
-		Slashings:                 b.Slashings(),
-		PreviousEpochAttestations: resultPrevEpochAtts,
-		CurrentEpochAttestations:  resultCurrEpochAtts,
-		JustificationBits:         b.JustificationBits(),
-		PreviousJustifiedCheckpoint: &v1.Checkpoint{
-			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
-			Root:  sourcePrevJustifiedCheckpoint.Root,
-		},
-		CurrentJustifiedCheckpoint: &v1.Checkpoint{
-			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
-			Root:  sourceCurrJustifiedCheckpoint.Root,
-		},
-		FinalizedCheckpoint: &v1.Checkpoint{
-			Epoch: sourceFinalizedCheckpoint.Epoch,
-			Root:  sourceFinalizedCheckpoint.Root,
-		},
-	}
-
-	return result, nil
-}
-
 // FieldReferencesCount returns the reference count held by each field. This
 // also includes the field trie held by each field.
 func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
@@ -391,18 +256,18 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.Version())))
 
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return htrutils.Uint64Root(b.state.GenesisTime), nil
+		return ssz.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
-		return htrutils.Uint64Root(uint64(b.state.Slot)), nil
+		return ssz.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:
-		return htrutils.Uint64Root(b.state.Eth1DepositIndex), nil
+		return ssz.Uint64Root(b.state.Eth1DepositIndex), nil
 	case fork:
-		return htrutils.ForkRoot(b.state.Fork)
+		return ssz.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
@@ -426,7 +291,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
+		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
 	case eth1Data:
 		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
@@ -466,7 +331,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
-		return htrutils.SlashingsRoot(b.state.Slashings)
+		return ssz.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
@@ -498,11 +363,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
@@ -521,7 +386,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		fTrieMutex.Unlock()
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
+	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

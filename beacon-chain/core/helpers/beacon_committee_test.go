@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -55,16 +55,16 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	index := uint64(5)
 	committee5, err := computeCommittee(indices, seed, index, committeeCount)
 	assert.NoError(t, err, "Could not compute committee")
-	start := sliceutil.SplitOffset(validatorCount, committeeCount, index)
-	end := sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
+	start := slice.SplitOffset(validatorCount, committeeCount, index)
+	end := slice.SplitOffset(validatorCount, committeeCount, index+1)
 	assert.DeepEqual(t, committee5, committees[start:end], "Committee has different shuffled indices")
 
 	// Test shuffled indices are correct for index 9 committee
 	index = uint64(9)
 	committee9, err := computeCommittee(indices, seed, index, committeeCount)
 	assert.NoError(t, err, "Could not compute committee")
-	start = sliceutil.SplitOffset(validatorCount, committeeCount, index)
-	end = sliceutil.SplitOffset(validatorCount, committeeCount, index+1)
+	start = slice.SplitOffset(validatorCount, committeeCount, index)
+	end = slice.SplitOffset(validatorCount, committeeCount, index+1)
 	assert.DeepEqual(t, committee9, committees[start:end], "Committee has different shuffled indices")
 }
 
@@ -620,7 +620,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hash.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)

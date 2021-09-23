@@ -7,11 +7,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // IsActiveValidator returns the boolean value on whether the validator
@@ -216,7 +216,7 @@ func BeaconProposerIndex(state state.ReadOnlyBeaconState) (types.ValidatorIndex,
 	}
 
 	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
-	seedWithSlotHash := hashutil.Hash(seedWithSlot)
+	seedWithSlotHash := hash.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(state, e)
 	if err != nil {
@@ -250,7 +250,7 @@ func ComputeProposerIndex(bState state.ReadOnlyValidators, activeIndices []types
 		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
 		candidateIndex, err := ComputeShuffledIndex(types.ValidatorIndex(i%length), length, seed, true /* shuffle */)
