@@ -1,4 +1,4 @@
-package depositcontract
+package deposit
 
 import (
 	"bytes"
