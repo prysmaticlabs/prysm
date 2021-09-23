@@ -55,3 +55,13 @@ func (c *FakeCommitteeCache) ProposerIndices(seed [32]byte) ([]types.ValidatorIn
 func (c *FakeCommitteeCache) HasEntry(string) bool {
 	return false
 }
+
+// MarkInProgress is a stub.
+func (c *FakeCommitteeCache) MarkInProgress(seed [32]byte) error {
+	return nil
+}
+
+// MarkNotInProgress is a stub.
+func (c *FakeCommitteeCache) MarkNotInProgress(seed [32]byte) error {
+	return nil
+}
