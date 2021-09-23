@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -48,10 +48,10 @@ func TestSSZRequested(t *testing.T) {
 }
 
 func TestPrepareSSZRequestForProxying(t *testing.T) {
-	middleware := &gateway.ApiProxyMiddleware{
-		GatewayAddress: "http://gateway.example",
+	middleware := &apimiddleware.ApiProxyMiddleware{
+		GatewayAddress: "http://apimiddleware.example",
 	}
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		Path: "http://foo.example",
 	}
 	var body bytes.Buffer
