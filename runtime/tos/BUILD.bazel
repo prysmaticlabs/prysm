@@ -22,7 +22,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//cmd:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
 )

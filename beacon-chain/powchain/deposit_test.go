@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -31,10 +31,10 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
@@ -54,10 +54,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	deposits[0].Proof = [][]byte{{'f', 'a', 'k', 'e'}}
@@ -80,7 +80,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	deposits[0].Data.PublicKey = bytesutil.PadTo([]byte("junk"), 48)
 
@@ -116,7 +116,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
@@ -151,12 +151,12 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()
 
-	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
@@ -245,9 +245,9 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
+	deposits, keys, err := util.DeterministicDepositsAndKeys(10)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	for i := range keys {

@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {

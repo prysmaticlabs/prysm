@@ -8,13 +8,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func Test_BaseReward(t *testing.T) {
 	genState := func(valCount uint64) state.ReadOnlyBeaconState {
-		s, _ := testutil.DeterministicGenesisStateAltair(t, valCount)
+		s, _ := util.DeterministicGenesisStateAltair(t, valCount)
 		return s
 	}
 	tests := []struct {
@@ -66,7 +66,7 @@ func Test_BaseReward(t *testing.T) {
 }
 
 func Test_BaseRewardWithTotalBalance(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisStateAltair(t, 1)
+	s, _ := util.DeterministicGenesisStateAltair(t, 1)
 	tests := []struct {
 		name          string
 		valIdx        types.ValidatorIndex
