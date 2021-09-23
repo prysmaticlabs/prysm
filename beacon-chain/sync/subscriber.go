@@ -31,6 +31,7 @@ import (
 
 const pubsubMessageTimeout = 30 * time.Second
 
+// wrappedVal represents a gossip validator which also returns an error along with the result.
 type wrappedVal func(context.Context, peer.ID, *pubsub.Message) (pubsub.ValidationResult, error)
 
 // subHandler represents handler for a given subscription.
