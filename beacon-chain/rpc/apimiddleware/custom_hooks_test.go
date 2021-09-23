@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -18,7 +18,7 @@ import (
 
 func TestWrapAttestationArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		unwrappedAtts := []*attestationJson{{AggregationBits: "1010"}}
@@ -39,7 +39,7 @@ func TestWrapAttestationArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		var body bytes.Buffer
@@ -56,7 +56,7 @@ func TestWrapAttestationArray(t *testing.T) {
 
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
@@ -80,7 +80,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		unwrappedAggs := []*signedAggregateAttestationAndProofJson{{Signature: "sig"}}
@@ -101,7 +101,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -118,7 +118,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 
 func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		unwrappedSubs := []*beaconCommitteeSubscribeJson{{
@@ -149,7 +149,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -166,7 +166,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		unwrappedSubs := []*syncCommitteeSubscriptionJson{
@@ -202,7 +202,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		var body bytes.Buffer
@@ -219,7 +219,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		unwrappedSigs := []*syncCommitteeMessageJson{{
@@ -248,7 +248,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		var body bytes.Buffer
@@ -265,7 +265,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 
 func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		unwrapped := []*signedContributionAndProofJson{
@@ -315,7 +315,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -331,7 +331,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 }
 
 func TestPrepareGraffiti(t *testing.T) {
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		PostRequest: &signedBeaconBlockContainerJson{
 			Message: &beaconBlockJson{
 				Body: &beaconBlockBodyJson{},

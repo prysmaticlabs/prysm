@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -24,7 +25,7 @@ func (*mockEndpointFactory) Paths() []string {
 	return []string{}
 }
 
-func (*mockEndpointFactory) Create(_ string) (*Endpoint, error) {
+func (*mockEndpointFactory) Create(_ string) (*apimiddleware.Endpoint, error) {
 	return nil, nil
 }
 

@@ -1,4 +1,4 @@
-package gateway
+package apimiddleware
 
 import (
 	"net/http"
@@ -50,19 +50,16 @@ type QueryParam struct {
 	Enum bool
 }
 
-// Hook is a function that can be invoked at various stages of the request/response cycle, leading to custom behaviour for a specific endpoint.
-type Hook = func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
-
 // CustomHandler is a function that can be invoked at the very beginning of the request,
 // essentially replacing the whole default request/response logic with custom logic for a specific endpoint.
 type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.ResponseWriter, req *http.Request) (handled bool)
 
 // HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	OnPreDeserializeRequestBodyIntoContainer      []Hook
-	OnPostDeserializeRequestBodyIntoContainer     []Hook
-	OnPreDeserializeGrpcResponseBodyIntoContainer []func([]byte, interface{}) (bool, ErrorJson)
-	OnPreSerializeMiddlewareResponseIntoJson      []func(interface{}) (bool, []byte, ErrorJson)
+	OnPreDeserializeRequestBodyIntoContainer      func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
+	OnPostDeserializeRequestBodyIntoContainer     func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
+	OnPreDeserializeGrpcResponseBodyIntoContainer func([]byte, interface{}) (bool, ErrorJson)
+	OnPreSerializeMiddlewareResponseIntoJson      func(interface{}) (bool, []byte, ErrorJson)
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -93,22 +90,9 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 		}
 
 		if req.Method == "POST" {
-			for _, hook := range endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer {
-				if errJson := hook(*endpoint, w, req); errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
-			}
-
-			if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.PostRequest); errJson != nil {
+			if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
-			}
-			for _, hook := range endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer {
-				if errJson := hook(*endpoint, w, req); errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
 			}
 
 			if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
@@ -125,87 +109,116 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 			WriteError(w, errJson, nil)
 			return
 		}
-		grpcResponse, errJson := ProxyRequest(req)
+		grpcResp, errJson := ProxyRequest(req)
 		if errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
-		grpcResponseBody, errJson := ReadGrpcResponseBody(grpcResponse.Body)
+		grpcRespBody, errJson := ReadGrpcResponseBody(grpcResp.Body)
 		if errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
 
-		var responseJson []byte
-		if !GrpcResponseIsEmpty(grpcResponseBody) {
-			if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
+		var respJson []byte
+		if !GrpcResponseIsEmpty(grpcRespBody) {
+			if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcRespBody); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
 			if endpoint.Err.Msg() != "" {
-				HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
+				HandleGrpcResponseError(endpoint.Err, grpcResp, w)
 				return
 			}
-			var response interface{}
+
+			var resp interface{}
 			if req.Method == "GET" {
-				response = endpoint.GetResponse
+				resp = endpoint.GetResponse
 			} else {
-				response = endpoint.PostResponse
+				resp = endpoint.PostResponse
 			}
-
-			runDefault := true
-			for _, hook := range endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer {
-				ok, errJson := hook(grpcResponseBody, response)
-				if errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
-				if ok {
-					runDefault = false
-					break
-				}
+			if errJson := deserializeGrpcResponseBodyIntoContainerWrapped(endpoint, grpcRespBody, resp); errJson != nil {
+				WriteError(w, errJson, nil)
+				return
 			}
-			if runDefault {
-				if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, response); errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
-			}
-
-			if errJson := ProcessMiddlewareResponseFields(response); errJson != nil {
+			if errJson := ProcessMiddlewareResponseFields(resp); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
 
-			var ok bool
-			runDefault = true
-			for _, hook := range endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson {
-				ok, responseJson, errJson = hook(response)
-				if errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
-				if ok {
-					runDefault = false
-					break
-				}
-			}
-			if runDefault {
-				responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
-				if errJson != nil {
-					WriteError(w, errJson, nil)
-					return
-				}
+			respJson, errJson = serializeMiddlewareResponseIntoJsonWrapped(endpoint, respJson, resp)
+			if errJson != nil {
+				WriteError(w, errJson, nil)
+				return
 			}
 		}
 
-		if errJson := WriteMiddlewareResponseHeadersAndBody(grpcResponse, responseJson, w); errJson != nil {
+		if errJson := WriteMiddlewareResponseHeadersAndBody(grpcResp, respJson, w); errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
-		if errJson := Cleanup(grpcResponse.Body); errJson != nil {
+		if errJson := Cleanup(grpcResp.Body); errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
 	})
+}
+
+func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {
+	if endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer != nil {
+		if errJson := endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer(*endpoint, w, req); errJson != nil {
+			return errJson
+		}
+	}
+	if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.PostRequest); errJson != nil {
+		WriteError(w, errJson, nil)
+		return errJson
+	}
+	if endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer != nil {
+		if errJson := endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer(*endpoint, w, req); errJson != nil {
+			return errJson
+		}
+	}
+	return nil
+}
+
+func deserializeGrpcResponseBodyIntoContainerWrapped(endpoint *Endpoint, grpcResponseBody []byte, resp interface{}) ErrorJson {
+	runDefault := true
+	if endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer != nil {
+		ok, errJson := endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, resp)
+		if errJson != nil {
+			return errJson
+		}
+		if ok {
+			runDefault = false
+		}
+	}
+	if runDefault {
+		if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, resp); errJson != nil {
+			return errJson
+		}
+	}
+	return nil
+}
+
+func serializeMiddlewareResponseIntoJsonWrapped(endpoint *Endpoint, respJson []byte, resp interface{}) ([]byte, ErrorJson) {
+	runDefault := true
+	var errJson ErrorJson
+	if endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson != nil {
+		var ok bool
+		ok, respJson, errJson = endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson(resp)
+		if errJson != nil {
+			return nil, errJson
+		}
+		if ok {
+			runDefault = false
+		}
+	}
+	if runDefault {
+		respJson, errJson = SerializeMiddlewareResponseIntoJson(resp)
+		if errJson != nil {
+			return nil, errJson
+		}
+	}
+	return respJson, nil
 }
