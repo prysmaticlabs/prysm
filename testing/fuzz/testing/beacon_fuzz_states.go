@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 const fileBase = "0-11-0/mainnet/beaconstate"
@@ -20,14 +20,14 @@ func BeaconFuzzState(ID uint64) (*ethpb.BeaconState, error) {
 	if p, ok := os.LookupEnv(fileBaseENV); ok {
 		base = p
 	}
-	ok, err := testing.BazelDirectoryNonEmpty(base)
+	ok, err := util.BazelDirectoryNonEmpty(base)
 	if err != nil {
 		panic(err)
 	}
 	if !ok {
 		panic(fmt.Sprintf("Beacon states directory (%s) does not exist or has no files.", base))
 	}
-	b, err := testing.BazelFileBytes(base, strconv.Itoa(int(ID)))
+	b, err := util.BazelFileBytes(base, strconv.Itoa(int(ID)))
 	if err != nil {
 		return nil, err
 	}

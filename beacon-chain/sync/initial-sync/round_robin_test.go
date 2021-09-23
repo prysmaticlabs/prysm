@@ -15,9 +15,9 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -283,10 +283,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testing2.NewBeaconBlock()))
+			err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 			require.NoError(t, err)
 
-			st, err := testing2.NewBeaconState()
+			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			mc := &mock.ChainService{
 				State: st,
@@ -323,12 +323,12 @@ func TestService_roundRobinSync(t *testing.T) {
 
 func TestService_processBlock(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
-	genesisBlk := testing2.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
@@ -349,12 +349,12 @@ func TestService_processBlock(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process duplicate block", func(t *testing.T) {
-		blk1 := testing2.NewBeaconBlock()
+		blk1 := util.NewBeaconBlock()
 		blk1.Block.Slot = 1
 		blk1.Block.ParentRoot = genesisBlkRoot[:]
 		blk1Root, err := blk1.Block.HashTreeRoot()
 		require.NoError(t, err)
-		blk2 := testing2.NewBeaconBlock()
+		blk2 := util.NewBeaconBlock()
 		blk2.Block.Slot = 2
 		blk2.Block.ParentRoot = blk1Root[:]
 
@@ -386,12 +386,12 @@ func TestService_processBlock(t *testing.T) {
 
 func TestService_processBlockBatch(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
-	genesisBlk := testing2.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
@@ -414,7 +414,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		currBlockRoot := genesisBlkRoot
 		for i := types.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
-			blk1 := testing2.NewBeaconBlock()
+			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
@@ -428,7 +428,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		var batch2 []block.SignedBeaconBlock
 		for i := types.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
-			blk1 := testing2.NewBeaconBlock()
+			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
@@ -517,10 +517,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testing2.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, err)
 	mc := &mock.ChainService{
@@ -583,10 +583,10 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testing2.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,

@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
@@ -75,8 +75,8 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testing2.NewBeaconBlock()
-	msg.Block.ParentRoot = testing2.Random32Bytes(t)
+	msg := util.NewBeaconBlock()
+	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
@@ -155,8 +155,8 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testing2.NewBeaconBlock()
-	msg.Block.ParentRoot = testing2.Random32Bytes(t)
+	msg := util.NewBeaconBlock()
+	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.Digest, err = r.currentForkDigest()
 	r.cfg.BlockNotifier = chainService.BlockNotifier()
@@ -194,7 +194,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	p2p.ReceivePubSub(topic, msg)
 	// wait for message to be sent
-	testing2.WaitTimeout(wg, 2*time.Second)
+	util.WaitTimeout(wg, 2*time.Second)
 }
 
 func TestSyncService_StopCleanly(t *testing.T) {

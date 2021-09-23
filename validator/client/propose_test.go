@@ -17,10 +17,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing3 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -197,7 +197,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(testing3.NewBeaconBlock().Block, nil /*err*/)
+	).Return(util.NewBeaconBlock().Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -233,7 +233,7 @@ func TestProposeBlockAltair_ProposeBlockFailed(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Altair{Altair: testing3.NewBeaconBlockAltair().Block},
+		Block: &ethpb.GenericBeaconBlock_Altair{Altair: util.NewBeaconBlockAltair().Block},
 	}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -267,7 +267,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	testBlock := testing3.NewBeaconBlock()
+	testBlock := util.NewBeaconBlock()
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	testBlock.Block.Slot = slot
 	m.validatorClient.EXPECT().GetBlock(
@@ -275,7 +275,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(),
 	).Return(testBlock.Block, nil /*err*/)
 
-	secondTestBlock := testing3.NewBeaconBlock()
+	secondTestBlock := util.NewBeaconBlock()
 	secondTestBlock.Block.Slot = slot
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
@@ -323,7 +323,7 @@ func TestProposeBlockAltair_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	testBlock := testing3.NewBeaconBlockAltair()
+	testBlock := util.NewBeaconBlockAltair()
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	testBlock.Block.Slot = slot
 	m.validatorClient.EXPECT().GetBeaconBlock(
@@ -333,7 +333,7 @@ func TestProposeBlockAltair_BlocksDoubleProposal(t *testing.T) {
 		Block: &ethpb.GenericBeaconBlock_Altair{Altair: testBlock.Block},
 	}, nil /*err*/)
 
-	secondTestBlock := testing3.NewBeaconBlockAltair()
+	secondTestBlock := util.NewBeaconBlockAltair()
 	secondTestBlock.Block.Slot = slot
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
@@ -379,7 +379,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	testBlock := testing3.NewBeaconBlock()
+	testBlock := util.NewBeaconBlock()
 	farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
 	testBlock.Block.Slot = farFuture
 	m.validatorClient.EXPECT().GetBlock(
@@ -387,7 +387,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.Any(),
 	).Return(testBlock.Block, nil /*err*/)
 
-	secondTestBlock := testing3.NewBeaconBlock()
+	secondTestBlock := util.NewBeaconBlock()
 	secondTestBlock.Block.Slot = farFuture
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
@@ -431,7 +431,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
-	blk := testing3.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -452,7 +452,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod - 400))
-	blk2 := testing3.NewBeaconBlock()
+	blk2 := util.NewBeaconBlock()
 	blk2.Block.Slot = past
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -479,7 +479,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
-	blk := testing3.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = farAhead
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -499,7 +499,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
-	blk2 := testing3.NewBeaconBlock()
+	blk2 := util.NewBeaconBlock()
 	blk2.Block.Slot = farAhead - 4
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -524,7 +524,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(testing3.NewBeaconBlock().Block, nil /*err*/)
+	).Return(util.NewBeaconBlock().Block, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -552,7 +552,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	blk := testing3.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Body.Graffiti = validator.graffiti
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
@@ -595,7 +595,7 @@ func TestProposeBlockAltair_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	blk := testing3.NewBeaconBlockAltair()
+	blk := util.NewBeaconBlockAltair()
 	blk.Block.Body.Graffiti = validator.graffiti
 	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
@@ -821,7 +821,7 @@ func TestSignBlock(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
-	blk := testing3.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
 	var pubKey [48]byte
@@ -854,7 +854,7 @@ func TestSignAltairBlock(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
-	blk := testing3.NewBeaconBlockAltair()
+	blk := util.NewBeaconBlockAltair()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
 	var pubKey [48]byte

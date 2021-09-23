@@ -14,9 +14,9 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
@@ -51,7 +51,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -96,7 +96,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -123,7 +123,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream2))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -174,7 +174,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	err := r.sendGoodByeMessage(context.Background(), failureCode, p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -222,7 +222,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 		t.Error("Peer is still not disconnected despite sending a goodbye message")
 	}
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
@@ -275,7 +275,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 }
 
 func genState(t *testing.T, valCount, avgBalance uint64) state.BeaconState {
-	beaconState, err := testing2.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	validators := make([]*ethpb.Validator, valCount)

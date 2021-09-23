@@ -9,9 +9,9 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 )
 
 func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
-	alphaBlock := testing2.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
+	alphaBlock := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
 	alphaBlock.Block.ProposerIndex = validatorIndex
 	alphaBlock.Block.ParentRoot = parentRoot
@@ -57,7 +57,7 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 
 func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 	proof := [32]byte{1}
-	att := testing2.HydrateAttestation(&ethpbalpha.Attestation{
+	att := util.HydrateAttestation(&ethpbalpha.Attestation{
 		Data: &ethpbalpha.AttestationData{
 			Slot: 5,
 		},
@@ -74,7 +74,7 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
-	alphaBlock := testing2.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
+	alphaBlock := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
 	alphaBlock.Block.ProposerIndex = validatorIndex
 	alphaBlock.Block.ParentRoot = parentRoot
@@ -97,7 +97,7 @@ func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
-	v1Block := testing2.HydrateV1SignedBeaconBlock(&ethpbv1.SignedBeaconBlock{})
+	v1Block := util.HydrateV1SignedBeaconBlock(&ethpbv1.SignedBeaconBlock{})
 	v1Block.Block.Slot = slot
 	v1Block.Block.ProposerIndex = validatorIndex
 	v1Block.Block.ParentRoot = parentRoot
@@ -120,7 +120,7 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
-	alphaBlock := testing2.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
+	alphaBlock := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 	alphaBlock.Slot = slot
 	alphaBlock.ProposerIndex = validatorIndex
 	alphaBlock.ParentRoot = parentRoot
@@ -173,7 +173,7 @@ func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ProposerSlashingToV1(t *testing.T) {
-	alphaHeader := testing2.HydrateSignedBeaconHeader(&ethpbalpha.SignedBeaconBlockHeader{})
+	alphaHeader := util.HydrateSignedBeaconHeader(&ethpbalpha.SignedBeaconBlockHeader{})
 	alphaHeader.Header.Slot = slot
 	alphaHeader.Header.ProposerIndex = validatorIndex
 	alphaHeader.Header.ParentRoot = parentRoot
@@ -337,7 +337,7 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 }
 
 func Test_BlockInterfaceToV1Block(t *testing.T) {
-	v1Alpha1Block := testing2.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
+	v1Alpha1Block := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
 	v1Alpha1Block.Block.Slot = slot
 	v1Alpha1Block.Block.ProposerIndex = validatorIndex
 	v1Alpha1Block.Block.ParentRoot = parentRoot
@@ -411,7 +411,7 @@ func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 	v1Att := &ethpbv1.SignedAggregateAttestationAndProof{
 		Message: &ethpbv1.AggregateAttestationAndProof{
 			AggregatorIndex: 1,
-			Aggregate:       testing2.HydrateV1Attestation(&ethpbv1.Attestation{}),
+			Aggregate:       util.HydrateV1Attestation(&ethpbv1.Attestation{}),
 			SelectionProof:  selectionProof,
 		},
 		Signature: signature,
@@ -426,7 +426,7 @@ func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1AttestationToV1Alpha1(t *testing.T) {
-	v1Att := testing2.HydrateV1Attestation(&ethpbv1.Attestation{})
+	v1Att := util.HydrateV1Attestation(&ethpbv1.Attestation{})
 	v1Alpha1Att := V1AttToV1Alpha1(v1Att)
 
 	v1Root, err := v1Att.HashTreeRoot()
@@ -437,7 +437,7 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
-	alphaBlock := testing2.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
+	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 	alphaBlock.Slot = slot
 	alphaBlock.ProposerIndex = validatorIndex
 	alphaBlock.ParentRoot = parentRoot
@@ -465,7 +465,7 @@ func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
 }
 
 func TestBeaconStateToV1(t *testing.T) {
-	source, err := testing2.NewBeaconState(testing2.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
+	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1
 		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
 		state.Slot = 2

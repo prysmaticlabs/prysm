@@ -20,16 +20,16 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	pubKey := pubKey(1)
@@ -56,7 +56,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		Validators: []*ethpb.Validator{},
 	})
 	require.NoError(t, err)
-	block := testing2.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -118,7 +118,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			},
 		},
 	}
-	block := testing2.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	depData := &ethpb.Deposit_Data{
@@ -218,7 +218,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 			},
 		},
 	}
-	block := testing2.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
@@ -298,7 +298,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(3))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
@@ -361,7 +361,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 			GenesisValidatorsRoot: genesisValidatorRoot[:],
 		},
 	})
-	testing2.WaitTimeout(wg, time.Second)
+	util.WaitTimeout(wg, time.Second)
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {

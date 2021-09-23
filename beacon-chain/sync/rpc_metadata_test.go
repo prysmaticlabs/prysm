@@ -21,9 +21,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
@@ -68,7 +68,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 
 	assert.NoError(t, r.metaDataHandler(context.Background(), new(interface{}), stream1))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -129,7 +129,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 		t.Fatalf("MetadataV0 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -193,7 +193,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	_, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -217,7 +217,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 		t.Fatalf("MetadataV1 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

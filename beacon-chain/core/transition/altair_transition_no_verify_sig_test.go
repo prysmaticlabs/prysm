@@ -16,13 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
-	beaconState, privKeys := testing2.DeterministicGenesisStateAltair(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := core.CurrentEpoch(beaconState)
-	randaoReveal, err := testing2.RandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
@@ -54,7 +54,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
-	block := testing2.NewBeaconBlockAltair()
+	block := util.NewBeaconBlockAltair()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -95,7 +95,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := testing2.BlockSignatureAltair(c, block.Block, privKeys)
+	sig, err := util.BlockSignatureAltair(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -109,7 +109,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 }
 
 func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
-	beaconState, privKeys := testing2.DeterministicGenesisStateAltair(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := core.CurrentEpoch(beaconState)
-	randaoReveal, err := testing2.RandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
@@ -141,7 +141,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
 	require.NoError(t, err)
-	block := testing2.NewBeaconBlockAltair()
+	block := util.NewBeaconBlockAltair()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -183,7 +183,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := testing2.BlockSignatureAltair(c, block.Block, privKeys)
+	sig, err := util.BlockSignatureAltair(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -208,13 +208,13 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 
 func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconStateAltair,
 	*ethpb.SignedBeaconBlockAltair) {
-	beaconState, privKeys := testing2.DeterministicGenesisStateAltair(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	assert.NoError(t, err)
 	assert.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
 	tState := beaconState.Copy()
-	blk, err := testing2.GenerateFullBlockAltair(tState, privKeys,
-		&testing2.BlockGenConfig{NumAttestations: 1, NumVoluntaryExits: 0, NumDeposits: 0}, 1)
+	blk, err := util.GenerateFullBlockAltair(tState, privKeys,
+		&util.BlockGenConfig{NumAttestations: 1, NumVoluntaryExits: 0, NumDeposits: 0}, 1)
 	require.NoError(t, err)
 
 	return beaconState, blk

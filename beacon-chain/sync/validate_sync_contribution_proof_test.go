@@ -31,9 +31,9 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_ValidateSyncContributionAndProof(t *testing.T) {
@@ -888,7 +888,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 }
 
 func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Database) ([32]byte, []bls.SecretKey) {
-	gs, keys := testing2.DeterministicGenesisStateAltair(t, 64)
+	gs, keys := util.DeterministicGenesisStateAltair(t, 64)
 	sCom, err := altair.NextSyncCommittee(ctx, gs)
 	assert.NoError(t, err)
 	assert.NoError(t, gs.SetCurrentSyncCommittee(sCom))
@@ -897,7 +897,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	testState := gs.Copy()
 	hRoot := [32]byte{}
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := testing2.GenerateFullBlockAltair(testState, keys, testing2.DefaultBlockGenConfig(), i)
+		blk, err := util.GenerateFullBlockAltair(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)

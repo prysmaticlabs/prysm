@@ -29,9 +29,9 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
@@ -83,10 +83,10 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testing2.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 
-	st, err := testing2.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	return &mock.ChainService{
@@ -133,13 +133,13 @@ func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
 	c.parentSlotCache = make(map[types.Slot]types.Slot)
 	parentSlot := types.Slot(0)
 
-	genesisBlock := testing2.NewBeaconBlock().Block
+	genesisBlock := util.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
 	require.NoError(t, err)
 	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
-		currentBlock := testing2.NewBeaconBlock().Block
+		currentBlock := util.NewBeaconBlock().Block
 		currentBlock.Slot = slot
 		currentBlock.ParentRoot = parentRoot[:]
 		parentRoot, err = currentBlock.HashTreeRoot()
@@ -200,7 +200,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			cache.RLock()
 			parentRoot := cache.rootCache[cache.parentSlotCache[slot]]
 			cache.RUnlock()
-			blk := testing2.NewBeaconBlock()
+			blk := util.NewBeaconBlock()
 			blk.Block.Slot = slot
 			blk.Block.ParentRoot = parentRoot[:]
 			// If forked peer, give a different parent root.
@@ -248,22 +248,22 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 	// See if genesis block needs to be created.
 	startSlot := len(inSeq)
 	if len(inSeq) == 0 {
-		outSeq[0] = testing2.NewBeaconBlock()
-		outSeq[0].Block.StateRoot = testing2.Random32Bytes(t)
+		outSeq[0] = util.NewBeaconBlock()
+		outSeq[0].Block.StateRoot = util.Random32Bytes(t)
 		startSlot++
 		outSeq = append(outSeq, nil)
 	}
 
 	// Extend block chain sequentially.
 	for slot := startSlot; slot < len(outSeq); slot++ {
-		outSeq[slot] = testing2.NewBeaconBlock()
+		outSeq[slot] = util.NewBeaconBlock()
 		outSeq[slot].Block.Slot = types.Slot(slot)
 		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
 		require.NoError(t, err)
 		outSeq[slot].Block.ParentRoot = parentRoot[:]
 		// Make sure that blocks having the same slot number, produce different hashes.
 		// That way different branches/forks will have different blocks for the same slots.
-		outSeq[slot].Block.StateRoot = testing2.Random32Bytes(t)
+		outSeq[slot].Block.StateRoot = util.Random32Bytes(t)
 	}
 
 	return outSeq

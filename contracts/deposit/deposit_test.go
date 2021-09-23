@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
@@ -44,7 +44,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 }
 
 func TestVerifyDepositSignature_ValidSig(t *testing.T) {
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep := deposits[0]
 	domain, err := helpers.ComputeDomain(
@@ -58,7 +58,7 @@ func TestVerifyDepositSignature_ValidSig(t *testing.T) {
 }
 
 func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
-	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep := deposits[0]
 	domain, err := helpers.ComputeDomain(

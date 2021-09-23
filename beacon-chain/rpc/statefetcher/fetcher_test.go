@@ -16,9 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestGetState(t *testing.T) {
@@ -29,7 +29,7 @@ func TestGetState(t *testing.T) {
 		state.Slot = headSlot
 		return nil
 	}
-	state, err := testing2.NewBeaconState(testing2.FillRootsNaturalOpt, fillSlot)
+	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -53,13 +53,13 @@ func TestGetState(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		db := testDB.SetupDB(t)
-		b := testing2.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testing2.NewBeaconState(func(state *ethpb.BeaconState) error {
+		state, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
@@ -191,13 +191,13 @@ func TestGetStateRoot(t *testing.T) {
 		state.Slot = headSlot
 		return nil
 	}
-	state, err := testing2.NewBeaconState(testing2.FillRootsNaturalOpt, fillSlot)
+	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	t.Run("head", func(t *testing.T) {
-		b := testing2.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.StateRoot = stateRoot[:]
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
@@ -213,12 +213,12 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("genesis", func(t *testing.T) {
 		db := testDB.SetupDB(t)
-		b := testing2.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testing2.NewBeaconState(func(state *ethpb.BeaconState) error {
+		state, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
@@ -243,7 +243,7 @@ func TestGetStateRoot(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
-		blk := testing2.NewBeaconBlock()
+		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
@@ -254,7 +254,7 @@ func TestGetStateRoot(t *testing.T) {
 		}
 		// a valid chain is required to save finalized checkpoint.
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
-		st, err := testing2.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
 		// a state is required to save checkpoint
@@ -274,7 +274,7 @@ func TestGetStateRoot(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
-		blk := testing2.NewBeaconBlock()
+		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
@@ -285,7 +285,7 @@ func TestGetStateRoot(t *testing.T) {
 		}
 		// a valid chain is required to save finalized checkpoint.
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
-		st, err := testing2.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
 		// a state is required to save checkpoint
@@ -328,13 +328,13 @@ func TestGetStateRoot(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
-		blk := testing2.NewBeaconBlock()
+		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = genesis[:]
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
-		st, err := testing2.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
 		// a state is required to save checkpoint

@@ -9,9 +9,9 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestVerify(t *testing.T) {
@@ -23,7 +23,7 @@ func testVerify(t *testing.T) {
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := testing2.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := util.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &VerifyMsgTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))

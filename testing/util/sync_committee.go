@@ -1,4 +1,4 @@
-package testing
+package util
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

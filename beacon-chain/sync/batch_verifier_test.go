@@ -6,12 +6,12 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestValidateWithBatchVerifier(t *testing.T) {
-	_, keys, err := testing2.DeterministicDepositsAndKeys(10)
+	_, keys, err := util.DeterministicDepositsAndKeys(10)
 	assert.NoError(t, err)
 	sig := keys[0].Sign(make([]byte, 32))
 	badSig := keys[1].Sign(make([]byte, 32))

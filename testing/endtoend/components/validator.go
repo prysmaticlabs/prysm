@@ -23,10 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 const depositGasLimit = 4000000
@@ -246,7 +246,7 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 			balances[i] = params.BeaconConfig().MaxEffectiveBalance
 		}
 	}
-	deposits, trie, err := testing.DepositsWithBalance(balances)
+	deposits, trie, err := util.DepositsWithBalance(balances)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 	allRoots := trie.Items()
 	allBalances := balances
 	if partial {
-		deposits2, trie2, err := testing.DepositsWithBalance(balances)
+		deposits2, trie2, err := util.DepositsWithBalance(balances)
 		if err != nil {
 			return err
 		}

@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 // RunAttesterSlashingTest executes "operations/attester_slashing" tests.
@@ -23,7 +23,7 @@ func RunAttesterSlashingTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			attSlashingFile, err := testing2.BazelFileBytes(folderPath, "attester_slashing.ssz_snappy")
+			attSlashingFile, err := util.BazelFileBytes(folderPath, "attester_slashing.ssz_snappy")
 			require.NoError(t, err)
 			attSlashingSSZ, err := snappy.Decode(nil /* dst */, attSlashingFile)
 			require.NoError(t, err, "Failed to decompress")

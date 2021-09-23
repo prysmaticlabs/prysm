@@ -11,14 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
-	beaconState, privKeys := testing2.DeterministicGenesisState(t, 5500)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
@@ -40,7 +40,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	root1 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
 	att1 := &ethpb.IndexedAttestation{
-		Data:             testing2.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
+		Data:             util.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
 		AttestingIndices: setA,
 		Signature:        make([]byte, 96),
 	}
@@ -58,7 +58,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
-		Data: testing2.HydrateAttestationData(&ethpb.AttestationData{
+		Data: util.HydrateAttestationData(&ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Root: root2[:]},
 		}),
 		AttestingIndices: setB,
@@ -84,7 +84,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 
-	b := testing2.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			AttesterSlashings: slashings,

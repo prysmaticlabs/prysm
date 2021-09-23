@@ -28,9 +28,9 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	p2pWrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"google.golang.org/protobuf/proto"
 )
@@ -93,10 +93,10 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: bytesutil.PadTo([]byte("f"), 4), HeadRoot: make([]byte, 32), FinalizedRoot: make([]byte, 32)}, stream1))
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
-	if testing2.WaitTimeout(&wg2, 1*time.Second) {
+	if util.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -151,7 +151,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
 	assert.NoError(t, err)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -166,12 +166,12 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	head := testing2.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testing2.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -241,7 +241,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	}, stream1)
 	assert.NoError(t, err)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -267,7 +267,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		Slot: 5,
 	})
 	require.NoError(t, err)
-	blk := testing2.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
@@ -357,10 +357,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.Peers().Add(new(enr.Record), p1.BHost.ID(), p1.BHost.Addrs()[0], network.DirUnknown)
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
-	if testing2.WaitTimeout(&wg2, 1*time.Second) {
+	if util.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -390,11 +390,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	head := testing2.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized := testing2.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = 40
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -453,7 +453,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -466,12 +466,12 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	head := testing2.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testing2.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -479,7 +479,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	blk := testing2.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -544,7 +544,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
-	if testing2.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -557,7 +557,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	bState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	blk := testing2.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -718,7 +718,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 		p1.Connect(p2)
 
-		if testing2.WaitTimeout(&wg, 1*time.Second) {
+		if util.WaitTimeout(&wg, 1*time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
 		}
 
@@ -733,11 +733,11 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	head := testing2.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized := testing2.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
@@ -798,7 +798,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	assert.Equal(t, false, p1.Peers().Scorers().IsBadPeer(p2.PeerID()), "Peer is marked as bad")
 	p1.Connect(p2)
 
-	if testing2.WaitTimeout(&wg, time.Second) {
+	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -812,12 +812,12 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	// Set up a head state with data we expect.
-	head := testing2.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testing2.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -935,7 +935,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = testing2.NewBeaconBlock()
+		blocks[j-i] = util.NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error

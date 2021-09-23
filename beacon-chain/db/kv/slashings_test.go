@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,12 +15,12 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	prop := &ethpb.ProposerSlashing{
-		Header_1: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header_1: util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 5,
 			},
 		}),
-		Header_2: testing2.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header_2: util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				ProposerIndex: 5,
 			},
@@ -44,11 +44,11 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	att := &ethpb.AttesterSlashing{
-		Attestation_1: testing2.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Slot: 5,
 			}}),
-		Attestation_2: testing2.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Slot: 7,
 			}})}
