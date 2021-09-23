@@ -36,7 +36,7 @@ go_library(
         "//runtime/interop:__subpackages__",
         "//shared/aggregation:__subpackages__",
         "//slasher/rpc:__subpackages__",
-        "//testing:__pkg__",
+        "//testing/util:__pkg__",
         "//testing/benchmark:__pkg__",
         "//testing/fuzz:__pkg__",
         "//testing/spectest:__subpackages__",

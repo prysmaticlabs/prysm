@@ -26,7 +26,7 @@ go_library(
         "//shared/attestationutil:__pkg__",
         "//shared/keystore:__pkg__",
         "//slasher:__subpackages__",
-        "//testing:__pkg__",
+        "//testing/util:__pkg__",
         "//testing/altair:__pkg__",
         "//testing/benchmark/benchmark_files:__subpackages__",
         "//testing/endtoend/evaluators:__pkg__",
