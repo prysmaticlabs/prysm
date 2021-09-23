@@ -298,10 +298,6 @@ type signedBeaconBlockContainerJson struct {
 	Signature string           `json:"signature" hex:"true"`
 }
 
-type beaconBlockContainerJson struct {
-	Message *beaconBlockJson `json:"message"`
-}
-
 type beaconBlockJson struct {
 	Slot          string               `json:"slot"`
 	ProposerIndex string               `json:"proposer_index"`
@@ -335,10 +331,6 @@ type beaconBlockContainerV2Json struct {
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
-}
-
-type beaconBlockAltairContainerJson struct {
-	Message *beaconBlockAltairJson `json:"message"`
 }
 
 type beaconBlockAltairJson struct {
@@ -745,14 +737,14 @@ type eventChainReorgJson struct {
 // Error handling.
 // ---------------
 
-// submitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
-type submitAttestationsErrorJson struct {
+// indexedVerificationFailureErrorJson is a JSON representation of the error returned when verifying an indexed object.
+type indexedVerificationFailureErrorJson struct {
 	gateway.DefaultErrorJson
-	Failures []*singleAttestationVerificationFailureJson `json:"failures"`
+	Failures []*singleIndexedVerificationFailureJson `json:"failures"`
 }
 
-// singleAttestationVerificationFailureJson is a JSON representation of a failure when verifying a single submitted attestation.
-type singleAttestationVerificationFailureJson struct {
+// singleIndexedVerificationFailureJson is a JSON representation of a an issue when verifying a single indexed object e.g. an item in an array.
+type singleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }

@@ -508,7 +508,7 @@ func handleGetBlock(blk block.SignedBeaconBlock, err error) error {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil || blk.IsNil() {
-		return status.Errorf(codes.Internal, "Could not find requested block")
+		return status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 	return nil
 }

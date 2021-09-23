@@ -59,7 +59,7 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 
 	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
 	require.Equal(t, true, errJson == nil)
-	assert.Equal(t, "/ssz", request.URL.Path)
+	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
