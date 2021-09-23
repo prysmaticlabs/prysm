@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -2428,4 +2429,104 @@ func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 
 	return earliestValidTime, latestValidTime
+}
+
+func BenchmarkGetBlock(b *testing.B) {
+	proposerServer, beaconState, privKeys := setupGetBlock(b)
+	ctx := context.Background()
+	for n := 1; n < b.N; n++ {
+		getBlock(b, ctx, proposerServer, beaconState, privKeys, n)
+	}
+}
+
+func BenchmarkOptimisedGetBlock(b *testing.B) {
+	// enable block optimisations flag
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		EnableGetBlockOptimizations: true,
+	})
+	defer resetCfg()
+	proposerServer, beaconState, privKeys := setupGetBlock(b)
+	ctx := context.Background()
+	for n := 1; n < b.N; n++ {
+		getBlock(b, ctx, proposerServer, beaconState, privKeys, n)
+	}
+}
+
+func getBlock(b *testing.B, ctx context.Context, proposerServer *Server, beaconState state.BeaconState, privKeys []bls.SecretKey, counter int) {
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	require.NoError(b, err)
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	req := &ethpb.BlockRequest{
+		Slot:         types.Slot(counter),
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	_, err = proposerServer.GetBlock(ctx, req)
+	require.NoError(b, err)
+}
+
+func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) {
+	db := dbutil.SetupDB(bm)
+	ctx := context.Background()
+
+	params.SetupTestConfigCleanup(bm)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	beaconState, privKeys := testutil.DeterministicGenesisState(bm, 64)
+
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(bm, err, "Could not hash genesis state")
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	require.NoError(bm, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(bm, err, "Could not get signing root")
+	require.NoError(bm, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(bm, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	proposerServer := &Server{
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:     &mock.ChainService{},
+		ChainStartFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		MockEth1Votes:     true,
+		AttPool:           attestations.NewPool(),
+		SlashingsPool:     slashings.NewPool(),
+		ExitPool:          voluntaryexits.NewPool(),
+		StateGen:          stategen.New(db),
+	}
+
+	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+			beaconState,
+			privKeys[i],
+			i, /* validator index */
+		)
+		require.NoError(bm, err)
+		proposerSlashings[i] = proposerSlashing
+		err = proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+		require.NoError(bm, err)
+	}
+
+	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+			beaconState,
+			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+		)
+		require.NoError(bm, err)
+		attSlashings[i] = attesterSlashing
+		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+		require.NoError(bm, err)
+	}
+	//_, err = proposerServer.GetBlock(ctx, req)
+	//require.NoError(bm, err)
+
+	return proposerServer, beaconState, privKeys
 }
