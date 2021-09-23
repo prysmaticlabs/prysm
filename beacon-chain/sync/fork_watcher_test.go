@@ -13,7 +13,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestService_CheckForNextEpochFork(t *testing.T) {

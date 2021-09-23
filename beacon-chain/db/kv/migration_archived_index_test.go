@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"go.etcd.io/bbolt"
 )
 
@@ -49,7 +49,7 @@ func Test_migrateArchivedIndex(t *testing.T) {
 					if err := tx.Bucket(archivedRootBucket).Put(bytesutil.Uint64ToBytesLittleEndian(2048), []byte("foo")); err != nil {
 						return err
 					}
-					sb := testutil.NewBeaconBlock()
+					sb := testing2.NewBeaconBlock()
 					sb.Block.Slot = 2048
 					b, err := encode(context.Background(), sb)
 					if err != nil {

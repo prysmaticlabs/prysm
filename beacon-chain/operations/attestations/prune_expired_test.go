@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
@@ -25,9 +25,9 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
+	ad1 := testing2.HydrateAttestationData(&ethpb.AttestationData{})
 
-	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
+	ad2 := testing2.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
 	atts := []*ethpb.Attestation{
 		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
@@ -84,9 +84,9 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
+	ad1 := testing2.HydrateAttestationData(&ethpb.AttestationData{})
 
-	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
+	ad2 := testing2.HydrateAttestationData(&ethpb.AttestationData{})
 
 	att1 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}

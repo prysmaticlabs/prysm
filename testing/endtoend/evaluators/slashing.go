@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/testing"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"google.golang.org/grpc"
@@ -106,7 +106,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get chain head")
 	}
 
-	_, privKeys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	_, privKeys, err := testing.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get chain head")
 	}
 
-	_, privKeys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	_, privKeys, err := testing.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
 	}

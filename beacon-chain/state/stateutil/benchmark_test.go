@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func BenchmarkMerkleize_Buffered(b *testing.B) {

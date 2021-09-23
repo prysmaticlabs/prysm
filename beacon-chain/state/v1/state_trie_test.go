@@ -11,13 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestInitializeFromProto(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testing2.DeterministicGenesisState(t, 64)
 	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -60,7 +60,7 @@ func TestInitializeFromProto(t *testing.T) {
 }
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testing2.DeterministicGenesisState(t, 64)
 	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -103,7 +103,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testing2.DeterministicGenesisState(t, 64)
 
 	type test struct {
 		name        string
@@ -172,7 +172,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testing2.DeterministicGenesisState(t, 64)
 
 	type test struct {
 		name        string
@@ -241,7 +241,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 }
 
 func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
-	st0, err := testutil.NewBeaconState()
+	st0, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	st1 := st0.Copy()
 	originalCount := st1.NumValidators()

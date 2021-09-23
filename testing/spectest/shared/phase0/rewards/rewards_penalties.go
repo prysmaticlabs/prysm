@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 )
 
@@ -49,7 +49,7 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	_, testsFolderPath := utils.TestFolders(t, config, "phase0", "rewards")
-	testTypes, err := testutil.BazelListDirectories(testsFolderPath)
+	testTypes, err := testing2.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
 
 	for _, testType := range testTypes {
@@ -66,7 +66,7 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 
 func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	ctx := context.Background()
-	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := testing2.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
@@ -95,7 +95,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	totalSpecTestPenalties := make([]uint64, len(penalties))
 
 	for _, dFile := range deltaFiles {
-		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))
+		sourceFile, err := testing2.BazelFileBytes(path.Join(testFolderPath, dFile))
 		require.NoError(t, err)
 		sourceSSZ, err := snappy.Decode(nil /* dst */, sourceFile)
 		require.NoError(t, err, "Failed to decompress")

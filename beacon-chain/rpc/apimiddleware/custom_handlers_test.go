@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/r3labs/sse"
 )
 

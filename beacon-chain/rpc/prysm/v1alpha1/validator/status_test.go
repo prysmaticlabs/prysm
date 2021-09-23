@@ -21,15 +21,15 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
@@ -167,11 +167,11 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, err := testutil.NewBeaconState()
+	state, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(5000))
 	err = state.SetValidators([]*ethpb.Validator{
@@ -249,7 +249,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.ActivationExitEpoch(0)
 
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -303,7 +303,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	epoch := core.SlotToEpoch(slot)
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -361,7 +361,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := types.Slot(10000)
 	epoch := core.SlotToEpoch(slot)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -418,12 +418,12 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	// Exit because only exit epoch is =< current epoch.
 	slot := types.Slot(10000)
 	epoch := core.SlotToEpoch(slot)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	state, err := testutil.NewBeaconState()
+	state, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
@@ -495,7 +495,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 func TestActivationStatus_OK(t *testing.T) {
 	ctx := context.Background()
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
 	stateObj, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{
@@ -520,7 +520,7 @@ func TestActivationStatus_OK(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	dep := deposits[0]
@@ -584,7 +584,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	currentSlot := types.Slot(5000)
@@ -633,7 +633,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState()
+	state, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(currentSlot))
@@ -682,7 +682,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	ctx := context.Background()
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(6)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(6)
 	require.NoError(t, err)
 	pubKeys := [][]byte{
 		deposits[0].Data.PublicKey,
@@ -725,7 +725,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -831,7 +831,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 	stateObj, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := testing2.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -886,7 +886,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 
 func TestValidatorStatus_Invalid(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
@@ -1240,7 +1240,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 
 func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStateManager) (state.BeaconState,
 	state.BeaconState, state.BeaconState, []bls.SecretKey) {
-	gs, keys := testutil.DeterministicGenesisState(t, 64)
+	gs, keys := testing2.DeterministicGenesisState(t, 64)
 	hs := gs.Copy()
 	// Head State
 	headEpoch := head

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {

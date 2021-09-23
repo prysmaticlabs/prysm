@@ -20,9 +20,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -101,7 +101,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 32)
 	att0, err := generateUnaggregatedAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -135,7 +135,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	att1, err := generateAtt(beaconState, 2, privKeys)
@@ -180,7 +180,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	aggregatorServer := &Server{
@@ -209,7 +209,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := testing2.HydrateAttestation(&ethpb.Attestation{
 		Data:            &ethpb.AttestationData{CommitteeIndex: 1},
 		AggregationBits: aggBits,
 	})
@@ -246,7 +246,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := testing2.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
 		},
@@ -294,7 +294,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
 	// aggregated. 1 has the validator's signature making this request and that is the expected
 	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
@@ -348,7 +348,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,
 	// index 0. This test should choose the most bits attestation, att1.
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)

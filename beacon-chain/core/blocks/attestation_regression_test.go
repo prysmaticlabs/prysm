@@ -10,9 +10,9 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 // Beaconfuzz discovered an off by one issue where an attestation could be produced which would pass
@@ -50,7 +50,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 func TestVerifyAttestationNoVerifySignature_IncorrectSourceEpoch(t *testing.T) {
 	// Attestation with an empty signature
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := testing2.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)

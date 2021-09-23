@@ -25,9 +25,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
@@ -36,7 +36,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(32)
-	s, _ := testutil.DeterministicGenesisState(t, validators)
+	s, _ := testing2.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	bf := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
@@ -61,7 +61,7 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(64)
-	s, _ := testutil.DeterministicGenesisState(t, validators)
+	s, _ := testing2.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	bf := []byte{0xff}
@@ -83,10 +83,10 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 	validators := uint64(2048)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
 
 	sig := privKeys[0].Sign([]byte{'A'})
-	data := testutil.HydrateAttestationData(&ethpb.AttestationData{})
+	data := testing2.HydrateAttestationData(&ethpb.AttestationData{})
 
 	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
@@ -97,7 +97,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := testing2.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
@@ -147,13 +147,13 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState, _ := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -232,9 +232,9 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState, _ := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -297,13 +297,13 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -390,13 +390,13 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -501,12 +501,12 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
@@ -590,13 +590,13 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
+	beaconState, privKeys := testing2.DeterministicGenesisState(t, validators)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 

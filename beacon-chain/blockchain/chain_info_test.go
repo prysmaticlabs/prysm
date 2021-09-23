@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -122,7 +122,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := &Service{cfg: &Config{BeaconDB: beaconDB}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -134,7 +134,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block.Slot = 1
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := setupBeaconChain(t, beaconDB)
 
-	blk := testutil.NewBeaconBlock()
+	blk := testing2.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 }
 
 func TestService_HeadValidatorsIndices(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := testing2.DeterministicGenesisState(t, 10)
 	c := &Service{}
 
 	c.head = &head{}
@@ -248,7 +248,7 @@ func TestService_HeadValidatorsIndices(t *testing.T) {
 }
 
 func TestService_HeadSeed(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := testing2.DeterministicGenesisState(t, 1)
 	c := &Service{}
 	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -265,7 +265,7 @@ func TestService_HeadSeed(t *testing.T) {
 }
 
 func TestService_HeadGenesisValidatorRoot(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := testing2.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
@@ -298,7 +298,7 @@ func TestService_ChainHeads(t *testing.T) {
 }
 
 func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := testing2.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -314,7 +314,7 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 }
 
 func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := testing2.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 

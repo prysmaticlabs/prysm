@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/mock"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 // pubKey is a helper to generate a well-formed public key.
@@ -35,11 +35,11 @@ func pubKey(i uint64) []byte {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -104,12 +104,12 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
-	genesis := testutil.NewBeaconBlock()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
+	genesis := testing2.NewBeaconBlock()
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := testutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := testing2.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	h := &ethpb.BeaconBlockHeader{
 		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
 		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
@@ -214,11 +214,11 @@ func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bState, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis state")
@@ -254,12 +254,12 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := uint64(64)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -315,11 +315,11 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -372,11 +372,11 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -477,11 +477,11 @@ func TestAssignValidatorToSyncSubnet(t *testing.T) {
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
 
-	genesis := testutil.NewBeaconBlock()
+	genesis := testing2.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testing2.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(b, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := testing2.DeterministicEth1Data(len(deposits))
 	require.NoError(b, err)
 	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(b, err, "Could not setup genesis bs")

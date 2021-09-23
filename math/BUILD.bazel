@@ -14,6 +14,6 @@ go_test(
     srcs = ["math_helper_test.go"],
     deps = [
         ":go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

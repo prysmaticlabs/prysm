@@ -11,8 +11,8 @@ import (
 	"github.com/go-yaml/yaml"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 )
 
@@ -23,7 +23,7 @@ func RunShuffleTests(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			testCaseFile, err := testutil.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
+			testCaseFile, err := testing2.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
 			require.NoError(t, err, "Could not read YAML tests directory")
 
 			testCase := &ShuffleTestCase{}

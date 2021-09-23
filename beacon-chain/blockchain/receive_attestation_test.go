@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -43,12 +43,12 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := testutil.NewBeaconBlock()
+	b32 := testing2.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b33 := testutil.NewBeaconBlock()
+	b33 := testing2.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
@@ -56,7 +56,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := "FFG and LMD votes are not consistent"
-	a := testutil.NewAttestation()
+	a := testing2.NewAttestation()
 	a.Data.Target.Epoch = 1
 	a.Data.Target.Root = []byte{'a'}
 	a.Data.BeaconBlockRoot = r33[:]
@@ -71,19 +71,19 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := testutil.NewBeaconBlock()
+	b32 := testing2.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b33 := testutil.NewBeaconBlock()
+	b33 := testing2.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	a := testutil.NewAttestation()
+	a := testing2.NewAttestation()
 	a.Data.Target.Epoch = 1
 	a.Data.Target.Root = r32[:]
 	a.Data.BeaconBlockRoot = r33[:]
@@ -105,10 +105,10 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	require.NoError(t, err)
-	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
+	genesisState, pks := testing2.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	atts, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
+	atts, err := testing2.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
 	copied := genesisState.Copy()

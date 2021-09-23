@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
@@ -36,7 +36,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 		Slot:       10,
 	})
 	require.NoError(t, err)
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -66,7 +66,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 		Slot:       0,
 	})
 	require.NoError(t, err)
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -115,7 +115,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,

@@ -22,9 +22,9 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
@@ -104,7 +104,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 				}
 			}
 		}()
-		if testutil.WaitTimeout(&wg, 5*time.Second) {
+		if testing2.WaitTimeout(&wg, 5*time.Second) {
 			t.Errorf("Isolated non-skipped slot not found in %d iterations: %v", i, expectedSlot)
 		} else {
 			log.Debugf("Isolated non-skipped slot found in %d iterations", i)
@@ -168,7 +168,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -320,7 +320,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State:          st,
@@ -432,7 +432,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := testing2.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,

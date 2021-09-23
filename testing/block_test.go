@@ -1,4 +1,4 @@
-package testutil
+package testing
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {

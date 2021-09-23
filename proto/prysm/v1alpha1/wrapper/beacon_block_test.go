@@ -10,9 +10,9 @@ import (
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
@@ -81,7 +81,7 @@ func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testing2.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	var b []byte
@@ -91,7 +91,7 @@ func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testing2.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -161,7 +161,7 @@ func TestAltairBeaconBlock_IsNil(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlock(testing2.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
 	require.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -178,7 +178,7 @@ func TestAltairBeaconBlock_Proto(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_SSZ(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlock(testing2.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b, err := wb.MarshalSSZ()
@@ -291,7 +291,7 @@ func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlockBody(testutil.HydrateBeaconBlockBodyAltair(&ethpb.BeaconBlockBodyAltair{}))
+	wb, err := wrapper.WrappedAltairBeaconBlockBody(testing2.HydrateBeaconBlockBodyAltair(&ethpb.BeaconBlockBodyAltair{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -311,7 +311,7 @@ func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
 	root := bytesutil.PadTo([]byte("root"), 32)
 	signature := bytesutil.PadTo([]byte("sig"), 96)
 	body := &ethpb.BeaconBlockBody{}
-	body = testutil.HydrateBeaconBlockBody(body)
+	body = testing2.HydrateBeaconBlockBody(body)
 	bodyRoot, err := body.HashTreeRoot()
 	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
@@ -340,7 +340,7 @@ func TestAltairSignedBeaconBlock_Header(t *testing.T) {
 	root := bytesutil.PadTo([]byte("root"), 32)
 	signature := bytesutil.PadTo([]byte("sig"), 96)
 	body := &ethpb.BeaconBlockBodyAltair{}
-	body = testutil.HydrateBeaconBlockBodyAltair(body)
+	body = testing2.HydrateBeaconBlockBodyAltair(body)
 	bodyRoot, err := body.HashTreeRoot()
 	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlockAltair{

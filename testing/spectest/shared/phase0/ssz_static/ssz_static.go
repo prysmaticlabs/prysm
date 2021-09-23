@@ -11,8 +11,8 @@ import (
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 )
 
@@ -33,14 +33,14 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
-				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
+				serializedBytes, err := testing2.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
 				require.NoError(t, err)
 				serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 				require.NoError(t, err, "Failed to decompress")
 				object, err := UnmarshalledSSZ(t, serializedSSZ, folder.Name())
 				require.NoError(t, err, "Could not unmarshall serialized SSZ")
 
-				rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
+				rootsYamlFile, err := testing2.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
 				require.NoError(t, err)
 				rootsYaml := &SSZRoots{}
 				require.NoError(t, utils.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")

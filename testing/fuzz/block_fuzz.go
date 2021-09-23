@@ -31,7 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,11 +66,11 @@ func setupDB() {
 	}
 
 	ctx := context.Background()
-	s, err := testutil.NewBeaconState()
+	s, err := testing2.NewBeaconState()
 	if err != nil {
 		panic(err)
 	}
-	b := testutil.NewBeaconBlock()
+	b := testing2.NewBeaconBlock()
 	if err := db1.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 		panic(err)
 	}

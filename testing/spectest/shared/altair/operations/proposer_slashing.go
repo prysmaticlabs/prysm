@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	testing2 "github.com/prysmaticlabs/prysm/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 )
 
@@ -22,7 +22,7 @@ func RunProposerSlashingTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			proposerSlashingFile, err := testutil.BazelFileBytes(folderPath, "proposer_slashing.ssz_snappy")
+			proposerSlashingFile, err := testing2.BazelFileBytes(folderPath, "proposer_slashing.ssz_snappy")
 			require.NoError(t, err)
 			proposerSlashingSSZ, err := snappy.Decode(nil /* dst */, proposerSlashingFile)
 			require.NoError(t, err, "Failed to decompress")
