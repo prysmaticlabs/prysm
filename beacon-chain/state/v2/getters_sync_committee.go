@@ -1,8 +1,8 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // currentSyncCommittee of the current sync committee in beacon chain state.

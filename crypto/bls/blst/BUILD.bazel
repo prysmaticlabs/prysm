@@ -147,7 +147,7 @@ go_test(
         ): [
             "//crypto/bls/blst:go_default_library",
             "//crypto/bls/common:go_default_library",
-            "//shared/bytesutil:go_default_library",
+            "//encoding/bytesutil:go_default_library",
             "//shared/testutil/assert:go_default_library",
             "//shared/testutil/require:go_default_library",
         ],
@@ -182,7 +182,7 @@ go_test(
             ":android_arm64",
         ): [
             "//crypto/bls/common:go_default_library",
-            "//shared/bytesutil:go_default_library",
+            "//encoding/bytesutil:go_default_library",
             "//shared/testutil/assert:go_default_library",
             "//shared/testutil/require:go_default_library",
         ],
@@ -209,7 +209,7 @@ go_test(
     deps = [
         ":go_default_library",
         "//crypto/bls/common:go_default_library",
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//crypto/hash:go_default_library",
     ],
 )
