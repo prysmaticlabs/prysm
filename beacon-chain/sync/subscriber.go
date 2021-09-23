@@ -258,20 +258,20 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		b, err := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
 			log.WithError(err).WithFields(logrus.Fields{
-				"topic":   topic,
-				"peer id": pid.String(),
-				"agent":   agentString(pid, s.cfg.P2P.Host()),
-				"score":   s.cfg.P2P.Peers().Scorers().Score(pid),
+				"topic":        topic,
+				"peer id":      pid.String(),
+				"agent":        agentString(pid, s.cfg.P2P.Host()),
+				"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
 			}).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {
 			if err != nil {
 				log.WithError(err).WithFields(logrus.Fields{
-					"topic":   topic,
-					"peer id": pid.String(),
-					"agent":   agentString(pid, s.cfg.P2P.Host()),
-					"score":   s.cfg.P2P.Peers().Scorers().Score(pid),
+					"topic":        topic,
+					"peer id":      pid.String(),
+					"agent":        agentString(pid, s.cfg.P2P.Host()),
+					"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
 				}).Debugf("Gossip message was ignored")
 			}
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
