@@ -161,10 +161,9 @@ service Health {
 }
 
 service Auth {
-    rpc Initialize(InitializeAuthRequest) returns (InitializeAuthResponse) {
+    rpc Initialize(google.protobuf.Empty) returns (InitializeAuthResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/initialize",
-            body: "*"
+            get: "/v2/validator/initialize",
         };
     }
 }

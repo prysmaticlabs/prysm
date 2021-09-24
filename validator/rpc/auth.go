@@ -86,6 +86,9 @@ const (
 
 // HasUsedWeb checks if the user has authenticated via the web interface.
 func (s *Server) Initialize(_ context.Context, req *pb.InitializeAuthRequest) (*pb.InitializeAuthResponse, error) {
+	if req.Token == "" {
+
+	}
 	if file.FileExists(filepath.Join(s.walletDir, authTokenHash)) {
 		return nil, nil
 	}
