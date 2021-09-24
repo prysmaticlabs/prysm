@@ -7,12 +7,12 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/util"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -52,7 +52,7 @@ func TestService_Send(t *testing.T) {
 	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.BHost.ID())
 	require.NoError(t, err)
 
-	testutil.WaitTimeout(&wg, 1*time.Second)
+	util.WaitTimeout(&wg, 1*time.Second)
 
 	rcvd := &ethpb.Fork{}
 	require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))

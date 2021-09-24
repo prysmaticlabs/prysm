@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"google.golang.org/protobuf/proto"
 )
 

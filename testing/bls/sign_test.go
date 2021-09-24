@@ -9,8 +9,8 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/testing/bls/utils"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSign(t *testing.T) {

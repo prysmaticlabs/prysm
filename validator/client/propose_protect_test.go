@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -127,7 +127,7 @@ func TestPreBlockSignValidation(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
@@ -148,7 +148,7 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	emptyBlock := testutil.NewBeaconBlock()
+	emptyBlock := util.NewBeaconBlock()
 	emptyBlock.Block.Slot = 10
 	emptyBlock.Block.ProposerIndex = 0
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}

@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func RunDepositTest(t *testing.T, config string) {
@@ -21,7 +21,7 @@ func RunDepositTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			depositFile, err := testutil.BazelFileBytes(folderPath, "deposit.ssz_snappy")
+			depositFile, err := util.BazelFileBytes(folderPath, "deposit.ssz_snappy")
 			require.NoError(t, err)
 			depositSSZ, err := snappy.Decode(nil /* dst */, depositFile)
 			require.NoError(t, err, "Failed to decompress")
