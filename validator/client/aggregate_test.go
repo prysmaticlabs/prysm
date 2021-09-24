@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -56,7 +56,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -95,7 +95,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -158,7 +158,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+		Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 			AggregationBits: bitfield.NewBitlist(1),
 		}),
 		SelectionProof: make([]byte, 96),

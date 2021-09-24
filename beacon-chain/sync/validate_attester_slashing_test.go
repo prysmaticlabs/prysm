@@ -20,20 +20,20 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
-	state, privKeys := testutil.DeterministicGenesisState(t, 5)
+	state, privKeys := util.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {
 		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
 	require.NoError(t, state.SetValidators(vals))
 
-	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -48,7 +48,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
@@ -132,10 +132,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	topic = r.addDigestToTopic(topic, d)
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
-		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
 	})
@@ -151,10 +151,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 
 	buf = new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{4, 3},
 		}),
-		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3, 4},
 		}),
 	})

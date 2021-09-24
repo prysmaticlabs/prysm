@@ -199,6 +199,6 @@ go_test(
     srcs = ["cloners_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil/assert:go_default_library",
+        "//testing/assert:go_default_library",
     ],
 )

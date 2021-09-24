@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestWrapAttestationArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		unwrappedAtts := []*attestationJson{{AggregationBits: "1010"}}
@@ -30,8 +30,9 @@ func TestWrapAttestationArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapAttestationsArray(endpoint, nil, request)
+		runDefault, errJson := wrapAttestationsArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedAtts := &submitAttestationRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAtts))
 		require.Equal(t, 1, len(wrappedAtts.Data), "wrong number of wrapped items")
@@ -39,7 +40,7 @@ func TestWrapAttestationArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		var body bytes.Buffer
@@ -47,8 +48,9 @@ func TestWrapAttestationArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapAttestationsArray(endpoint, nil, request)
+		runDefault, errJson := wrapAttestationsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
@@ -56,7 +58,7 @@ func TestWrapAttestationArray(t *testing.T) {
 
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
@@ -68,19 +70,36 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapValidatorIndicesArray(endpoint, nil, request)
+		runDefault, errJson := wrapValidatorIndicesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedIndices := &dutiesRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
 		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
 		assert.Equal(t, "1", wrappedIndices.Index[0])
 		assert.Equal(t, "2", wrappedIndices.Index[1])
 	})
+
+	t.Run("invalid_body", func(t *testing.T) {
+		endpoint := apimiddleware.Endpoint{
+			PostRequest: &dutiesRequestJson{},
+		}
+		var body bytes.Buffer
+		_, err := body.Write([]byte("invalid"))
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		runDefault, errJson := wrapValidatorIndicesArray(endpoint, nil, request)
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
 }
 
 func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		unwrappedAggs := []*signedAggregateAttestationAndProofJson{{Signature: "sig"}}
@@ -92,8 +111,9 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
+		runDefault, errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedAggs := &submitAggregateAndProofsRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggs))
 		require.Equal(t, 1, len(wrappedAggs.Data), "wrong number of wrapped items")
@@ -101,7 +121,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -109,8 +129,9 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
+		runDefault, errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
@@ -118,7 +139,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 
 func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		unwrappedSubs := []*beaconCommitteeSubscribeJson{{
@@ -136,8 +157,9 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		runDefault, errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedSubs := &submitBeaconCommitteeSubscriptionsRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
 		require.Equal(t, 1, len(wrappedSubs.Data), "wrong number of wrapped items")
@@ -149,7 +171,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -157,8 +179,9 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
+		runDefault, errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
@@ -166,7 +189,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		unwrappedSubs := []*syncCommitteeSubscriptionJson{
@@ -189,8 +212,9 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
+		runDefault, errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedSubs := &submitSyncCommitteeSubscriptionRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
 		require.Equal(t, 2, len(wrappedSubs.Data), "wrong number of wrapped items")
@@ -202,7 +226,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		var body bytes.Buffer
@@ -210,8 +234,9 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
+		runDefault, errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
@@ -219,7 +244,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		unwrappedSigs := []*syncCommitteeMessageJson{{
@@ -236,8 +261,9 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
+		runDefault, errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrappedSigs := &submitSyncCommitteeSignaturesRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSigs))
 		require.Equal(t, 1, len(wrappedSigs.Data), "wrong number of wrapped items")
@@ -248,7 +274,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		var body bytes.Buffer
@@ -256,8 +282,9 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
+		runDefault, errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
@@ -265,7 +292,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 
 func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		unwrapped := []*signedContributionAndProofJson{
@@ -296,8 +323,9 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
+		runDefault, errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		wrapped := &submitContributionAndProofsRequestJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrapped))
 		require.Equal(t, 2, len(wrapped.Data), "wrong number of wrapped items")
@@ -315,7 +343,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -323,15 +351,16 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 
-		errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
+		runDefault, errJson := wrapSignedContributionAndProofsArray(endpoint, nil, request)
 		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
 }
 
 func TestPrepareGraffiti(t *testing.T) {
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		PostRequest: &signedBeaconBlockContainerJson{
 			Message: &beaconBlockJson{
 				Body: &beaconBlockBodyJson{},
@@ -391,9 +420,9 @@ func TestPrepareValidatorAggregates(t *testing.T) {
 	require.NoError(t, err)
 
 	container := &syncCommitteesResponseJson{}
-	handled, errJson := prepareValidatorAggregates(bodyJson, container)
+	runDefault, errJson := prepareValidatorAggregates(bodyJson, container)
 	require.Equal(t, nil, errJson)
-	require.Equal(t, true, handled)
+	require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 	assert.DeepEqual(t, []string{"1", "2"}, container.Data.Validators)
 	require.DeepEqual(t, [][]string{{"3", "4"}, {"5"}}, container.Data.ValidatorAggregates)
 }
@@ -403,16 +432,31 @@ func TestSerializeV2Block(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 				Signature:   "sig",
 			},
 		}
-		ok, j, errJson := serializeV2Block(response)
+		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0BlockResponseJson{}))
+		resp := &phase0BlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -420,21 +464,36 @@ func TestSerializeV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
-				Signature:   "sig",
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
+				Signature: "sig",
 			},
 		}
-		ok, j, errJson := serializeV2Block(response)
+		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairBlockResponseJson{}))
+		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
-		ok, j, errJson := serializeV2Block(response)
-		require.Equal(t, false, ok)
+		runDefault, j, errJson := serializeV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
@@ -450,9 +509,9 @@ func TestSerializeV2State(t *testing.T) {
 				AltairState: nil,
 			},
 		}
-		ok, j, errJson := serializeV2State(response)
+		runDefault, j, errJson := serializeV2State(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		require.NoError(t, json.Unmarshal(j, &phase0StateResponseJson{}))
 	})
@@ -465,16 +524,16 @@ func TestSerializeV2State(t *testing.T) {
 				AltairState: &beaconStateV2Json{},
 			},
 		}
-		ok, j, errJson := serializeV2State(response)
+		runDefault, j, errJson := serializeV2State(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		require.NoError(t, json.Unmarshal(j, &altairStateResponseJson{}))
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
-		ok, j, errJson := serializeV2State(&types.Empty{})
-		require.Equal(t, false, ok)
+		runDefault, j, errJson := serializeV2State(&types.Empty{})
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
@@ -486,15 +545,30 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &beaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 			},
 		}
-		ok, j, errJson := serializeProducedV2Block(response)
+		runDefault, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0ProduceBlockResponseJson{}))
+		resp := &phase0ProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -502,20 +576,35 @@ func TestSerializeProduceV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
 			},
 		}
-		ok, j, errJson := serializeProducedV2Block(response)
+		runDefault, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, nil, errJson)
-		require.Equal(t, true, ok)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairProduceBlockResponseJson{}))
+		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
-		ok, j, errJson := serializeProducedV2Block(response)
-		require.Equal(t, false, ok)
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))

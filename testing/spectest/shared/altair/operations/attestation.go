@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func RunAttestationTest(t *testing.T, config string) {
@@ -23,7 +23,7 @@ func RunAttestationTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			attestationFile, err := testutil.BazelFileBytes(folderPath, "attestation.ssz_snappy")
+			attestationFile, err := util.BazelFileBytes(folderPath, "attestation.ssz_snappy")
 			require.NoError(t, err)
 			attestationSSZ, err := snappy.Decode(nil /* dst */, attestationFile)
 			require.NoError(t, err, "Failed to decompress")

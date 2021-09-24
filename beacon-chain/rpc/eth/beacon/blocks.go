@@ -46,7 +46,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -233,8 +233,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
@@ -272,8 +273,9 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
@@ -422,7 +424,7 @@ func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
 	err error,
 ) {
 	blk, err := bs.blockFromBlockID(ctx, blockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -500,7 +502,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 	return blk, nil
 }
 
-func handleGetBlock(blk block.SignedBeaconBlock, err error) error {
+func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
@@ -508,7 +510,7 @@ func handleGetBlock(blk block.SignedBeaconBlock, err error) error {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
 	if blk == nil || blk.IsNil() {
-		return status.Errorf(codes.Internal, "Could not find requested block")
+		return status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 	return nil
 }

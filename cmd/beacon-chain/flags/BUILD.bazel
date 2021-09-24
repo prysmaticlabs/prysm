@@ -1,8 +1,9 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
+        "api_module.go",
         "base.go",
         "config.go",
         "interop.go",
@@ -21,4 +22,11 @@ go_library(
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["api_module_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//testing/assert:go_default_library"],
 )
