@@ -13,12 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -52,7 +52,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 
 	cached, err := genesis.State(params.BeaconConfig().ConfigName)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return nil, err
 	}
 	span.AddAttributes(trace.BoolAttribute("cache_hit", cached != nil))
@@ -377,7 +377,7 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // unmarshal state from marshaled proto state bytes to versioned state struct type.
-func (s *Store) unmarshalState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
+func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -710,7 +710,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 
 func (s *Store) isStateValidatorMigrationOver() (bool, error) {
 	// if flag is enabled, then always follow the new code path.
-	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+	if features.Get().EnableHistoricalSpaceRepresentation {
 		return true, nil
 	}
 

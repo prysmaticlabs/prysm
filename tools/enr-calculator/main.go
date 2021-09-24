@@ -11,8 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/prysmaticlabs/prysm/io/file"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -68,7 +68,7 @@ func main() {
 	log.Info(localNode.Node().String())
 
 	if *outfile != "" {
-		err := fileutil.WriteFile(*outfile, []byte(localNode.Node().String()))
+		err := file.WriteFile(*outfile, []byte(localNode.Node().String()))
 		if err != nil {
 			panic(err)
 		}

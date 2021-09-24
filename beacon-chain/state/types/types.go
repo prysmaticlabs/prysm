@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // FieldIndex represents the relevant field position in the

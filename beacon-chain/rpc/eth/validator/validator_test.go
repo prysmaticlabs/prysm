@@ -28,14 +28,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -1101,8 +1101,6 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := sharedtestutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err, "Could not set up genesis state")
-	// Set state to epoch 1.
-	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
@@ -1215,7 +1213,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 				{
 					ValidatorIndex:       0,
 					SyncCommitteeIndices: []uint64{},
-					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1,
+					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 2,
 				},
 			},
 		}
@@ -1528,7 +1526,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	v1Server := &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher: &mockChain.ChainService{
-			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
 	server := Server{

@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/urfave/cli/v2"
 )
@@ -15,7 +15,7 @@ import (
 func MigrateUp(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
-	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
+	if !file.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
 		return errors.New("No validator db found at path, nothing to migrate")
 	}
 
@@ -33,7 +33,7 @@ func MigrateUp(cliCtx *cli.Context) error {
 func MigrateDown(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
-	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
+	if !file.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
 		return errors.New("No validator db found at path, nothing to rollback")
 	}
 

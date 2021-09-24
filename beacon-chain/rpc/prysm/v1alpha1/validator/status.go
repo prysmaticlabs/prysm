@@ -8,11 +8,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -238,14 +238,14 @@ func (vs *Server) validatorStatus(
 	}
 	vStatus, idx, err := statusForPubKey(headState, pubKey)
 	if err != nil && err != errPubkeyDoesNotExist {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return resp, nonExistentIndex
 	}
 	resp.Status = vStatus
 	if err != errPubkeyDoesNotExist {
 		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return resp, idx
 		}
 		resp.ActivationEpoch = val.ActivationEpoch()

@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessRandao checks the block proposer's
@@ -71,7 +71,7 @@ func ProcessRandaoNoVerify(
 	if err != nil {
 		return nil, err
 	}
-	blockRandaoReveal := hashutil.Hash(randaoReveal)
+	blockRandaoReveal := hash.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
 		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
 	}

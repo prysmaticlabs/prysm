@@ -7,11 +7,11 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//config/features:go_default_library",
+        "//config/params:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/bls:go_default_library",
-        "//shared/featureconfig:go_default_library",
-        "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -22,9 +22,9 @@ go_test(
     deps = [
         ":go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//config/params:go_default_library",
+        "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/bls:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

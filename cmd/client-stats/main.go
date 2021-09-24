@@ -7,12 +7,12 @@ import (
 	"time"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/client-stats/flags"
-	"github.com/prysmaticlabs/prysm/shared/clientstats"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/journald"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -80,7 +80,7 @@ func main() {
 
 		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
-			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
+			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}

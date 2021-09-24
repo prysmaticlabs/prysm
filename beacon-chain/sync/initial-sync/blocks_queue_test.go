@@ -16,15 +16,15 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -286,7 +286,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
-			missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -745,7 +745,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 
 		queue.smm.addStateMachine(256)
 		// Machine is not skipped for too long. Do not mark as new just yet.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * (skippedMachineTimeout / 2))
+		queue.smm.machines[256].updated = prysmTime.Now().Add(-1 * (skippedMachineTimeout / 2))
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -764,7 +764,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 
 		queue.smm.addStateMachine(256)
 		// Machine is skipped for too long. Reset.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * skippedMachineTimeout)
+		queue.smm.machines[256].updated = prysmTime.Now().Add(-1 * skippedMachineTimeout)
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -1001,7 +1001,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
-			updated: timeutils.Now().Add(-staleEpochTimeout / 2),
+			updated: prysmTime.Now().Add(-staleEpochTimeout / 2),
 		}, nil)
 		// State should not change, as machine is not yet stale.
 		assert.NoError(t, err)
@@ -1017,7 +1017,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
-			updated: timeutils.Now().Add(-staleEpochTimeout),
+			updated: prysmTime.Now().Add(-staleEpochTimeout),
 		}, nil)
 		// State should change, as machine is stale.
 		assert.NoError(t, err)

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -18,7 +18,7 @@ func (s *Store) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) er
 
 	if data == nil {
 		err := errors.New("cannot save nil eth1data")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
@@ -30,7 +30,7 @@ func (s *Store) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) er
 		}
 		return bkt.Put(powchainDataKey, enc)
 	})
-	traceutil.AnnotateError(span, err)
+	tracing.AnnotateError(span, err)
 	return err
 }
 

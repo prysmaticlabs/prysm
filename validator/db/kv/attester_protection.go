@@ -8,10 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -156,7 +156,7 @@ func (s *Store) CheckSlashableAttestation(
 			if existingSigningRoot != nil {
 				var existing [32]byte
 				copy(existing[:], existingSigningRoot)
-				if slashutil.SigningRootsDiffer(existing, signingRoot) {
+				if slashings.SigningRootsDiffer(existing, signingRoot) {
 					slashKind = DoubleVote
 					return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
 				}
@@ -187,7 +187,7 @@ func (s *Store) CheckSlashableAttestation(
 		return nil
 	})
 
-	traceutil.AnnotateError(span, err)
+	tracing.AnnotateError(span, err)
 	return slashKind, err
 }
 
@@ -216,7 +216,7 @@ func (s *Store) checkSurroundedVote(
 					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
 				},
 			}
-			surrounded := slashutil.IsSurround(existingAtt, att)
+			surrounded := slashings.IsSurround(existingAtt, att)
 			if surrounded {
 				return SurroundedVote, fmt.Errorf(
 					surroundedVoteMessage,
@@ -256,7 +256,7 @@ func (s *Store) checkSurroundingVote(
 					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
 				},
 			}
-			surrounding := slashutil.IsSurround(att, existingAtt)
+			surrounding := slashings.IsSurround(att, existingAtt)
 			if surrounding {
 				return SurroundingVote, fmt.Errorf(
 					surroundingVoteMessage,

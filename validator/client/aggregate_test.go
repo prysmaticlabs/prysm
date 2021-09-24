@@ -8,14 +8,14 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -118,30 +118,30 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := timeutils.Now()
+	currentTime := time.Now()
 	numOfSlots := types.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
-	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
+	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
 
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	currentTime = timeutils.Now()
+	currentTime = time.Now()
 	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
 func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := timeutils.Now()
+	currentTime := time.Now()
 	numOfSlots := types.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 
-	expectedTime := timeutils.Now()
+	expectedTime := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validator.waitToSlotTwoThirds(ctx, numOfSlots)
-	currentTime = timeutils.Now()
+	currentTime = time.Now()
 	assert.Equal(t, expectedTime.Unix(), currentTime.Unix())
 }
 

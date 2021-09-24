@@ -7,16 +7,16 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	types "github.com/prysmaticlabs/eth2-types"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -193,7 +193,7 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 		sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
 		require.Equal(t, true, ok, "type assertion failed")
 		md := sts.Header()
-		v, ok := md[strings.ToLower(grpcutils.CustomErrorMetadataKey)]
+		v, ok := md[strings.ToLower(grpcutil.CustomErrorMetadataKey)]
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,

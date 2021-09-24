@@ -9,9 +9,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
@@ -40,7 +40,7 @@ func run(ctx context.Context, v iface.Validator) {
 		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
-	if featureconfig.Get().SlasherProtection {
+	if features.Get().SlasherProtection {
 		if err := v.SlasherReady(ctx); err != nil {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
