@@ -63,12 +63,6 @@ service Accounts {
             body: "*"
         };
     }
-    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/password/edit",
-            body: "*"
-        };
-    }
     rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/voluntary-exit",
@@ -167,26 +161,9 @@ service Health {
 }
 
 service Auth {
-    rpc HasUsedWeb(google.protobuf.Empty) returns (HasUsedWebResponse) {
+    rpc Initialize(InitializeAuthRequest) returns (InitializeAuthResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/initialized",
-        };
-    }
-    rpc Login(AuthRequest) returns (AuthResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/login",
-            body: "*"
-        };
-    }
-    rpc Signup(AuthRequest) returns (AuthResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/signup",
-            body: "*"
-        };
-    }
-    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/logout",
+            post: "/v2/validator/initialize",
             body: "*"
         };
     }
@@ -295,17 +272,6 @@ message AccountRequest {
     repeated uint64 indices = 2;
 }
 
-message AuthRequest {
-    string password = 1;
-    string password_confirmation = 2;
-}
-
-message AuthResponse {
-    string token = 1;
-
-    uint64 token_expiration = 2;
-}
-
 message NodeConnectionResponse {
     // The host address of the beacon node the validator
     // client is connected to.
@@ -330,12 +296,6 @@ message VersionResponse {
 	string validator = 2;
 }
 
-message ChangePasswordRequest {
-    string current_password = 1;
-    string password = 2;
-    string password_confirmation = 3;
-}
-
 message HasWalletResponse {
     // Whether or not the user has a wallet on disk.
     bool wallet_exists = 1;
@@ -353,7 +313,11 @@ message ImportKeystoresResponse {
     repeated bytes imported_public_keys = 1;
 }
 
-message HasUsedWebResponse {
+message InitializeAuthRequest {
+    string token = 1;
+}
+
+message InitializeAuthResponse {
     bool has_signed_up = 1;
     bool has_wallet = 2;
 }
