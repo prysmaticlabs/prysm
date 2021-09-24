@@ -26,11 +26,11 @@ type EndpointFactory interface {
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.
 type Endpoint struct {
 	Path               string          // The path of the HTTP endpoint.
+	GetResponse        interface{}     // The struct corresponding to the JSON structure used in a GET response.
 	PostRequest        interface{}     // The struct corresponding to the JSON structure used in a POST request.
 	PostResponse       interface{}     // The struct corresponding to the JSON structure used in a POST response.
 	RequestURLLiterals []string        // Names of URL parameters that should not be base64-encoded.
 	RequestQueryParams []QueryParam    // Query parameters of the request.
-	GetResponse        interface{}     // The struct corresponding to the JSON structure used in a GET response.
 	Err                ErrorJson       // The struct corresponding to the error that should be returned in case of a request failure.
 	Hooks              HookCollection  // A collection of functions that can be invoked at various stages of the request/response cycle.
 	CustomHandlers     []CustomHandler // Functions that will be executed instead of the default request/response behaviour.
