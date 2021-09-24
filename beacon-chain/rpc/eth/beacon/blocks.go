@@ -233,8 +233,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlock(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
@@ -272,8 +273,9 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlock(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
