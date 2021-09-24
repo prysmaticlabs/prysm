@@ -18,8 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_decodePubsubMessage(t *testing.T) {
@@ -63,7 +63,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				Message: &pb.Message{
 					Data: func() []byte {
 						buf := new(bytes.Buffer)
-						if _, err := p2ptesting.NewTestP2P(t).Encoding().EncodeGossip(buf, testutil.NewBeaconBlock()); err != nil {
+						if _, err := p2ptesting.NewTestP2P(t).Encoding().EncodeGossip(buf, util.NewBeaconBlock()); err != nil {
 							t.Fatal(err)
 						}
 						return buf.Bytes()
@@ -71,7 +71,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+			want:    wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		},
 	}
 	for _, tt := range tests {

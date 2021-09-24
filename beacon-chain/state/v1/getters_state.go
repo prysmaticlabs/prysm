@@ -2,8 +2,8 @@ package v1
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // InnerStateUnsafe returns the pointer value of the underlying

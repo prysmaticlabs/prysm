@@ -10,16 +10,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
-	emptyBlock := testutil.NewBeaconBlock()
+	emptyBlock := util.NewBeaconBlock()
 	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
 	assert.NoError(t, err, "Could not compute signing root of block")
 }
@@ -56,12 +56,12 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 		{
 			name: "block proposer",
 			genState: func(t *testing.T) (state.BeaconState, []bls.SecretKey) {
-				beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+				beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
 			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
-				block, err := testutil.GenerateFullBlock(st, keys, nil, 1)
+				block, err := util.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block
 			},

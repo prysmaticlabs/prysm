@@ -8,7 +8,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
@@ -17,8 +17,8 @@ func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
 	testFiles, err := ioutil.ReadDir(filepath)
 	require.NoError(t, err)
 
-	fileNames := []string{}
-	fileContent := [][]byte{}
+	var fileNames []string
+	var fileContent [][]byte
 	require.Equal(t, false, len(testFiles) == 0, "no files exist in directory")
 	for _, f := range testFiles {
 		// Remove .yml suffix
