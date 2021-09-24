@@ -46,7 +46,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +424,7 @@ func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
 	err error,
 ) {
 	blk, err := bs.blockFromBlockID(ctx, blockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -502,7 +502,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 	return blk, nil
 }
 
-func handleGetBlock(blk block.SignedBeaconBlock, err error) error {
+func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
