@@ -12,6 +12,16 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
+// A struct encapsulating input arguments to
+// functions used for attester slashing detection and
+// loading, saving, and updating min/max span chunks.
+type chunkUpdateArgs struct {
+	kind                slashertypes.ChunkKind
+	chunkIndex          uint64
+	validatorChunkIndex uint64
+	currentEpoch        types.Epoch
+}
+
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
 // min spans used for surround vote detection in slasher. The interface defines methods used to check
 // if an attestation is slashable for a validator index based on the contents of
