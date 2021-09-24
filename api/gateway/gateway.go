@@ -39,7 +39,7 @@ type MuxHandler func(http.Handler, http.ResponseWriter, *http.Request)
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
 	conn                         *grpc.ClientConn
-	pbHandlers                   []PbMux
+	pbHandlers                   []*PbMux
 	muxHandler                   MuxHandler
 	maxCallRecvMsgSize           uint64
 	router                       *mux.Router
@@ -57,7 +57,7 @@ type Gateway struct {
 // New returns a new instance of the Gateway.
 func New(
 	ctx context.Context,
-	pbHandlers []PbMux,
+	pbHandlers []*PbMux,
 	muxHandler MuxHandler,
 	remoteAddr,
 	gatewayAddress string,

@@ -552,7 +552,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		}
 	}
 
-	pbHandler := gateway.PbMux{
+	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
 		Patterns:      []string{"/accounts/", "/v2/"},
 		Mux:           mux,
@@ -560,7 +560,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 	gw := gateway.New(
 		cliCtx.Context,
-		[]gateway.PbMux{pbHandler},
+		[]*gateway.PbMux{pbHandler},
 		muxHandler,
 		rpcAddr,
 		gatewayAddress,

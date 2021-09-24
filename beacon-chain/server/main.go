@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
 )
@@ -26,6 +27,11 @@ var (
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
 	enableDebugRPCEndpoints = flag.Bool("enable-debug-rpc-endpoints", false, "Enable debug rpc endpoints such as /eth/v1alpha1/beacon/state")
 	grpcMaxMsgSize          = flag.Int("grpc-max-msg-size", 1<<22, "Integer to define max recieve message call size")
+	httpModules             = flag.String(
+		"http-modules",
+		strings.Join([]string{flags.PrysmAPIModule, flags.EthAPIModule}, ","),
+		"Comma-separated list of API module names. Possible values: `"+flags.PrysmAPIModule+`,`+flags.EthAPIModule+"`.",
+	)
 )
 
 func init() {
@@ -38,17 +44,26 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints)
+	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints, *httpModules)
+	muxs := make([]*gateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	}
+	if gatewayConfig.EthPbMux != nil {
+		muxs = append(muxs, gatewayConfig.EthPbMux)
+	}
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.EthPbMux},
+		muxs,
 		gatewayConfig.Handler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
-		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
-		WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
+	if flags.EnableHTTPEthAPI(*httpModules) {
+		gw.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/swagger/", gateway.SwaggerServer())
