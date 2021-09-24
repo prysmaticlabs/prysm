@@ -45,8 +45,6 @@ go_test(
         "//testing/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_prysm//shared/testutil/assert:go_default_library",
-        "@com_github_prysmaticlabs_prysm//shared/testutil/require:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
