@@ -344,7 +344,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
 
 	// Each sync subcommittee is 128 bits and the sync committee is 512 bits for mainnet.
-	bitsHolder := [][]byte{}
+	var bitsHolder [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 		bitsHolder = append(bitsHolder, ethpb.NewSyncCommitteeAggregationBits())
 	}

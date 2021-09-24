@@ -50,17 +50,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	Init(cfg)
 }
 
-// ConfigureSlasher sets the global config based
-// on what flags are enabled for the slasher client.
-func ConfigureSlasher(ctx *cli.Context) {
-	cfg := newConfig(ctx)
-	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
-		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
-		log.Warnf("Starting slasher with max RPC page size of %d", cfg.MaxRPCPageSize)
-	}
-	Init(cfg)
-}
-
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
