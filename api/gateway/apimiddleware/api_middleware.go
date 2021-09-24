@@ -36,6 +36,9 @@ type Endpoint struct {
 	CustomHandlers     []CustomHandler // Functions that will be executed instead of the default request/response behaviour.
 }
 
+// RunDefault expresses whether the default processing logic should be carried out after running a pre hook.
+type RunDefault bool
+
 // DefaultEndpoint returns an Endpoint with default configuration, e.g. DefaultErrorJson for error handling.
 func DefaultEndpoint() Endpoint {
 	return Endpoint{
@@ -56,10 +59,10 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.Respo
 
 // HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	OnPreDeserializeRequestBodyIntoContainer      func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
+	OnPreDeserializeRequestBodyIntoContainer      func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) (RunDefault, ErrorJson)
 	OnPostDeserializeRequestBodyIntoContainer     func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
-	OnPreDeserializeGrpcResponseBodyIntoContainer func([]byte, interface{}) (bool, ErrorJson)
-	OnPreSerializeMiddlewareResponseIntoJson      func(interface{}) (bool, []byte, ErrorJson)
+	OnPreDeserializeGrpcResponseBodyIntoContainer func([]byte, interface{}) (RunDefault, ErrorJson)
+	OnPreSerializeMiddlewareResponseIntoJson      func(interface{}) (RunDefault, []byte, ErrorJson)
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -165,14 +168,20 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 }
 
 func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {
+	runDefault := true
 	if endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer != nil {
-		if errJson := endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer(*endpoint, w, req); errJson != nil {
+		run, errJson := endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer(*endpoint, w, req)
+		if errJson != nil {
 			return errJson
 		}
+		if !run {
+			runDefault = false
+		}
 	}
-	if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.PostRequest); errJson != nil {
-		WriteError(w, errJson, nil)
-		return errJson
+	if runDefault {
+		if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.PostRequest); errJson != nil {
+			return errJson
+		}
 	}
 	if endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer != nil {
 		if errJson := endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer(*endpoint, w, req); errJson != nil {
@@ -185,11 +194,11 @@ func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Re
 func deserializeGrpcResponseBodyIntoContainerWrapped(endpoint *Endpoint, grpcResponseBody []byte, resp interface{}) ErrorJson {
 	runDefault := true
 	if endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer != nil {
-		ok, errJson := endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, resp)
+		run, errJson := endpoint.Hooks.OnPreDeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, resp)
 		if errJson != nil {
 			return errJson
 		}
-		if ok {
+		if !run {
 			runDefault = false
 		}
 	}
@@ -205,12 +214,12 @@ func serializeMiddlewareResponseIntoJsonWrapped(endpoint *Endpoint, respJson []b
 	runDefault := true
 	var errJson ErrorJson
 	if endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson != nil {
-		var ok bool
-		ok, respJson, errJson = endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson(resp)
+		var run RunDefault
+		run, respJson, errJson = endpoint.Hooks.OnPreSerializeMiddlewareResponseIntoJson(resp)
 		if errJson != nil {
 			return nil, errJson
 		}
-		if ok {
+		if !run {
 			runDefault = false
 		}
 	}
