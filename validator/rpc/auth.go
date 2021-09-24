@@ -24,6 +24,7 @@ var (
 const (
 	// HashedRPCPassword for the validator RPC access.
 	HashedRPCPassword       = "rpc-password-hash"
+	authToken               = "auth-token"
 	checkUserSignupInterval = time.Second * 30
 )
 
@@ -85,6 +86,9 @@ const (
 
 // HasUsedWeb checks if the user has authenticated via the web interface.
 func (s *Server) Initialize(_ context.Context, req *pb.InitializeAuthRequest) (*pb.InitializeAuthResponse, error) {
+	if file.FileExists(filepath.Join(s.walletDir, authTokenHash)) {
+		return nil, nil
+	}
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
@@ -139,8 +143,8 @@ func (s *Server) Initialize(_ context.Context, req *pb.InitializeAuthRequest) (*
 //}
 
 // SaveHashedPassword to disk for the validator RPC.
-func (s *Server) SaveHashedPassword(password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost)
+func (s *Server) saveHashedAuthToken(token string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(token), hashCost)
 	if err != nil {
 		return errors.Wrap(err, "could not generate hashed password")
 	}
@@ -153,8 +157,22 @@ func (s *Server) SaveHashedPassword(password string) error {
 // user via stdout and the validator client should then attempt to open the default
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
-func (s *Server) initializeAuthToken() {
-
+func (s *Server) initializeAuthToken() error {
+	authTokenFile := filepath.Join(s.walletDir, authToken)
+	if file.FileExists(authTokenFile) {
+		authToken, err := file.ReadFileAsBytes(authTokenFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	token, expr, err := s.createTokenString()
+	if err != nil {
+		return err
+	}
+	if file.FileExists(filepath.Join(s.walletDir, authToken)) {
+		return nil
+	}
 }
 
 // Interval in which we should check if a user has not yet used the RPC Signup endpoint
