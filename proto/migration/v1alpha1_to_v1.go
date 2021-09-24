@@ -2,12 +2,13 @@ package migration
 
 import (
 	"github.com/pkg/errors"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -364,6 +365,140 @@ func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) 
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v2Block, nil
+}
+
+func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
+	sourceFork := state.Fork()
+	sourceLatestBlockHeader := state.LatestBlockHeader()
+	sourceEth1Data := state.Eth1Data()
+	sourceEth1DataVotes := state.Eth1DataVotes()
+	sourceValidators := state.Validators()
+	sourcePrevEpochAtts, err := state.PreviousEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get previous epoch attestations from state")
+	}
+	sourceCurrEpochAtts, err := state.CurrentEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get current epoch attestations from state")
+	}
+	sourcePrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := state.FinalizedCheckpoint()
+
+	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
+	for i, vote := range sourceEth1DataVotes {
+		resultEth1DataVotes[i] = &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(vote.DepositRoot),
+			DepositCount: vote.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(vote.BlockHash),
+		}
+	}
+	resultValidators := make([]*ethpbv1.Validator, len(sourceValidators))
+	for i, validator := range sourceValidators {
+		resultValidators[i] = &ethpbv1.Validator{
+			Pubkey:                     bytesutil.SafeCopyBytes(validator.PublicKey),
+			WithdrawalCredentials:      bytesutil.SafeCopyBytes(validator.WithdrawalCredentials),
+			EffectiveBalance:           validator.EffectiveBalance,
+			Slashed:                    validator.Slashed,
+			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
+			ActivationEpoch:            validator.ActivationEpoch,
+			ExitEpoch:                  validator.ExitEpoch,
+			WithdrawableEpoch:          validator.WithdrawableEpoch,
+		}
+	}
+	resultPrevEpochAtts := make([]*ethpbv1.PendingAttestation, len(sourcePrevEpochAtts))
+	for i, att := range sourcePrevEpochAtts {
+		data := att.Data
+		resultPrevEpochAtts[i] = &ethpbv1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &ethpbv1.AttestationData{
+				Slot:            data.Slot,
+				Index:           data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &ethpbv1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
+	resultCurrEpochAtts := make([]*ethpbv1.PendingAttestation, len(sourceCurrEpochAtts))
+	for i, att := range sourceCurrEpochAtts {
+		data := att.Data
+		resultCurrEpochAtts[i] = &ethpbv1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &ethpbv1.AttestationData{
+				Slot:            data.Slot,
+				Index:           data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &ethpbv1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
+
+	result := &ethpbv1.BeaconState{
+		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorRoot()),
+		Slot:                  state.Slot(),
+		Fork: &ethpbv1.Fork{
+			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
+			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
+			Epoch:           sourceFork.Epoch,
+		},
+		LatestBlockHeader: &ethpbv1.BeaconBlockHeader{
+			Slot:          sourceLatestBlockHeader.Slot,
+			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
+			ParentRoot:    bytesutil.SafeCopyBytes(sourceLatestBlockHeader.ParentRoot),
+			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
+			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
+		},
+		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
+		Eth1Data: &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
+			DepositCount: sourceEth1Data.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
+		},
+		Eth1DataVotes:             resultEth1DataVotes,
+		Eth1DepositIndex:          state.Eth1DepositIndex(),
+		Validators:                resultValidators,
+		Balances:                  state.Balances(),
+		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
+		Slashings:                 state.Slashings(),
+		PreviousEpochAttestations: resultPrevEpochAtts,
+		CurrentEpochAttestations:  resultCurrEpochAtts,
+		JustificationBits:         bytesutil.SafeCopyBytes(state.JustificationBits()),
+		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
+		},
+		CurrentJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceCurrJustifiedCheckpoint.Root),
+		},
+		FinalizedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceFinalizedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
+		},
+	}
+
+	return result, nil
 }
 
 func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconStateV2, error) {

@@ -1,4 +1,4 @@
-// Package runutil includes helpers for scheduling runnable, periodic functions.
+// Package async includes helpers for scheduling runnable, periodic functions and contains useful helpers for converting multi-processor computation.
 package async
 
 import (

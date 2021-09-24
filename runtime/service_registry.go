@@ -1,4 +1,4 @@
-// Package shared includes useful utilities globally accessible in
+// Package runtime includes useful utilities globally accessible in
 // the Prysm monorepo.
 package runtime
 

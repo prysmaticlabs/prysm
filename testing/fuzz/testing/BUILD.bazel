@@ -13,7 +13,7 @@ go_library(
     ],
     deps = [
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/testutil:go_default_library",
+        "//testing/util:go_default_library",
     ],
 )
 
@@ -21,5 +21,5 @@ go_test(
     name = "go_default_test",
     srcs = ["beacon_fuzz_states_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
+    deps = ["//testing/require:go_default_library"],
 )

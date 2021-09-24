@@ -3,6 +3,8 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -52,6 +54,12 @@ var (
 	KeyFlag = &cli.StringFlag{
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
+	}
+	// HTTPModules define the set of enabled HTTP APIs.
+	HTTPModules = &cli.StringFlag{
+		Name:  "http-modules",
+		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
+		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
 	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{
@@ -179,6 +187,6 @@ var (
 	MinPeersPerSubnet = &cli.Uint64Flag{
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
-		Value: 4,
+		Value: 6,
 	}
 )

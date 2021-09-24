@@ -8,7 +8,7 @@ go_library(
     visibility = ["//testing/bls:__subpackages__"],
     deps = [
         "//io/file:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

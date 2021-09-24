@@ -28,12 +28,12 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_ValidateSyncContributionAndProof(t *testing.T) {
@@ -810,7 +810,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							rawBytes := p2ptypes.SSZBytes(headRoot[:])
 							sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 							assert.NoError(t, err)
-							sigs := []bls.Signature{}
+							var sigs []bls.Signature
 							for i, p2 := range coms {
 								idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p2))
 								assert.Equal(t, true, ok)
@@ -888,7 +888,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 }
 
 func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Database) ([32]byte, []bls.SecretKey) {
-	gs, keys := testutil.DeterministicGenesisStateAltair(t, 64)
+	gs, keys := util.DeterministicGenesisStateAltair(t, 64)
 	sCom, err := altair.NextSyncCommittee(ctx, gs)
 	assert.NoError(t, err)
 	assert.NoError(t, gs.SetCurrentSyncCommittee(sCom))
@@ -897,7 +897,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	testState := gs.Copy()
 	hRoot := [32]byte{}
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := testutil.GenerateFullBlockAltair(testState, keys, testutil.DefaultBlockGenConfig(), i)
+		blk, err := util.GenerateFullBlockAltair(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)

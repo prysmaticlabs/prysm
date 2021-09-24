@@ -13,7 +13,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestService_CheckForNextEpochFork(t *testing.T) {
@@ -245,5 +245,5 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 }
 
 func oneEpoch() time.Duration {
-	return time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().SecondsPerSlot))) * time.Second
+	return time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 }
