@@ -6,11 +6,11 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )

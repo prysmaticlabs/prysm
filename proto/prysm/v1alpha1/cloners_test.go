@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestCopyETH1Data(t *testing.T) {

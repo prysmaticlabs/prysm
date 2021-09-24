@@ -16,13 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
@@ -570,7 +570,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 
-	testutil.WaitTimeout(&wg, 3*time.Second)
+	util.WaitTimeout(&wg, 3*time.Second)
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
@@ -625,7 +625,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 
-	testutil.WaitTimeout(&wg, 3*time.Second)
+	util.WaitTimeout(&wg, 3*time.Second)
 
 	for range blacklistedPublicKeys {
 		assert.LogsContain(t, hook, "Not including slashable public key")

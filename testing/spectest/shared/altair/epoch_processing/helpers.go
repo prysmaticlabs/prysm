@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -26,7 +26,7 @@ func RunEpochOperationTest(
 	testFolderPath string,
 	operationFn epochOperation,
 ) {
-	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := util.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")

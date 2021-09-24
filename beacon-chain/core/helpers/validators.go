@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // IsActiveValidator returns the boolean value on whether the validator

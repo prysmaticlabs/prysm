@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -150,11 +150,11 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 }
 
 func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
-	if !bytesutil.IsHexOfLen(msg.BeaconBlockRoot, 64) {
-		return errors.New("invalid block root format")
+	if len(msg.BeaconBlockRoot) != 32 {
+		return errors.New("invalid block root length")
 	}
-	if !bytesutil.IsHexOfLen(msg.Signature, 192) {
-		return errors.New("invalid signature format")
+	if len(msg.Signature) != 96 {
+		return errors.New("invalid signature length")
 	}
 	return nil
 }

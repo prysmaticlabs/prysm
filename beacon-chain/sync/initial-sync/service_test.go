@@ -20,9 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -50,7 +50,7 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "future genesis",
 			chainService: func() *mock.ChainService {
 				// Set to future time (genesis time hasn't arrived yet).
-				st, err := testutil.NewBeaconState()
+				st, err := util.NewBeaconState()
 				require.NoError(t, err)
 
 				return &mock.ChainService{
@@ -81,7 +81,7 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "zeroth epoch",
 			chainService: func() *mock.ChainService {
 				// Set to nearby slot.
-				st, err := testutil.NewBeaconState()
+				st, err := util.NewBeaconState()
 				require.NoError(t, err)
 				return &mock.ChainService{
 					State: st,
@@ -112,7 +112,7 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "already synced",
 			chainService: func() *mock.ChainService {
 				// Set to some future slot, and then make sure that current head matches it.
-				st, err := testutil.NewBeaconState()
+				st, err := util.NewBeaconState()
 				require.NoError(t, err)
 				futureSlot := types.Slot(27354)
 				require.NoError(t, st.SetSlot(futureSlot))
@@ -188,7 +188,7 @@ func TestService_InitStartStop(t *testing.T) {
 					cancel()
 				})
 			}()
-			if testutil.WaitTimeout(wg, time.Second*4) {
+			if util.WaitTimeout(wg, time.Second*4) {
 				t.Fatalf("Test should have exited by now, timed out")
 			}
 			tt.assert()
@@ -232,7 +232,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			})
 		}()
 
-		if testutil.WaitTimeout(wg, time.Second*2) {
+		if util.WaitTimeout(wg, time.Second*2) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
@@ -274,7 +274,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			})
 		}()
 
-		if testutil.WaitTimeout(wg, time.Second*2) {
+		if util.WaitTimeout(wg, time.Second*2) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
@@ -316,7 +316,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			wg.Done()
 		}()
 
-		if testutil.WaitTimeout(wg, time.Second*5) {
+		if util.WaitTimeout(wg, time.Second*5) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
@@ -364,7 +364,7 @@ func TestService_markSynced(t *testing.T) {
 	}()
 	s.markSynced(expectedGenesisTime)
 
-	if testutil.WaitTimeout(wg, time.Second*2) {
+	if util.WaitTimeout(wg, time.Second*2) {
 		t.Fatalf("Test should have exited by now, timed out")
 	}
 	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
@@ -378,7 +378,7 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]
@@ -398,7 +398,7 @@ func TestService_Resync(t *testing.T) {
 		{
 			name: "resync ok",
 			chainService: func() *mock.ChainService {
-				st, err := testutil.NewBeaconState()
+				st, err := util.NewBeaconState()
 				require.NoError(t, err)
 				futureSlot := types.Slot(160)
 				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
