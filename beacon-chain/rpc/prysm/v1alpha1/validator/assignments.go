@@ -280,7 +280,7 @@ func registerSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
 	}
-	startEpoch := types.Epoch(syncPeriod) * params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	startEpoch := types.Epoch(syncPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 	currPeriod := core.SyncCommitteePeriod(currEpoch)
 	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)
