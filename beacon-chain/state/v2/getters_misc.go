@@ -4,7 +4,6 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -209,13 +208,4 @@ func (b *BeaconState) balancesLength() int {
 	}
 
 	return len(b.state.Balances)
-}
-
-// RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
-// according to the Simple Serialize specification of Ethereum.
-func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	if features.Get().EnableSSZCache {
-		return cachedHasher.arraysRoot(vals, length, fieldName)
-	}
-	return nocachedHasher.arraysRoot(vals, length, fieldName)
 }
