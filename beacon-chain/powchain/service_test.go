@@ -519,6 +519,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 
 	headBlock := util.NewBeaconBlock()
 	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
 	stateGen := stategen.New(beaconDB)
 
 	emptyState, err := util.NewBeaconState()
