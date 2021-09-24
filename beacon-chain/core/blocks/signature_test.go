@@ -6,12 +6,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
@@ -20,8 +20,8 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	bCfg.AltairForkEpoch = 100
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 100
 	params.OverrideBeaconConfig(bCfg)
-	bState, keys := testutil.DeterministicGenesisState(t, 100)
-	altairBlk := testutil.NewBeaconBlockAltair()
+	bState, keys := util.DeterministicGenesisState(t, 100)
+	altairBlk := util.NewBeaconBlockAltair()
 	altairBlk.Block.ProposerIndex = 0
 	altairBlk.Block.Slot = params.BeaconConfig().SlotsPerEpoch * 100
 	fData := &ethpb.Fork{

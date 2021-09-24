@@ -11,9 +11,9 @@ go_library(
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/require:go_default_library",
         "//testing/spectest/utils:go_default_library",
+        "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

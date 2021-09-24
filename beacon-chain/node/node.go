@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -55,6 +56,9 @@ import (
 )
 
 const testSkipPowFlag = "test-skip-pow"
+
+// 128MB max message size when enabling debug endpoints.
+const debugGrpcMaxMsgSize = 1 << 27
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -568,8 +572,13 @@ func (b *BeaconNode) registerRPCService() error {
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
-	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	if enableDebugRPCEndpoints {
+		maxMsgSize = int(math.Max(float64(maxMsgSize), debugGrpcMaxMsgSize))
+	}
+
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
@@ -662,6 +671,9 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
+	if enableDebugRPCEndpoints {
+		maxCallSize = uint64(math.Max(float64(maxCallSize), debugGrpcMaxMsgSize))
+	}
 
 	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
 	muxs := make([]*apigateway.PbMux, 0)

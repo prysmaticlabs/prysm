@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestWrapAttestationArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		unwrappedAtts := []*attestationJson{{AggregationBits: "1010"}}
@@ -39,7 +39,7 @@ func TestWrapAttestationArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		var body bytes.Buffer
@@ -56,7 +56,7 @@ func TestWrapAttestationArray(t *testing.T) {
 
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
@@ -80,7 +80,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		unwrappedAggs := []*signedAggregateAttestationAndProofJson{{Signature: "sig"}}
@@ -101,7 +101,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -118,7 +118,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 
 func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		unwrappedSubs := []*beaconCommitteeSubscribeJson{{
@@ -149,7 +149,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -166,7 +166,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		unwrappedSubs := []*syncCommitteeSubscriptionJson{
@@ -202,7 +202,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		var body bytes.Buffer
@@ -219,7 +219,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		unwrappedSigs := []*syncCommitteeMessageJson{{
@@ -248,7 +248,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		var body bytes.Buffer
@@ -265,7 +265,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 
 func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		unwrapped := []*signedContributionAndProofJson{
@@ -315,7 +315,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := gateway.Endpoint{
+		endpoint := apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -331,7 +331,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 }
 
 func TestPrepareGraffiti(t *testing.T) {
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		PostRequest: &signedBeaconBlockContainerJson{
 			Message: &beaconBlockJson{
 				Body: &beaconBlockBodyJson{},
@@ -403,7 +403,13 @@ func TestSerializeV2Block(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 				Signature:   "sig",
 			},
@@ -412,7 +418,16 @@ func TestSerializeV2Block(t *testing.T) {
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0BlockResponseJson{}))
+		resp := &phase0BlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -420,15 +435,30 @@ func TestSerializeV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &signedBeaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
-				Signature:   "sig",
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
+				Signature: "sig",
 			},
 		}
 		ok, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairBlockResponseJson{}))
+		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
@@ -486,7 +516,13 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
 			Data: &beaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{},
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
 				AltairBlock: nil,
 			},
 		}
@@ -494,7 +530,16 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &phase0ProduceBlockResponseJson{}))
+		resp := &phase0ProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -502,14 +547,29 @@ func TestSerializeProduceV2Block(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconBlockContainerV2Json{
 				Phase0Block: nil,
-				AltairBlock: &beaconBlockAltairJson{},
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
 			},
 		}
 		ok, j, errJson := serializeProducedV2Block(response)
 		require.Equal(t, nil, errJson)
 		require.Equal(t, true, ok)
 		require.NotNil(t, j)
-		require.NoError(t, json.Unmarshal(j, &altairProduceBlockResponseJson{}))
+		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {

@@ -28,5 +28,5 @@ go_test(
     name = "go_default_test",
     srcs = ["api_module_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/assert:go_default_library"],
+    deps = ["@com_github_prysmaticlabs_prysm//shared/testutil/assert:go_default_library"],
 )

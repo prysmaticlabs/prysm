@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
@@ -46,7 +47,7 @@ type Gateway struct {
 	cancel                       context.CancelFunc
 	remoteCert                   string
 	gatewayAddr                  string
-	apiMiddlewareEndpointFactory EndpointFactory
+	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
 	ctx                          context.Context
 	startFailure                 error
 	remoteAddr                   string
@@ -98,7 +99,7 @@ func (g *Gateway) WithMaxCallRecvMsgSize(size uint64) *Gateway {
 }
 
 // WithApiMiddleware allows adding API Middleware proxy to the gateway.
-func (g *Gateway) WithApiMiddleware(endpointFactory EndpointFactory) *Gateway {
+func (g *Gateway) WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) *Gateway {
 	g.apiMiddlewareEndpointFactory = endpointFactory
 	return g
 }
@@ -271,7 +272,7 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 }
 
 func (g *Gateway) registerApiMiddleware() {
-	proxy := &ApiProxyMiddleware{
+	proxy := &apimiddleware.ApiProxyMiddleware{
 		GatewayAddress:  g.gatewayAddr,
 		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
