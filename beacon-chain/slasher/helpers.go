@@ -5,9 +5,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -106,7 +106,7 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 }
 
 func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
-	indices := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	indices := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	log.WithFields(logrus.Fields{
 		"validatorIndex":  indices,
 		"prevSourceEpoch": slashing.Attestation_1.Data.Source.Epoch,
