@@ -17,14 +17,18 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -461,6 +465,81 @@ func TestInitDepositCache_OK(t *testing.T) {
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 	require.Equal(t, 3, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
+}
+
+func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
+	ctrs := []*protodb.DepositContainer{
+		{
+			Index:           0,
+			Eth1BlockHeight: 2,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+		{
+			Index:           1,
+			Eth1BlockHeight: 4,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+		{
+			Index:           2,
+			Eth1BlockHeight: 6,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+	}
+	gs, _ := util.DeterministicGenesisState(t, 1)
+	beaconDB := dbutil.SetupDB(t)
+	s := &Service{
+		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		preGenesisState: gs,
+		cfg:             &Web3ServiceConfig{BeaconDB: beaconDB},
+	}
+	var err error
+	s.cfg.DepositCache, err = depositcache.New()
+	require.NoError(t, err)
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	require.Equal(t, 0, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
+
+	headBlock := util.NewBeaconBlock()
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	stateGen := stategen.New(beaconDB)
+
+	emptyState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), headRoot))
+	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, headRoot))
+	require.NoError(t, stateGen.SaveState(context.Background(), headRoot, emptyState))
+	s.cfg.StateGen = stateGen
+	require.NoError(t, emptyState.SetEth1DepositIndex(2))
+
+	ctx := context.Background()
+	require.NoError(t, stateGen.SaveState(ctx, headRoot, emptyState))
+	require.NoError(t, beaconDB.SaveState(ctx, emptyState, headRoot))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: core.SlotToEpoch(0), Root: headRoot[:]}))
+
+	s.chainStartData.Chainstarted = true
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	deps := s.cfg.DepositCache.NonFinalizedDeposits(context.Background(), nil)
+	assert.Equal(t, 0, len(deps))
 }
 
 func TestNewService_EarliestVotingBlock(t *testing.T) {

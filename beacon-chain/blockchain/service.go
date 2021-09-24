@@ -193,6 +193,7 @@ func (s *Service) Start() {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 		}
+
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
