@@ -13,6 +13,7 @@ go_library(
         "//api/gateway:go_default_library",
         "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//cmd/beacon-chain/flags:go_default_library",
         "//runtime/maxprocs:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_joonix_log//:go_default_library",
