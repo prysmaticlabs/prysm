@@ -30,13 +30,13 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/slasher/types:go_default_library",
+        "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_prysm//shared/params:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
