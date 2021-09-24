@@ -17,7 +17,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/gateway"
+	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -670,22 +670,32 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
 	if enableDebugRPCEndpoints {
 		maxCallSize = uint64(math.Max(float64(maxCallSize), debugGrpcMaxMsgSize))
 	}
 
-	gatewayConfig := gateway2.DefaultConfig(enableDebugRPCEndpoints)
+	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
+	muxs := make([]*apigateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	}
+	if gatewayConfig.EthPbMux != nil {
+		muxs = append(muxs, gatewayConfig.EthPbMux)
+	}
 
-	g := gateway.New(
+	g := apigateway.New(
 		b.ctx,
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.EthPbMux},
+		muxs,
 		gatewayConfig.Handler,
 		selfAddress,
 		gatewayAddress,
 	).WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
-		WithMaxCallRecvMsgSize(maxCallSize).
-		WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+		WithMaxCallRecvMsgSize(maxCallSize)
+	if flags.EnableHTTPEthAPI(httpModules) {
+		g.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	}
 
 	return b.services.RegisterService(g)
 }
