@@ -21,9 +21,9 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -526,8 +526,8 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		response := &fetchRequestResponse{
 			pid: "abc",
 			blocks: []block.SignedBeaconBlock{
-				wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
-				wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+				wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
+				wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 			},
 		}
 		fsm := &stateMachine{
@@ -622,7 +622,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.machines[256].pid = pidDataParsed
 		queue.smm.machines[256].blocks = []block.SignedBeaconBlock{
-			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -652,7 +652,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []block.SignedBeaconBlock{
-			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -679,7 +679,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
 		queue.smm.machines[320].blocks = []block.SignedBeaconBlock{
-			wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -1042,7 +1042,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -1243,7 +1243,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -1271,9 +1271,9 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	// Set head to slot 85, while we do not have block with slot 84 in DB, so block is orphaned.
 	// Moreover, block with slot 85 is a forked block and should be replaced, with block from peer.
-	orphanedBlock := testutil.NewBeaconBlock()
+	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85
-	orphanedBlock.Block.StateRoot = testutil.Random32Bytes(t)
+	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(orphanedBlock)))
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))
 	require.Equal(t, types.Slot(85), mc.HeadSlot())

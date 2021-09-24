@@ -93,10 +93,6 @@ var (
 		Name:  "disable-next-slot-state-cache",
 		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
-	disableUpdateHeadTimely = &cli.BoolFlag{
-		Name:  "disable-update-head-timely",
-		Usage: "Disables updating head right after state transition",
-	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
 		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
@@ -195,7 +191,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	disableUpdateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
