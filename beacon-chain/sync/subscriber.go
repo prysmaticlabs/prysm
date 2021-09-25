@@ -762,7 +762,7 @@ func agentString(pid peer.ID, hst host.Host) string {
 
 func multiAddr(pid peer.ID, stat *peers.Status) string {
 	addrs, err := stat.Address(pid)
-	if err != nil {
+	if err != nil || addrs == nil {
 		return ""
 	}
 	return addrs.String()
