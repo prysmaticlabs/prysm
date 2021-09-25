@@ -11,8 +11,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
-        "//beacon-chain/db/slasherkv:go_default_library",
     ],
 )

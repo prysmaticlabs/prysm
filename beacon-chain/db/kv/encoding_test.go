@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func Test_encode_handlesNilFromFunction(t *testing.T) {

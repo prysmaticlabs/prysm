@@ -14,17 +14,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"google.golang.org/grpc"
 )
 
 func Test_currentCommitteeIndicesFromState(t *testing.T) {
-	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
@@ -55,7 +56,7 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 }
 
 func Test_extractSyncSubcommittees(t *testing.T) {
-	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	for i := 0; i < len(syncCommittee); i++ {
@@ -108,7 +109,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 
 func TestListSyncCommittees(t *testing.T) {
 	ctx := context.Background()
-	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	for i := 0; i < len(syncCommittee); i++ {
@@ -151,7 +152,7 @@ func TestListSyncCommittees(t *testing.T) {
 
 func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-	st, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 10)
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 
 	alphaServer := &validator.Server{
 		SyncCommitteePool: synccommittee.NewStore(),
@@ -165,13 +166,17 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 	}
 
 	t.Run("Ok", func(t *testing.T) {
-		_, err := s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
+		root, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 64))
+		require.NoError(t, err)
+		sig, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 192))
+		require.NoError(t, err)
+		_, err = s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
 			Data: []*ethpbv2.SyncCommitteeMessage{
 				{
 					Slot:            0,
-					BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+					BeaconBlockRoot: root,
 					ValidatorIndex:  0,
-					Signature:       []byte("0x" + strings.Repeat("0", 192)),
+					Signature:       sig,
 				},
 			},
 		})
@@ -197,19 +202,23 @@ func TestSubmitPoolSyncCommitteeSignatures(t *testing.T) {
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,
-			[]string{"{\"failures\":[{\"index\":0,\"message\":\"invalid block root format\"}]}"},
+			[]string{"{\"failures\":[{\"index\":0,\"message\":\"invalid block root length\"}]}"},
 			v,
 		)
 	})
 }
 
 func TestValidateSyncCommitteeMessage(t *testing.T) {
+	root, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 64))
+	require.NoError(t, err)
+	sig, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 192))
+	require.NoError(t, err)
 	t.Run("valid", func(t *testing.T) {
 		msg := &ethpbv2.SyncCommitteeMessage{
 			Slot:            0,
-			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			BeaconBlockRoot: root,
 			ValidatorIndex:  0,
-			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+			Signature:       sig,
 		}
 		err := validateSyncCommitteeMessage(msg)
 		assert.NoError(t, err)
@@ -219,21 +228,21 @@ func TestValidateSyncCommitteeMessage(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: []byte("invalid"),
 			ValidatorIndex:  0,
-			Signature:       []byte("0x" + strings.Repeat("0", 192)),
+			Signature:       sig,
 		}
 		err := validateSyncCommitteeMessage(msg)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid block root format", err)
+		assert.ErrorContains(t, "invalid block root length", err)
 	})
 	t.Run("invalid block root", func(t *testing.T) {
 		msg := &ethpbv2.SyncCommitteeMessage{
 			Slot:            0,
-			BeaconBlockRoot: []byte("0x" + strings.Repeat("0", 64)),
+			BeaconBlockRoot: root,
 			ValidatorIndex:  0,
 			Signature:       []byte("invalid"),
 		}
 		err := validateSyncCommitteeMessage(msg)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid signature format", err)
+		assert.ErrorContains(t, "invalid signature length", err)
 	})
 }

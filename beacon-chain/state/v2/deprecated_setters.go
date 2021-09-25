@@ -2,7 +2,7 @@ package v2
 
 import (
 	"github.com/pkg/errors"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
