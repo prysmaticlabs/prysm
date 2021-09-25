@@ -36,6 +36,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//async:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/state:go_default_library",

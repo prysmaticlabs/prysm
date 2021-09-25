@@ -2,9 +2,11 @@ package helpers
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -85,6 +87,12 @@ func ActiveValidatorIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]t
 	if activeIndices != nil {
 		return activeIndices, nil
 	}
+
+	// Smoothing out committee cache update with a multi lock by seed.
+	mLock := async.NewMultilock(committeeCacheLockKey(seed))
+	mLock.Lock()
+	defer mLock.Unlock()
+
 	var indices []types.ValidatorIndex
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
@@ -116,6 +124,11 @@ func ActiveValidatorCount(s state.ReadOnlyBeaconState, epoch types.Epoch) (uint6
 	if activeCount != 0 && s.Slot() != 0 {
 		return uint64(activeCount), nil
 	}
+
+	// Smoothing out committee cache update with a multi lock by seed.
+	mLock := async.NewMultilock(committeeCacheLockKey(seed))
+	mLock.Lock()
+	defer mLock.Unlock()
 
 	count := uint64(0)
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
@@ -362,4 +375,8 @@ func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator 
 func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch types.Epoch) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
+}
+
+func committeeCacheLockKey(seed [32]byte) string {
+	return fmt.Sprintf("%s-%s", "committee_cache_update", string(seed[:]))
 }
