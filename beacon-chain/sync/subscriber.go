@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -260,7 +261,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		if b == pubsub.ValidationReject {
 			log.WithError(err).WithFields(logrus.Fields{
 				"topic":        topic,
-				"multiaddress": multiAddr(pid, s.cfg.P2P.Host()),
+				"multiaddress": multiAddr(pid, s.cfg.P2P.Peers()),
 				"peer id":      pid.String(),
 				"agent":        agentString(pid, s.cfg.P2P.Host()),
 				"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
@@ -271,7 +272,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			if err != nil {
 				log.WithError(err).WithFields(logrus.Fields{
 					"topic":        topic,
-					"multiaddress": multiAddr(pid, s.cfg.P2P.Host()),
+					"multiaddress": multiAddr(pid, s.cfg.P2P.Peers()),
 					"peer id":      pid.String(),
 					"agent":        agentString(pid, s.cfg.P2P.Host()),
 					"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
@@ -759,10 +760,10 @@ func agentString(pid peer.ID, hst host.Host) string {
 	return agString
 }
 
-func multiAddr(pid peer.ID, hst host.Host) string {
-	addrs := hst.Peerstore().Addrs(pid)
-	if len(addrs) == 0 {
+func multiAddr(pid peer.ID, stat *peers.Status) string {
+	addrs, err := stat.Address(pid)
+	if err != nil {
 		return ""
 	}
-	return addrs[0].String()
+	return addrs.String()
 }
