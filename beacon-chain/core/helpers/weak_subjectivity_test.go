@@ -6,13 +6,13 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
@@ -22,7 +22,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 		want       types.Epoch
 	}{
 		// Asserting that we get the same numbers as defined in the reference table:
-		// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
+		// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
 		{valCount: 32768, avgBalance: 28, want: 504},
 		{valCount: 65536, avgBalance: 28, want: 752},
 		{valCount: 131072, avgBalance: 28, want: 1248},
@@ -57,14 +57,14 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	tests := []struct {
 		name            string
 		epoch           types.Epoch
-		genWsState      func() iface.ReadOnlyBeaconState
+		genWsState      func() state.ReadOnlyBeaconState
 		genWsCheckpoint func() *ethpb.WeakSubjectivityCheckpoint
 		want            bool
 		wantedErr       string
 	}{
 		{
 			name: "nil weak subjectivity state",
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				return nil
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
@@ -78,7 +78,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		},
 		{
 			name: "nil weak subjectivity checkpoint",
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				return genState(t, 128, 32)
 			},
 			genWsCheckpoint: func() *ethpb.WeakSubjectivityCheckpoint {
@@ -88,7 +88,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		},
 		{
 			name: "state and checkpoint roots do not match",
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				beaconState := genState(t, 128, 32)
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -109,7 +109,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		},
 		{
 			name: "state and checkpoint epochs do not match",
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				beaconState := genState(t, 128, 32)
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -129,7 +129,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		},
 		{
 			name: "no active validators",
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				beaconState := genState(t, 0, 32)
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -150,7 +150,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		{
 			name:  "outside weak subjectivity period",
 			epoch: 300,
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				beaconState := genState(t, 128, 32)
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -171,7 +171,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		{
 			name:  "within weak subjectivity period",
 			epoch: 299,
-			genWsState: func() iface.ReadOnlyBeaconState {
+			genWsState: func() state.ReadOnlyBeaconState {
 				beaconState := genState(t, 128, 32)
 				require.NoError(t, beaconState.SetSlot(42*params.BeaconConfig().SlotsPerEpoch))
 				err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -274,8 +274,8 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 	}
 }
 
-func genState(t *testing.T, valCount, avgBalance uint64) iface.BeaconState {
-	beaconState, err := testutil.NewBeaconState()
+func genState(t *testing.T, valCount, avgBalance uint64) state.BeaconState {
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	validators := make([]*ethpb.Validator, valCount)

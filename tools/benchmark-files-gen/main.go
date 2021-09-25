@@ -10,18 +10,18 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/benchutil"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
+	"github.com/prysmaticlabs/prysm/testing/benchmark"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 var (
@@ -36,18 +36,18 @@ func main() {
 	}
 
 	if !*overwrite {
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState1EpochFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.BState1EpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState2EpochFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.BstateEpochFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
-		if _, err := os.Stat(path.Join(*outputDir, benchutil.FullBlockFileName)); err == nil {
+		if _, err := os.Stat(path.Join(*outputDir, benchmark.FullBlockFileName)); err == nil {
 			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
 		}
 	}
 
-	if err := fileutil.MkdirAll(*outputDir); err != nil {
+	if err := file.MkdirAll(*outputDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -66,13 +66,13 @@ func main() {
 		log.Fatalf("Could not generate 2 full epoch state: %v", err)
 	}
 	// Removing the genesis state SSZ since its 10MB large and no longer needed.
-	if err := os.Remove(path.Join(*outputDir, benchutil.GenesisFileName)); err != nil {
+	if err := os.Remove(path.Join(*outputDir, benchmark.GenesisFileName)); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func generateGenesisBeaconState() error {
-	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchutil.ValidatorCount)
+	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -80,54 +80,54 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
 }
 
 func generateMarshalledFullStateAndBlock() error {
-	benchutil.SetBenchmarkConfig()
+	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
 	}
 
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchutil.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
 
-	conf := &testutil.BlockGenConfig{}
+	conf := &util.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we dont process a block on an epoch.
 	slotOffset := types.Slot(2)
-	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
+	block, err := util.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
 		return err
 	}
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
 
-	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / uint64(slotsPerEpoch),
+	attConfig := &util.BlockGenConfig{
+		NumAttestations: benchmark.AttestationsPerEpoch / uint64(slotsPerEpoch),
 	}
 
 	var atts []*ethpb.Attestation
 	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
-		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
+		attsForSlot, err := util.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {
 			return err
 		}
 		atts = append(atts, attsForSlot...)
 	}
 
-	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
+	block, err = util.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not generate full block")
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	s, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	s, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return errors.Wrap(err, "could not calculate state root")
 	}
@@ -141,7 +141,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}
@@ -153,12 +153,12 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := fileutil.WriteFile(path.Join(*outputDir, benchutil.BState1EpochFileName), beaconBytes); err != nil {
+	if err := file.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
 		return err
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -168,31 +168,31 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
 }
 
 func generate2FullEpochState() error {
-	benchutil.SetBenchmarkConfig()
+	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
 	}
 
-	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchutil.ValidatorCount)
+	privs, _, err := interop.DeterministicallyGenerateKeys(0, benchmark.ValidatorCount)
 	if err != nil {
 		return err
 	}
 
-	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
+	attConfig := &util.BlockGenConfig{
+		NumAttestations: benchmark.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
-		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
+		block, err := util.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err
 		}
-		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+		beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		if err != nil {
 			return err
 		}
@@ -203,17 +203,17 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (iface.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
+func genesisBeaconState() (state.BeaconState, error) {
+	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchmark.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}
-	genesisState := &pb.BeaconState{}
+	genesisState := &ethpb.BeaconState{}
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return stateV0.InitializeFromProtoUnsafe(genesisState)
+	return v1.InitializeFromProtoUnsafe(genesisState)
 }

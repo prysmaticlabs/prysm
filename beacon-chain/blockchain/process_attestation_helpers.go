@@ -7,22 +7,22 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
-func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (iface.BeaconState, error) {
+func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.BeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
-	lock := mputil.NewMultilock(string(c.Root) + epochKey)
+	lock := async.NewMultilock(string(c.Root) + epochKey)
 	lock.Lock()
 	defer lock.Unlock()
 	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
@@ -38,38 +38,23 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 
-	epochStartSlot, err := helpers.StartSlot(c.Epoch)
+	epochStartSlot, err := core.StartSlot(c.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		if featureconfig.Get().EnableNextSlotStateCache {
-			baseState, err = state.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-			}
-		} else {
-			baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-			}
+		baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 		}
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-		return baseState, nil
 	}
 
-	// To avoid sharing the same state across checkpoint state cache and hot state cache,
-	// we don't add the state to check point cache.
-	has, err := s.cfg.StateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
-	if err != nil {
-		return nil, err
-	}
-	if !has {
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
+	// Sharing the same state across caches is perfectly fine here, the fetching
+	// of attestation prestate is by far the most accessed state fetching pattern in
+	// the beacon node. An extra state instance cached isn't an issue in the bigger
+	// picture.
+	if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
+		return nil, errors.Wrap(err, "could not save checkpoint state to cache")
 	}
 	return baseState, nil
 
@@ -78,7 +63,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
 func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	currentEpoch := core.SlotToEpoch(currentSlot)
 	var prevEpoch types.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {

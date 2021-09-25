@@ -3,22 +3,22 @@ package kv
 import (
 	"context"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
 // SaveStateSummary saves a state summary object to the DB.
-func (s *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
-	return s.SaveStateSummaries(ctx, []*pb.StateSummary{summary})
+	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
 }
 
 // SaveStateSummaries saves state summary objects to the DB.
-func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 
@@ -38,22 +38,24 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSum
 }
 
 // StateSummary returns the state summary object from the db using input block root.
-func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
 
 	if s.stateSummaryCache.has(blockRoot) {
 		return s.stateSummaryCache.get(blockRoot), nil
 	}
-
-	enc, err := s.stateSummaryBytes(ctx, blockRoot)
-	if err != nil {
+	var enc []byte
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		enc = tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 	if len(enc) == 0 {
 		return nil, nil
 	}
-	summary := &pb.StateSummary{}
+	summary := &ethpb.StateSummary{}
 	if err := decode(ctx, enc, summary); err != nil {
 		return nil, err
 	}
@@ -65,29 +67,22 @@ func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 
+	var hasSummary bool
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		hasSummary = s.hasStateSummaryBytes(tx, blockRoot)
+		return nil
+	}); err != nil {
+		return false
+	}
+	return hasSummary
+}
+
+func (s *Store) hasStateSummaryBytes(tx *bolt.Tx, blockRoot [32]byte) bool {
 	if s.stateSummaryCache.has(blockRoot) {
 		return true
 	}
-
-	enc, err := s.stateSummaryBytes(ctx, blockRoot)
-	if err != nil {
-		panic(err)
-	}
+	enc := tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
 	return len(enc) > 0
-}
-
-func (s *Store) stateSummaryBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateSummaryBytes")
-	defer span.End()
-
-	var enc []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
-		enc = bucket.Get(blockRoot[:])
-		return nil
-	})
-
-	return enc, err
 }
 
 // This saves all cached state summary objects to DB, and clears up the cache.

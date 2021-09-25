@@ -7,7 +7,7 @@
   },
   "unreachable": {
     "exclude_files": {
-      "shared/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
+      "runtime/messagehandler/messagehandler_test.go": "Necessary panic before return for test",
       "external/.*": "Unreachable third party code"
     }
   },
@@ -63,7 +63,7 @@
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
-      "shared/params/config.go": "This config struct needs to be organized for now",
+      "config/params/config.go": "This config struct needs to be organized for now",
       "shared/featureconfig/config.go": "This config struct needs to be organized for now",
       "proto/.*": "Excluding protobuf objects for now"
     }
@@ -100,7 +100,7 @@
     },
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
-      "shared/rand/rand\\.go": "Abstracts CSPRNGs for common use",
+      "crypto/rand/rand\\.go": "Abstracts CSPRNGs for common use",
       "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
   },
@@ -151,7 +151,7 @@
     },
     "exclude_files": {
       ".*_test\\.go": "Tests are ok",
-      "shared/fileutil/fileutil.go": "Package which defines the proper rules"
+      "io/file/fileutil.go": "Package which defines the proper rules"
     }
   }
 }

@@ -10,15 +10,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
-func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
+func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
@@ -28,13 +28,13 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
+	if err := s.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
-	if err := s.SaveStateSummary(ctx, &pbp2p.StateSummary{
+	if err := s.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: 0,
 		Root: genesisBlkRoot[:],
 	}); err != nil {
@@ -47,7 +47,6 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err := s.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis block root")
 	}
-
 	return nil
 }
 
@@ -57,11 +56,11 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	st := &pbp2p.BeaconState{}
+	st := &ethpb.BeaconState{}
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return err
 	}
-	gs, err := state.InitializeFromProtoUnsafe(st)
+	gs, err := statev1.InitializeFromProtoUnsafe(st)
 	if err != nil {
 		return err
 	}
@@ -90,7 +89,6 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis "+
 			"fork version (%#x)", gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion)
 	}
-
 	return s.SaveGenesisData(ctx, gs)
 }
 

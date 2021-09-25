@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/form3tech-oss/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -38,20 +38,20 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 	}
 	// First, we check if the validator already has a password. In this case,
 	// the user should be logged in as normal.
-	if fileutil.FileExists(filepath.Join(walletDir, HashedRPCPassword)) {
+	if file.FileExists(filepath.Join(walletDir, HashedRPCPassword)) {
 		return s.Login(ctx, req)
 	}
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
-	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+	if err := prompt.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
 	}
-	hasDir, err := fileutil.HasDir(walletDir)
+	hasDir, err := file.HasDir(walletDir)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Could not check if wallet directory exists")
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(walletDir); err != nil {
+		if err := file.MkdirAll(walletDir); err != nil {
 			return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
 		}
 	}
@@ -63,18 +63,18 @@ func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespo
 }
 
 // Login to authenticate with the validator RPC API using a password.
-func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
+func (s *Server) Login(_ context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
 	walletDir := s.walletDir
 	// We check the strength of the password to ensure it is high-entropy,
 	// has the required character count, and contains only unicode characters.
-	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+	if err := prompt.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
 	}
 	hashedPasswordPath := filepath.Join(walletDir, HashedRPCPassword)
-	if !fileutil.FileExists(hashedPasswordPath) {
+	if !file.FileExists(hashedPasswordPath) {
 		return nil, status.Error(codes.Internal, "Could not find hashed password on disk")
 	}
-	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+	hashedPassword, err := file.ReadFileAsBytes(hashedPasswordPath)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
 	}
@@ -86,20 +86,20 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 }
 
 // HasUsedWeb checks if the user has authenticated via the web interface.
-func (s *Server) HasUsedWeb(ctx context.Context, _ *empty.Empty) (*pb.HasUsedWebResponse, error) {
+func (s *Server) HasUsedWeb(_ context.Context, _ *empty.Empty) (*pb.HasUsedWebResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
 	}
 	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
 	return &pb.HasUsedWebResponse{
-		HasSignedUp: fileutil.FileExists(hashedPasswordPath),
+		HasSignedUp: file.FileExists(hashedPasswordPath),
 		HasWallet:   walletExists,
 	}, nil
 }
 
 // Logout a user by invalidating their JWT key.
-func (s *Server) Logout(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
+func (s *Server) Logout(_ context.Context, _ *empty.Empty) (*empty.Empty, error) {
 	// Invalidate the old JWT key, making all requests done with its token fail.
 	jwtKey, err := createRandomJWTKey()
 	if err != nil {
@@ -123,15 +123,15 @@ func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
 }
 
 // ChangePassword allows changing the RPC password via the API as an authenticated method.
-func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
+func (s *Server) ChangePassword(_ context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
 	if req.CurrentPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Current password cannot be empty")
 	}
 	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-	if !fileutil.FileExists(hashedPasswordPath) {
+	if !file.FileExists(hashedPasswordPath) {
 		return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
 	}
-	hashedPassword, err := fileutil.ReadFileAsBytes(hashedPasswordPath)
+	hashedPassword, err := file.ReadFileAsBytes(hashedPasswordPath)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Could not retrieve hashed password from disk")
 	}
@@ -141,7 +141,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	if req.Password != req.PasswordConfirmation {
 		return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
 	}
-	if err := promptutil.ValidatePasswordInput(req.Password); err != nil {
+	if err := prompt.ValidatePasswordInput(req.Password); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not validate password input: %v", err)
 	}
 	// Write the new password hash to disk.
@@ -158,20 +158,20 @@ func (s *Server) SaveHashedPassword(password string) error {
 		return errors.Wrap(err, "could not generate hashed password")
 	}
 	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
-	return fileutil.WriteFile(hashFilePath, hashedPassword)
+	return file.WriteFile(hashFilePath, hashedPassword)
 }
 
 // Interval in which we should check if a user has not yet used the RPC Signup endpoint
 // which means they are using the --web flag and someone could come in and signup for them
 // if they have their web host:port exposed to the Internet.
-func (s *Server) checkUserSignup(ctx context.Context) {
+func (s *Server) checkUserSignup(_ context.Context) {
 	ticker := time.NewTicker(checkUserSignupInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-			if fileutil.FileExists(hashedPasswordPath) {
+			if file.FileExists(hashedPasswordPath) {
 				return
 			}
 			log.Warnf(
@@ -191,7 +191,7 @@ func (s *Server) checkUserSignup(ctx context.Context) {
 func (s *Server) createTokenString() (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
-	expirationTime := timeutils.Now().Add(tokenExpiryLength)
+	expirationTime := prysmTime.Now().Add(tokenExpiryLength)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expirationTime.Unix(),
 	})

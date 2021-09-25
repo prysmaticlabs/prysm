@@ -3,18 +3,20 @@ package slasherkv
 import (
 	"context"
 	"encoding/binary"
+	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
 
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
@@ -73,13 +75,13 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	beaconDB := setupDB(t)
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
-		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
 	})
 	require.NoError(t, err)
 
 	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}), // Different signing root.
-		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}), // Different signing root.
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}), // Different signing root.
 	}
 
 	wanted := []*slashertypes.AttesterDoubleVote{
@@ -98,19 +100,28 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 		{
 			ValidatorIndex:         2,
 			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 		{
 			ValidatorIndex:         3,
 			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
 	require.NoError(t, err)
-	require.DeepEqual(t, wanted, doubleVotes)
+	sort.SliceStable(doubleVotes, func(i, j int) bool {
+		return uint64(doubleVotes[i].ValidatorIndex) < uint64(doubleVotes[j].ValidatorIndex)
+	})
+	require.Equal(t, len(wanted), len(doubleVotes))
+	for i, double := range doubleVotes {
+		require.DeepEqual(t, wanted[i].ValidatorIndex, double.ValidatorIndex)
+		require.DeepEqual(t, wanted[i].Target, double.Target)
+		require.DeepEqual(t, wanted[i].PrevAttestationWrapper, double.PrevAttestationWrapper)
+		require.DeepEqual(t, wanted[i].AttestationWrapper, double.AttestationWrapper)
+	}
 }
 
 func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
@@ -334,9 +345,9 @@ func TestStore_HighestAttestations(t *testing.T) {
 			name: "should get highest att for multiple with diff histories",
 			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(0, 3, []uint64{2}, []byte{1}),
-				createAttestationWrapper(1, 4, []uint64{3}, []byte{1}),
-				createAttestationWrapper(2, 3, []uint64{4}, []byte{1}),
-				createAttestationWrapper(5, 6, []uint64{5}, []byte{1}),
+				createAttestationWrapper(1, 4, []uint64{3}, []byte{2}),
+				createAttestationWrapper(2, 3, []uint64{4}, []byte{3}),
+				createAttestationWrapper(5, 6, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
 			expected: []*slashpb.HighestAttestation{
@@ -366,9 +377,9 @@ func TestStore_HighestAttestations(t *testing.T) {
 			name: "should get correct highest att for multiple shared atts with diff histories",
 			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(1, 4, []uint64{2, 3}, []byte{1}),
-				createAttestationWrapper(2, 5, []uint64{3, 5}, []byte{1}),
-				createAttestationWrapper(4, 5, []uint64{1, 2}, []byte{1}),
-				createAttestationWrapper(6, 7, []uint64{5}, []byte{1}),
+				createAttestationWrapper(2, 5, []uint64{3, 5}, []byte{2}),
+				createAttestationWrapper(4, 5, []uint64{1, 2}, []byte{3}),
+				createAttestationWrapper(6, 7, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
 			expected: []*slashpb.HighestAttestation{
@@ -438,6 +449,38 @@ func BenchmarkHighestAttestations(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconDB.HighestAttestations(ctx, allIndices)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkStore_CheckDoubleBlockProposals(b *testing.B) {
+	b.StopTimer()
+	count := 10000
+	valsPerAtt := 100
+	indicesPerAtt := make([][]uint64, count)
+	for i := 0; i < count; i++ {
+		indicesForAtt := make([]uint64, valsPerAtt)
+		for r := i * count; r < valsPerAtt*(i+1); r++ {
+			indicesForAtt[i] = uint64(r)
+		}
+		indicesPerAtt[i] = indicesForAtt
+	}
+	atts := make([]*slashertypes.IndexedAttestationWrapper, count)
+	for i := 0; i < count; i++ {
+		atts[i] = createAttestationWrapper(types.Epoch(i), types.Epoch(i+2), indicesPerAtt[i], []byte{})
+	}
+
+	ctx := context.Background()
+	beaconDB := setupDB(b)
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
+
+	// shuffle attestations
+	rand.Shuffle(count, func(i, j int) { atts[i], atts[j] = atts[j], atts[i] })
+
+	b.ReportAllocs()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconDB.CheckAttesterDoubleVotes(ctx, atts)
 		require.NoError(b, err)
 	}
 }

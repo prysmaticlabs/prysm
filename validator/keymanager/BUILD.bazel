@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -14,9 +13,9 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//proto/validator/accounts/v2:go_default_library",
-        "//shared/bls:go_default_library",
-        "//shared/event:go_default_library",
+        "//async/event:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
     ],
 )
 

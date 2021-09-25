@@ -2,15 +2,20 @@ package apimiddleware
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/r3labs/sse"
 )
 
 func TestSSZRequested(t *testing.T) {
@@ -43,10 +48,10 @@ func TestSSZRequested(t *testing.T) {
 }
 
 func TestPrepareSSZRequestForProxying(t *testing.T) {
-	middleware := &gateway.ApiProxyMiddleware{
-		GatewayAddress: "http://gateway.example",
+	middleware := &apimiddleware.ApiProxyMiddleware{
+		GatewayAddress: "http://apimiddleware.example",
 	}
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		Path: "http://foo.example",
 	}
 	var body bytes.Buffer
@@ -54,7 +59,7 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 
 	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
 	require.Equal(t, true, errJson == nil)
-	assert.Equal(t, "/ssz", request.URL.Path)
+	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
@@ -77,7 +82,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"204"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"204"},
 			},
 		}
 		responseSsz := []byte("ssz")
@@ -123,7 +128,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"invalid"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"invalid"},
 			},
 		}
 		responseSsz := []byte("ssz")
@@ -135,4 +140,109 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not parse status code"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
+}
+
+func TestReceiveEvents(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := &eventFinalizedCheckpointJson{
+			Block: base64Val,
+			State: base64Val,
+			Epoch: "1",
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte(events.FinalizedCheckpointTopic),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+}
+
+func TestReceiveEvents_EventNotSupported(t *testing.T) {
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+
+	go func() {
+		msg := &sse.Event{
+			Data:  []byte("foo"),
+			Event: []byte("not_supported"),
+		}
+		ch <- msg
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	require.NotNil(t, errJson)
+	assert.Equal(t, "Event type 'not_supported' not supported", errJson.Msg())
+}
+
+func TestReceiveEvents_TrailingSpace(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := &eventFinalizedCheckpointJson{
+			Block: base64Val,
+			State: base64Val,
+			Epoch: "1",
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte("finalized_checkpoint "),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+	assert.Equal(t, `event: finalized_checkpoint
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1"}
+
+`, w.Body.String())
+}
+
+func TestWriteEvent(t *testing.T) {
+	base64Val := "Zm9v"
+	data := &eventFinalizedCheckpointJson{
+		Block: base64Val,
+		State: base64Val,
+		Epoch: "1",
+	}
+	bData, err := json.Marshal(data)
+	require.NoError(t, err)
+	msg := &sse.Event{
+		Data:  bData,
+		Event: []byte("test_event"),
+	}
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
+	require.Equal(t, true, errJson == nil)
+	written := w.Body.String()
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
 }

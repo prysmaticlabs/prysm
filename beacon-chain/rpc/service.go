@@ -1,4 +1,4 @@
-// Package rpc defines a gRPC server implementing the eth2 API as needed
+// Package rpc defines a gRPC server implementing the Ethereum consensus API as needed
 // by validator clients and consumers of chain data.
 package rpc
 
@@ -22,28 +22,28 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
+	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
+	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -61,8 +61,8 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *pbp2p.BeaconState
-	incomingAttestation  chan *ethpb.Attestation
+	canonicalStateChan   chan *ethpbv1alpha1.BeaconState
+	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
 	clientConnectionLock sync.Mutex
@@ -93,6 +93,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
+	SyncCommitteeObjectPool synccommittee.Pool
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
@@ -115,8 +116,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:  make(chan *ethpbv1alpha1.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
 }
@@ -135,7 +136,7 @@ func (s *Service) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_opentracing.StreamServerInterceptor(),
@@ -143,7 +144,7 @@ func (s *Service) Start() {
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),
@@ -165,9 +166,8 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	validatorServer := &validator.Server{
+	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
-		BeaconDB:               s.cfg.BeaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
@@ -191,9 +191,27 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 	}
-	nodeServer := &node.Server{
-		LogsStreamer:         logutil.NewStreamServer(),
+	validatorServerV1 := &validator.Server{
+		HeadFetcher:      s.cfg.HeadFetcher,
+		TimeFetcher:      s.cfg.GenesisTimeFetcher,
+		SyncChecker:      s.cfg.SyncService,
+		AttestationsPool: s.cfg.AttestationsPool,
+		PeerManager:      s.cfg.PeerManager,
+		Broadcaster:      s.cfg.Broadcaster,
+		V1Alpha1Server:   validatorServer,
+		StateFetcher: &statefetcher.StateProvider{
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
+		},
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+	}
+
+	nodeServer := &nodev1alpha1.Server{
+		LogsStreamer:         logs.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.cfg.BeaconDB,
 		Server:               s.grpcServer,
@@ -205,7 +223,7 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
-	nodeServerV1 := &nodev1.Server{
+	nodeServerV1 := &node.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.cfg.SyncService,
@@ -216,7 +234,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	beaconChainServer := &beacon.Server{
+	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
@@ -235,16 +253,17 @@ func (s *Service) Start() {
 		Broadcaster:                 s.cfg.Broadcaster,
 		StateGen:                    s.cfg.StateGen,
 		SyncChecker:                 s.cfg.SyncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
+		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 	}
-	beaconChainServerV1 := &beaconv1.Server{
+	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		AttestationsPool:   s.cfg.AttestationsPool,
 		SlashingsPool:      s.cfg.SlashingsPool,
 		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		BlockNotifier:      s.cfg.BlockNotifier,
+		OperationNotifier:  s.cfg.OperationNotifier,
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,
@@ -254,14 +273,16 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
-		VoluntaryExitsPool: s.cfg.ExitPool,
+		HeadFetcher:             s.cfg.HeadFetcher,
+		VoluntaryExitsPool:      s.cfg.ExitPool,
+		V1Alpha1ValidatorServer: validatorServer,
 	}
-	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
-	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbv1.RegisterEventsServer(s.grpcServer, &eventsv1.Server{
+	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
+	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
 		BlockNotifier:     s.cfg.BlockNotifier,
@@ -269,7 +290,7 @@ func (s *Service) Start() {
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
-		debugServer := &debug.Server{
+		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,
@@ -277,7 +298,7 @@ func (s *Service) Start() {
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
-		debugServerV1 := &debugv1.Server{
+		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{
@@ -287,11 +308,11 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 			},
 		}
-		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
-		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
+		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
-	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-
+	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
@@ -348,7 +369,7 @@ func (s *Service) validatorUnaryConnectionInterceptor(
 }
 
 func (s *Service) logNewClientConnection(ctx context.Context) {
-	if featureconfig.Get().DisableGRPCConnectionLogs {
+	if features.Get().DisableGRPCConnectionLogs {
 		return
 	}
 	if clientInfo, ok := peer.FromContext(ctx); ok {

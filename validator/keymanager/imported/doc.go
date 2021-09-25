@@ -7,7 +7,7 @@ relies on storing account information on-disk, making it trivial to import, back
 list all associated accounts for a user.
 
 EIP-2335 is a keystore format defined by https://eips.ethereum.org/EIPS/eip-2335 for
-storing and defining encryption for BLS12-381 private keys, utilized by eth2. This keystore.json
+storing and defining encryption for BLS12-381 private keys, utilized by Ethereum. This keystore.json
 format is not compatible with the current keystore standard used in eth1 due to a lack of
 support for KECCAK-256. Passwords utilized for key encryptions are strings of arbitrary unicode characters.
 The password is first converted to its NFKD representation, stripped of control codes specified

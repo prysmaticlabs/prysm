@@ -6,8 +6,8 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -112,7 +112,7 @@ func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error
 // SlotDeadline for mocking.
 func (fv *FakeValidator) SlotDeadline(_ types.Slot) time.Time {
 	fv.SlotDeadlineCalled = true
-	return timeutils.Now()
+	return prysmTime.Now()
 }
 
 // NextSlot for mocking.
@@ -169,11 +169,14 @@ func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [48]
 // SubmitAggregateAndProof for mocking.
 func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {}
 
+// SubmitSyncCommitteeMessage for mocking.
+func (fv *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [48]byte) {}
+
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyTimeLeft for mocking.
-func (fv *FakeValidator) LogNextDutyTimeLeft(slot types.Slot) error {
+func (fv *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
 	return nil
 }
 
@@ -213,8 +216,13 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 	return fv.Keymanager
 }
 
+// CheckDoppelGanger for mocking
+func (fv *FakeValidator) CheckDoppelGanger(_ context.Context) error {
+	return nil
+}
+
 // ReceiveBlocks for mocking
-func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
+func (fv *FakeValidator) ReceiveBlocks(_ context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- iface.ErrConnectionIssue
@@ -230,4 +238,8 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 		}
 	}
 	return false, nil
+}
+
+// SubmitSignedContributionAndProof for mocking
+func (fv *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
 }

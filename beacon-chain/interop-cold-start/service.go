@@ -13,16 +13,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 var _ depositcache.DepositFetcher = (*Service)(nil)
 var _ powchain.ChainStartFetcher = (*Service)(nil)
 
@@ -62,11 +61,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
-		genesisState := &pb.BeaconState{}
+		genesisState := &ethpb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
-		genesisTrie, err := stateV0.InitializeFromProto(genesisState)
+		genesisTrie, err := v1.InitializeFromProto(genesisState)
 		if err != nil {
 			log.Fatalf("Could not get state trie: %v", err)
 		}
@@ -81,7 +80,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
-	genesisTrie, err := stateV0.InitializeFromProto(genesisState)
+	genesisTrie, err := v1.InitializeFromProto(genesisState)
 	if err != nil {
 		log.Fatalf("Could not get state trie: %v", err)
 	}
@@ -93,7 +92,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
+	go slots.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
@@ -132,8 +131,8 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() iface.BeaconState {
-	return &stateV0.BeaconState{}
+func (s *Service) PreGenesisState() state.BeaconState {
+	return &v1.BeaconState{}
 }
 
 // ClearPreGenesisData --
@@ -161,7 +160,7 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 	return []*ethpb.Deposit{}
 }
 
-func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
+func (s *Service) saveGenesisState(ctx context.Context, genesisState state.BeaconState) error {
 	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
 	}

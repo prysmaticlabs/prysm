@@ -8,13 +8,13 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -24,7 +24,7 @@ import (
 // either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
-	blocks []interfaces.SignedBeaconBlock
+	blocks []block.SignedBeaconBlock
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -103,7 +103,7 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
 	slot += nonSkippedSlotsFullSearchEpochs * slotsPerEpoch
-	upperBoundSlot, err := helpers.StartSlot(targetEpoch + 1)
+	upperBoundSlot, err := core.StartSlot(targetEpoch + 1)
 	if err != nil {
 		return 0, err
 	}
@@ -124,7 +124,7 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 	if upperBoundSlot > slotsPerEpoch {
 		upperBoundSlot -= slotsPerEpoch
 	}
-	upperBoundSlot, err = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
+	upperBoundSlot, err = core.StartSlot(core.SlotToEpoch(upperBoundSlot))
 	if err != nil {
 		return 0, err
 	}
@@ -132,7 +132,7 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 	if err != nil {
 		return 0, err
 	}
-	s, err := helpers.StartSlot(targetEpoch + 1)
+	s, err := core.StartSlot(targetEpoch + 1)
 	if err != nil {
 		return 0, err
 	}
@@ -158,12 +158,12 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot types.Slot) (*forkDat
 	// The current slot's epoch must be after the finalization epoch,
 	// triggering backtracking on earlier epochs is unnecessary.
 	finalizedEpoch := f.chain.FinalizedCheckpt().Epoch
-	epoch := helpers.SlotToEpoch(slot)
+	epoch := core.SlotToEpoch(slot)
 	if epoch <= finalizedEpoch {
 		return nil, errors.New("slot is not after the finalized epoch, no backtracking is necessary")
 	}
 	// Update slot to the beginning of the current epoch (preserve original slot for comparison).
-	slot, err := helpers.StartSlot(epoch)
+	slot, err := core.StartSlot(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		return nil, fmt.Errorf("cannot obtain peer's status: %w", err)
 	}
 	nonSkippedSlot, err := f.nonSkippedSlotAfterWithPeersTarget(
-		ctx, slot-slotsPerEpoch, []peer.ID{pid}, helpers.SlotToEpoch(pidState.HeadSlot))
+		ctx, slot-slotsPerEpoch, []peer.ID{pid}, core.SlotToEpoch(pidState.HeadSlot))
 	if err != nil {
 		return nil, fmt.Errorf("cannot locate non-empty slot for a peer: %w", err)
 	}
@@ -257,8 +257,8 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block interfaces.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := []interfaces.SignedBeaconBlock{block}
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b block.SignedBeaconBlock) (*forkData, error) {
+	outBlocks := []block.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
 		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
@@ -294,7 +294,7 @@ func (f *blocksFetcher) bestFinalizedSlot() types.Slot {
 
 // bestNonFinalizedSlot returns the highest non-finalized slot of enough number of connected peers.
 func (f *blocksFetcher) bestNonFinalizedSlot() types.Slot {
-	headEpoch := helpers.SlotToEpoch(f.chain.HeadSlot())
+	headEpoch := core.SlotToEpoch(f.chain.HeadSlot())
 	targetEpoch, _ := f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, headEpoch)
 	return params.BeaconConfig().SlotsPerEpoch.Mul(uint64(targetEpoch))
 }
@@ -306,7 +306,7 @@ func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch t
 		headEpoch = f.chain.FinalizedCheckpt().Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	} else {
-		headEpoch = helpers.SlotToEpoch(f.chain.HeadSlot())
+		headEpoch = core.SlotToEpoch(f.chain.HeadSlot())
 		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
 	}
 	return headEpoch, targetEpoch, peers

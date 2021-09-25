@@ -6,18 +6,18 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func Test_slashableAttestationCheck(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
@@ -49,10 +49,10 @@ func Test_slashableAttestationCheck(t *testing.T) {
 }
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -101,10 +101,10 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 }
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: false,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
 	validator, _, _, finish := setup(t)
@@ -132,10 +132,10 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 }
 
 func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		SlasherProtection: false,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
 	validator, _, _, finish := setup(t)

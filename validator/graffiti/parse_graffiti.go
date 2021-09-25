@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,17 +26,21 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
-	yamlFile, err := ioutil.ReadFile(f)
+	yamlFile, err := ioutil.ReadFile(f) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
 	g := &Graffiti{}
-	if err := yaml.Unmarshal(yamlFile, g); err != nil {
-		return nil, err
+	if err := yaml.UnmarshalStrict(yamlFile, g); err != nil {
+		if _, ok := err.(*yaml.TypeError); !ok {
+			return nil, err
+		} else {
+			log.WithError(err).Error("There were some issues parsing graffiti from a yaml file.")
+		}
 	}
 
 	for i, o := range g.Specific {
-		g.Specific[types.ValidatorIndex(i)] = ParseHexGraffiti(o)
+		g.Specific[i] = ParseHexGraffiti(o)
 	}
 
 	for i, v := range g.Ordered {
@@ -48,7 +52,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	}
 
 	g.Default = ParseHexGraffiti(g.Default)
-	g.Hash = hashutil.Hash(yamlFile)
+	g.Hash = hash.Hash(yamlFile)
 
 	return g, nil
 }

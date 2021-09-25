@@ -9,27 +9,29 @@ import (
 	"net/http"
 	"strings"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/gorilla/mux"
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
 	beaconRPC               = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port                    = flag.Int("port", 8000, "Port to serve on")
-	apiMiddlewarePort       = flag.Int("port", 8001, "Port to serve API middleware on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
 	enableDebugRPCEndpoints = flag.Bool("enable-debug-rpc-endpoints", false, "Enable debug rpc endpoints such as /eth/v1alpha1/beacon/state")
 	grpcMaxMsgSize          = flag.Int("grpc-max-msg-size", 1<<22, "Integer to define max recieve message call size")
+	httpModules             = flag.String(
+		"http-modules",
+		strings.Join([]string{flags.PrysmAPIModule, flags.EthAPIModule}, ","),
+		"Comma-separated list of API module names. Possible values: `"+flags.PrysmAPIModule+`,`+flags.EthAPIModule+"`.",
+	)
 )
 
 func init() {
@@ -42,79 +44,31 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	v1Alpha1Registrations := []gateway.PbHandlerRegistration{
-		ethpb.RegisterNodeHandler,
-		ethpb.RegisterBeaconChainHandler,
-		ethpb.RegisterBeaconNodeValidatorHandler,
-		ethpbv1.RegisterEventsHandler,
-		pbrpc.RegisterHealthHandler,
+	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints, *httpModules)
+	muxs := make([]*gateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
 	}
-	v1Registrations := []gateway.PbHandlerRegistration{
-		ethpbv1.RegisterBeaconNodeHandler,
-		ethpbv1.RegisterBeaconChainHandler,
-		ethpbv1.RegisterBeaconValidatorHandler,
-	}
-	if *enableDebugRPCEndpoints {
-		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbv1.RegisterBeaconDebugHandler)
-
-	}
-	v1Alpha1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-	v1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req)
-	}
-	v1Alpha1PbHandler := gateway.PbMux{
-		Registrations: v1Alpha1Registrations,
-		Patterns:      []string{"/eth/v1alpha1/"},
-		Mux:           v1Alpha1Mux,
-	}
-	v1PbHandler := gateway.PbMux{
-		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
-		Mux:           v1Mux,
+	if gatewayConfig.EthPbMux != nil {
+		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbMux{v1Alpha1PbHandler, v1PbHandler},
-		muxHandler,
+		muxs,
+		gatewayConfig.Handler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
-		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
-		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *apiMiddlewarePort), &apimiddleware.BeaconEndpointFactory{})
+		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
+	if flags.EnableHTTPEthAPI(*httpModules) {
+		gw.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
-	mux.HandleFunc("/healthz", healthzServer(gw))
-	gw = gw.WithMux(mux)
+	r := mux.NewRouter()
+	r.HandleFunc("/swagger/", gateway.SwaggerServer())
+	r.HandleFunc("/healthz", healthzServer(gw))
+	gw = gw.WithRouter(r)
 
 	gw.Start()
 

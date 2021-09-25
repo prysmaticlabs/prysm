@@ -7,10 +7,10 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
@@ -64,10 +64,10 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 
 func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
 	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	cfg := &featureconfig.Flags{
+	cfg := &features.Flags{
 		SlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(cfg)
+	reset := features.InitWithReset(cfg)
 	defer reset()
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.SlasherReadyCalled, "Expected SlasherReady() to be called")

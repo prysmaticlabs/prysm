@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -7,10 +6,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/interfaces:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/metadata:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
@@ -23,8 +20,8 @@ go_test(
     srcs = ["store_test.go"],
     deps = [
         ":go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
     ],
 )

@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
 )
 
@@ -155,7 +155,7 @@ func ReloadHTTP(w http.ResponseWriter, _ *http.Request) {
 
 // OpenAddresses from text file (name:address)
 func OpenAddresses(filename string) error {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) // #nosec G304
 	if err != nil {
 		return err
 	}

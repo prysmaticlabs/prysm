@@ -16,12 +16,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -58,7 +58,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 		// We give every peer a different genesis validators root, which
 		// will cause each peer to have a different ForkDigest, preventing
-		// them from connecting according to our discovery rules for eth2.
+		// them from connecting according to our discovery rules for Ethereum consensus.
 		root := make([]byte, 32)
 		copy(root, strconv.Itoa(port))
 		s = &Service{
@@ -144,12 +144,12 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 		c := params.BeaconConfig()
 		nextForkEpoch := types.Epoch(i)
-		c.NextForkEpoch = nextForkEpoch
+		c.ForkVersionSchedule[[4]byte{'A', 'B', 'C', 'D'}] = nextForkEpoch
 		params.OverrideBeaconConfig(c)
 
 		// We give every peer a different genesis validators root, which
 		// will cause each peer to have a different ForkDigest, preventing
-		// them from connecting according to our discovery rules for eth2.
+		// them from connecting according to our discovery rules for Ethereum consensus.
 		s = &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
@@ -209,19 +209,17 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
-	c.ForkVersionSchedule = map[types.Epoch][]byte{
-		0: params.BeaconConfig().GenesisForkVersion,
-		1: {0, 0, 0, 1},
+	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
+		{0, 0, 0, 1}: 1,
 	}
 	nextForkEpoch := types.Epoch(1)
 	nextForkVersion := []byte{0, 0, 0, 1}
-	c.NextForkEpoch = nextForkEpoch
-	c.NextForkVersion = nextForkVersion
 	params.OverrideBeaconConfig(c)
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
-	digest, err := p2putils.CreateForkDigest(genesisTime, make([]byte, 32))
+	digest, err := forks.CreateForkDigest(genesisTime, make([]byte, 32))
 	require.NoError(t, err)
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
@@ -255,6 +253,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 }
 
 func TestAddForkEntry_Genesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
@@ -263,6 +262,11 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
+
+	bCfg := params.BeaconConfig()
+	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
+	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))

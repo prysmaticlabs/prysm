@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -15,11 +14,10 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/aggregation/attestations:go_default_library",
-        "//shared/copyutil:go_default_library",
-        "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
+        "//crypto/hash:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/attestation/aggregation/attestations:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -41,13 +39,14 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/bls:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

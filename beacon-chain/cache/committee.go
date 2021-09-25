@@ -10,8 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 var (
@@ -48,14 +50,8 @@ func committeeKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
-	cCache, err := lru.New(int(maxCommitteesCacheSize))
-	// An error is only returned if the size of the cache is
-	// <= 0.
-	if err != nil {
-		panic(err)
-	}
 	return &CommitteeCache{
-		CommitteeCache: cCache,
+		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
 	}
 }
 
@@ -83,7 +79,10 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := uint64(index) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
+	indexOffSet, err := math.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
+	if err != nil {
+		return nil, err
+	}
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {
@@ -155,15 +154,15 @@ func (c *CommitteeCache) HasEntry(seed string) bool {
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.ShuffledIndices))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
+	start := slice.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := slice.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 	return start, end
 }
 
 // Using seed as source for key to handle reorgs in the same epoch.
 // The seed is derived from state's array of randao mixes and epoch value
 // hashed together. This avoids collisions on different validator set. Spec definition:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
+// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
 func key(seed [32]byte) string {
 	return string(seed[:])
 }

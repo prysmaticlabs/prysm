@@ -7,16 +7,17 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/abool"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -282,10 +283,10 @@ func TestService_roundRobinSync(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+			err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 			require.NoError(t, err)
 
-			st, err := testutil.NewBeaconState()
+			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			mc := &mock.ChainService{
 				State: st,
@@ -294,6 +295,8 @@ func TestService_roundRobinSync(t *testing.T) {
 				FinalizedCheckPoint: &eth.Checkpoint{
 					Epoch: 0,
 				},
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{},
 			} // no-op mock
 			s := &Service{
 				ctx:          context.Background(),
@@ -310,7 +313,7 @@ func TestService_roundRobinSync(t *testing.T) {
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
-			missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -320,12 +323,12 @@ func TestService_roundRobinSync(t *testing.T) {
 
 func TestService_processBlock(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
-	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk))
+	err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
@@ -337,6 +340,8 @@ func TestService_processBlock(t *testing.T) {
 			FinalizedCheckPoint: &eth.Checkpoint{
 				Epoch: 0,
 			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{},
 		},
 		StateNotifier: &mock.MockStateNotifier{},
 	})
@@ -344,33 +349,33 @@ func TestService_processBlock(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process duplicate block", func(t *testing.T) {
-		blk1 := testutil.NewBeaconBlock()
+		blk1 := util.NewBeaconBlock()
 		blk1.Block.Slot = 1
 		blk1.Block.ParentRoot = genesisBlkRoot[:]
 		blk1Root, err := blk1.Block.HashTreeRoot()
 		require.NoError(t, err)
-		blk2 := testutil.NewBeaconBlock()
+		blk2 := util.NewBeaconBlock()
 		blk2.Block.Slot = 2
 		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk1), func(
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk1), func(
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk2), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, wrapper.WrappedPhase0SignedBeaconBlock(blk2), func(
+			ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -381,12 +386,12 @@ func TestService_processBlock(t *testing.T) {
 
 func TestService_processBlockBatch(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
-	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk))
+	err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
@@ -405,38 +410,38 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.SignedBeaconBlock
+		var batch []block.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := types.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
-			blk1 := testutil.NewBeaconBlock()
+			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk1))
 			require.NoError(t, err)
-			batch = append(batch, interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			batch = append(batch, wrapper.WrappedPhase0SignedBeaconBlock(blk1))
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.SignedBeaconBlock
+		var batch2 []block.SignedBeaconBlock
 		for i := types.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
-			blk1 := testutil.NewBeaconBlock()
+			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			err = beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk1))
 			require.NoError(t, err)
-			batch2 = append(batch2, interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			batch2 = append(batch2, wrapper.WrappedPhase0SignedBeaconBlock(blk1))
 			currBlockRoot = blk1Root
 		}
 
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -444,12 +449,12 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blocks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, "no good blocks in batch", err)
 
-		var badBatch2 []interfaces.SignedBeaconBlock
+		var badBatch2 []block.SignedBeaconBlock
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -460,7 +465,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Bad batch should fail because it is non linear
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		expectedSubErr := "expected linear block list"
@@ -468,7 +473,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []block.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -512,10 +517,10 @@ func TestService_blockProviderScoring(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, err)
 	mc := &mock.ChainService{
@@ -526,6 +531,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	} // no-op mock
 	s := &Service{
 		ctx:          context.Background(),
@@ -550,7 +557,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
-	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := slice.NotSlot(slice.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
@@ -576,10 +583,10 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -589,6 +596,8 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 	s := &Service{
 		ctx:          context.Background(),
@@ -617,7 +626,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
-	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := slice.NotSlot(slice.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}

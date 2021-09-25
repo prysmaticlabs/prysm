@@ -1,5 +1,5 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
@@ -16,17 +16,17 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/node:go_default_library",
+        "//cmd:go_default_library",
         "//cmd/beacon-chain/db:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
-        "//shared/cmd:go_default_library",
-        "//shared/debug:go_default_library",
-        "//shared/featureconfig:go_default_library",
-        "//shared/fileutil:go_default_library",
-        "//shared/journald:go_default_library",
-        "//shared/logutil:go_default_library",
-        "//shared/maxprocs:go_default_library",
-        "//shared/tos:go_default_library",
-        "//shared/version:go_default_library",
+        "//config/features:go_default_library",
+        "//io/file:go_default_library",
+        "//io/logs:go_default_library",
+        "//monitoring/journald:go_default_library",
+        "//runtime/debug:go_default_library",
+        "//runtime/maxprocs:go_default_library",
+        "//runtime/tos:go_default_library",
+        "//runtime/version:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ipfs_go_log_v2//:go_default_library",
         "@com_github_joonix_log//:go_default_library",
@@ -52,6 +52,7 @@ container_image(
     name = "image_with_creation_time",
     base = "image",
     stamp = True,
+    tags = ["manual"],
     visibility = ["//beacon-chain:__pkg__"],
 )
 
@@ -131,7 +132,7 @@ go_binary(
     embed = [":go_default_library"],
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//endtoend:__pkg__",
+        "//testing/endtoend:__pkg__",
     ],
 )
 
@@ -142,7 +143,7 @@ go_test(
     embed = [":go_default_library"],
     visibility = ["//beacon-chain:__pkg__"],
     deps = [
-        "//shared/featureconfig:go_default_library",
+        "//config/features:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
 )

@@ -3,8 +3,8 @@ package stateutil
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func Test_handleValidatorSlice_OutOfRange(t *testing.T) {

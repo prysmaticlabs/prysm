@@ -6,8 +6,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -23,7 +23,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	var backupsDir string
 	var err error
 	if outputDir != "" {
-		backupsDir, err = fileutil.ExpandPath(outputDir)
+		backupsDir, err = file.ExpandPath(outputDir)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.HandleBackupDir(backupsDir, permissionOverride); err != nil {
+	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_validatordb_%d.backup", time.Now().Unix()))
@@ -53,14 +53,30 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 
 	return s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			log.Debugf("Copying bucket %s\n", name)
+			log.Debugf("Copying bucket %s\n with %d keys", name, b.Stats().KeyN)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {
 				b2, err := tx2.CreateBucketIfNotExists(name)
 				if err != nil {
 					return err
 				}
-				return b.ForEach(b2.Put)
+				return b.ForEach(createNestedBuckets(b, b2, b2.Put))
 			})
 		})
 	})
+}
+
+// Walks through each buckets and looks out for nested buckets so that
+// the backup db also includes them.
+func createNestedBuckets(srcBucket *bolt.Bucket, dstBucket *bolt.Bucket, fn func(k, v []byte) error) func(k, v []byte) error {
+	return func(k, v []byte) error {
+		bkt := srcBucket.Bucket(k)
+		if bkt != nil {
+			b2, err := dstBucket.CreateBucketIfNotExists(k)
+			if err != nil {
+				return err
+			}
+			return bkt.ForEach(createNestedBuckets(bkt, b2, b2.Put))
+		}
+		return fn(k, v)
+	}
 }

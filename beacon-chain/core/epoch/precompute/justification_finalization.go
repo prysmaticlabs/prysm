@@ -2,9 +2,10 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -23,8 +24,8 @@ import (
 //    previous_target_balance = get_attesting_balance(state, previous_attestations)
 //    current_target_balance = get_attesting_balance(state, current_attestations)
 //    weigh_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
-func ProcessJustificationAndFinalizationPreCompute(state iface.BeaconState, pBal *Balance) (iface.BeaconState, error) {
-	canProcessSlot, err := helpers.StartSlot(2 /*epoch*/)
+func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal *Balance) (state.BeaconState, error) {
+	canProcessSlot, err := core.StartSlot(2 /*epoch*/)
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +76,10 @@ func ProcessJustificationAndFinalizationPreCompute(state iface.BeaconState, pBal
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func weighJustificationAndFinalization(state iface.BeaconState,
-	totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (iface.BeaconState, error) {
-	prevEpoch := helpers.PrevEpoch(state)
-	currentEpoch := helpers.CurrentEpoch(state)
+func weighJustificationAndFinalization(state state.BeaconState,
+	totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (state.BeaconState, error) {
+	prevEpoch := core.PrevEpoch(state)
+	currentEpoch := core.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 
@@ -127,7 +128,7 @@ func weighJustificationAndFinalization(state iface.BeaconState,
 		}
 	}
 
-	// Process finalization according to ETH2.0 specifications.
+	// Process finalization according to Ethereum Beacon Chain specification.
 	justification := state.JustificationBits().Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.

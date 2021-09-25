@@ -8,9 +8,9 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 const (
@@ -46,7 +46,7 @@ type stateMachine struct {
 	start   types.Slot
 	state   stateID
 	pid     peer.ID
-	blocks  []interfaces.SignedBeaconBlock
+	blocks  []block.SignedBeaconBlock
 	updated time.Time
 }
 
@@ -78,8 +78,8 @@ func (smm *stateMachineManager) addStateMachine(startSlot types.Slot) *stateMach
 		smm:     smm,
 		start:   startSlot,
 		state:   stateNew,
-		blocks:  []interfaces.SignedBeaconBlock{},
-		updated: timeutils.Now(),
+		blocks:  []block.SignedBeaconBlock{},
+		updated: prysmTime.Now(),
 	}
 	smm.recalculateMachineAttribs()
 	return smm.machines[startSlot]
@@ -158,7 +158,7 @@ func (m *stateMachine) setState(name stateID) {
 		return
 	}
 	m.state = name
-	m.updated = timeutils.Now()
+	m.updated = prysmTime.Now()
 }
 
 // trigger invokes the event handler on a given state machine.
@@ -189,7 +189,7 @@ func (m *stateMachine) isLast() bool {
 
 // String returns human-readable representation of a FSM state.
 func (m *stateMachine) String() string {
-	return fmt.Sprintf("{%d:%s}", helpers.SlotToEpoch(m.start), m.state)
+	return fmt.Sprintf("{%d:%s}", core.SlotToEpoch(m.start), m.state)
 }
 
 // String returns human-readable representation of a state.

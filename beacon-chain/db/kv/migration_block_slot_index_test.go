@@ -1,10 +1,11 @@
 package kv
 
 import (
+	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"go.etcd.io/bbolt"
 )
 
@@ -57,7 +58,7 @@ func Test_migrateBlockSlotIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t).db
 			tt.setup(t, db)
-			assert.NoError(t, db.Update(migrateBlockSlotIndex), "migrateBlockSlotIndex(tx) error")
+			assert.NoError(t, migrateBlockSlotIndex(context.Background(), db), "migrateBlockSlotIndex(tx) error")
 			tt.eval(t, db)
 		})
 	}

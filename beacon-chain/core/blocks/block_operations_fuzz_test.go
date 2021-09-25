@@ -7,24 +7,24 @@ import (
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ctx := context.Background()
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	att := &eth.Attestation{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(att)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		_, err = ProcessAttestationNoVerifySignature(ctx, s, att)
 		_ = err
@@ -33,16 +33,16 @@ func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
 
 func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	block := &eth.SignedBeaconBlock{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(block)
 
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeader(context.Background(), s, interfaces.WrappedPhase0SignedBeaconBlock(block))
+		_, err = ProcessBlockHeader(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		_ = err
 	}
 }
@@ -74,7 +74,7 @@ func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 func TestFuzzProcessEth1DataInBlock_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	e := &eth.Eth1Data{}
-	state := &stateV0.BeaconState{}
+	state := &v1.BeaconState{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(e)
@@ -105,7 +105,7 @@ func TestFuzzEth1DataHasEnoughSupport_10000(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(eth1data)
 		fuzzer.Fuzz(&stateVotes)
-		s, err := stateV0.InitializeFromProto(&pb.BeaconState{
+		s, err := v1.InitializeFromProto(&ethpb.BeaconState{
 			Eth1DataVotes: stateVotes,
 		})
 		require.NoError(t, err)
@@ -117,13 +117,13 @@ func TestFuzzEth1DataHasEnoughSupport_10000(t *testing.T) {
 
 func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	block := &eth.BeaconBlock{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(block)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		_, err = ProcessBlockHeaderNoVerify(s, block.Slot, block.ProposerIndex, block.ParentRoot, []byte{})
 		_ = err
@@ -132,15 +132,15 @@ func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 
 func TestFuzzProcessRandao_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	b := &eth.SignedBeaconBlock{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(b)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandao(context.Background(), s, interfaces.WrappedPhase0SignedBeaconBlock(b))
+		r, err := ProcessRandao(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -149,13 +149,13 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 
 func TestFuzzProcessRandaoNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	blockBody := &eth.BeaconBlockBody{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(blockBody)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessRandaoNoVerify(s, blockBody.RandaoReveal)
 		if err != nil && r != nil {
@@ -166,13 +166,13 @@ func TestFuzzProcessRandaoNoVerify_10000(t *testing.T) {
 
 func TestFuzzProcessProposerSlashings_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	p := &eth.ProposerSlashing{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(p)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessProposerSlashings(ctx, s, []*eth.ProposerSlashing{p}, v.SlashValidator)
 		if err != nil && r != nil {
@@ -183,12 +183,12 @@ func TestFuzzProcessProposerSlashings_10000(t *testing.T) {
 
 func TestFuzzVerifyProposerSlashing_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	proposerSlashing := &eth.ProposerSlashing{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(proposerSlashing)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		err = VerifyProposerSlashing(s, proposerSlashing)
 		_ = err
@@ -197,13 +197,13 @@ func TestFuzzVerifyProposerSlashing_10000(t *testing.T) {
 
 func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	a := &eth.AttesterSlashing{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(a)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessAttesterSlashings(ctx, s, []*eth.AttesterSlashing{a}, v.SlashValidator)
 		if err != nil && r != nil {
@@ -214,13 +214,13 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 
 func TestFuzzVerifyAttesterSlashing_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	attesterSlashing := &eth.AttesterSlashing{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(attesterSlashing)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		err = VerifyAttesterSlashing(ctx, s, attesterSlashing)
 		_ = err
@@ -249,66 +249,32 @@ func TestFuzzslashableAttesterIndices_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzProcessAttestations_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
-	b := &eth.SignedBeaconBlock{}
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(b)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
-		require.NoError(t, err)
-		r, err := ProcessAttestations(ctx, s, interfaces.WrappedPhase0SignedBeaconBlock(b))
-		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
-		}
-	}
-}
-
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	b := &eth.SignedBeaconBlock{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(b)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, interfaces.WrappedPhase0SignedBeaconBlock(b))
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
-		}
-	}
-}
-
-func TestFuzzProcessAttestation_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
-	attestation := &eth.Attestation{}
-	ctx := context.Background()
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(attestation)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
-		require.NoError(t, err)
-		r, err := ProcessAttestation(ctx, s, attestation)
-		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, attestation)
 		}
 	}
 }
 
 func TestFuzzVerifyIndexedAttestationn_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	idxAttestation := &eth.IndexedAttestation{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(idxAttestation)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		err = VerifyIndexedAttestation(ctx, s, idxAttestation)
 		_ = err
@@ -317,13 +283,13 @@ func TestFuzzVerifyIndexedAttestationn_10000(t *testing.T) {
 
 func TestFuzzVerifyAttestation_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	attestation := &eth.Attestation{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(attestation)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		err = VerifyAttestationSignature(ctx, s, attestation)
 		_ = err
@@ -332,7 +298,7 @@ func TestFuzzVerifyAttestation_10000(t *testing.T) {
 
 func TestFuzzProcessDeposits_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	deposits := make([]*eth.Deposit, 100)
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
@@ -340,7 +306,7 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 		for i := range deposits {
 			fuzzer.Fuzz(deposits[i])
 		}
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessDeposits(ctx, s, deposits)
 		if err != nil && r != nil {
@@ -351,14 +317,14 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 
 func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	deposit := &eth.Deposit{}
 	ctx := context.Background()
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessPreGenesisDeposits(ctx, s, []*eth.Deposit{deposit})
 		if err != nil && r != nil {
@@ -369,15 +335,15 @@ func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
 
 func TestFuzzProcessDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	deposit := &eth.Deposit{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessDeposit(s, deposit, true)
+		r, _, err := ProcessDeposit(s, deposit, true)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
 		}
@@ -386,12 +352,12 @@ func TestFuzzProcessDeposit_10000(t *testing.T) {
 
 func TestFuzzverifyDeposit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	deposit := &eth.Deposit{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		err = verifyDeposit(s, deposit)
 		_ = err
@@ -400,13 +366,13 @@ func TestFuzzverifyDeposit_10000(t *testing.T) {
 
 func TestFuzzProcessVoluntaryExits_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	e := &eth.SignedVoluntaryExit{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(e)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessVoluntaryExits(ctx, s, []*eth.SignedVoluntaryExit{e})
 		if err != nil && r != nil {
@@ -417,12 +383,12 @@ func TestFuzzProcessVoluntaryExits_10000(t *testing.T) {
 
 func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &pb.BeaconState{}
+	state := &ethpb.BeaconState{}
 	e := &eth.SignedVoluntaryExit{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(e)
-		s, err := stateV0.InitializeFromProtoUnsafe(state)
+		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := ProcessVoluntaryExits(context.Background(), s, []*eth.SignedVoluntaryExit{e})
 		if err != nil && r != nil {
@@ -434,16 +400,18 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &eth.SignedVoluntaryExit{}
-	val := stateV0.ReadOnlyValidator{}
-	fork := &pb.Fork{}
+	rawVal := &ethpb.Validator{}
+	fork := &ethpb.Fork{}
 	var slot types.Slot
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)
-		fuzzer.Fuzz(&val)
+		fuzzer.Fuzz(rawVal)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		err := VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
+		val, err := v1.NewValidator(&ethpb.Validator{})
+		_ = err
+		err = VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 		_ = err
 	}
 }

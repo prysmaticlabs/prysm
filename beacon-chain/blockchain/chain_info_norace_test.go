@@ -6,9 +6,9 @@ import (
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestHeadSlot_DataRace(t *testing.T) {
@@ -39,7 +39,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
 		cfg:  &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{block: interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
+		head: &head{block: wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))

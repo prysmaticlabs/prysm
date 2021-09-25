@@ -1,0 +1,273 @@
+// Copyright 2020 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.service;
+
+import "google/api/annotations.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v1/beacon_chain.proto";
+import "proto/eth/v2/beacon_block.proto";
+import "proto/eth/v2/sync_committee.proto";
+
+option csharp_namespace = "Ethereum.Eth.Service";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option java_multiple_files = true;
+option java_outer_classname = "BeaconChainServiceProto";
+option java_package = "org.ethereum.eth.service";
+option php_namespace = "Ethereum\\Eth\\Service";
+
+// Beacon Chain API
+//
+// The config API endpoints can be used to query the beacon chain state and information. Such as spec, current fork,
+// blocks, and the validator spec.
+//
+// This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/).
+service BeaconChain {
+  // Beacon state API related endpoints.
+
+  // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
+  rpc GetGenesis(google.protobuf.Empty) returns (v1.GenesisResponse) {
+    option (google.api.http) = { get: "/internal/eth/v1/beacon/genesis" };
+  }
+
+  // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
+  rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/root"
+    };
+  }
+
+  // GetStateFork returns Fork object for state with given 'stateId'.
+  rpc GetStateFork(v1.StateRequest) returns (v1.StateForkResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/fork"
+    };
+  }
+
+  // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
+  // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
+  rpc GetFinalityCheckpoints(v1.StateRequest) returns (v1.StateFinalityCheckpointResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/finality_checkpoints"
+    };
+  }
+
+  // ListValidators returns a filterable list of validators with their balance, status and index.
+  rpc ListValidators(v1.StateValidatorsRequest) returns (v1.StateValidatorsResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/validators"
+    };
+  }
+
+  // GetValidator returns a validator specified by state and id or public key along with status and balance.
+  rpc GetValidator(v1.StateValidatorRequest) returns (v1.StateValidatorResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/validators/{validator_id}"
+    };
+  }
+
+  // ListValidators returns a filterable list of validator balances.
+  rpc ListValidatorBalances(v1.ValidatorBalancesRequest) returns (v1.ValidatorBalancesResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/validator_balances"
+    };
+  }
+
+  // ListCommittees retrieves the committees for the given state at the given epoch.
+  rpc ListCommittees(v1.StateCommitteesRequest) returns (v1.StateCommitteesResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/committees"
+    };
+  }
+
+  // ListSyncCommittees retrieves the sync committees for the given state at the given epoch.
+  rpc ListSyncCommittees(v2.StateSyncCommitteesRequest) returns (v2.StateSyncCommitteesResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/states/{state_id}/sync_committees"
+    };
+  }
+
+  // Beacon blocks API related endpoints.
+
+  // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
+  rpc ListBlockHeaders(v1.BlockHeadersRequest) returns (v1.BlockHeadersResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/headers"
+    };
+  }
+
+  // GetBlockHeader retrieves block header for given block id.
+  rpc GetBlockHeader(v1.BlockRequest) returns (v1.BlockHeaderResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/headers/{block_id}"
+    };
+  }
+
+  // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
+  // included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
+  // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
+  // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
+  // still broadcast but a different status code is returned (202).
+  rpc SubmitBlock(v1.BeaconBlockContainer) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/blocks"
+      body: "*"
+    };
+  }
+
+  // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
+  rpc GetBlockRoot(v1.BlockRequest) returns (v1.BlockRootResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blocks/{block_id}/root"
+    };
+  }
+
+  // GetBlock retrieves block details for given block id.
+  rpc GetBlock(v1.BlockRequest) returns (v1.BlockResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blocks/{block_id}"
+    };
+  }
+
+  // GetBlockSSZ returns the SSZ-serialized version of block details for given block id.
+  rpc GetBlockSSZ(v1.BlockRequest) returns (v1.BlockSSZResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blocks/{block_id}/ssz"
+    };
+  }
+
+  // GetBlockV2 retrieves block details for given block id.
+  rpc GetBlockV2(v2.BlockRequestV2) returns (v2.BlockResponseV2) {
+    option (google.api.http) = {
+      get: "/internal/eth/v2/beacon/blocks/{block_id}"
+    };
+  }
+
+  // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
+  rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
+    option (google.api.http) = {
+      get: "/internal/eth/v2/beacon/blocks/{block_id}/ssz"
+    };
+  }
+
+  // ListBlockAttestations retrieves attestation included in requested block.
+  rpc ListBlockAttestations(v1.BlockRequest) returns (v1.BlockAttestationsResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blocks/{block_id}/attestations"
+    };
+  }
+
+  // Beacon pools API related endpoints.
+
+  // ListPoolAttestations retrieves attestations known by the node but
+  // not necessarily incorporated into any block.
+  rpc ListPoolAttestations(v1.AttestationsPoolRequest) returns (v1.AttestationsPoolResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/pool/attestations"
+    };
+  }
+
+  // SubmitAttestations submits Attestation objects to node. If attestation passes all validation
+  // constraints, node MUST publish attestation on appropriate subnet.
+  rpc SubmitAttestations(v1.SubmitAttestationsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/attestations"
+      body: "*"
+    };
+  }
+
+  // ListPoolAttesterSlashings retrieves attester slashings known by the node but
+  // not necessarily incorporated into any block.
+  rpc ListPoolAttesterSlashings(google.protobuf.Empty) returns (v1.AttesterSlashingsPoolResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/pool/attester_slashings"
+    };
+  }
+
+  // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
+  // if passes validation node MUST broadcast it to network.
+  rpc SubmitAttesterSlashing(v1.AttesterSlashing) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/attester_slashings"
+      body: "*"
+    };
+  }
+
+  // ListPoolProposerSlashings retrieves proposer slashings known by the node
+  // but not necessarily incorporated into any block.
+  rpc ListPoolProposerSlashings(google.protobuf.Empty) returns (v1.ProposerSlashingPoolResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/pool/proposer_slashings"
+    };
+  }
+
+  // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
+  // passes validation node MUST broadcast it to network.
+  rpc SubmitProposerSlashing(v1.ProposerSlashing) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/proposer_slashings"
+      body: "*"
+    };
+  }
+
+  // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
+  // not necessarily incorporated into any block.
+  rpc ListPoolVoluntaryExits(google.protobuf.Empty) returns (v1.VoluntaryExitsPoolResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/pool/voluntary_exits"
+    };
+  }
+
+  // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
+  // and if passes validation node MUST broadcast it to network.
+  rpc SubmitVoluntaryExit(v1.SignedVoluntaryExit) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/voluntary_exits"
+      body: "*"
+    };
+  }
+
+  // Submits sync committee signature objects to the node.
+  rpc SubmitPoolSyncCommitteeSignatures(v2.SubmitPoolSyncCommitteeSignatures) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/sync_committees"
+      body: "*"
+    };
+  }
+
+  // Beacon config API related endpoints.
+
+  // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
+  rpc GetForkSchedule(google.protobuf.Empty) returns (v1.ForkScheduleResponse) {
+    option (google.api.http) = {get: "/internal/eth/v1/config/fork_schedule"};
+  }
+
+  // Spec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
+  // Values are returned with following format:
+  // - any value starting with 0x in the spec is returned as a hex string
+  // - all other values are returned as number
+  rpc GetSpec(google.protobuf.Empty) returns (v1.SpecResponse) {
+    option (google.api.http) = {get: "/internal/eth/v1/config/spec"};
+  }
+
+  // GetDepositContract retrieves deposit contract address and genesis fork version.
+  rpc GetDepositContract(google.protobuf.Empty) returns (v1.DepositContractResponse) {
+    option (google.api.http) = {get: "/internal/eth/v1/config/deposit_contract"};
+  }
+}
+

@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	slashing "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,7 +16,7 @@ import (
 
 // ExportSlashingProtection handles the rpc call returning the json slashing history.
 // The format of the export follows the EIP-3076 standard which makes it
-// easy to migrate machines or eth2 clients.
+// easy to migrate machines or Ethereum consensus clients.
 //
 // Steps:
 // 1. Call the function which exports the data from

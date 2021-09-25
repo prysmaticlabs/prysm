@@ -7,13 +7,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"go.opencensus.io/trace"
 )
 
@@ -24,15 +22,18 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 	GenesisFetcher
 	CanonicalFetcher
+	ForkFetcher
+	TimeFetcher
+	HeadDomainFetcher
 }
 
-// TimeFetcher retrieves the Eth2 data that's related to time.
+// TimeFetcher retrieves the Ethereum consensus data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
 	CurrentSlot() types.Slot
 }
 
-// GenesisFetcher retrieves the eth2 data related to its genesis.
+// GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
 type GenesisFetcher interface {
 	GenesisValidatorRoot() [32]byte
 }
@@ -42,19 +43,23 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
-	HeadState(ctx context.Context) (iface.BeaconState, error)
+	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
+	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
+	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool)
+	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
+	HeadSyncCommitteeFetcher
+	HeadDomainFetcher
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
-	CurrentFork() *pb.Fork
+	CurrentFork() *ethpb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
@@ -77,7 +82,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return copyutil.CopyCheckpoint(s.finalizedCheckpt)
+	return ethpb.CopyCheckpoint(s.finalizedCheckpt)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -86,7 +91,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return copyutil.CopyCheckpoint(s.justifiedCheckpt)
+	return ethpb.CopyCheckpoint(s.justifiedCheckpt)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -95,7 +100,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return copyutil.CopyCheckpoint(s.prevJustifiedCheckpt)
+	return ethpb.CopyCheckpoint(s.prevJustifiedCheckpt)
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -139,7 +144,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -153,7 +158,7 @@ func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, 
 // HeadState returns the head state of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head state from DB.
-func (s *Service) HeadState(ctx context.Context) (iface.BeaconState, error) {
+func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()
 	s.headLock.RLock()
@@ -238,12 +243,12 @@ func (s *Service) GenesisValidatorRoot() [32]byte {
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
-func (s *Service) CurrentFork() *pb.Fork {
+func (s *Service) CurrentFork() *ethpb.Fork {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
-		return &pb.Fork{
+		return &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
@@ -282,4 +287,24 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 	}
 
 	return headsRoots, headsSlots
+}
+
+// HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
+func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return s.headState(ctx).ValidatorIndexByPubkey(pubKey)
+}
+
+// HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
+func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([48]byte, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	v, err := s.headValidatorAtIndex(index)
+	if err != nil {
+		return [48]byte{}, err
+	}
+	return v.PublicKey(), nil
 }

@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
@@ -70,7 +70,7 @@ func (e *StateRootNotFoundError) Error() string {
 
 // Fetcher is responsible for retrieving info related with the beacon chain.
 type Fetcher interface {
-	State(ctx context.Context, stateId []byte) (iface.BeaconState, error)
+	State(ctx context.Context, stateId []byte) (state.BeaconState, error)
 	StateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 }
 
@@ -89,9 +89,9 @@ type StateProvider struct {
 //  - "justified"
 //  - <slot>
 //  - <hex encoded state root with '0x' prefix>
-func (p *StateProvider) State(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
+func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	var (
-		s   iface.BeaconState
+		s   state.BeaconState
 		err error
 	)
 
@@ -171,7 +171,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 	return root, err
 }
 
-func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
+func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
@@ -187,7 +187,7 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (iface.B
 	return nil, &stateNotFoundErr
 }
 
-func (p *StateProvider) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
+func (p *StateProvider) stateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")

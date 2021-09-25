@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -60,9 +60,9 @@ func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		hasStateSummaryInDB := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummaryInDB) {
+		if !(hasStateInDB || hasStateSummary) {
 			return errMissingStateForCheckpoint
 		}
 		return bucket.Put(justifiedCheckpointKey, enc)
@@ -80,9 +80,9 @@ func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		hasStateSummaryInDB := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummaryInDB) {
+		if !(hasStateInDB || hasStateSummary) {
 			return errMissingStateForCheckpoint
 		}
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {

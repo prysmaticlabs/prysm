@@ -10,20 +10,21 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -253,7 +254,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
-			processBlock := func(block interfaces.SignedBeaconBlock) error {
+			processBlock := func(block block.SignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
@@ -264,7 +265,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				return mc.ReceiveBlock(ctx, block, root)
 			}
 
-			var blocks []interfaces.SignedBeaconBlock
+			var blocks []block.SignedBeaconBlock
 			for data := range queue.fetchedData {
 				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
@@ -285,7 +286,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
-			missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -524,16 +525,16 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		response := &fetchRequestResponse{
 			pid: "abc",
-			blocks: []interfaces.SignedBeaconBlock{
-				interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
-				interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+			blocks: []block.SignedBeaconBlock{
+				wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
+				wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 			},
 		}
 		fsm := &stateMachine{
 			state: stateScheduled,
 		}
 		assert.Equal(t, peer.ID(""), fsm.pid)
-		assert.DeepSSZEqual(t, []interfaces.SignedBeaconBlock(nil), fsm.blocks)
+		assert.DeepSSZEqual(t, []block.SignedBeaconBlock(nil), fsm.blocks)
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
@@ -620,8 +621,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.machines[256].pid = pidDataParsed
-		queue.smm.machines[256].blocks = []interfaces.SignedBeaconBlock{
-			interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+		queue.smm.machines[256].blocks = []block.SignedBeaconBlock{
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -650,8 +651,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
-			interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+		queue.smm.machines[320].blocks = []block.SignedBeaconBlock{
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -677,8 +678,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
-			interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()),
+		queue.smm.machines[320].blocks = []block.SignedBeaconBlock{
+			wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -744,7 +745,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 
 		queue.smm.addStateMachine(256)
 		// Machine is not skipped for too long. Do not mark as new just yet.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * (skippedMachineTimeout / 2))
+		queue.smm.machines[256].updated = prysmTime.Now().Add(-1 * (skippedMachineTimeout / 2))
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -763,7 +764,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 
 		queue.smm.addStateMachine(256)
 		// Machine is skipped for too long. Reset.
-		queue.smm.machines[256].updated = timeutils.Now().Add(-1 * skippedMachineTimeout)
+		queue.smm.machines[256].updated = prysmTime.Now().Add(-1 * skippedMachineTimeout)
 		queue.smm.machines[256].state = stateSkipped
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateScheduled
@@ -1000,7 +1001,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
-			updated: timeutils.Now().Add(-staleEpochTimeout / 2),
+			updated: prysmTime.Now().Add(-staleEpochTimeout / 2),
 		}, nil)
 		// State should not change, as machine is not yet stale.
 		assert.NoError(t, err)
@@ -1016,7 +1017,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
 			state:   stateSent,
-			updated: timeutils.Now().Add(-staleEpochTimeout),
+			updated: prysmTime.Now().Add(-staleEpochTimeout),
 		}, nil)
 		// State should change, as machine is stale.
 		assert.NoError(t, err)
@@ -1034,14 +1035,14 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	forkedSlot := types.Slot(201)
 	chain2 := extendBlockSequence(t, chain1[:forkedSlot], 100)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -1051,6 +1052,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1077,7 +1080,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
-			require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+			require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1132,7 +1135,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		}
 
 		// Update counter, and trigger backtracking.
-		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		queue.staleEpochs[core.SlotToEpoch(machineSlots[0])] = maxResetAttempts
 		handlerFn = queue.onProcessSkippedEvent(ctx)
 		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
 		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
@@ -1182,7 +1185,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		}
 
 		// Update counter, and trigger backtracking.
-		queue.staleEpochs[helpers.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		queue.staleEpochs[core.SlotToEpoch(machineSlots[0])] = maxResetAttempts
 		handlerFn = queue.onProcessSkippedEvent(ctx)
 		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
 		require.NoError(t, err)
@@ -1193,7 +1196,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 
 		// Alternative fork should start on slot 201, make sure that the first machine contains all
 		// required forked data, including data on and after slot 201.
-		forkedEpochStartSlot, err := helpers.StartSlot(helpers.SlotToEpoch(forkedSlot))
+		forkedEpochStartSlot, err := core.StartSlot(core.SlotToEpoch(forkedSlot))
 		require.NoError(t, err)
 		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
 		require.Equal(t, true, ok)
@@ -1233,14 +1236,14 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	chain := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
 	finalizedSlot := types.Slot(82)
-	finalizedEpoch := helpers.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -1250,6 +1253,8 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 
 	// Populate database with blocks with part of the chain, orphaned block will be added on top.
@@ -1257,7 +1262,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
-			require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+			require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1266,10 +1271,10 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	// Set head to slot 85, while we do not have block with slot 84 in DB, so block is orphaned.
 	// Moreover, block with slot 85 is a forked block and should be replaced, with block from peer.
-	orphanedBlock := testutil.NewBeaconBlock()
+	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85
-	orphanedBlock.Block.StateRoot = testutil.Random32Bytes(t)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(orphanedBlock)))
+	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(orphanedBlock)))
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))
 	require.Equal(t, types.Slot(85), mc.HeadSlot())
 
@@ -1298,8 +1303,8 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	})
 
 	require.NoError(t, queue.start())
-	isProcessedBlock := func(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
-		finalizedSlot, err := helpers.StartSlot(mc.FinalizedCheckpt().Epoch)
+	isProcessedBlock := func(ctx context.Context, blk block.SignedBeaconBlock, blkRoot [32]byte) bool {
+		finalizedSlot, err := core.StartSlot(mc.FinalizedCheckpt().Epoch)
 		if err != nil {
 			return false
 		}

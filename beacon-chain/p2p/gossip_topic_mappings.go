@@ -3,27 +3,53 @@ package p2p
 import (
 	"reflect"
 
-	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
-// GossipTopicMappings represent the protocol ID to protobuf message type map for easy
+// gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
-var GossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:             &pb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:       &pb.Attestation{},
-	ExitSubnetTopicFormat:              &pb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:  &pb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:  &pb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat: &pb.SignedAggregateAttestationAndProof{},
+var gossipTopicMappings = map[string]proto.Message{
+	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &pb.Attestation{},
+	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
+	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
+}
+
+// GossipTopicMappings is a function to return the assigned data type
+// versioned by epoch.
+func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
+	if topic == BlockSubnetTopicFormat && epoch >= params.BeaconConfig().AltairForkEpoch {
+		return &ethpb.SignedBeaconBlockAltair{}
+	}
+	return gossipTopicMappings[topic]
+}
+
+// AllTopics returns all topics stored in our
+// gossip mapping.
+func AllTopics() []string {
+	var topics []string
+	for k := range gossipTopicMappings {
+		topics = append(topics, k)
+	}
+	return topics
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
 // can be mapped to a protocol ID string.
-var GossipTypeMapping = make(map[reflect.Type]string, len(GossipTopicMappings))
+var GossipTypeMapping = make(map[reflect.Type]string, len(gossipTopicMappings))
 
 func init() {
-	for k, v := range GossipTopicMappings {
+	for k, v := range gossipTopicMappings {
 		GossipTypeMapping[reflect.TypeOf(v)] = k
 	}
+	// Specially handle Altair Objects.
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
 }

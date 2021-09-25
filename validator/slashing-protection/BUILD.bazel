@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -16,13 +15,12 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//api/grpc:go_default_library",
+        "//cmd:go_default_library",
         "//cmd/validator/flags:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//proto/slashing:go_default_library",
-        "//shared/cmd:go_default_library",
-        "//shared/fileutil:go_default_library",
-        "//shared/grpcutils:go_default_library",
-        "//validator/accounts/prompt:go_default_library",
+        "//io/file:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//validator/accounts/userprompt:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
@@ -48,13 +46,13 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//cmd:go_default_library",
         "//cmd/validator/flags:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/cmd:go_default_library",
-        "//shared/fileutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//io/file:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",

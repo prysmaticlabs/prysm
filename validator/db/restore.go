@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/urfave/cli/v2"
 )
@@ -21,9 +21,9 @@ func Restore(cliCtx *cli.Context) error {
 	sourceFile := cliCtx.String(cmd.RestoreSourceFileFlag.Name)
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
 
-	if fileutil.FileExists(path.Join(targetDir, kv.ProtectionDbFileName)) {
-		resp, err := promptutil.ValidatePrompt(
-			os.Stdin, dbExistsYesNoPrompt, promptutil.ValidateYesOrNo,
+	if file.FileExists(path.Join(targetDir, kv.ProtectionDbFileName)) {
+		resp, err := prompt.ValidatePrompt(
+			os.Stdin, dbExistsYesNoPrompt, prompt.ValidateYesOrNo,
 		)
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
@@ -33,10 +33,10 @@ func Restore(cliCtx *cli.Context) error {
 			return nil
 		}
 	}
-	if err := fileutil.MkdirAll(targetDir); err != nil {
+	if err := file.MkdirAll(targetDir); err != nil {
 		return err
 	}
-	if err := fileutil.CopyFile(sourceFile, path.Join(targetDir, kv.ProtectionDbFileName)); err != nil {
+	if err := file.CopyFile(sourceFile, path.Join(targetDir, kv.ProtectionDbFileName)); err != nil {
 		return err
 	}
 

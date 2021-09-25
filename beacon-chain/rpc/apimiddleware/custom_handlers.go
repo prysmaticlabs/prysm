@@ -3,15 +3,18 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	"github.com/r3labs/sse"
 )
 
 type sszConfig struct {
@@ -20,7 +23,7 @@ type sszConfig struct {
 	responseJson sszResponseJson
 }
 
-func handleGetBeaconStateSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
@@ -29,7 +32,7 @@ func handleGetBeaconStateSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
-func handleGetBeaconBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
@@ -38,9 +41,27 @@ func handleGetBeaconBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
+func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
+		fileName:     "beacon_state.ssz",
+		responseJson: &beaconStateSSZResponseV2Json{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v2/beacon/blocks/{block_id}/ssz",
+		fileName:     "beacon_block.ssz",
+		responseJson: &blockSSZResponseV2Json{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
 func handleGetSSZ(
-	m *gateway.ApiProxyMiddleware,
-	endpoint gateway.Endpoint,
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
 	w http.ResponseWriter,
 	req *http.Request,
 	config sszConfig,
@@ -50,42 +71,42 @@ func handleGetSSZ(
 	}
 
 	if errJson := prepareSSZRequestForProxying(m, endpoint, req, config.sszPath); errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	grpcResponse, errJson := gateway.ProxyRequest(req)
+	grpcResponse, errJson := apimiddleware.ProxyRequest(req)
 	if errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	grpcResponseBody, errJson := gateway.ReadGrpcResponseBody(grpcResponse.Body)
+	grpcResponseBody, errJson := apimiddleware.ReadGrpcResponseBody(grpcResponse.Body)
 	if errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	if errJson := gateway.DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
 	if endpoint.Err.Msg() != "" {
-		gateway.HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
+		apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
 		return true
 	}
-	if errJson := gateway.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
 	responseSsz, errJson := serializeMiddlewareResponseIntoSSZ(config.responseJson.SSZData())
 	if errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
 	if errJson := writeSSZResponseHeaderAndBody(grpcResponse, w, responseSsz, config.fileName); errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	if errJson := gateway.Cleanup(grpcResponse.Body); errJson != nil {
-		gateway.WriteError(w, errJson, nil)
+	if errJson := apimiddleware.Cleanup(grpcResponse.Body); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
 
@@ -105,30 +126,38 @@ func sszRequested(req *http.Request) bool {
 	return false
 }
 
-func prepareSSZRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, req *http.Request, sszPath string) gateway.ErrorJson {
+func prepareSSZRequestForProxying(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	req *http.Request, sszPath string,
+) apimiddleware.ErrorJson {
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
 	req.URL.Path = sszPath
-	return gateway.HandleURLParameters(endpoint.Path, req, []string{})
+	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, []string{}); errJson != nil {
+		return errJson
+	}
+	// We have to add the prefix after handling parameters because adding the prefix changes URL segment indexing.
+	req.URL.Path = "/internal" + req.URL.Path
+	return nil
 }
 
-func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson gateway.ErrorJson) {
+func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson apimiddleware.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		e := errors.Wrapf(err, "could not decode response body into base64")
-		return nil, &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, apimiddleware.InternalServerErrorWithMessage(err, "could not decode response body into base64")
 	}
 	return b, nil
 }
 
-func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWriter, responseSsz []byte, fileName string) gateway.ErrorJson {
+func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWriter, responseSsz []byte, fileName string) apimiddleware.ErrorJson {
 	var statusCodeHeader string
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
 			}
 		} else {
@@ -140,8 +169,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
-			e := errors.Wrapf(err, "could not parse status code")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return apimiddleware.InternalServerErrorWithMessage(err, "could not parse status code")
 		}
 		w.WriteHeader(code)
 	} else {
@@ -150,10 +178,129 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Length", strconv.Itoa(len(responseSsz)))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.WriteHeader(grpcResp.StatusCode)
 	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
-		e := errors.Wrapf(err, "could not write response message")
-		return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return apimiddleware.InternalServerErrorWithMessage(err, "could not write response message")
 	}
+	return nil
+}
+
+func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	sseClient := sse.NewClient("http://" + m.GatewayAddress + "/internal" + req.URL.RequestURI())
+	eventChan := make(chan *sse.Event)
+
+	// We use grpc-gateway as the server side of events, not the sse library.
+	// Because of this subscribing to streams doesn't work as intended, resulting in each event being handled by all subscriptions.
+	// To handle events properly, we subscribe just once using a placeholder value ('events') and handle all topics inside this subscription.
+	if err := sseClient.SubscribeChan("events", eventChan); err != nil {
+		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
+		sseClient.Unsubscribe(eventChan)
+		return
+	}
+
+	errJson := receiveEvents(eventChan, w, req)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+	}
+
+	sseClient.Unsubscribe(eventChan)
+	return true
+}
+
+func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http.Request) apimiddleware.ErrorJson {
+	for {
+		select {
+		case msg := <-eventChan:
+			var data interface{}
+
+			// The message's event comes to us with trailing whitespace.  Remove it here for
+			// ease of future procesing.
+			msg.Event = bytes.TrimSpace(msg.Event)
+
+			switch string(msg.Event) {
+			case events.HeadTopic:
+				data = &eventHeadJson{}
+			case events.BlockTopic:
+				data = &receivedBlockDataJson{}
+			case events.AttestationTopic:
+				data = &attestationJson{}
+
+				// Data received in the event does not fit the expected event stream output.
+				// We extract the underlying attestation from event data
+				// and assign the attestation back to event data for further processing.
+				eventData := &aggregatedAttReceivedDataJson{}
+				if err := json.Unmarshal(msg.Data, eventData); err != nil {
+					return apimiddleware.InternalServerError(err)
+				}
+				attData, err := json.Marshal(eventData.Aggregate)
+				if err != nil {
+					return apimiddleware.InternalServerError(err)
+				}
+				msg.Data = attData
+			case events.VoluntaryExitTopic:
+				data = &signedVoluntaryExitJson{}
+			case events.FinalizedCheckpointTopic:
+				data = &eventFinalizedCheckpointJson{}
+			case events.ChainReorgTopic:
+				data = &eventChainReorgJson{}
+			case "error":
+				data = &eventErrorJson{}
+			default:
+				return &apimiddleware.DefaultErrorJson{
+					Message: fmt.Sprintf("Event type '%s' not supported", string(msg.Event)),
+					Code:    http.StatusInternalServerError,
+				}
+			}
+
+			if errJson := writeEvent(msg, w, data); errJson != nil {
+				return errJson
+			}
+			if errJson := flushEvent(w); errJson != nil {
+				return errJson
+			}
+		case <-req.Context().Done():
+			return nil
+		}
+	}
+}
+
+func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) apimiddleware.ErrorJson {
+	if err := json.Unmarshal(msg.Data, data); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+	if errJson := apimiddleware.ProcessMiddlewareResponseFields(data); errJson != nil {
+		return errJson
+	}
+	dataJson, errJson := apimiddleware.SerializeMiddlewareResponseIntoJson(data)
+	if errJson != nil {
+		return errJson
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+
+	if _, err := w.Write([]byte("event: ")); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+	if _, err := w.Write(msg.Event); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+	if _, err := w.Write([]byte("\ndata: ")); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+	if _, err := w.Write(dataJson); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+	if _, err := w.Write([]byte("\n\n")); err != nil {
+		return apimiddleware.InternalServerError(err)
+	}
+
+	return nil
+}
+
+func flushEvent(w http.ResponseWriter) apimiddleware.ErrorJson {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return &apimiddleware.DefaultErrorJson{Message: fmt.Sprintf("Flush not supported in %T", w), Code: http.StatusInternalServerError}
+	}
+	flusher.Flush()
 	return nil
 }

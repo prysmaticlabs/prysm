@@ -9,9 +9,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -74,7 +75,7 @@ func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
 }
 
 func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2ptypes.RPCGoodbyeCode, id peer.ID) error {
-	lock := mputil.NewMultilock(id.String())
+	lock := async.NewMultilock(id.String())
 	lock.Lock()
 	defer lock.Unlock()
 	// In the event we are already disconnected, exit early from the
@@ -95,7 +96,11 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.cfg.P2P.Send(ctx, &code, p2p.RPCGoodByeTopicV1, id)
+	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	if err != nil {
+		return err
+	}
+	stream, err := s.cfg.P2P.Send(ctx, &code, topic, id)
 	if err != nil {
 		return err
 	}

@@ -6,12 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"go.opencensus.io/trace"
 )
 
@@ -19,7 +20,7 @@ import (
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
 	ctx context.Context,
-	state iface.ReadOnlyBeaconState,
+	state state.ReadOnlyBeaconState,
 	vp []*Validator,
 	pBal *Balance,
 ) ([]*Validator, *Balance, error) {
@@ -43,12 +44,12 @@ func ProcessAttestations(
 		}
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
 		}
 		v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = AttestedPrevEpoch(state, a)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
@@ -56,7 +57,7 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -69,8 +70,8 @@ func ProcessAttestations(
 }
 
 // AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
-func AttestedCurrentEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, bool, error) {
-	currentEpoch := helpers.CurrentEpoch(s)
+func AttestedCurrentEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (bool, bool, error) {
+	currentEpoch := core.CurrentEpoch(s)
 	var votedCurrentEpoch, votedTarget bool
 	// Did validator vote current epoch.
 	if a.Data.Target.Epoch == currentEpoch {
@@ -87,8 +88,8 @@ func AttestedCurrentEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation)
 }
 
 // AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
-func AttestedPrevEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
-	prevEpoch := helpers.PrevEpoch(s)
+func AttestedPrevEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (bool, bool, bool, error) {
+	prevEpoch := core.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
 	// Did validator vote previous epoch.
 	if a.Data.Target.Epoch == prevEpoch {
@@ -115,7 +116,7 @@ func AttestedPrevEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (b
 }
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
+func SameTarget(state state.ReadOnlyBeaconState, a *ethpb.PendingAttestation, e types.Epoch) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err
@@ -127,7 +128,7 @@ func SameTarget(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation, e typ
 }
 
 // SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
-func SameHead(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, error) {
+func SameHead(state state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (bool, error) {
 	r, err := helpers.BlockRootAtSlot(state, a.Data.Slot)
 	if err != nil {
 		return false, err
@@ -139,7 +140,7 @@ func SameHead(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, 
 }
 
 // UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot types.Slot) []*Validator {
+func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *ethpb.PendingAttestation, aSlot types.Slot) []*Validator {
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {

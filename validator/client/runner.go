@@ -8,10 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
@@ -40,7 +40,7 @@ func run(ctx context.Context, v iface.Validator) {
 		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
-	if featureconfig.Get().SlasherProtection {
+	if features.Get().SlasherProtection {
 		if err := v.SlasherReady(ctx); err != nil {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
@@ -83,6 +83,14 @@ func run(ctx context.Context, v iface.Validator) {
 		}
 		if err != nil {
 			log.Fatalf("Could not wait for validator activation: %v", err)
+		}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
 		}
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
@@ -168,7 +176,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			// Start fetching domain data for the next epoch.
-			if helpers.IsEpochEnd(slot) {
+			if core.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
@@ -192,6 +200,10 @@ func run(ctx context.Context, v iface.Validator) {
 							v.ProposeBlock(slotCtx, slot, pubKey)
 						case iface.RoleAggregator:
 							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
+						case iface.RoleSyncCommittee:
+							v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
+						case iface.RoleSyncCommitteeAggregator:
+							v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
 						case iface.RoleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 						default:

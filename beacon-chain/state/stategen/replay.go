@@ -6,25 +6,28 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(
 	ctx context.Context,
-	state iface.BeaconState,
-	signed []interfaces.SignedBeaconBlock,
+	state state.BeaconState,
+	signed []block.SignedBeaconBlock,
 	targetSlot types.Slot,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
-
 	var err error
+	log.Debugf("Replaying state from slot %d till slot %d", state.Slot(), targetSlot)
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -58,7 +61,7 @@ func (s *State) ReplayBlocks(
 
 // LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
+func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]block.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
@@ -96,7 +99,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 		return nil, errors.New("end block roots don't match")
 	}
 
-	filteredBlocks := []interfaces.SignedBeaconBlock{blocks[length-1]}
+	filteredBlocks := []block.SignedBeaconBlock{blocks[length-1]}
 	// Starting from second to last index because the last block is already in the filtered block list.
 	for i := length - 2; i >= 0; i-- {
 		if ctx.Err() != nil {
@@ -118,9 +121,9 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
-	state iface.BeaconState,
-	signed interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+	state state.BeaconState,
+	signed block.SignedBeaconBlock,
+) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -146,6 +149,16 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
+	if signed.Version() == version.Altair {
+		sa, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		state, err = altair.ProcessSyncAggregate(state, sa)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return state, nil
 }
@@ -153,7 +166,7 @@ func executeStateTransitionStateGen(
 // processSlotsStateGen to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
-func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
+func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -176,13 +189,30 @@ func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot typ
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if transition.CanProcessEpoch(state) {
-			state, err = transition.ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			switch state.Version() {
+			case version.Phase0:
+				state, err = transition.ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			case version.Altair:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimization")
+				}
+			default:
+				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			return nil, err
+		}
+
+		if core.CanUpgradeToAltair(state.Slot()) {
+			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -205,7 +235,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 		return gRoot, 0, nil
 	}
 
-	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot+1)
+	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
@@ -228,7 +258,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 // This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
+func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
 
@@ -264,7 +294,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
-func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]block.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {
@@ -273,7 +303,7 @@ func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot type
 	if len(bs) != len(bRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
 	}
-	fbs := make([]interfaces.SignedBeaconBlock, 0, len(bs))
+	fbs := make([]block.SignedBeaconBlock, 0, len(bs))
 	for i := len(bs) - 1; i >= 0; i-- {
 		if s.beaconDB.IsFinalizedBlock(ctx, bRoots[i]) {
 			fbs = append(fbs, bs[i])

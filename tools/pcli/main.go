@@ -11,13 +11,12 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -37,7 +36,7 @@ func main() {
 	log.SetFormatter(customFormatter)
 	app := cli.App{}
 	app.Name = "pcli"
-	app.Usage = "A command line utility to run eth2 specific commands"
+	app.Usage = "A command line utility to run Ethereum consensus specific commands"
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		{
@@ -82,7 +81,7 @@ func main() {
 				case "deposit":
 					data = &ethpb.Deposit{}
 				case "deposit_message":
-					data = &pb.DepositMessage{}
+					data = &ethpb.DepositMessage{}
 				case "proposer_slashing":
 					data = &ethpb.ProposerSlashing{}
 				case "signed_block_header":
@@ -92,7 +91,7 @@ func main() {
 				case "voluntary_exit":
 					data = &ethpb.VoluntaryExit{}
 				case "state":
-					data = &pb.BeaconState{}
+					data = &ethpb.BeaconState{}
 				default:
 					log.Fatal("Invalid type")
 				}
@@ -156,11 +155,11 @@ func main() {
 					}
 					preStatePath = text
 				}
-				preState := &pb.BeaconState{}
+				preState := &ethpb.BeaconState{}
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := stateV0.InitializeFromProto(preState)
+				stateObj, err := v1.InitializeFromProto(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -176,7 +175,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, interfaces.WrappedPhase0SignedBeaconBlock(block))
+				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -188,11 +187,11 @@ func main() {
 
 				// Diff the state if a post state is provided.
 				if expectedPostStatePath != "" {
-					expectedState := &pb.BeaconState{}
+					expectedState := &ethpb.BeaconState{}
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !sszutil.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
+					if !ssz.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
 						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
@@ -209,7 +208,7 @@ func main() {
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data fssz.Unmarshaler) error {
-	rawFile, err := ioutil.ReadFile(fPath)
+	rawFile, err := ioutil.ReadFile(fPath) // #nosec G304
 	if err != nil {
 		return err
 	}

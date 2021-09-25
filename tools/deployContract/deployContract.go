@@ -11,12 +11,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -109,9 +108,13 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			txOps = bind.NewKeyedTransactor(privKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey, big.NewInt(1337))
+			if err != nil {
+				log.Fatal(err)
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
+			txOps.Context = context.Background()
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
 			// #nosec - Inclusion of file via variable is OK for this tool.
@@ -135,14 +138,13 @@ func main() {
 				return err
 			}
 
-			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey.PrivateKey, big.NewInt(1337))
+			if err != nil {
+				log.Fatal(err)
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
-		}
-
-		drain := txOps.From
-		if drainAddress != "" {
-			drain = common.HexToAddress(drainAddress)
+			txOps.Context = context.Background()
 		}
 
 		txOps.GasPrice = big.NewInt(10 * 1e9 /* 10 gwei */)
@@ -151,7 +153,6 @@ func main() {
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			drain,
 		)
 
 		if err != nil {

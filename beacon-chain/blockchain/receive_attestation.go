@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -21,7 +22,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.BeaconState, error)
+	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -43,12 +44,12 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 // AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.BeaconState, error) {
-	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
+func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
+	ss, err := core.StartSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
 	return s.getAttPreState(ctx, att.Data.Target)
@@ -56,7 +57,7 @@ func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestatio
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	targetSlot, err := helpers.StartSlot(a.Data.Target.Epoch)
+	targetSlot, err := core.StartSlot(a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
-	ss, err := helpers.StartSlot(f.Epoch)
+	ss, err := core.StartSlot(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -113,7 +114,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 		log.Warn("Genesis time received, now available to process attestations")
 	}
 
-	st := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -138,9 +139,9 @@ func (s *Service) processAttestations(ctx context.Context) {
 	for _, a := range atts {
 		// Based on the spec, don't process the attestation until the subsequent slot.
 		// This delays consideration in the fork choice until their slot is in the past.
-		// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
+		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := core.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

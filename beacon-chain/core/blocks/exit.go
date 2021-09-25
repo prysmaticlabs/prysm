@@ -6,12 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ValidatorAlreadyExitedMsg defines a message saying that a validator has already exited.
@@ -45,9 +45,9 @@ var ValidatorCannotExitYetMsg = "validator has not been active long enough to ex
 //    initiate_validator_exit(state, voluntary_exit.validator_index)
 func ProcessVoluntaryExits(
 	_ context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	exits []*ethpb.SignedVoluntaryExit,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
@@ -88,9 +88,9 @@ func ProcessVoluntaryExits(
 //    # Initiate exit
 //    initiate_validator_exit(state, voluntary_exit.validator_index)
 func VerifyExitAndSignature(
-	validator iface.ReadOnlyValidator,
+	validator state.ReadOnlyValidator,
 	currentSlot types.Slot,
-	fork *pb.Fork,
+	fork *ethpb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
 	genesisRoot []byte,
 ) error {
@@ -133,8 +133,8 @@ func VerifyExitAndSignature(
 //    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
 //    # Initiate exit
 //    initiate_validator_exit(state, voluntary_exit.validator_index)
-func verifyExitConditions(validator iface.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
+func verifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
+	currentEpoch := core.SlotToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")

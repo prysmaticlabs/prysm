@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/form3tech-oss/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/io/file"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -52,7 +52,7 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert we stored the hashed password.
-	passwordHashExists := fileutil.FileExists(filepath.Join(defaultWalletPath, HashedRPCPassword))
+	passwordHashExists := file.FileExists(filepath.Join(defaultWalletPath, HashedRPCPassword))
 	assert.Equal(t, true, passwordHashExists)
 
 	// We attempt to create the wallet.

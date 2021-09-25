@@ -10,10 +10,10 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -37,7 +37,7 @@ func (s *Server) registerBeaconClient() error {
 		return errors.New("no dial options for beacon chain gRPC client")
 	}
 
-	s.ctx = grpcutils.AppendHeaders(s.ctx, s.clientGrpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
 
 	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *Server) registerBeaconClient() error {
 	}
 	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
 	s.beaconNodeClient = ethpb.NewNodeClient(conn)
-	s.beaconNodeHealthClient = healthpb.NewHealthClient(conn)
+	s.beaconNodeHealthClient = pb.NewHealthClient(conn)
 	s.beaconNodeValidatorClient = ethpb.NewBeaconNodeValidatorClient(conn)
 	return nil
 }
@@ -56,10 +56,10 @@ func (s *Server) registerBeaconClient() error {
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
-func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.BeaconStatusResponse, error) {
+func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return &pb.BeaconStatusResponse{
+		return &validatorpb.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,
 			Syncing:            false,
@@ -75,7 +75,7 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.Beaco
 	if err != nil {
 		return nil, err
 	}
-	return &pb.BeaconStatusResponse{
+	return &validatorpb.BeaconStatusResponse{
 		BeaconNodeEndpoint:     s.beaconClientEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus.Syncing,

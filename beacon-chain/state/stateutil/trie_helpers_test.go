@@ -4,20 +4,20 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestReturnTrieLayer_OK(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
-	root, err := stateV0.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	newState, _ := util.DeterministicGenesisState(t, 32)
+	root, err := v1.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
@@ -30,10 +30,10 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 }
 
 func TestReturnTrieLayerVariable_OK(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
-	root, err := stateV0.ValidatorRegistryRoot(newState.Validators())
+	newState, _ := util.DeterministicGenesisState(t, 32)
+	root, err := v1.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
@@ -49,7 +49,7 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 }
 
 func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, _ := util.DeterministicGenesisState(t, 32)
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {
@@ -62,7 +62,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[0], changedRoots[0]))
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[1], changedRoots[1]))
 
-	expectedRoot, err := stateV0.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	expectedRoot, err := v1.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	root, _, err := stateutil.RecomputeFromLayer(changedRoots, changedIdx, layers)
 	require.NoError(t, err)
@@ -70,9 +70,9 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 }
 
 func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, _ := util.DeterministicGenesisState(t, 32)
 	validators := newState.Validators()
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
 		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
@@ -96,7 +96,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := stateV0.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := v1.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	roots = make([][32]byte, 0, len(changedVals))
 	for _, val := range changedVals {

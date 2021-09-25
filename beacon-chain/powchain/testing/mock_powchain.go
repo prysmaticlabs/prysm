@@ -13,12 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // POWChain defines a properly functioning mock for the powchain service.
@@ -30,7 +30,7 @@ type POWChain struct {
 	BlockNumberByTime map[uint64]*big.Int
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
-	GenesisState      iface.BeaconState
+	GenesisState      state.BeaconState
 }
 
 // GenesisTime represents a static past date - JAN 01 2000.
@@ -55,8 +55,8 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trieutil.SparseMerkleTrie {
-	return &trieutil.SparseMerkleTrie{}
+func (m *POWChain) DepositTrie() *trie.SparseMerkleTrie {
+	return &trie.SparseMerkleTrie{}
 }
 
 // BlockExists --
@@ -120,7 +120,7 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (m *POWChain) PreGenesisState() iface.BeaconState {
+func (m *POWChain) PreGenesisState() state.BeaconState {
 	return m.GenesisState
 }
 

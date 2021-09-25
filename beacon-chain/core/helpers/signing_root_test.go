@@ -5,20 +5,21 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
-	emptyBlock := testutil.NewBeaconBlock()
+	emptyBlock := util.NewBeaconBlock()
 	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
 	assert.NoError(t, err, "Could not compute signing root of block")
 }
@@ -47,20 +48,20 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
-		genState   func(t *testing.T) (iface.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
+		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
+		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
 		{
 			name: "block proposer",
-			genState: func(t *testing.T) (iface.BeaconState, []bls.SecretKey) {
-				beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+			genState: func(t *testing.T) (state.BeaconState, []bls.SecretKey) {
+				beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
-				block, err := testutil.GenerateFullBlock(st, keys, nil, 1)
+			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
+				block, err := util.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block
 			},
@@ -83,7 +84,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 			require.NoError(t, err)
 			block := tt.genBlock(t, beaconState, privKeys)
 			got, err := helpers.ComputeDomainAndSign(
-				beaconState, helpers.CurrentEpoch(beaconState), block, tt.domainType, privKeys[idx])
+				beaconState, core.CurrentEpoch(beaconState), block, tt.domainType, privKeys[idx])
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got, "Incorrect signature")
 		})
@@ -107,9 +108,9 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 	}
 }
 
-func TestFuzzverifySigningRoot_10000(t *testing.T) {
+func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethereum_beacon_p2p_v1.BeaconState{}
+	state := &ethpb.BeaconState{}
 	pubkey := [48]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}

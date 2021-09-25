@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
 
@@ -411,8 +410,13 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 			if int(n.weight)+nodeDelta < 0 {
 				n.weight = 0
 			} else {
+				// Absolute value of node delta.
+				d := nodeDelta
+				if nodeDelta < 0 {
+					d *= -1
+				}
 				// Subtract node's weight.
-				n.weight -= uint64(math.Abs(float64(nodeDelta)))
+				n.weight -= uint64(d)
 			}
 		} else {
 			// Add node's weight.

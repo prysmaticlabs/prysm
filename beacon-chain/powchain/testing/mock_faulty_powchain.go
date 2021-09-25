@@ -6,12 +6,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // FaultyMockPOWChain defines an incorrectly functioning powchain service.
@@ -60,8 +60,8 @@ func (f *FaultyMockPOWChain) DepositRoot() [32]byte {
 }
 
 // DepositTrie --
-func (f *FaultyMockPOWChain) DepositTrie() *trieutil.SparseMerkleTrie {
-	return &trieutil.SparseMerkleTrie{}
+func (f *FaultyMockPOWChain) DepositTrie() *trie.SparseMerkleTrie {
+	return &trie.SparseMerkleTrie{}
 }
 
 // ChainStartDeposits --
@@ -75,8 +75,8 @@ func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (f *FaultyMockPOWChain) PreGenesisState() iface.BeaconState {
-	return &stateV0.BeaconState{}
+func (f *FaultyMockPOWChain) PreGenesisState() state.BeaconState {
+	return &v1.BeaconState{}
 }
 
 // ClearPreGenesisData --

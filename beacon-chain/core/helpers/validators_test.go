@@ -6,14 +6,14 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestIsActiveValidator_OK(t *testing.T) {
@@ -45,7 +45,7 @@ func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 		{a: 64, b: true},
 	}
 	val := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{val}})
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{val}})
 	require.NoError(t, err)
 	for _, test := range tests {
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
@@ -210,7 +210,7 @@ func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
+		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
 		require.NoError(t, err)
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
 		require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -293,7 +293,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 		roots[i] = make([]byte, 32)
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -317,7 +317,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -331,7 +331,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hash.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		require.NoError(t, err)
 		proposerIndices = append(proposerIndices, index)
@@ -342,7 +342,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hash.Hash(seedWithSlot)
 		index, err := computeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
 		require.NoError(t, err)
 		wantedProposerIndices = append(wantedProposerIndices, index)
@@ -364,7 +364,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:        0,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -375,7 +375,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 	require.NoError(t, committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []types.ValidatorIndex{1, 2, 3}}))
-	validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
+	validatorCount, err := ActiveValidatorCount(beaconState, core.CurrentEpoch(beaconState))
 	require.NoError(t, err)
 	assert.Equal(t, uint64(c), validatorCount, "Did not get the correct validator count")
 }
@@ -400,13 +400,13 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
+		validatorCount, err := ActiveValidatorCount(beaconState, core.CurrentEpoch(beaconState))
 		require.NoError(t, err)
 		resultChurn, err := ValidatorChurnLimit(validatorCount)
 		require.NoError(t, err)
@@ -415,8 +415,8 @@ func TestChurnLimit_OK(t *testing.T) {
 }
 
 func TestDomain_OK(t *testing.T) {
-	state := &pb.BeaconState{
-		Fork: &pb.Fork{
+	state := &ethpb.BeaconState{
+		Fork: &ethpb.Fork{
 			Epoch:           3,
 			PreviousVersion: []byte{0, 0, 0, 2},
 			CurrentVersion:  []byte{0, 0, 0, 3},
@@ -445,7 +445,7 @@ func TestDomain_OK(t *testing.T) {
 func TestActiveValidatorIndices(t *testing.T) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	type args struct {
-		state *pb.BeaconState
+		state *ethpb.BeaconState
 		epoch types.Epoch
 	}
 	tests := []struct {
@@ -457,7 +457,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		{
 			name: "all_active_epoch_10",
 			args: args{
-				state: &pb.BeaconState{
+				state: &ethpb.BeaconState{
 					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
@@ -481,7 +481,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		{
 			name: "some_active_epoch_10",
 			args: args{
-				state: &pb.BeaconState{
+				state: &ethpb.BeaconState{
 					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
@@ -505,7 +505,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		{
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
-				state: &pb.BeaconState{
+				state: &ethpb.BeaconState{
 					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
@@ -533,7 +533,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		{
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
-				state: &pb.BeaconState{
+				state: &ethpb.BeaconState{
 					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
@@ -561,7 +561,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		{
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
-				state: &pb.BeaconState{
+				state: &ethpb.BeaconState{
 					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
@@ -589,7 +589,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := stateV0.InitializeFromProto(tt.args.state)
+			s, err := v1.InitializeFromProto(tt.args.state)
 			require.NoError(t, err)
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if tt.wantedErr != "" {
@@ -695,32 +695,18 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
-		{
-			name: "nil_validator",
-			args: args{
-				validators: []*ethpb.Validator{
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					nil, // Should never happen, but would cause a panic when it does happen.
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-				},
-				indices: []types.ValidatorIndex{0, 1, 2, 3, 4},
-				seed:    seed,
-			},
-			want: 4,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bState := &pb.BeaconState{Validators: tt.args.validators}
-			stTrie, err := stateV0.InitializeFromProtoUnsafe(bState)
+			bState := &ethpb.BeaconState{Validators: tt.args.validators}
+			stTrie, err := v1.InitializeFromProtoUnsafe(bState)
 			require.NoError(t, err)
 			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return
 			}
+			assert.NoError(t, err, "received unexpected error")
 			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
 		})
 	}
@@ -753,25 +739,25 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	tests := []struct {
 		name      string
 		validator *ethpb.Validator
-		state     *pb.BeaconState
+		state     *ethpb.BeaconState
 		want      bool
 	}{
 		{"Eligible",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
+			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
 			true},
 		{"Not yet finalized",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
+			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 			false},
 		{"Incorrect activation epoch",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1},
-			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
+			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
 			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := stateV0.InitializeFromProto(tt.state)
+			s, err := v1.InitializeFromProto(tt.state)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
 		})
@@ -784,7 +770,7 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
 		candidateIndex, err := ComputeShuffledIndex(types.ValidatorIndex(i%length), length, seed, true /* shuffle */)
