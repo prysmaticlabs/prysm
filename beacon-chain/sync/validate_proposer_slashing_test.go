@@ -136,7 +136,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		},
 	}
 
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
@@ -172,7 +174,9 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	assert.NotNil(t, err)
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Slashing from the far distant future should have timed out and returned false")
 }
 
@@ -200,6 +204,8 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Did not fail validation")
 }

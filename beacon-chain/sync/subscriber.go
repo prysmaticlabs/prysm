@@ -38,14 +38,14 @@ type wrappedVal func(context.Context, peer.ID, *pubsub.Message) (pubsub.Validati
 type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
-func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, nil
 	}
 	msg.ValidatorData = m
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Register PubSub subscribers
