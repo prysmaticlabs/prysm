@@ -363,8 +363,9 @@ message ExecutionPayload {
     uint64 gas_limit = 8;
     uint64 gas_used = 9;
     uint64 timestamp = 10;
-    bytes base_fee_per_gas = 11 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes block_hash = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-    repeated bytes transactions = 13  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "16384,1048576"];
-    //repeated bytes transactions = 13 [(ethereum.eth.ext.ssz_max)  = "16384, 16777216"];
+    bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
+    bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+//    repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "16384,1048576"];
+//    //repeated bytes transactions = 13 [(ethereum.eth.ext.ssz_max)  = "16384, 16777216"];
 }
