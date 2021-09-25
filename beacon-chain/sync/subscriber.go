@@ -260,6 +260,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		if b == pubsub.ValidationReject {
 			log.WithError(err).WithFields(logrus.Fields{
 				"topic":        topic,
+				"multiaddress": multiAddr(pid, s.cfg.P2P.Host()),
 				"peer id":      pid.String(),
 				"agent":        agentString(pid, s.cfg.P2P.Host()),
 				"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
@@ -270,6 +271,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			if err != nil {
 				log.WithError(err).WithFields(logrus.Fields{
 					"topic":        topic,
+					"multiaddress": multiAddr(pid, s.cfg.P2P.Host()),
 					"peer id":      pid.String(),
 					"agent":        agentString(pid, s.cfg.P2P.Host()),
 					"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
@@ -755,4 +757,12 @@ func agentString(pid peer.ID, hst host.Host) string {
 		agString = ""
 	}
 	return agString
+}
+
+func multiAddr(pid peer.ID, hst host.Host) string {
+	addrs := hst.Peerstore().Addrs(pid)
+	if len(addrs) == 0 {
+		return ""
+	}
+	return addrs[0].String()
 }
