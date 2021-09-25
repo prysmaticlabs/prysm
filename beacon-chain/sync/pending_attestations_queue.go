@@ -72,7 +72,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					// validation steps.
 					valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
 					if err != nil {
-						log.WithError(err).Debug("Pending attestation failed validation")
+						log.WithError(err).Debug("Pending aggregated attestation failed validation")
 					}
 					aggValid := pubsub.ValidationAccept == valRes
 					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
@@ -107,7 +107,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 					valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
 					if err != nil {
-						log.WithError(err).Debug("Attestation failed validation with state")
+						log.WithError(err).Debug("Pending unaggregated attestation failed validation")
 						continue
 					}
 					if valid == pubsub.ValidationAccept {
