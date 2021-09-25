@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -543,7 +544,7 @@ func (p *Status) Prune() {
 	defer p.store.Unlock()
 
 	// Default to old method if flag isnt enabled.
-	if !featureconfig.Get().EnablePeerScorer {
+	if !features.Get().EnablePeerScorer {
 		p.deprecatedPrune()
 		return
 	}
@@ -744,7 +745,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 // bad response count. In the future scoring will be used
 // to determine the most suitable peers to take out.
 func (p *Status) PeersToPrune() []peer.ID {
-	if !featureconfig.Get().EnablePeerScorer {
+	if !features.Get().EnablePeerScorer {
 		return p.deprecatedPeersToPrune()
 	}
 	connLimit := p.ConnectedPeerLimit()
