@@ -23,13 +23,13 @@ func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk block.SignedBea
 	return WriteBlockChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), blk)
 }
 
-// WriteChunk object to stream.
+// WriteBlockChunk writes block chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blk block.SignedBeaconBlock) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	obtainedCtx := []byte{}
+	var obtainedCtx []byte
 	switch blk.Version() {
 	case version.Phase0:
 		valRoot := chain.GenesisValidatorRoot()

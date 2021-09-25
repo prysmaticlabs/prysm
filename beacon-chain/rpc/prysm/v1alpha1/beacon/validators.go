@@ -680,7 +680,7 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 		}
 	}
-	validatorSummary := []*precompute.Validator{}
+	var validatorSummary []*precompute.Validator
 	switch headState.Version() {
 	case version.Phase0:
 		vp, bp, err := precompute.New(ctx, headState)

@@ -810,7 +810,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							rawBytes := p2ptypes.SSZBytes(headRoot[:])
 							sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 							assert.NoError(t, err)
-							sigs := []bls.Signature{}
+							var sigs []bls.Signature
 							for i, p2 := range coms {
 								idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p2))
 								assert.Equal(t, true, ok)

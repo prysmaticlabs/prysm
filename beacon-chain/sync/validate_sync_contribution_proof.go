@@ -235,8 +235,8 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		defer span.End()
 		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
-		activePubkeys := []bls.PublicKey{}
-		activeRawPubkeys := [][]byte{}
+		var activePubkeys []bls.PublicKey
+		var activeRawPubkeys [][]byte
 		syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
@@ -320,7 +320,7 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 // verifySyncSelectionData verifies that the provided sync contribution has a valid
 // selection proof.
 func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.ContributionAndProof) error {
-	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
+	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: m.Contribution.SubcommitteeIndex}
 	domain, err := s.cfg.Chain.HeadSyncSelectionProofDomain(ctx, m.Contribution.Slot)
 	if err != nil {
 		return err
