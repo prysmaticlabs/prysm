@@ -148,7 +148,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
-	activeCount, err := corehelpers.ActiveValidatorCount(st, epoch)
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -171,7 +171,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
-			committee, err := corehelpers.BeaconCommitteeFromState(st, slot, index)
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}

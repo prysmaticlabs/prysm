@@ -61,7 +61,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 2048)
 	tr := [32]byte{'a'}
 	require.NoError(t, bs.StateGen.SaveState(ctx, tr, s))
-	c, err := helpers.BeaconCommitteeFromState(s, 1, 0)
+	c, err := helpers.BeaconCommitteeFromState(context.Background(), s, 1, 0)
 	require.NoError(t, err)
 
 	a := &ethpb.Attestation{
