@@ -70,7 +70,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					aggValid := s.validateAggregatedAtt(ctx, signedAtt) == pubsub.ValidationAccept
+					valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
+					if err != nil {
+						log.WithError(err).Debug("Pending aggregated attestation failed validation")
+					}
+					aggValid := pubsub.ValidationAccept == valRes
 					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
 						if err := s.cfg.AttPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							log.WithError(err).Debug("Could not save aggregate attestation")
@@ -101,7 +105,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						continue
 					}
 
-					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					if err != nil {
+						log.WithError(err).Debug("Pending unaggregated attestation failed validation")
+						continue
+					}
 					if valid == pubsub.ValidationAccept {
 						if err := s.cfg.AttPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
 							log.WithError(err).Debug("Could not save unaggregated attestation")
