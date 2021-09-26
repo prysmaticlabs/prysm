@@ -437,3 +437,8 @@ func GenerateFullBlockAltair(
 
 	return &ethpb.SignedBeaconBlockAltair{Block: block, Signature: signature.Marshal()}, nil
 }
+
+// NewBeaconBlockMerge creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
+	return &ethpb.SignedBeaconBlockMerge{}
+}
