@@ -1,6 +1,7 @@
 package epoch_processing
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -27,7 +28,7 @@ func RunRegistryUpdatesTests(t *testing.T, config string) {
 }
 
 func processRegistryUpdatesWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessRegistryUpdates(state)
+	state, err := epoch.ProcessRegistryUpdates(context.Background(), state)
 	require.NoError(t, err, "Could not process registry updates")
 	return state, nil
 }

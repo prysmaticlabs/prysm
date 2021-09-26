@@ -119,7 +119,7 @@ func GenerateAttestations(
 		headRoot = b
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), bState, currentEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func GenerateAttestations(
 		return nil, err
 	}
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
-		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, slot, c)
 		if err != nil {
 			return nil, err
 		}
