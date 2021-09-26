@@ -96,7 +96,7 @@ func VerifyAttestationNoVerifySignature(
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(beaconState, att.Data.Target.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -105,12 +105,12 @@ func VerifyAttestationNoVerifySignature(
 		return fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 
-	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
+	if err := helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
 		return errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
 	// Verify attesting indices are correct.
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func ProcessAttestationNoVerifySignature(
 	currEpoch := core.CurrentEpoch(beaconState)
 	data := att.Data
 	s := att.Data.Slot
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyB
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

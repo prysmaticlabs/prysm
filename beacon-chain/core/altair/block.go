@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"context"
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -42,7 +43,7 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
+func ProcessSyncAggregate(ctx context.Context, s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
 	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) 
 		return nil, err
 	}
 
-	return ApplySyncRewardsPenalties(s, votedIndices, didntVoteIndices)
+	return ApplySyncRewardsPenalties(ctx, s, votedIndices, didntVoteIndices)
 }
 
 // FilterSyncCommitteeVotes filters the validator public keys and indices for the ones that voted and didn't vote.
@@ -124,7 +125,7 @@ func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey,
 }
 
 // ApplySyncRewardsPenalties applies rewards and penalties for proposer and sync committee participants.
-func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
+func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
 	activeBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVot
 		earnedProposerReward += proposerReward
 	}
 	// Apply proposer rewards.
-	proposerIndex, err := helpers.BeaconProposerIndex(s)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, s)
 	if err != nil {
 		return nil, err
 	}

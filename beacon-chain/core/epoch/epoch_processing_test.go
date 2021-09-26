@@ -1,6 +1,7 @@
 package epoch_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	indices, err := epoch.UnslashedAttestingIndices(beaconState, atts)
+	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
 	require.NoError(t, err)
 	for i := 0; i < len(indices)-1; i++ {
 		if indices[i] >= indices[i+1] {
@@ -59,7 +60,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	validators = beaconState.Validators()
 	validators[slashedValidator].Slashed = true
 	require.NoError(t, beaconState.SetValidators(validators))
-	indices, err = epoch.UnslashedAttestingIndices(beaconState, atts)
+	indices, err = epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
 	require.NoError(t, err)
 	for i := 0; i < len(indices); i++ {
 		assert.NotEqual(t, slashedValidator, indices[i], "Slashed validator %d is not filtered", slashedValidator)
@@ -92,7 +93,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	indices, err := epoch.UnslashedAttestingIndices(beaconState, atts)
+	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
 	require.NoError(t, err)
 
 	for i := 0; i < len(indices)-1; i++ {
@@ -138,7 +139,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	balance, err := epoch.AttestingBalance(beaconState, atts)
+	balance, err := epoch.AttestingBalance(context.Background(), beaconState, atts)
 	require.NoError(t, err)
 	wanted := 256 * params.BeaconConfig().MaxEffectiveBalance
 	assert.Equal(t, wanted, balance)
@@ -292,7 +293,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := epoch.ProcessRegistryUpdates(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
 		assert.Equal(t, params.BeaconConfig().MaxSeedLookahead, validator.ExitEpoch, "Could not update registry %d", i)
@@ -316,7 +317,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	currentEpoch := core.CurrentEpoch(beaconState)
-	newState, err := epoch.ProcessRegistryUpdates(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
 		assert.Equal(t, currentEpoch+1, validator.ActivationEligibilityEpoch, "Could not update registry %d, unexpected activation eligibility epoch", i)
@@ -344,7 +345,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := epoch.ProcessRegistryUpdates(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
 		assert.Equal(t, params.BeaconConfig().MaxSeedLookahead, validator.ExitEpoch, "Could not update registry %d, unexpected exit slot", i)
@@ -368,7 +369,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := epoch.ProcessRegistryUpdates(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
 		assert.Equal(t, params.BeaconConfig().MaxSeedLookahead+1, validator.ExitEpoch, "Could not update registry %d, unexpected exit slot", i)
@@ -393,7 +394,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := epoch.ProcessRegistryUpdates(beaconState)
+	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
 		assert.Equal(t, exitEpoch, validator.ExitEpoch, "Could not update registry %d, unexpected exit slot", i)

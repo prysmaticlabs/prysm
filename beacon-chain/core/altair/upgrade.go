@@ -103,7 +103,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err != nil {
 		return nil, err
 	}
-	newState, err = TranslateParticipation(newState, prevEpochAtts)
+	newState, err = TranslateParticipation(ctx, newState, prevEpochAtts)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 //        for index in get_attesting_indices(state, data, attestation.aggregation_bits):
 //            for flag_index in participation_flag_indices:
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
+func TranslateParticipation(ctx context.Context, state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
 	epochParticipation, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.Pendin
 		if err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}

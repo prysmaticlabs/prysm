@@ -245,7 +245,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
 	// Calculate new proposer index.
-	idx, err := helpers.BeaconProposerIndex(head)
+	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
