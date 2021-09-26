@@ -281,9 +281,14 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			if tt.topic == "" {
 				m.Message.Topic = nil
 			}
-			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
+
+			res, err := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m)
+			received := res == pubsub.ValidationAccept
 			if received != tt.want {
 				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
+			}
+			if tt.want && err != nil {
+				t.Errorf("Non nil error returned: %v", err)
 			}
 			if tt.want && m.ValidatorData == nil {
 				t.Error("Expected validator data to be set")
