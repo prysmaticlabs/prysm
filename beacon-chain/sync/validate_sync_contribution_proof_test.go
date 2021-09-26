@@ -880,7 +880,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ReceivedFrom:  "",
 				ValidatorData: nil,
 			}
-			if got := tt.svc.validateSyncContributionAndProof(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+			if got, err := tt.svc.validateSyncContributionAndProof(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+				_ = err
 				t.Errorf("validateSyncContributionAndProof() = %v, want %v", got, tt.want)
 			}
 		})
