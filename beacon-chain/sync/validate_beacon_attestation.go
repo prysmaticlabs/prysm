@@ -60,7 +60,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return pubsub.ValidationReject, err
 	}
-
+	// Do not process slot 0 attestations.
+	if att.Data.Slot == 0 {
+		return pubsub.ValidationIgnore, nil
+	}
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 	// of a received unaggregated attestation.
 	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
