@@ -315,6 +315,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Slot:            1,
 			BeaconBlockRoot: root[:],
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
@@ -356,7 +357,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			P2P:         p,
 			DB:          db,
 			InitialSync: &mockSync.Sync{IsSyncing: false},
-			Chain: &mock.ChainService{Genesis: time.Now(),
+			Chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
 				State:            beaconState,
 				ValidAttestation: true,
 				FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -409,6 +410,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
+			Slot:            1,
 			BeaconBlockRoot: root[:],
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
@@ -449,7 +451,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			P2P:         p,
 			DB:          db,
 			InitialSync: &mockSync.Sync{IsSyncing: false},
-			Chain: &mock.ChainService{Genesis: time.Now(),
+			Chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
 				ValidatorsRoot:   [32]byte{'A'},
 				State:            beaconState,
 				ValidAttestation: true,
