@@ -39,7 +39,7 @@ import (
 //    proposer = state.validators[block.proposer_index]
 //    assert not proposer.slashed
 func ProcessBlockHeader(
-	_ context.Context,
+	ctx context.Context,
 	beaconState state.BeaconState,
 	block block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
@@ -50,7 +50,7 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	beaconState, err = ProcessBlockHeaderNoVerify(beaconState, block.Block().Slot(), block.Block().ProposerIndex(), block.Block().ParentRoot(), bodyRoot[:])
+	beaconState, err = ProcessBlockHeaderNoVerify(ctx, beaconState, block.Block().Slot(), block.Block().ProposerIndex(), block.Block().ParentRoot(), bodyRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +92,7 @@ func ProcessBlockHeader(
 //    proposer = state.validators[block.proposer_index]
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
+	ctx context.Context,
 	beaconState state.BeaconState,
 	slot types.Slot, proposerIndex types.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
@@ -99,7 +100,7 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != slot {
 		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), slot)
 	}
-	idx, err := helpers.BeaconProposerIndex(beaconState)
+	idx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}

@@ -778,7 +778,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 		StateGen:      stategen.New(db),
 	}
 
-	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(beaconState)
+	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), beaconState)
 	require.NoError(t, err)
 
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &emptypb.Empty{})

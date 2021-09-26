@@ -44,7 +44,7 @@ var ValidatorCannotExitYetMsg = "validator has not been active long enough to ex
 //    # Initiate exit
 //    initiate_validator_exit(state, voluntary_exit.validator_index)
 func ProcessVoluntaryExits(
-	_ context.Context,
+	ctx context.Context,
 	beaconState state.BeaconState,
 	exits []*ethpb.SignedVoluntaryExit,
 ) (state.BeaconState, error) {
@@ -59,7 +59,7 @@ func ProcessVoluntaryExits(
 		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
+		beaconState, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex)
 		if err != nil {
 			return nil, err
 		}

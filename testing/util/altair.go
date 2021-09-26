@@ -299,7 +299,7 @@ func BlockSignatureAltair(
 	if err := bState.SetSlot(block.Slot); err != nil {
 		return nil, err
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(bState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), bState)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +405,7 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
-	idx, err := helpers.BeaconProposerIndex(bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, bState)
 	if err != nil {
 		return nil, err
 	}
