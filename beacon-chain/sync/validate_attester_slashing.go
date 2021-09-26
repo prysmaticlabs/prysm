@@ -14,16 +14,16 @@ import (
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.P2P.PeerID() {
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 
 	// The head state will be too far away to validate any slashing.
 	if s.cfg.InitialSync.Syncing() {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
@@ -31,32 +31,31 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Could not decode message")
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, err
 	}
 	slashing, ok := m.(*ethpb.AttesterSlashing)
 	if !ok {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errNilMessage
 	}
 	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, nil
 	}
 
 	headState, err := s.cfg.Chain.HeadState(ctx)
 	if err != nil {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, err
 	}
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
