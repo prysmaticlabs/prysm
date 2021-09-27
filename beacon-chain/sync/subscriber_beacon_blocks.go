@@ -38,6 +38,11 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
+	if err := s.processPendingAtts(s.ctx); err != nil {
+		log.WithError(err).Debugf("Could not process pending attestation: %v", err)
+		return err
+	}
+
 	if !features.Get().CorrectlyPruneCanonicalAtts {
 		// Delete attestations from the block in the pool to avoid inclusion in future block.
 		if err := s.deleteAttsInPool(block.Body().Attestations()); err != nil {

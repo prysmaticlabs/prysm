@@ -3,36 +3,19 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
-
-// This defines how often a node cleans up and processes pending attestations in the queue.
-var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
-
-// This processes pending attestation queues on every `processPendingAttsPeriod`.
-func (s *Service) processPendingAttsQueue() {
-	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
-	mutex := new(sync.Mutex)
-	async.RunEvery(s.ctx, processPendingAttsPeriod, func() {
-		mutex.Lock()
-		if err := s.processPendingAtts(s.ctx); err != nil {
-			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
-		}
-		mutex.Unlock()
-	})
-}
 
 // This defines how pending attestations are processed. It contains features:
 // 1. Clean up invalid pending attestations from the queue.

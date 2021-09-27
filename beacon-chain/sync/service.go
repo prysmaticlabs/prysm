@@ -172,7 +172,6 @@ func (s *Service) Start() {
 	})
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
-	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	if !flags.Get().DisableSync {
 		s.resyncIfBehind()
