@@ -114,7 +114,10 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_source",
-			Help:      "True if correctly voted source in last attestation.",
+			Help: "True if correctly voted source in last attestation. In Altair, this " +
+				"value will be false if the attestation was not included within " +
+				"integer_squareroot(SLOTS_PER_EPOCH) slots, even if it was a vote for the " +
+				"correct source.",
 		},
 		[]string{
 			"pubkey",
@@ -125,7 +128,9 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_target",
-			Help:      "True if correctly voted target in last attestation.",
+			Help: "True if correctly voted target in last attestation. In Altair, this " +
+				"value will be false if the attestation was not included within " +
+				"SLOTS_PER_EPOCH slots, even if it was a vote for the correct target.",
 		},
 		[]string{
 			"pubkey",
@@ -136,7 +141,8 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_head",
-			Help:      "True if correctly voted head in last attestation.",
+			Help: "True if correctly voted head in last attestation. In Altair, this value " +
+				"will be false if the attestation was not included in the next slot.",
 		},
 		[]string{
 			"pubkey",
