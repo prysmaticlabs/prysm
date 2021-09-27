@@ -7,12 +7,12 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -125,7 +125,7 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [48]b
 
 	var sig bls.Signature
 	sszUint := types.SSZUint64(slot)
-	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, a
 		return nil, err
 	}
 	var sig bls.Signature
-	root, err := helpers.ComputeSigningRoot(agg, d.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(agg, d.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}

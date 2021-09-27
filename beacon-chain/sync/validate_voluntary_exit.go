@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -14,16 +15,16 @@ import (
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.P2P.PeerID() {
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 
 	// The head state will be too far away to validate any voluntary exit.
 	if s.cfg.InitialSync.Syncing() {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateVoluntaryExit")
@@ -31,42 +32,41 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Could not decode message")
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, err
 	}
 
 	exit, ok := m.(*ethpb.SignedVoluntaryExit)
 	if !ok {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if exit.Exit == nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errNilMessage
 	}
 	if s.hasSeenExitIndex(exit.Exit.ValidatorIndex) {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, nil
 	}
 
 	headState, err := s.cfg.Chain.HeadState(ctx)
 	if err != nil {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, err
 	}
 
 	if uint64(exit.Exit.ValidatorIndex) >= uint64(headState.NumValidators()) {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errors.New("validator index is invalid")
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, err
 	}
 
 	msg.ValidatorData = exit // Used in downstream subscriber
 
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Returns true if the node has already received a valid exit request for the validator with index `i`.

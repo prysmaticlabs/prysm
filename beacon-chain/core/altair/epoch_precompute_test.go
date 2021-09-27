@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestInitializeEpochValidators_Ok(t *testing.T) {
@@ -31,7 +31,7 @@ func TestInitializeEpochValidators_Ok(t *testing.T) {
 		InactivityScores: []uint64{0, 1, 2, 3},
 	})
 	require.NoError(t, err)
-	v, b, err := InitializeEpochValidators(context.Background(), s)
+	v, b, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &precompute.Validator{
 		IsSlashed:                    true,
@@ -68,14 +68,14 @@ func TestInitializeEpochValidators_BadState(t *testing.T) {
 		InactivityScores: []uint64{},
 	})
 	require.NoError(t, err)
-	_, _, err = InitializeEpochValidators(context.Background(), s)
-	require.ErrorContains(t, "num of validators can't be greater than length of inactivity scores", err)
+	_, _, err = InitializePrecomputeValidators(context.Background(), s)
+	require.ErrorContains(t, "num of validators is different than num of inactivity scores", err)
 }
 
 func TestProcessEpochParticipation(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -145,7 +145,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		InactivityScores: []uint64{0, 0, 0},
 	})
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), st)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), st)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), st, balance, validators)
 	require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 func TestAttestationsDelta(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -208,7 +208,7 @@ func TestAttestationsDelta(t *testing.T) {
 func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -240,7 +240,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
 func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
 	defaultScore := uint64(5)
 	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -283,12 +283,32 @@ func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
 	require.Equal(t, defaultScore-1, inactivityScores[3])
 }
 
+func TestProcessInactivityScores_GenesisEpoch(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(10)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	require.NoError(t, s.SetSlot(params.BeaconConfig().GenesisSlot))
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, _, err = ProcessInactivityScores(context.Background(), s, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, defaultScore, inactivityScores[0])
+	require.Equal(t, defaultScore, inactivityScores[1])
+	require.Equal(t, defaultScore, inactivityScores[2])
+	require.Equal(t, defaultScore, inactivityScores[3])
+}
+
 func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
 	defaultScore := uint64(5)
 	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -306,7 +326,7 @@ func TestProcessInactivityScores_CanProcessNonInactivityLeak(t *testing.T) {
 func TestProcessRewardsAndPenaltiesPrecompute_GenesisEpoch(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -325,7 +345,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_GenesisEpoch(t *testing.T) {
 func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	_, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
@@ -338,7 +358,7 @@ func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
 	require.NoError(t, err)
 	defaultScore := uint64(5)
 	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
-	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 
 	// v0 is eligible (not active previous epoch, slashed and not withdrawable)

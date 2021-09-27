@@ -39,7 +39,7 @@ func NewTracingSink(endpoint string) *TracingSink {
 }
 
 // Start the tracing sink.
-func (ts *TracingSink) Start(ctx context.Context) error {
+func (ts *TracingSink) Start(_ context.Context) error {
 	go ts.initializeSink()
 	close(ts.started)
 	return nil
@@ -52,7 +52,11 @@ func (ts *TracingSink) Started() <-chan struct{} {
 
 // Initialize an http handler that writes all requests to a file.
 func (ts *TracingSink) initializeSink() {
-	ts.server = &http.Server{Addr: ts.endpoint}
+	mux := &http.ServeMux{}
+	ts.server = &http.Server{
+		Addr:    ts.endpoint,
+		Handler: mux,
+	}
 	defer func() {
 		if err := ts.server.Close(); err != nil {
 			log.WithError(err).Error("Failed to close http server")
@@ -69,8 +73,7 @@ func (ts *TracingSink) initializeSink() {
 			log.WithError(err).Error("Could not close stdout file")
 		}
 	}
-
-	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		if err := captureRequest(stdOutFile, r); err != nil {
 			log.WithError(err).Error("Failed to capture http request")
 			return

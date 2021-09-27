@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -23,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -37,24 +40,25 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const testSkipPowFlag = "test-skip-pow"
+
+// 128MB max message size when enabling debug endpoints.
+const debugGrpcMaxMsgSize = 1 << 27
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -63,7 +67,7 @@ type BeaconNode struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
-	services          *shared.ServiceRegistry
+	services          *runtime.ServiceRegistry
 	lock              sync.RWMutex
 	stop              chan struct{} // Channel to wait for termination notifications.
 	db                db.Database
@@ -100,7 +104,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
 
-	registry := shared.NewServiceRegistry()
+	registry := runtime.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
@@ -363,7 +367,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
-		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
+		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootstrapNodeAddrs,
 		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
 		DataDir:           dataDir,
@@ -376,7 +380,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
-		DenyListCIDR:      sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
+		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
@@ -568,8 +572,13 @@ func (b *BeaconNode) registerRPCService() error {
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
-	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	if enableDebugRPCEndpoints {
+		maxMsgSize = int(math.Max(float64(maxMsgSize), debugGrpcMaxMsgSize))
+	}
+
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
@@ -653,29 +662,40 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		return nil
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	ethApiPort := b.cliCtx.Int(flags.EthApiPort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
+	if enableDebugRPCEndpoints {
+		maxCallSize = uint64(math.Max(float64(maxCallSize), debugGrpcMaxMsgSize))
+	}
 
-	gatewayConfig := gateway2.DefaultConfig(enableDebugRPCEndpoints)
+	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
+	muxs := make([]*apigateway.PbMux, 0)
+	if gatewayConfig.V1Alpha1PbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	}
+	if gatewayConfig.EthPbMux != nil {
+		muxs = append(muxs, gatewayConfig.EthPbMux)
+	}
 
-	g := gateway.New(
+	g := apigateway.New(
 		b.ctx,
-		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		muxs,
 		gatewayConfig.Handler,
 		selfAddress,
 		gatewayAddress,
 	).WithAllowedOrigins(allowedOrigins).
 		WithRemoteCert(selfCert).
-		WithMaxCallRecvMsgSize(maxCallSize).
-		WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
+		WithMaxCallRecvMsgSize(maxCallSize)
+	if flags.EnableHTTPEthAPI(httpModules) {
+		g.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	}
 
 	return b.services.RegisterService(g)
 }

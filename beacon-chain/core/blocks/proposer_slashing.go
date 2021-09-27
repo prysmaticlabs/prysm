@@ -8,14 +8,15 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
+type slashValidatorFunc func(ctx context.Context, st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -43,7 +44,7 @@ type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, pen
 //
 //    slash_validator(state, header_1.proposer_index)
 func ProcessProposerSlashings(
-	_ context.Context,
+	ctx context.Context,
 	beaconState state.BeaconState,
 	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
@@ -61,7 +62,7 @@ func ProcessProposerSlashings(
 		if beaconState.Version() == version.Altair {
 			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
 		}
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+		beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}
@@ -97,7 +98,7 @@ func VerifyProposerSlashing(
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := helpers.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
+		if err := signing.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
 			header.Header, params.BeaconConfig().DomainBeaconProposer, header.Signature); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}

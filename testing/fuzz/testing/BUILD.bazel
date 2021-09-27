@@ -1,0 +1,25 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    testonly = 1,
+    srcs = ["beacon_fuzz_states.go"],
+    data = [
+        "@sigp_beacon_fuzz_corpora//:current_mainnet_beaconstate",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/testing/fuzz/testing",
+    visibility = [
+        "//testing/fuzz:__pkg__",
+    ],
+    deps = [
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/util:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["beacon_fuzz_states_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//testing/require:go_default_library"],
+)

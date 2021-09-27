@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 var (
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	res := execTmpl(tpl, input{Package: "testing", MapStr: sszBytesToMapStr(m)})
-	if err := fileutil.WriteFile(*output, res.Bytes()); err != nil {
+	if err := file.WriteFile(*output, res.Bytes()); err != nil {
 		panic(err)
 	}
 }

@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -19,7 +19,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
@@ -40,7 +40,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// Cache the state prior.
@@ -59,7 +59,7 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	svc := New(beaconDB)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	r := [32]byte{'a'}
@@ -79,7 +79,7 @@ func TestSaveState_Alreadyhas(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	r := [32]byte{'A'}
 
@@ -98,7 +98,7 @@ func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	r := [32]byte{'A'}
 
@@ -119,10 +119,10 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
 	r := [32]byte{'A'}
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 	service.EnableSaveHotStateToDB(ctx)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
 
 	r := [32]byte{'A'}
@@ -182,7 +182,7 @@ func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
 	service.saveHotStateDB.enabled = true
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)

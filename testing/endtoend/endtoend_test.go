@@ -17,15 +17,15 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/config/params"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -113,18 +113,6 @@ func (r *testRunner) run() {
 		return validatorNodes.Start(ctx)
 	})
 
-	// Slasher nodes.
-	var slasherNodes e2etypes.ComponentRunner
-	if config.TestSlasher {
-		slasherNodes := components.NewSlasherNodeSet(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-				return fmt.Errorf("slasher nodes require beacon nodes to run: %w", err)
-			}
-			return slasherNodes.Start(ctx)
-		})
-	}
-
 	// Run E2E evaluators and tests.
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
@@ -137,9 +125,7 @@ func (r *testRunner) run() {
 		requiredComponents := []e2etypes.ComponentRunner{
 			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
-		if config.TestSlasher && slasherNodes != nil {
-			requiredComponents = append(requiredComponents, slasherNodes)
-		}
+
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {

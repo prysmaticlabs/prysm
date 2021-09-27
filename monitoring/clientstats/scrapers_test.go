@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -24,7 +24,7 @@ type mockRT struct {
 	statusCode int
 }
 
-func (rt *mockRT) RoundTrip(req *http.Request) (*http.Response, error) {
+func (rt *mockRT) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return &http.Response{
 		Status:     http.StatusText(http.StatusOK),
 		StatusCode: http.StatusOK,

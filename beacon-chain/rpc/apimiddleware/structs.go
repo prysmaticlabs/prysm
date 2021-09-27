@@ -1,6 +1,8 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/shared/gateway"
+import (
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+)
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
@@ -298,10 +300,6 @@ type signedBeaconBlockContainerJson struct {
 	Signature string           `json:"signature" hex:"true"`
 }
 
-type beaconBlockContainerJson struct {
-	Message *beaconBlockJson `json:"message"`
-}
-
 type beaconBlockJson struct {
 	Slot          string               `json:"slot"`
 	ProposerIndex string               `json:"proposer_index"`
@@ -335,10 +333,6 @@ type beaconBlockContainerV2Json struct {
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
-}
-
-type beaconBlockAltairContainerJson struct {
-	Message *beaconBlockAltairJson `json:"message"`
 }
 
 type beaconBlockAltairJson struct {
@@ -674,12 +668,32 @@ func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
+type blockSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *blockSSZResponseV2Json) SSZData() string {
+	return ssz.Data
+}
+
 // beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
 type beaconStateSSZResponseJson struct {
 	Data string `json:"data"`
 }
 
 func (ssz *beaconStateSSZResponseJson) SSZData() string {
+	return ssz.Data
+}
+
+// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
+type beaconStateSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
 	return ssz.Data
 }
 
@@ -725,14 +739,14 @@ type eventChainReorgJson struct {
 // Error handling.
 // ---------------
 
-// submitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
-type submitAttestationsErrorJson struct {
-	gateway.DefaultErrorJson
-	Failures []*singleAttestationVerificationFailureJson `json:"failures"`
+// indexedVerificationFailureErrorJson is a JSON representation of the error returned when verifying an indexed object.
+type indexedVerificationFailureErrorJson struct {
+	apimiddleware.DefaultErrorJson
+	Failures []*singleIndexedVerificationFailureJson `json:"failures"`
 }
 
-// singleAttestationVerificationFailureJson is a JSON representation of a failure when verifying a single submitted attestation.
-type singleAttestationVerificationFailureJson struct {
+// singleIndexedVerificationFailureJson is a JSON representation of a an issue when verifying a single indexed object e.g. an item in an array.
+type singleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }

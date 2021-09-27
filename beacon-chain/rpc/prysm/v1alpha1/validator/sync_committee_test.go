@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -27,7 +27,7 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
-	st, _ := testutil.DeterministicGenesisStateAltair(t, 10)
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
@@ -54,8 +54,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
-			CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
-			NextSyncCommitteeIndices:    []types.CommitteeIndex{1},
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
 	pubKey := [48]byte{}
@@ -65,14 +64,6 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
-
-	// Request at period boundary, should get index 1 for validator 0.
-	periodBoundary := types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1
-	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
-		PublicKey: pubKey[:], Slot: periodBoundary,
-	})
-	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{1}, res.Indices)
 }
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {

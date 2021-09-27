@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -40,12 +40,12 @@ type Store struct {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
-	hasDir, err := fileutil.HasDir(dirPath)
+	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(dirPath); err != nil {
+		if err := file.MkdirAll(dirPath); err != nil {
 			return nil, err
 		}
 	}

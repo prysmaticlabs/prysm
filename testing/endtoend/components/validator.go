@@ -17,16 +17,16 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	cmdshared "github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 const depositGasLimit = 4000000
@@ -246,7 +246,7 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 			balances[i] = params.BeaconConfig().MaxEffectiveBalance
 		}
 	}
-	deposits, trie, err := testutil.DepositsWithBalance(balances)
+	deposits, trie, err := util.DepositsWithBalance(balances)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 	allRoots := trie.Items()
 	allBalances := balances
 	if partial {
-		deposits2, trie2, err := testutil.DepositsWithBalance(balances)
+		deposits2, trie2, err := util.DepositsWithBalance(balances)
 		if err != nil {
 			return err
 		}

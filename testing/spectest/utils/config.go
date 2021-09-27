@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.

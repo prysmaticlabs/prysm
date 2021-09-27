@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
@@ -129,12 +129,12 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch+1)
+	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
@@ -280,7 +280,7 @@ func registerSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
 	}
-	startEpoch := types.Epoch(syncPeriod) * params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	startEpoch := types.Epoch(syncPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 	currPeriod := core.SyncCommitteePeriod(currEpoch)
 	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)

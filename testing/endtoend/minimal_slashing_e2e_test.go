@@ -3,11 +3,11 @@ package endtoend
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {

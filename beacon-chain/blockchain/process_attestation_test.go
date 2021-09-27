@@ -10,13 +10,13 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time"
 )
 
@@ -35,30 +35,30 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
-	BlkWithOutState := testutil.NewBeaconBlock()
+	BlkWithOutState := util.NewBeaconBlock()
 	BlkWithOutState.Block.Slot = 0
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithOutState)))
 	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	BlkWithStateBadAtt := testutil.NewBeaconBlock()
+	BlkWithStateBadAtt := util.NewBeaconBlock()
 	BlkWithStateBadAtt.Block.Slot = 1
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithStateBadAtt)))
 	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
-	BlkWithValidState := testutil.NewBeaconBlock()
+	BlkWithValidState := util.NewBeaconBlock()
 	BlkWithValidState.Block.Slot = 2
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithValidState)))
 
 	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err = testutil.NewBeaconState()
+	s, err = util.NewBeaconState()
 	require.NoError(t, err)
 	err = s.SetFork(&ethpb.Fork{
 		Epoch:           0,
@@ -75,17 +75,17 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	}{
 		{
 			name:      "attestation's data slot not aligned with target vote",
-			a:         testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
+			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
 			wantedErr: "slot 32 does not match target epoch 0",
 		},
 		{
 			name:      "no pre state for attestations's target block",
-			a:         testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
+			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
 			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
-			a: testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
+			a: util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}}),
 			wantedErr: "target epoch 100 does not match current epoch",
 		},
@@ -137,10 +137,10 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
-	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
+	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(time.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	att, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
+	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
@@ -162,7 +162,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
 	require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 
 	epoch := types.Epoch(1)
-	baseState, _ := testutil.DeterministicGenesisState(t, 1)
+	baseState, _ := util.DeterministicGenesisState(t, 1)
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
@@ -307,7 +307,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	d := testutil.HydrateAttestationData(&ethpb.AttestationData{})
+	d := util.HydrateAttestationData(&ethpb.AttestationData{})
 	assert.ErrorContains(t, "signed beacon block can't be nil", service.verifyBeaconBlock(ctx, d))
 }
 
@@ -319,7 +319,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
@@ -337,7 +337,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
@@ -355,7 +355,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := testutil.NewBeaconBlock()
+	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
 	r32, err := b32.Block.HashTreeRoot()
@@ -363,7 +363,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
 
-	b33 := testutil.NewBeaconBlock()
+	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
@@ -382,7 +382,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := testutil.NewBeaconBlock()
+	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
 	r32, err := b32.Block.HashTreeRoot()
@@ -390,7 +390,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
 
-	b33 := testutil.NewBeaconBlock()
+	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
@@ -409,14 +409,14 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	b32 := testutil.NewBeaconBlock()
+	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
 
-	b33 := testutil.NewBeaconBlock()
+	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	r33, err := b33.Block.HashTreeRoot()

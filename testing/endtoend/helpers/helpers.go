@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/config/params"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/time/slots"

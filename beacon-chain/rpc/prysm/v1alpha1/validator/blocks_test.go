@@ -11,13 +11,13 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/mock"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestServer_StreamAltairBlocksVerified_ContextCanceled(t *testing.T) {
@@ -73,12 +73,12 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	ctx := context.Background()
-	beaconState, privs := testutil.DeterministicGenesisStateAltair(t, 64)
+	beaconState, privs := util.DeterministicGenesisStateAltair(t, 64)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := testutil.GenerateFullBlockAltair(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	b, err := util.GenerateFullBlockAltair(beaconState, privs, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
@@ -115,12 +115,12 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	beaconState, privs := testutil.DeterministicGenesisStateAltair(t, 32)
+	beaconState, privs := util.DeterministicGenesisStateAltair(t, 32)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := testutil.GenerateFullBlockAltair(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	b, err := util.GenerateFullBlockAltair(beaconState, privs, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)

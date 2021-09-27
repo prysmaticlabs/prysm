@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
 package blst
@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
@@ -174,21 +174,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	signature := new(blstAggregateSignature)
 	signature.Aggregate(rawSigs, false)
 	return &Signature{s: signature.ToAffine()}
-}
-
-// Aggregate is an alias for AggregateSignatures, defined to conform to BLS specification.
-//
-// In IETF draft BLS specification:
-// Aggregate(signature_1, ..., signature_n) -> signature: an
-//      aggregation algorithm that compresses a collection of signatures
-//      into a single signature.
-//
-// In the Ethereum proof of stake specification:
-// def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
-//
-// Deprecated: Use AggregateSignatures.
-func Aggregate(sigs []common.Signature) common.Signature {
-	return AggregateSignatures(sigs)
 }
 
 // VerifyMultipleSignatures verifies a non-singular set of signatures and its respective pubkeys and messages.

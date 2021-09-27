@@ -15,19 +15,19 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -179,7 +179,7 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 		}()
 		s.Start()
 	}()
-	testutil.WaitTimeout(wg, time.Second)
+	util.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -189,8 +189,8 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	st, _ := testutil.DeterministicGenesisState(t, 10)
-	b := testutil.NewBeaconBlock()
+	st, _ := util.DeterministicGenesisState(t, 10)
+	b := util.NewBeaconBlock()
 	genRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
@@ -213,7 +213,7 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 		wg.Done()
 	}()
 	s.cancel()
-	testutil.WaitTimeout(wg, time.Second)
+	util.WaitTimeout(wg, time.Second)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -438,7 +438,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
-	gs, _ := testutil.DeterministicGenesisState(t, 1)
+	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
 		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
@@ -454,7 +454,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 
 	blockRootA := [32]byte{'a'}
 
-	emptyState, err := testutil.NewBeaconState()
+	emptyState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
 	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, blockRootA))
@@ -570,7 +570,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -579,7 +579,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: thirdEndpoint}, httputils.Endpoint{Url: fourthEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: thirdEndpoint}, network.Endpoint{Url: fourthEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -622,7 +622,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -646,7 +646,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -670,7 +670,7 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 

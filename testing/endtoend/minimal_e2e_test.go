@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
@@ -29,16 +29,15 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
-	if usePrysmSh {
-		// If using prysm.sh, run for 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = 6
-	}
-
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
+	}
+	if usePrysmSh {
+		// If using prysm.sh, run for only 6 epochs.
+		// TODO(#9166): remove this block once v2 changes are live.
+		epochsToRun = 6
 	}
 	const tracingEndpoint = "127.0.0.1:9411"
 	evals := []types.Evaluator{
@@ -57,7 +56,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
-		ev.APIGatewayV1VerifyIntegrity,
+		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 	}
 	// TODO(#9166): remove this block once v2 changes are live.

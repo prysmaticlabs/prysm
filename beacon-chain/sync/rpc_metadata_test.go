@@ -12,18 +12,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
@@ -68,7 +68,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 
 	assert.NoError(t, r.metaDataHandler(context.Background(), new(interface{}), stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -125,11 +125,11 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !sszutil.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
+	if !ssz.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
 		t.Fatalf("MetadataV0 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -193,7 +193,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	_, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -213,11 +213,11 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !sszutil.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
+	if !ssz.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
 		t.Fatalf("MetadataV1 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -229,9 +229,9 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 
 func TestExtractMetaDataType(t *testing.T) {
 	// Precompute digests
-	genDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
+	genDigest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
-	altairDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
+	altairDigest, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
 
 	type args struct {

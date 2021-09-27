@@ -9,8 +9,8 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
+        "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//shared/params:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
@@ -19,5 +19,5 @@ go_test(
     name = "go_default_test",
     srcs = ["pregen_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
+    deps = ["//testing/require:go_default_library"],
 )

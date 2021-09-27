@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -14,7 +15,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -118,7 +118,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 	if len(attFailures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: attFailures}
-		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
@@ -134,7 +134,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *emptypb.Empty) (*ethpbv1.AttesterSlashingsPoolResponse, error) {
+func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.AttesterSlashingsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttesterSlashings")
 	defer span.End()
 
@@ -186,7 +186,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 
 // ListPoolProposerSlashings retrieves proposer slashings known by the node
 // but not necessarily incorporated into any block.
-func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *emptypb.Empty) (*ethpbv1.ProposerSlashingPoolResponse, error) {
+func (bs *Server) ListPoolProposerSlashings(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ProposerSlashingPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolProposerSlashings")
 	defer span.End()
 
@@ -238,7 +238,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
+func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
 	defer span.End()
 

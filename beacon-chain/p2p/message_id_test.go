@@ -7,18 +7,18 @@ import (
 
 	"github.com/golang/snappy"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestMsgID_HashesCorrectly(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
-	d, err := p2putils.CreateForkDigest(time.Now(), genesisValidatorsRoot)
+	d, err := forks.CreateForkDigest(time.Now(), genesisValidatorsRoot)
 	assert.NoError(t, err)
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
@@ -37,7 +37,7 @@ func TestMsgID_HashesCorrectly(t *testing.T) {
 
 func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
-	d, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genesisValidatorsRoot)
+	d, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
 	topicLen := uint64(len(tpc))

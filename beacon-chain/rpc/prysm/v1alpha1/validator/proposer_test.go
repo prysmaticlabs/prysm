@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -22,19 +23,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -44,7 +45,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -71,7 +72,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		StateGen:          stategen.New(db),
 	}
 
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
@@ -83,7 +84,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
 			i, /* validator index */
@@ -96,7 +97,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
@@ -125,7 +126,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := util.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -156,7 +157,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
-		a, err := testutil.GenerateAttestations(beaconState, privKeys, 4, 1, true)
+		a, err := util.GenerateAttestations(beaconState, privKeys, 4, 1, true)
 		require.NoError(t, err)
 		atts = append(atts, a...)
 	}
@@ -167,7 +168,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	atts, err = testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true)
+	atts, err = util.GenerateAttestations(beaconState, privKeys, 300, 1, true)
 	require.NoError(t, err)
 	found := false
 	for _, a := range atts {
@@ -178,7 +179,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	}
 	require.Equal(t, true, found, "No unaggregated attestations were generated")
 
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	assert.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
@@ -211,11 +212,11 @@ func TestProposer_ProposeBlock_Phase0_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
-	genesis := testutil.NewBeaconBlock()
+	genesis := util.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	numDeposits := uint64(64)
-	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
+	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
 	bsRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
@@ -232,7 +233,7 @@ func TestProposer_ProposeBlock_Phase0_OK(t *testing.T) {
 		BlockNotifier:     c.BlockNotifier(),
 		P2P:               mockp2p.NewTestP2P(t),
 	}
-	req := testutil.NewBeaconBlock()
+	req := util.NewBeaconBlock()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
@@ -247,11 +248,11 @@ func TestProposer_ProposeBlock_Altair_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
-	genesis := testutil.NewBeaconBlock()
+	genesis := util.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	numDeposits := uint64(64)
-	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, numDeposits)
+	beaconState, _ := util.DeterministicGenesisStateAltair(t, numDeposits)
 	bsRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
@@ -268,7 +269,7 @@ func TestProposer_ProposeBlock_Altair_OK(t *testing.T) {
 		BlockNotifier:     c.BlockNotifier(),
 		P2P:               mockp2p.NewTestP2P(t),
 	}
-	blockToPropose := testutil.NewBeaconBlockAltair()
+	blockToPropose := util.NewBeaconBlockAltair()
 	blockToPropose.Block.Slot = 5
 	blockToPropose.Block.ParentRoot = bsRoot[:]
 	blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
@@ -285,7 +286,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -304,19 +305,19 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		StateGen:          stategen.New(db),
 	}
-	req := testutil.NewBeaconBlock()
+	req := util.NewBeaconBlock()
 	req.Block.ProposerIndex = 21
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := core.CurrentEpoch(beaconState)
-	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	_, err = proposerServer.ComputeStateRoot(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(req))
@@ -352,7 +353,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	blockHash = make([]byte, 32)
 	copy(blockHash, "0x0")
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetEth1DepositIndex(2))
 	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
@@ -362,7 +363,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	}))
 	require.NoError(t, beaconState.SetEth1DataVotes(votes))
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -476,7 +477,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -489,7 +490,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot())
 	}
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 
 	blkRoot, err := blk.HashTreeRoot()
@@ -552,7 +553,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		Eth1DataVotes:    votes,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 
 	blkRoot, err := blk.HashTreeRoot()
@@ -611,7 +612,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -657,7 +658,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		},
 	}
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetEth1Data(&ethpb.Eth1Data{
 		BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
@@ -665,7 +666,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		DepositCount: 100,
 	}))
 	require.NoError(t, beaconState.SetEth1DepositIndex(10))
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
@@ -706,7 +707,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -762,7 +763,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		Eth1DepositIndex: 2,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
@@ -802,7 +803,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -856,7 +857,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		Eth1DepositIndex: 2,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
@@ -896,7 +897,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -950,7 +951,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		Eth1DepositIndex: 1,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -1009,7 +1010,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -1060,7 +1061,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		Eth1DepositIndex: 1,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -1119,7 +1120,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	for _, dp := range append(finalizedDeposits, recentDeposits...) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
@@ -1167,7 +1168,7 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 	tt := []struct {
 		name            string
 		eth1dataCreator func() *ethpb.Eth1Data
-		trieCreator     func() *trieutil.SparseMerkleTrie
+		trieCreator     func() *trie.SparseMerkleTrie
 		success         bool
 	}{
 		{
@@ -1175,8 +1176,8 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 			eth1dataCreator: func() *ethpb.Eth1Data {
 				return &ethpb.Eth1Data{DepositRoot: []byte{}, DepositCount: 10, BlockHash: []byte{}}
 			},
-			trieCreator: func() *trieutil.SparseMerkleTrie {
-				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+			trieCreator: func() *trie.SparseMerkleTrie {
+				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
 				return trie
 			},
@@ -1185,15 +1186,15 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 		{
 			name: "invalid deposit root",
 			eth1dataCreator: func() *ethpb.Eth1Data {
-				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
 				trie.Insert([]byte{'a'}, 0)
 				trie.Insert([]byte{'b'}, 1)
 				trie.Insert([]byte{'c'}, 2)
 				return &ethpb.Eth1Data{DepositRoot: []byte{'B'}, DepositCount: 3, BlockHash: []byte{}}
 			},
-			trieCreator: func() *trieutil.SparseMerkleTrie {
-				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+			trieCreator: func() *trie.SparseMerkleTrie {
+				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
 				trie.Insert([]byte{'a'}, 0)
 				trie.Insert([]byte{'b'}, 1)
@@ -1205,7 +1206,7 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 		{
 			name: "valid deposit trie",
 			eth1dataCreator: func() *ethpb.Eth1Data {
-				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
 				trie.Insert([]byte{'a'}, 0)
 				trie.Insert([]byte{'b'}, 1)
@@ -1213,8 +1214,8 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 				rt := trie.HashTreeRoot()
 				return &ethpb.Eth1Data{DepositRoot: rt[:], DepositCount: 3, BlockHash: []byte{}}
 			},
-			trieCreator: func() *trieutil.SparseMerkleTrie {
-				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+			trieCreator: func() *trie.SparseMerkleTrie {
+				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
 				trie.Insert([]byte{'a'}, 0)
 				trie.Insert([]byte{'b'}, 1)
@@ -1237,75 +1238,6 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 	}
 }
 
-func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.UseMinimalConfig()
-	ctx := context.Background()
-
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*dbpb.DepositContainer{
-		{
-			Index:           0,
-			Eth1BlockHeight: 8,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-		{
-			Index:           1,
-			Eth1BlockHeight: 14,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	require.NoError(t, err, "Could not setup deposit trie")
-
-	depositCache, err := depositcache.New()
-	require.NoError(t, err)
-
-	for _, dp := range deps {
-		assert.NoError(t, depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
-	}
-
-	p := &mockPOW.POWChain{
-		LatestBlockNumber: height,
-		HashesByHeight: map[int][]byte{
-			0:  []byte("hash0"),
-			12: []byte("hash12"),
-		},
-	}
-	proposerServer := &Server{
-		ChainStartFetcher:      p,
-		Eth1InfoFetcher:        p,
-		Eth1BlockFetcher:       p,
-		DepositFetcher:         depositCache,
-		PendingDepositsFetcher: depositCache,
-	}
-
-	defEth1Data := &ethpb.Eth1Data{
-		DepositCount: 10,
-		BlockHash:    []byte{'t', 'e', 's', 't'},
-		DepositRoot:  []byte{'r', 'o', 'o', 't'},
-	}
-
-	p.Eth1Data = defEth1Data
-
-	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(16))
-	require.NoError(t, err)
-
-	if !proto.Equal(result, defEth1Data) {
-		t.Errorf("Did not receive default eth1data. Wanted %v but got %v", defEth1Data, result)
-	}
-}
-
 func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 	slot := types.Slot(64)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
@@ -1320,7 +1252,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 				WithdrawalCredentials: make([]byte, 32),
 			}},
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -1854,10 +1786,10 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 func TestProposer_FilterAttestation(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	genesis := testutil.NewBeaconBlock()
+	genesis := util.NewBeaconBlock()
 
 	numValidators := uint64(64)
-	state, privKeys := testutil.DeterministicGenesisState(t, numValidators)
+	state, privKeys := util.DeterministicGenesisState(t, numValidators)
 	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
 	assert.NoError(t, state.SetSlot(1))
 
@@ -1884,7 +1816,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
+					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
 							CommitteeIndex: types.CommitteeIndex(i),
 						},
@@ -1901,26 +1833,26 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
+					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
 							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
 					})
-					committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
-					attestingIndices, err := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
-					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					zeroSig := [96]byte{}
 					atts[i].Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
-						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
 						require.NoError(t, err)
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig
@@ -1974,7 +1906,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		Eth1DepositIndex: 2,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = beaconState.Slot()
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2015,7 +1947,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 				}},
 		})
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 
 	depositCache, err := depositcache.New()
@@ -2057,11 +1989,11 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
 	aggregatedAtts := []*ethpb.Attestation{
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
 	unaggregatedAtts := []*ethpb.Attestation{
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 
 	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
 	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))
@@ -2081,7 +2013,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
@@ -2127,7 +2059,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
@@ -2139,7 +2071,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
 			i, /* validator index */
@@ -2152,7 +2084,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
@@ -2185,7 +2117,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	cfg := params.MainnetConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -2239,7 +2171,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
@@ -2252,7 +2184,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
 			i, /* validator index */
@@ -2265,7 +2197,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */

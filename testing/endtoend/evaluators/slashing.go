@@ -7,14 +7,14 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -106,7 +106,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get chain head")
 	}
 
-	_, privKeys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -152,14 +152,14 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := corehelpers.ComputeSigningRoot(attData, resp.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(attData, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
 
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
-		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
+		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
 			valsToSlash++
 			continue
 		}
@@ -194,7 +194,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get chain head")
 	}
 
-	_, privKeys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	var proposerIndex types.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
-		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
+		if slice.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
 			proposerIndex = types.ValidatorIndex(i)
 			break
 		}
@@ -248,7 +248,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := corehelpers.ComputeSigningRoot(blk, resp.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(blk, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}

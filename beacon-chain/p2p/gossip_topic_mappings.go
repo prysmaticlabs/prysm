@@ -4,9 +4,9 @@ import (
 	"reflect"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -35,7 +35,7 @@ func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 // AllTopics returns all topics stored in our
 // gossip mapping.
 func AllTopics() []string {
-	topics := []string{}
+	var topics []string
 	for k := range gossipTopicMappings {
 		topics = append(topics, k)
 	}

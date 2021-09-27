@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"go.opencensus.io/trace"
 )
 
@@ -53,11 +53,11 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err
 		}

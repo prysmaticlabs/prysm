@@ -12,16 +12,17 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 var (
@@ -47,7 +48,7 @@ func main() {
 		}
 	}
 
-	if err := fileutil.MkdirAll(*outputDir); err != nil {
+	if err := file.MkdirAll(*outputDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -80,7 +81,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.GenesisFileName), beaconBytes)
 }
 
 func generateMarshalledFullStateAndBlock() error {
@@ -95,11 +96,11 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	conf := &testutil.BlockGenConfig{}
+	conf := &util.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we dont process a block on an epoch.
 	slotOffset := types.Slot(2)
-	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
+	block, err := util.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
 		return err
 	}
@@ -108,20 +109,20 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	attConfig := &testutil.BlockGenConfig{
+	attConfig := &util.BlockGenConfig{
 		NumAttestations: benchmark.AttestationsPerEpoch / uint64(slotsPerEpoch),
 	}
 
 	var atts []*ethpb.Attestation
 	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
-		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
+		attsForSlot, err := util.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i, false)
 		if err != nil {
 			return err
 		}
 		atts = append(atts, attsForSlot...)
 	}
 
-	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
+	block, err = util.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not generate full block")
 	}
@@ -137,11 +138,11 @@ func generateMarshalledFullStateAndBlock() error {
 	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
 		return err
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}
@@ -153,7 +154,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := fileutil.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
+	if err := file.WriteFile(path.Join(*outputDir, benchmark.BState1EpochFileName), beaconBytes); err != nil {
 		return err
 	}
 
@@ -168,7 +169,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.FullBlockFileName), blockBytes)
 }
 
 func generate2FullEpochState() error {
@@ -183,12 +184,12 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	attConfig := &testutil.BlockGenConfig{
+	attConfig := &util.BlockGenConfig{
 		NumAttestations: benchmark.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
-		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
+		block, err := util.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err
 		}
@@ -203,7 +204,7 @@ func generate2FullEpochState() error {
 		return err
 	}
 
-	return fileutil.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
+	return file.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
 }
 
 func genesisBeaconState() (state.BeaconState, error) {

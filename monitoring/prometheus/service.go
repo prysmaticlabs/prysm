@@ -14,7 +14,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "prometheus")
 // show all the metrics registered with the Prometheus DefaultRegisterer.
 type Service struct {
 	server      *http.Server
-	svcRegistry *shared.ServiceRegistry
+	svcRegistry *runtime.ServiceRegistry
 	failStatus  error
 }
 
@@ -36,7 +36,7 @@ type Handler struct {
 
 // NewService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
+func NewService(addr string, svcRegistry *runtime.ServiceRegistry, additionalHandlers ...Handler) *Service {
 	s := &Service{svcRegistry: svcRegistry}
 
 	mux := http.NewServeMux()

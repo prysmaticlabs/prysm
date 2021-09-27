@@ -1,4 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
+// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
 package blst_test
@@ -11,9 +11,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
