@@ -141,7 +141,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	valCount, err := helpers.ActiveValidatorCount(bs, core.SlotToEpoch(a.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(ctx, bs, core.SlotToEpoch(a.Data.Slot))
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -170,7 +170,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(bs, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err

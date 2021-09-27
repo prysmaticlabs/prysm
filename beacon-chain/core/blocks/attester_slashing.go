@@ -65,7 +65,7 @@ func ProcessAttesterSlashings(
 				if beaconState.Version() == version.Altair {
 					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
 				}
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
+				beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)

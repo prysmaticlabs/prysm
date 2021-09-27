@@ -1,6 +1,7 @@
 package helpers_test
 
 import (
+	"context"
 	"strconv"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ import (
 func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("aggregator", func(t *testing.T) {
 		beaconState, privKeys := util.DeterministicGenesisState(t, 100)
-		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
 		require.NoError(t, err)
 		sig := privKeys[0].Sign([]byte{'A'})
 		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
@@ -35,7 +36,7 @@ func TestAttestation_IsAggregator(t *testing.T) {
 		defer params.UseMainnetConfig()
 		beaconState, privKeys := util.DeterministicGenesisState(t, 2048)
 
-		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
 		require.NoError(t, err)
 		sig := privKeys[0].Sign([]byte{'A'})
 		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
@@ -117,7 +118,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		},
 		Signature: []byte{'B'},
 	}
-	valCount, err := helpers.ActiveValidatorCount(state, core.SlotToEpoch(att.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, core.SlotToEpoch(att.Data.Slot))
 	require.NoError(t, err)
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")

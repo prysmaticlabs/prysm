@@ -211,7 +211,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 			return err
 		}
 	}
-	idx, err := helpers.BeaconProposerIndex(parentState)
+	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
 	if err != nil {
 		return err
 	}

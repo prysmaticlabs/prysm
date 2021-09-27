@@ -78,7 +78,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		},
 		AggregationBits: aggBits,
 	}
-	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), s, att.Data.Slot, att.Data.CommitteeIndex)
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)

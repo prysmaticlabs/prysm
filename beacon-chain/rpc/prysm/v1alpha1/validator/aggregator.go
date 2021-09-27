@@ -38,7 +38,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	}
 
 	epoch := core.SlotToEpoch(req.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(st, epoch)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
@@ -46,7 +46,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
 	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	committee, err := helpers.BeaconCommittee(ctx, activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}

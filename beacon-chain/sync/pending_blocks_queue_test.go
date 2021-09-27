@@ -479,7 +479,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	require.NoError(t, copied.SetSlot(1))
-	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
 
 	st, err := util.NewBeaconState()
@@ -551,7 +551,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
 	copied := beaconState.Copy()
 	require.NoError(t, copied.SetSlot(1))
-	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
 
 	st, err := util.NewBeaconState()
