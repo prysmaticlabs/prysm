@@ -57,7 +57,9 @@ func (a proposerAtts) filterByValidation(ctx context.Context, st state.BeaconSta
 	return validAtts, invalidAtts
 }
 
+// filterByBlocks filters the attestation list that's not covered by the attestations contained in input `blks`.
 func (a proposerAtts) filterByBlocks(ctx context.Context, blks []block.SignedBeaconBlock) (proposerAtts, error) {
+	// Construct a map of seen attestation bits given the input block's attestations.
 	seenBits := make(map[[32]byte][]bitfield.Bitlist)
 	for _, blk := range blks {
 		for _, att := range blk.Block().Body().Attestations() {
@@ -87,6 +89,7 @@ func (a proposerAtts) filterByBlocks(ctx context.Context, blks []block.SignedBea
 		}
 	}
 
+	// Filter out attestations that are covered by the constructed map.
 	filteredAtts := make(proposerAtts, 0, len(a))
 	for _, att := range a {
 		r, err := hashFn(att.Data)

@@ -711,6 +711,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st st
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
+	// Retrieve parent blocks up to one epoch old.
 	parentBlock, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
