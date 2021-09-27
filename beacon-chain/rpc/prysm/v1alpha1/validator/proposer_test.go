@@ -2366,7 +2366,7 @@ func BenchmarkOptimisedGetBlock(b *testing.B) {
 }
 
 func runGetBlock(ctx context.Context, b *testing.B, proposerServer *Server, beaconState state.BeaconState, privKeys []bls.SecretKey, counter int) {
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(b, err)
 
 	graffiti := bytesutil.ToBytes32([]byte("eth2"))
@@ -2386,7 +2386,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 
 	params.SetupTestConfigCleanup(bm)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(bm, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(bm, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(bm, err, "Could not hash genesis state")
@@ -2415,7 +2415,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
 	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
 			i, /* validator index */
@@ -2428,7 +2428,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 
 	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
 	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
 			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
