@@ -1,12 +1,14 @@
-package helpers_test
+package signing_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -20,7 +22,7 @@ import (
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
 	emptyBlock := util.NewBeaconBlock()
-	_, err := helpers.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
+	_, err := signing.ComputeSigningRoot(emptyBlock, bytesutil.PadTo([]byte{'T', 'E', 'S', 'T'}, 32))
 	assert.NoError(t, err, "Could not compute signing root of block")
 }
 
@@ -37,7 +39,7 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 		{epoch: 3, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
 	}
 	for _, tt := range tests {
-		if got, err := helpers.ComputeDomain(tt.domainType, nil, nil); !bytes.Equal(got, tt.domain) {
+		if got, err := signing.ComputeDomain(tt.domainType, nil, nil); !bytes.Equal(got, tt.domain) {
 			t.Errorf("wanted domain version: %d, got: %d", tt.domain, got)
 		} else {
 			require.NoError(t, err)
@@ -80,10 +82,10 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconState, privKeys := tt.genState(t)
-			idx, err := helpers.BeaconProposerIndex(beaconState)
+			idx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 			require.NoError(t, err)
 			block := tt.genBlock(t, beaconState, privKeys)
-			got, err := helpers.ComputeDomainAndSign(
+			got, err := signing.ComputeDomainAndSign(
 				beaconState, core.CurrentEpoch(beaconState), block, tt.domainType, privKeys[idx])
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got, "Incorrect signature")
@@ -102,7 +104,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 		{version: []byte{'b', 'w', 'r', 't'}, root: [32]byte{'r', 'd', 'c'}, result: [4]byte{0x83, 0x34, 0x38, 0x88}},
 	}
 	for _, tt := range tests {
-		digest, err := helpers.ComputeForkDigest(tt.version, tt.root[:])
+		digest, err := signing.ComputeForkDigest(tt.version, tt.root[:])
 		require.NoError(t, err)
 		assert.Equal(t, tt.result, digest, "Wanted domain version: %#x, got: %#x", digest, tt.result)
 	}
@@ -126,9 +128,9 @@ func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		err := helpers.VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		err := signing.VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
 		_ = err
-		err = helpers.VerifySigningRoot(state, p, s, d)
+		err = signing.VerifySigningRoot(state, p, s, d)
 		_ = err
 	}
 }

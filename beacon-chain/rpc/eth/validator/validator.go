@@ -56,11 +56,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(s, req.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -130,7 +130,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(s, req.Epoch)
+	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}

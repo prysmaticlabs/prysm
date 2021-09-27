@@ -182,7 +182,7 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 	if !s.hasHeadState() {
 		return []types.ValidatorIndex{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState(ctx), epoch)
+	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
@@ -293,7 +293,9 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-
+	if !s.hasHeadState() {
+		return 0, false
+	}
 	return s.headState(ctx).ValidatorIndexByPubkey(pubKey)
 }
 
@@ -301,7 +303,9 @@ func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]
 func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([48]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-
+	if !s.hasHeadState() {
+		return [48]byte{}, nil
+	}
 	v, err := s.headValidatorAtIndex(index)
 	if err != nil {
 		return [48]byte{}, err

@@ -823,13 +823,13 @@ func (s *Service) run(done <-chan struct{}) {
 				chainstartTicker.Stop()
 				continue
 			}
-			s.logTillChainStart()
+			s.logTillChainStart(context.Background())
 		}
 	}
 }
 
 // logs the current thresholds required to hit chainstart every minute.
-func (s *Service) logTillChainStart() {
+func (s *Service) logTillChainStart(ctx context.Context) {
 	if s.chainStartData.Chainstarted {
 		return
 	}
@@ -838,7 +838,7 @@ func (s *Service) logTillChainStart() {
 		log.Error(err)
 		return
 	}
-	valCount, genesisTime := s.currentCountAndTime(blockTime)
+	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	valNeeded := uint64(0)
 	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
 		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount

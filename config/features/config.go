@@ -216,20 +216,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	Init(cfg)
 }
 
-// ConfigureSlasher sets the global config based
-// on what flags are enabled for the slasher client.
-func ConfigureSlasher(ctx *cli.Context) {
-	complainOnDeprecatedFlags(ctx)
-	cfg := &Flags{}
-	configureTestnet(ctx, cfg)
-
-	if ctx.Bool(disableLookbackFlag.Name) {
-		logDisabled(disableLookbackFlag)
-		cfg.DisableLookback = true
-	}
-	Init(cfg)
-}
-
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {

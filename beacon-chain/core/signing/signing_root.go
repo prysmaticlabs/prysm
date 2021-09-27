@@ -1,4 +1,4 @@
-package helpers
+package signing
 
 import (
 	fssz "github.com/ferranbt/fastssz"
@@ -134,26 +134,6 @@ func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte,
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
 	}, nil
-}
-
-// VerifyBlockHeaderSigningRoot verifies the signing root of a block header given it's public key, signature and domain.
-func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signature, domain []byte) error {
-	publicKey, err := bls.PublicKeyFromBytes(pub)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
-	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-	root, err := signingData(blkHdr.HashTreeRoot, domain)
-	if err != nil {
-		return errors.Wrap(err, "could not compute signing root")
-	}
-	if !sig.Verify(publicKey, root[:]) {
-		return ErrSigFailedToVerify
-	}
-	return nil
 }
 
 // ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte

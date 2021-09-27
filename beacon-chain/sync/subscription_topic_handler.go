@@ -75,7 +75,7 @@ func (s *subTopicHandler) digestExists(digest [4]byte) bool {
 func (s *subTopicHandler) allTopics() []string {
 	s.RLock()
 	defer s.RUnlock()
-	topics := []string{}
+	var topics []string
 	for t := range s.subTopics {
 		copiedTopic := t
 		topics = append(topics, copiedTopic)

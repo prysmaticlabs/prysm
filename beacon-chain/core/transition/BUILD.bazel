@@ -79,6 +79,7 @@ go_test(
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",

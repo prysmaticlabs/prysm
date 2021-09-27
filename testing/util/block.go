@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -154,7 +155,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 
-	idx, err := helpers.BeaconProposerIndex(bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, bState)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +202,7 @@ func GenerateProposerSlashingForValidator(
 	})
 	currentEpoch := core.CurrentEpoch(bState)
 	var err error
-	header1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
+	header1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +216,7 @@ func GenerateProposerSlashingForValidator(
 			ParentRoot:    make([]byte, 32),
 		},
 	}
-	header2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
+	header2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +272,7 @@ func GenerateAttesterSlashingForValidator(
 		AttestingIndices: []uint64{uint64(idx)},
 	}
 	var err error
-	att1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+	att1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +293,7 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{uint64(idx)},
 	}
-	att2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+	att2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +313,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +367,7 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		exit.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privs[valIndex])
+		exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privs[valIndex])
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +377,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, core.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
