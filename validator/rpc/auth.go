@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (
@@ -28,122 +29,18 @@ const (
 	checkUserSignupInterval = time.Second * 30
 )
 
-// Signup to authenticate access to the validator RPC API using bcrypt and
-// a sufficiently strong password check.
-//func (s *Server) Signup(ctx context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-//walletDir := s.walletDir
-//if req.Password != req.PasswordConfirmation {
-//return nil, status.Error(codes.InvalidArgument, "Password confirmation does not match")
-//}
-//// First, we check if the validator already has a password. In this case,
-//// the user should be logged in as normal.
-//if file.FileExists(filepath.Join(walletDir, HashedRPCPassword)) {
-//return s.Login(ctx, req)
-//}
-//// We check the strength of the password to ensure it is high-entropy,
-//// has the required character count, and contains only unicode characters.
-//if err := prompt.ValidatePasswordInput(req.Password); err != nil {
-//return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
-//}
-//hasDir, err := file.HasDir(walletDir)
-//if err != nil {
-//return nil, status.Error(codes.FailedPrecondition, "Could not check if wallet directory exists")
-//}
-//if !hasDir {
-//if err := file.MkdirAll(walletDir); err != nil {
-//return nil, status.Errorf(codes.Internal, "could not write directory %s to disk: %v", walletDir, err)
-//}
-//}
-//// Write the password hash to disk.
-//if err := s.SaveHashedPassword(req.Password); err != nil {
-//return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
-//}
-//return s.sendAuthResponse()
-//}
-
-//// Login to authenticate with the validator RPC API using a password.
-//func (s *Server) Login(_ context.Context, req *pb.AuthRequest) (*pb.AuthResponse, error) {
-//walletDir := s.walletDir
-//// We check the strength of the password to ensure it is high-entropy,
-//// has the required character count, and contains only unicode characters.
-//if err := prompt.ValidatePasswordInput(req.Password); err != nil {
-//return nil, status.Errorf(codes.InvalidArgument, "Could not validate RPC password input: %v", err)
-//}
-//hashedPasswordPath := filepath.Join(walletDir, HashedRPCPassword)
-//if !file.FileExists(hashedPasswordPath) {
-//return nil, status.Error(codes.Internal, "Could not find hashed password on disk")
-//}
-//hashedPassword, err := file.ReadFileAsBytes(hashedPasswordPath)
-//if err != nil {
-//return nil, status.Error(codes.Internal, "Could not retrieve hashed password from disk")
-//}
-//// Compare the stored hashed password, with the hashed version of the password that was received.
-//if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.Password)); err != nil {
-//return nil, status.Error(codes.Unauthenticated, "Incorrect validator RPC password")
-//}
-//return s.sendAuthResponse()
-//}
-
 // HasUsedWeb checks if the user has authenticated via the web interface.
-func (s *Server) Initialize(_ context.Context, req *pb.InitializeAuthRequest) (*pb.InitializeAuthResponse, error) {
-	if req.Token == "" {
-
-	}
-	if file.FileExists(filepath.Join(s.walletDir, authTokenHash)) {
-		return nil, nil
-	}
+func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
 	}
-	hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
+	authTokenPath := filepath.Join(s.walletDir, authToken)
 	return &pb.InitializeAuthResponse{
-		HasSignedUp: file.FileExists(hashedPasswordPath),
+		HasSignedUp: file.FileExists(authTokenPath),
 		HasWallet:   walletExists,
 	}, nil
 }
-
-// Sends an auth response via gRPC containing a new JWT token.
-//func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
-//// If everything is fine here, construct the auth token.
-//tokenString, expirationTime, err := s.createTokenString()
-//if err != nil {
-//return nil, status.Error(codes.Internal, "Could not create jwt token string")
-//}
-//return &pb.AuthResponse{
-//Token:           tokenString,
-//TokenExpiration: expirationTime,
-//}, nil
-//}
-
-// ChangePassword allows changing the RPC password via the API as an authenticated method.
-//func (s *Server) ChangePassword(_ context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
-//if req.CurrentPassword == "" {
-//return nil, status.Error(codes.InvalidArgument, "Current password cannot be empty")
-//}
-//hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-//if !file.FileExists(hashedPasswordPath) {
-//return nil, status.Error(codes.FailedPrecondition, "Could not compare password from disk")
-//}
-//hashedPassword, err := file.ReadFileAsBytes(hashedPasswordPath)
-//if err != nil {
-//return nil, status.Error(codes.FailedPrecondition, "Could not retrieve hashed password from disk")
-//}
-//if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(req.CurrentPassword)); err != nil {
-//return nil, status.Error(codes.Unauthenticated, "Incorrect password")
-//}
-//if req.Password != req.PasswordConfirmation {
-//return nil, status.Error(codes.InvalidArgument, "Password does not match confirmation")
-//}
-//if err := prompt.ValidatePasswordInput(req.Password); err != nil {
-//return nil, status.Errorf(codes.InvalidArgument, "Could not validate password input: %v", err)
-//}
-//// Write the new password hash to disk.
-//if err := s.SaveHashedPassword(req.Password); err != nil {
-//return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
-//}
-//return &empty.Empty{}, nil
-//}
 
 // SaveHashedPassword to disk for the validator RPC.
 func (s *Server) saveHashedAuthToken(token string) error {
