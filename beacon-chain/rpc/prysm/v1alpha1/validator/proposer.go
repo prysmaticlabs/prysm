@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -528,66 +527,6 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	return core.VotingPeriodStartTime(startTime, slot)
 }
 
-func (vs *Server) inRangeVotes(ctx context.Context,
-	beaconState state.ReadOnlyBeaconState,
-	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
-
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-
-	var inRangeVotes []eth1DataSingleVote
-	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
-		if err != nil {
-			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
-		}
-		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-		if eth1Data.DepositCount < currentETH1Data.DepositCount {
-			continue
-		}
-		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
-		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
-		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
-		}
-	}
-
-	return inRangeVotes, nil
-}
-
-func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
-	var voteCount []eth1DataAggregatedVote
-	for _, singleVote := range votes {
-		newVote := true
-		for i, aggregatedVote := range voteCount {
-			aggregatedData := aggregatedVote.data
-			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
-				voteCount[i].votes++
-				newVote = false
-				break
-			}
-		}
-
-		if newVote {
-			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
-		}
-	}
-	if len(voteCount) == 0 {
-		return eth1DataAggregatedVote{}
-	}
-	currentVote := voteCount[0]
-	for _, aggregatedVote := range voteCount[1:] {
-		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
-		if aggregatedVote.votes > currentVote.votes ||
-			(aggregatedVote.votes == currentVote.votes &&
-				aggregatedVote.data.blockHeight.Cmp(currentVote.data.blockHeight) == 1) {
-			currentVote = aggregatedVote
-		}
-	}
-
-	return currentVote
-}
-
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
@@ -824,37 +763,6 @@ func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1
 		return false, errors.Errorf("wanted the canonical deposit root of %#x but received %#x", canonicalEth1Data.DepositRoot, rt)
 	}
 	return true, nil
-}
-
-// in case no vote for new eth1data vote considered best vote we
-// default into returning the latest deposit root and the block
-// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
-// latest block.
-func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	if depositsTillHeight == 0 {
-		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
-	}
-	// // Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-	if depositsTillHeight < currentETH1Data.DepositCount {
-		return currentETH1Data, nil
-	}
-	return &ethpb.Eth1Data{
-		DepositRoot:  depositRoot[:],
-		BlockHash:    blockHash[:],
-		DepositCount: depositsTillHeight,
-	}, nil
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
