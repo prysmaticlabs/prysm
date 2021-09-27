@@ -43,11 +43,6 @@ var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
 
-type eth1DataSingleVote struct {
-	eth1Data    *ethpb.Eth1Data
-	blockHeight *big.Int
-}
-
 // blockData required to create a beacon block.
 type blockData struct {
 	ParentRoot        []byte
