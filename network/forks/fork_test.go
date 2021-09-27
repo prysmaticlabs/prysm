@@ -7,7 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -185,7 +185,7 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 	}
 	params.OverrideBeaconConfig(cfg)
 	genValRoot := [32]byte{'A', 'B', 'C', 'D'}
-	digest, err := core.ComputeForkDigest([]byte{'A', 'B', 'C', 'F'}, genValRoot[:])
+	digest, err := signing.ComputeForkDigest([]byte{'A', 'B', 'C', 'F'}, genValRoot[:])
 	assert.NoError(t, err)
 
 	version, epoch, err := RetrieveForkDataFromDigest(digest, genValRoot[:])
@@ -193,7 +193,7 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 	assert.Equal(t, [4]byte{'A', 'B', 'C', 'F'}, version)
 	assert.Equal(t, epoch, types.Epoch(10))
 
-	digest, err = core.ComputeForkDigest([]byte{'A', 'B', 'C', 'Z'}, genValRoot[:])
+	digest, err = signing.ComputeForkDigest([]byte{'A', 'B', 'C', 'Z'}, genValRoot[:])
 	assert.NoError(t, err)
 
 	version, epoch, err = RetrieveForkDataFromDigest(digest, genValRoot[:])

@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -30,7 +31,7 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, priv
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	sszEpoch := types.SSZUint64(epoch)
-	return core.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
+	return signing.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
@@ -45,11 +46,11 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := core.Domain(bState.Fork(), core.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), core.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := core.ComputeSigningRoot(block, domain)
+	blockRoot, err := signing.ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package core
+package signing
 
 import (
 	"github.com/pkg/errors"

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -44,9 +44,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		AttestingIndices: setA,
 		Signature:        make([]byte, 96),
 	}
-	domain, err := core.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	signingRoot, err := core.ComputeSigningRoot(att1.Data, domain)
+	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err, "Could not get signing root of beacon block header")
 	var aggSigs []bls.Signature
 	for _, index := range setA {
@@ -64,7 +64,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		AttestingIndices: setB,
 		Signature:        make([]byte, 96),
 	}
-	signingRoot, err = core.ComputeSigningRoot(att2.Data, domain)
+	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	aggSigs = []bls.Signature{}
 	for _, index := range setB {

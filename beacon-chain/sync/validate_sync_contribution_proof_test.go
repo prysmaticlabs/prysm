@@ -15,6 +15,7 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -469,7 +470,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 						}
 					}
 				}
-				d, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -545,9 +546,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.AggregationBits.SetBitAt(1, true)
 							msg.Signature = infiniteSig[:]
 
-							d, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+							d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 							assert.NoError(t, err)
-							sigRoot, err := core.ComputeSigningRoot(msg.Message, d)
+							sigRoot, err := signing.ComputeSigningRoot(msg.Message, d)
 							assert.NoError(t, err)
 							contrSig := keys[idx].Sign(sigRoot[:])
 
@@ -602,7 +603,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 					coms, err := altair.SyncSubCommitteePubkeys(sc, types.CommitteeIndex(i))
@@ -624,7 +625,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.Signature = infiniteSig[:]
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
-							sigRoot, err := core.ComputeSigningRoot(msg.Message, cd)
+							sigRoot, err := signing.ComputeSigningRoot(msg.Message, cd)
 							assert.NoError(t, err)
 							contrSig := keys[idx].Sign(sigRoot[:])
 
@@ -634,7 +635,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				d, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -686,9 +687,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
-				d, err := core.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				var pubkeys [][]byte
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
@@ -712,7 +713,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
 							// Only Sign for 1 validator.
 							rawBytes := p2ptypes.SSZBytes(headRoot[:])
-							sigRoot, err := core.ComputeSigningRoot(&rawBytes, d)
+							sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 							assert.NoError(t, err)
 							valIdx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(coms[0]))
 							assert.Equal(t, true, ok)
@@ -720,7 +721,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.AggregationBits.SetBitAt(uint64(0), true)
 							msg.Message.Contribution.Signature = sig.Marshal()
 
-							sigRoot, err = core.ComputeSigningRoot(msg.Message, cd)
+							sigRoot, err = signing.ComputeSigningRoot(msg.Message, cd)
 							assert.NoError(t, err)
 							contrSig := keys[idx].Sign(sigRoot[:])
 							msg.Signature = contrSig.Marshal()
@@ -729,7 +730,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				pd, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				pd, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -782,9 +783,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
-				cd, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+				cd, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
-				d, err := core.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				var pubkeys [][]byte
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
@@ -807,7 +808,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
 							rawBytes := p2ptypes.SSZBytes(headRoot[:])
-							sigRoot, err := core.ComputeSigningRoot(&rawBytes, d)
+							sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 							assert.NoError(t, err)
 							var sigs []bls.Signature
 							for i, p2 := range coms {
@@ -818,7 +819,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 								msg.Message.Contribution.AggregationBits.SetBitAt(uint64(i), true)
 							}
 							msg.Message.Contribution.Signature = bls.AggregateSignatures(sigs).Marshal()
-							sigRoot, err = core.ComputeSigningRoot(msg.Message, cd)
+							sigRoot, err = signing.ComputeSigningRoot(msg.Message, cd)
 							assert.NoError(t, err)
 							contrSig := keys[idx].Sign(sigRoot[:])
 							msg.Signature = contrSig.Marshal()
@@ -827,7 +828,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					}
 				}
 
-				pd, err := core.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
+				pd, err := signing.Domain(hState.Fork(), core.SlotToEpoch(core.PrevSlot(hState.Slot())), params.BeaconConfig().DomainSyncCommitteeSelectionProof, hState.GenesisValidatorRoot())
 				require.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -915,10 +916,10 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 }
 
 func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
-	dom, err := core.Domain(st.Fork(), core.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
+	dom, err := signing.Domain(st.Fork(), core.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
 	if err != nil {
 		return [32]byte{}, err
 	}
 	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
-	return core.ComputeSigningRoot(selectionData, dom)
+	return signing.ComputeSigningRoot(selectionData, dom)
 }
