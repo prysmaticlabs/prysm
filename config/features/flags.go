@@ -36,10 +36,6 @@ var (
 		Usage: "Enables the validator to connect to external slasher to prevent it from " +
 			"transmitting a slashable offence over the network.",
 	}
-	disableLookbackFlag = &cli.BoolFlag{
-		Name:  "disable-lookback",
-		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
