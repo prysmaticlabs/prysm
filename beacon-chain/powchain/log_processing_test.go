@@ -553,7 +553,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
-	s.checkForChainstart([32]byte{}, nil, 0)
+	s.checkForChainstart(context.Background(), [32]byte{}, nil, 0)
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
 }
 

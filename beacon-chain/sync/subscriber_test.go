@@ -276,13 +276,15 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	defaultTopic := "/eth2/testing/%#x/committee%d"
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
-	require.NoError(t, r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
+	_, topVal := r.wrapAndReportValidation(fullTopic, r.noopValidator)
+	require.NoError(t, r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, topVal))
 	subscriptions[1], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
 	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.cfg.P2P.Encoding().ProtocolSuffix()
-	err = r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	_, topVal = r.wrapAndReportValidation(fullTopic, r.noopValidator)
+	err = r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, topVal)
 	require.NoError(t, err)
 	subscriptions[2], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
@@ -330,7 +332,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
 		topic        string
-		v            pubsub.ValidatorEx
+		v            wrappedVal
 		chainstarted bool
 		pid          peer.ID
 		msg          *pubsub.Message
@@ -344,8 +346,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator Before chainstart",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{
@@ -363,7 +365,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator panicked",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
 					panic("oh no!")
 				},
 				chainstarted: true,
@@ -382,8 +384,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator OK",
 			args: args{
 				topic: mockTopic,
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				chainstarted: true,
 				msg: &pubsub.Message{
@@ -401,8 +403,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "nil topic",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{

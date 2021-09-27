@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
+type slashValidatorFunc func(ctx context.Context, st state.BeaconState, vid types.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -43,7 +43,7 @@ type slashValidatorFunc func(st state.BeaconState, vid types.ValidatorIndex, pen
 //
 //    slash_validator(state, header_1.proposer_index)
 func ProcessProposerSlashings(
-	_ context.Context,
+	ctx context.Context,
 	beaconState state.BeaconState,
 	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
@@ -61,7 +61,7 @@ func ProcessProposerSlashings(
 		if beaconState.Version() == version.Altair {
 			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
 		}
-		beaconState, err = slashFunc(beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+		beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}

@@ -103,7 +103,9 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 
 	assert.Equal(t, true, valid, "Failed Validation")
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
@@ -146,7 +148,9 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 
 	buf = new(bytes.Buffer)
@@ -165,7 +169,9 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored = r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored = res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 }
 
@@ -198,7 +204,9 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "slashing from the far distant future should have timed out and returned false")
 }
 
@@ -227,7 +235,9 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Passed validation")
 }
 

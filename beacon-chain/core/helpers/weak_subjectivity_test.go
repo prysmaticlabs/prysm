@@ -1,6 +1,7 @@
 package helpers_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 		t.Run(fmt.Sprintf("valCount: %d, avgBalance: %d", tt.valCount, tt.avgBalance), func(t *testing.T) {
 			// Reset committee cache - as we need to recalculate active validator set for each test.
 			helpers.ClearCache()
-			got, err := helpers.ComputeWeakSubjectivityPeriod(genState(t, tt.valCount, tt.avgBalance))
+			got, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), genState(t, tt.valCount, tt.avgBalance))
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "valCount: %v, avgBalance: %v", tt.valCount, tt.avgBalance)
 		})
@@ -192,7 +193,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := helpers.IsWithinWeakSubjectivityPeriod(tt.epoch, tt.genWsState(), tt.genWsCheckpoint())
+			got, err := helpers.IsWithinWeakSubjectivityPeriod(context.Background(), tt.epoch, tt.genWsState(), tt.genWsCheckpoint())
 			if tt.wantedErr != "" {
 				assert.Equal(t, false, got)
 				assert.ErrorContains(t, tt.wantedErr, err)

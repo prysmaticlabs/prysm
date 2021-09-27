@@ -120,10 +120,12 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object
 // from a block and its corresponding state.
-func RandaoSignatureSet(beaconState state.ReadOnlyBeaconState,
+func RandaoSignatureSet(
+	ctx context.Context,
+	beaconState state.ReadOnlyBeaconState,
 	reveal []byte,
 ) (*bls.SignatureSet, error) {
-	buf, proposerPub, domain, err := randaoSigningData(beaconState)
+	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +137,8 @@ func RandaoSignatureSet(beaconState state.ReadOnlyBeaconState,
 }
 
 // retrieves the randao related signing data from the state.
-func randaoSigningData(beaconState state.ReadOnlyBeaconState) ([]byte, []byte, []byte, error) {
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconState) ([]byte, []byte, []byte, error) {
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
@@ -169,7 +171,7 @@ func createAttestationSignatureSet(
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.Signature
-		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
+		c, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}

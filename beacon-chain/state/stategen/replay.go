@@ -154,7 +154,7 @@ func executeStateTransitionStateGen(
 		if err != nil {
 			return nil, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return nil, err
 		}
