@@ -8,7 +8,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -208,7 +208,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationReject, err
 			}
-			root, err := helpers.ComputeSigningRoot(m.Message, d)
+			root, err := signing.ComputeSigningRoot(m.Message, d)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationReject, err
@@ -221,7 +221,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set), nil
 		}
 
-		if err := helpers.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
+		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
 		}
@@ -264,7 +264,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 			return pubsub.ValidationIgnore, err
 		}
 		rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
-		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+		sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
@@ -334,7 +334,7 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		if err != nil {
 			return err
 		}
-		root, err := helpers.ComputeSigningRoot(selectionData, domain)
+		root, err := signing.ComputeSigningRoot(selectionData, domain)
 		if err != nil {
 			return err
 		}
@@ -349,5 +349,5 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		}
 		return nil
 	}
-	return helpers.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
+	return signing.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
 }

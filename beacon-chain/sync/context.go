@@ -4,7 +4,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
@@ -62,7 +62,7 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 	case p2p.SchemaVersionV2:
 		currFork := chain.CurrentFork()
 		genRoot := chain.GenesisValidatorRoot()
-		digest, err := helpers.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
+		digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
 		if err != nil {
 			return nil, err
 		}
