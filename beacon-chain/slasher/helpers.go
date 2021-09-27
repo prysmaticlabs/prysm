@@ -1,8 +1,6 @@
 package slasher
 
 import (
-	"strconv"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -114,18 +112,6 @@ func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
 		"sourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
 		"targetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
 	}).Info("Attester slashing detected")
-}
-
-func logProposerSlashing(slashing *ethpb.ProposerSlashing) {
-	log.WithFields(logrus.Fields{
-		"validatorIndex": slashing.Header_1.Header.ProposerIndex,
-		"slot":           slashing.Header_1.Header.Slot,
-	}).Info("Proposer slashing detected")
-}
-
-// Turns a uint64 value to a string representation.
-func uintToString(val uint64) string {
-	return strconv.FormatUint(val, 10)
 }
 
 // If an existing signing root does not match an incoming proposal signing root,
