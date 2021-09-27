@@ -22,8 +22,7 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	// Placeholder until fork epoch is decided.
-	mainnetAltairForkEpoch = math.MaxUint64
+	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
