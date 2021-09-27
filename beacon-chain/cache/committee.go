@@ -5,7 +5,6 @@ package cache
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -122,7 +121,6 @@ func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]ty
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
-		fmt.Println("cache miss active indices")
 		CommitteeCacheMiss.Inc()
 		return nil, nil
 	}
