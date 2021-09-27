@@ -213,7 +213,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 		Data:            &ethpb.AttestationData{CommitteeIndex: 1},
 		AggregationBits: aggBits,
 	})
-	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 		},
 		AggregationBits: aggBits,
 	})
-	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}

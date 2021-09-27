@@ -100,7 +100,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	bp.PrevEpochHeadAttested = bp.PrevEpochHeadAttested * 2 / 3
 	rewards, penalties, err := AttestationsDelta(beaconState, bp, vp)
 	require.NoError(t, err)
-	attestedBalance, err := epoch.AttestingBalance(beaconState, atts)
+	attestedBalance, err := epoch.AttestingBalance(context.Background(), beaconState, atts)
 	require.NoError(t, err)
 	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	require.NoError(t, err)

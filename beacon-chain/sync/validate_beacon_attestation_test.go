@@ -254,7 +254,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			helpers.ClearCache()
 			chain.ValidAttestation = tt.validAttestationSignature
 			if tt.validAttestationSignature {
-				com, err := helpers.BeaconCommitteeFromState(savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
+				com, err := helpers.BeaconCommitteeFromState(context.Background(), savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
 				require.NoError(t, err)
 				domain, err := helpers.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
 				require.NoError(t, err)
@@ -281,9 +281,14 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			if tt.topic == "" {
 				m.Message.Topic = nil
 			}
-			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
+
+			res, err := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m)
+			received := res == pubsub.ValidationAccept
 			if received != tt.want {
 				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
+			}
+			if tt.want && err != nil {
+				t.Errorf("Non nil error returned: %v", err)
 			}
 			if tt.want && m.ValidatorData == nil {
 				t.Error("Expected validator data to be set")
