@@ -896,6 +896,7 @@ func (bs *Server) GetIndividualVotes(
 			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
 			InclusionSlot:                    v[index].InclusionSlot,
 			InclusionDistance:                v[index].InclusionDistance,
+			InactivityScore:                  v[index].InactivityScore,
 		})
 	}
 

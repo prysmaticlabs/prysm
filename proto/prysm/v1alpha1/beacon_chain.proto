@@ -713,7 +713,7 @@ message ValidatorPerformanceResponse {
     // The public keys in the order they are in of the response.
     repeated bytes public_keys = 11 [(ethereum.eth.ext.ssz_size) = "?,48"];
 
-    // InactivityScore of the validator. [New in Altair]
+    // The inactivity score of the validator tracks validator participation. [New in Altair]
     repeated uint64 inactivity_scores = 12;
 }
 
@@ -896,10 +896,12 @@ message IndividualVotesRespond {
         bool is_previous_epoch_head_attester = 12;
         // The current effective balance of the validator.
         uint64 current_epoch_effective_balance_gwei = 13;
-        // The slots of when the validator's attestation got included in the block.
-        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-        // How many slots have passed until the validator's attestation got included in the block.
-        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+        // The slots of when the validator's attestation got included in the block. Only available in phase0.
+        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
+        // How many slots have passed until the validator's attestation got included in the block. Only available in phase0.
+        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
+        // The inactivity score of the validator tracks validator participation. [New in Altair]
+        uint64 inactivity_score = 16;
     }
 
     repeated IndividualVote individual_votes = 1;
