@@ -154,7 +154,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 
-	idx, err := helpers.BeaconProposerIndex(bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, bState)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +312,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +376,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, core.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}

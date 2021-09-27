@@ -74,7 +74,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 				}
 				targetStates[tr] = s
 			}
-			c, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
+			c, err := helpers.BeaconCommitteeFromState(ctx, s, a.Data.Slot, a.Data.CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}

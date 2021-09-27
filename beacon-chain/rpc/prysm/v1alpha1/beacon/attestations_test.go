@@ -543,7 +543,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
-		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
@@ -551,7 +551,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 	for i := 0; i < len(atts2); i++ {
 		att := atts2[i]
-		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts2[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
@@ -650,7 +650,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
-		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 		require.NoError(t, err)
 		idxAtt, err := attestation.ConvertToIndexed(ctx, atts[i], committee)
 		require.NoError(t, err, "Could not convert attestation to indexed")
@@ -861,12 +861,12 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 	epoch := types.Epoch(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), activeIndices, attesterSeed)
+	committees, err := computeCommittees(context.Background(), params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
