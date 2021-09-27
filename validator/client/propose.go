@@ -10,7 +10,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -110,7 +109,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		Signature: sig,
 	}
 
-	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	signingRoot, err := core.ComputeSigningRoot(b, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -243,7 +242,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		Signature: sig,
 	}
 
-	signingRoot, err := helpers.ComputeSigningRoot(altairBlk.Altair, domain.SignatureDomain)
+	signingRoot, err := core.ComputeSigningRoot(altairBlk.Altair, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -367,7 +366,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 
 	var randaoReveal bls.Signature
 	sszUint := types.SSZUint64(epoch)
-	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
+	root, err := core.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +399,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}
-		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		blockRoot, err := core.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
@@ -419,7 +418,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block phase 0")
 		}
-		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		blockRoot, err := core.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
@@ -459,7 +458,7 @@ func signVoluntaryExit(
 		return nil, errors.New(domainDataErr)
 	}
 
-	exitRoot, err := helpers.ComputeSigningRoot(exit, domain.SignatureDomain)
+	exitRoot, err := core.ComputeSigningRoot(exit, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, signingRootErr)
 	}

@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -126,9 +126,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
 		Signature:             make([]byte, 96),
 	}
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	domain, err := core.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
+	signingRoot, err := core.ComputeSigningRoot(depData, domain)
 	require.NoError(t, err)
 	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()
 

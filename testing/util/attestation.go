@@ -149,7 +149,7 @@ func GenerateAttestations(
 		)
 	}
 
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
+	domain, err := core.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func GenerateAttestations(
 			},
 		}
 
-		dataRoot, err := helpers.ComputeSigningRoot(attData, domain)
+		dataRoot, err := core.ComputeSigningRoot(attData, domain)
 		if err != nil {
 			return nil, err
 		}

@@ -1,4 +1,4 @@
-package helpers
+package core
 
 import (
 	fssz "github.com/ferranbt/fastssz"

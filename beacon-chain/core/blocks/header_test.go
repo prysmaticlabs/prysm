@@ -57,7 +57,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
-	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	block.Signature, err = core.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
@@ -90,7 +90,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = lbhdr[:]
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
+	block.Signature, err = core.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
 	require.NoError(t, err)
 
 	_, err = blocks.ProcessBlockHeader(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
@@ -124,7 +124,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sszBytes := p2ptypes.SSZBytes("hello")
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
+	blockSig, err := core.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
@@ -162,7 +162,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sszBytes := p2ptypes.SSZBytes("hello")
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
+	blockSig, err := core.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
@@ -203,7 +203,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sszBytes := p2ptypes.SSZBytes("hello")
-	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
+	blockSig, err := core.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
@@ -253,7 +253,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
-	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	block.Signature, err = core.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	require.NoError(t, err, "Failed to hash block bytes got")
@@ -312,7 +312,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	block.Block.ProposerIndex = pID
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
-	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
+	block.Signature, err = core.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)

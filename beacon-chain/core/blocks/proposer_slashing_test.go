@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -150,7 +149,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		}),
 	}
 	var err error
-	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	header1.Signature, err = core.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
@@ -159,7 +158,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	header2.Signature, err = core.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	slashings := []*ethpb.ProposerSlashing{
@@ -198,7 +197,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		}),
 	}
 	var err error
-	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	header1.Signature, err = core.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
@@ -207,7 +206,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	header2.Signature, err = core.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	slashings := []*ethpb.ProposerSlashing{
@@ -329,15 +328,15 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
-			d, err := helpers.Domain(tt.args.beaconState.Fork(), core.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
+			d, err := core.Domain(tt.args.beaconState.Fork(), core.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
 			require.NoError(t, err)
 			if tt.args.slashing.Header_1.Signature == nil {
-				sr, err := helpers.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)
+				sr, err := core.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)
 				require.NoError(t, err)
 				tt.args.slashing.Header_1.Signature = sk.Sign(sr[:]).Marshal()
 			}
 			if tt.args.slashing.Header_2.Signature == nil {
-				sr, err := helpers.ComputeSigningRoot(tt.args.slashing.Header_2.Header, d)
+				sr, err := core.ComputeSigningRoot(tt.args.slashing.Header_2.Header, d)
 				require.NoError(t, err)
 				tt.args.slashing.Header_2.Signature = sk.Sign(sr[:]).Marshal()
 			}

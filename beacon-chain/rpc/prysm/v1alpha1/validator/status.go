@@ -263,7 +263,7 @@ func (vs *Server) validatorStatus(
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
-		domain, err := helpers.ComputeDomain(
+		domain, err := core.ComputeDomain(
 			params.BeaconConfig().DomainDeposit,
 			nil, /*forkVersion*/
 			nil, /*genesisValidatorsRoot*/

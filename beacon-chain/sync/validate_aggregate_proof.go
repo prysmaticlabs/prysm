@@ -288,12 +288,12 @@ func validateSelectionIndex(
 		return nil, err
 	}
 
-	d, err := helpers.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
+	d, err := core.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
 	sszUint := types.SSZUint64(data.Slot)
-	root, err := helpers.ComputeSigningRoot(&sszUint, d)
+	root, err := core.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}
@@ -316,11 +316,11 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 	}
 
 	epoch := core.SlotToEpoch(a.Message.Aggregate.Data.Slot)
-	d, err := helpers.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
+	d, err := core.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(a.Message, d)
+	root, err := core.ComputeSigningRoot(a.Message, d)
 	if err != nil {
 		return nil, err
 	}

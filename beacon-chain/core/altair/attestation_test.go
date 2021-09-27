@@ -217,7 +217,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		sb, err := core.ComputeDomainAndSign(beaconState, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)

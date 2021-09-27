@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -108,9 +108,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	signingRoot, err := core.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 := privKeys[0].Sign(signingRoot[:])
 	sig1 := privKeys[1].Sign(signingRoot[:])
@@ -120,7 +120,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
-	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	signingRoot, err = core.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 = privKeys[0].Sign(signingRoot[:])
 	sig1 = privKeys[1].Sign(signingRoot[:])
@@ -177,9 +177,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	signingRoot, err := core.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 := privKeys[0].Sign(signingRoot[:])
 	sig1 := privKeys[1].Sign(signingRoot[:])
@@ -189,7 +189,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
-	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	signingRoot, err = core.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sig0 = privKeys[0].Sign(signingRoot[:])
 	sig1 = privKeys[1].Sign(signingRoot[:])

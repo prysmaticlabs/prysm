@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -152,7 +152,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := corehelpers.ComputeSigningRoot(attData, resp.SignatureDomain)
+	signingRoot, err := core.ComputeSigningRoot(attData, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -248,7 +248,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := corehelpers.ComputeSigningRoot(blk, resp.SignatureDomain)
+	signingRoot, err := core.ComputeSigningRoot(blk, resp.SignatureDomain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}

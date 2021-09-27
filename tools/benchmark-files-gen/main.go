@@ -141,7 +141,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = core.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}

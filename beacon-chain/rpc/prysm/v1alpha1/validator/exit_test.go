@@ -7,9 +7,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -62,7 +62,7 @@ func TestProposeExit_Notification(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}
-	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	req.Signature, err = core.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 
 	resp, err := server.ProposeExit(context.Background(), req)
@@ -141,7 +141,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")
-	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	req.Signature, err = core.ComputeDomainAndSign(beaconState, epoch, req.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 	resp, err := server.ProposeExit(context.Background(), req)
 	require.NoError(t, err)

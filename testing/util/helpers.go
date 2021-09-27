@@ -30,7 +30,7 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, priv
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	sszEpoch := types.SSZUint64(epoch)
-	return helpers.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
+	return core.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
@@ -45,11 +45,11 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := helpers.Domain(bState.Fork(), core.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := core.Domain(bState.Fork(), core.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := helpers.ComputeSigningRoot(block, domain)
+	blockRoot, err := core.ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}

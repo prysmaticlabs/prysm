@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -219,7 +219,7 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	root, err := core.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

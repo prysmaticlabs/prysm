@@ -2,7 +2,11 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["slot_epoch.go"],
+    srcs = [
+        "domain.go",
+        "signing_root.go",
+        "slot_epoch.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core",
     visibility = [
         "//beacon-chain:__subpackages__",
@@ -26,9 +30,13 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "//time:go_default_library",
         "@com_github_ethereum_go_ethereum//common/math:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
@@ -36,15 +44,25 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["slot_epoch_test.go"],
+    srcs = [
+        "domain_test.go",
+        "signing_root_test.go",
+        "slot_epoch_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
         "//time:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

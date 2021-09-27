@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -195,9 +196,9 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	deposit.Data.PublicKey = priv.PublicKey().Marshal()
-	d, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	d, err := core.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
-	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
+	signedRoot, err := core.ComputeSigningRoot(deposit.Data, d)
 	require.NoError(t, err)
 
 	sig := priv.Sign(signedRoot[:])

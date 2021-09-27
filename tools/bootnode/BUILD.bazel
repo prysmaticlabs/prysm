@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//async:go_default_library",
-        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/logs:go_default_library",

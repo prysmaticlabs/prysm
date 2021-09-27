@@ -907,9 +907,9 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 					},
 				},
 			}
-			domain, err := helpers.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
+			domain, err := core.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
 			require.NoError(t, err)
-			encoded, err := helpers.ComputeSigningRoot(attExample.Data, domain)
+			encoded, err := core.ComputeSigningRoot(attExample.Data, domain)
 			require.NoError(t, err)
 			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()

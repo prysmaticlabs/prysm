@@ -13,7 +13,6 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -423,7 +422,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	}
 
 	for _, att := range []*ethpbv1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
-		sb, err := helpers.ComputeDomainAndSign(state, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		sb, err := core.ComputeDomainAndSign(state, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -524,7 +523,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	}
 
 	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
-		sb, err := helpers.ComputeDomainAndSign(
+		sb, err := core.ComputeDomainAndSign(
 			state,
 			core.SlotToEpoch(h.Message.Slot),
 			h.Message,
@@ -610,7 +609,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 
-	sb, err := helpers.ComputeDomainAndSign(state, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	sb, err := core.ComputeDomainAndSign(state, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 	sig, err := bls.SignatureFromBytes(sb)
 	require.NoError(t, err)
@@ -764,7 +763,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	}
 
 	for _, att := range []*ethpbv1.Attestation{att1, att2} {
-		sb, err := helpers.ComputeDomainAndSign(
+		sb, err := core.ComputeDomainAndSign(
 			state,
 			core.SlotToEpoch(att.Data.Slot),
 			att.Data,
@@ -871,7 +870,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	// Don't sign attInvalidSignature.
-	sb, err := helpers.ComputeDomainAndSign(
+	sb, err := core.ComputeDomainAndSign(
 		state,
 		core.SlotToEpoch(attValid.Data.Slot),
 		attValid.Data,

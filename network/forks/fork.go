@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -48,7 +47,7 @@ func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte)
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	return core.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 }
 
 // CreateForkDigest creates a fork digest from a genesis time and genesis
@@ -72,7 +71,7 @@ func CreateForkDigest(
 		return [4]byte{}, err
 	}
 
-	digest, err := helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	digest, err := core.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err
 	}
@@ -112,7 +111,7 @@ func Fork(
 func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
-		rDigest, err := helpers.ComputeForkDigest(v[:], genesisValidatorsRoot)
+		rDigest, err := core.ComputeForkDigest(v[:], genesisValidatorsRoot)
 		if err != nil {
 			return [4]byte{}, 0, err
 		}

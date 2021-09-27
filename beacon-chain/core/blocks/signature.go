@@ -56,7 +56,7 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 		return err
 	}
 	if !rSig.Verify(publicKey, root[:]) {
-		return helpers.ErrSigFailedToVerify
+		return core.ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
 	currentEpoch := core.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
+	return core.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
 // VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
@@ -88,7 +88,7 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	if err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
+	return core.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
@@ -106,7 +106,7 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	currentEpoch := core.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
+	return core.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
 }
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object
@@ -148,7 +148,7 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -194,7 +194,7 @@ func createAttestationSignatureSet(
 		}
 		pks[i] = aggP
 
-		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
+		root, err := core.ComputeSigningRoot(ia.Data, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root of object")
 		}
@@ -232,7 +232,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 
 	// Check attestations from before the fork.
 	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig set.
-		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
+		prevDomain, err := core.Domain(fork, fork.Epoch-1, dt, gvr)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 
 	if len(postForkAtts) > 0 {
 		// Then check attestations from after the fork.
-		currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
+		currDomain, err := core.Domain(fork, fork.Epoch, dt, gvr)
 		if err != nil {
 			return nil, err
 		}

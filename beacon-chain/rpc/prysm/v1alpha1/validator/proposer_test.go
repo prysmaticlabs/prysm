@@ -316,7 +316,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := core.CurrentEpoch(beaconState)
-	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	req.Signature, err = core.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	_, err = proposerServer.ComputeStateRoot(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(req))
@@ -1844,14 +1844,14 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
-					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					domain, err := core.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					zeroSig := [96]byte{}
 					atts[i].Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
-						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						hashTreeRoot, err := core.ComputeSigningRoot(atts[i].Data, domain)
 						require.NoError(t, err)
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig

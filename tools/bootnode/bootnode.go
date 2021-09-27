@@ -33,7 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -212,7 +212,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		}
 		genRoot = bytesutil.ToBytes32(retRoot)
 	}
-	digest, err := helpers.ComputeForkDigest(fVersion, genRoot[:])
+	digest, err := core.ComputeForkDigest(fVersion, genRoot[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not compute fork digest")
 	}

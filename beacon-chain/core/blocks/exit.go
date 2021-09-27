@@ -102,13 +102,13 @@ func VerifyExitAndSignature(
 	if err := verifyExitConditions(validator, currentSlot, exit); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
+	domain, err := core.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
 	if err != nil {
 		return err
 	}
 	valPubKey := validator.PublicKey()
-	if err := helpers.VerifySigningRoot(exit, valPubKey[:], signed.Signature, domain); err != nil {
-		return helpers.ErrSigFailedToVerify
+	if err := core.VerifySigningRoot(exit, valPubKey[:], signed.Signature, domain); err != nil {
+		return core.ErrSigFailedToVerify
 	}
 	return nil
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
@@ -119,7 +119,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			Signature:             make([]byte, 96),
 		},
 	}
-	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	sr, err := core.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()

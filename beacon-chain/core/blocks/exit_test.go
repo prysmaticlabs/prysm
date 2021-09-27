@@ -112,7 +112,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
-	exits[0].Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	exits[0].Signature, err = core.ComputeDomainAndSign(state, core.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()

@@ -12,7 +12,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptesting "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -23,7 +23,7 @@ import (
 )
 
 func TestService_decodePubsubMessage(t *testing.T) {
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, make([]byte, 32))
+	digest, err := core.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, make([]byte, 32))
 	require.NoError(t, err)
 	tests := []struct {
 		name    string

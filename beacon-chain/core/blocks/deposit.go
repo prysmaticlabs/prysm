@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -99,7 +100,7 @@ func ProcessDeposits(
 // BatchVerifyDepositsSignatures batch verifies deposit signatures.
 func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
 	var err error
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	domain, err := core.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -169,7 +170,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		if verifySignature {
-			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			domain, err := core.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {
 				return nil, newValidator, err
 			}
@@ -266,7 +267,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			Amount:                dep.Data.Amount,
 		}
-		sr, err := helpers.ComputeSigningRoot(depositMessage, domain)
+		sr, err := core.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {
 			return err
 		}

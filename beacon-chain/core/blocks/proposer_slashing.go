@@ -97,7 +97,7 @@ func VerifyProposerSlashing(
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := helpers.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
+		if err := core.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
 			header.Header, params.BeaconConfig().DomainBeaconProposer, header.Signature); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}

@@ -13,6 +13,7 @@ import (
 	gcache "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -493,7 +494,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1.Block.ProposerIndex = proposerIdx
-	b1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	b1.Signature, err = core.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	b2 := util.NewBeaconBlock()
@@ -565,7 +566,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	b1Root, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b1.Block.ProposerIndex = proposerIdx
-	b1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	b1.Signature, err = core.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()

@@ -221,7 +221,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
 		},
 	})
-	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header1.Signature, err = core.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
@@ -231,7 +231,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header2.Signature, err = core.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
@@ -251,9 +251,9 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := core.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	hashTreeRoot, err := core.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
@@ -269,7 +269,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		AttestingIndices: []uint64{0, 1},
 	})
 
-	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	hashTreeRoot, err = core.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
@@ -304,7 +304,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	attestingIndices, err := attestation.AttestingIndices(blockAtt.AggregationBits, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	hashTreeRoot, err = helpers.ComputeSigningRoot(blockAtt.Data, domain)
+	hashTreeRoot, err = core.ComputeSigningRoot(blockAtt.Data, domain)
 	assert.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
@@ -319,7 +319,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			Epoch:          0,
 		},
 	}
-	exit.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privKeys[exit.Exit.ValidatorIndex])
+	exit.Signature, err = core.ComputeDomainAndSign(beaconState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privKeys[exit.Exit.ValidatorIndex])
 	require.NoError(t, err)
 
 	header := beaconState.LatestBlockHeader()
