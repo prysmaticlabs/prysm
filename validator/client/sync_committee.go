@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -47,7 +47,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 	sszRoot := types.SSZBytes(res.Root)
-	r, err := helpers.ComputeSigningRoot(&sszRoot, d.SignatureDomain)
+	r, err := signing.ComputeSigningRoot(&sszRoot, d.SignatureDomain)
 	if err != nil {
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
@@ -221,7 +221,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 
 // This computes the signing root of hash tree root capable object `obj` and signs it using public key `pubKey` along with the signature domain `sigDomain`.
 func (v *validator) computeAndSign(ctx context.Context, obj fssz.HashRoot, pubKey [48]byte, sigDomain []byte) (bls.Signature, error) {
-	root, err := helpers.ComputeSigningRoot(obj, sigDomain)
+	root, err := signing.ComputeSigningRoot(obj, sigDomain)
 	if err != nil {
 		return nil, err
 	}

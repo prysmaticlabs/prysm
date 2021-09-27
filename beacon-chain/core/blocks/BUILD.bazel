@@ -26,6 +26,7 @@ go_library(
     deps = [
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
@@ -75,6 +76,7 @@ go_test(
     deps = [
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
