@@ -288,6 +288,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 				previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
 				previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[i]
 			}
+			if core.SlotToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
+				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[i]
+			}
 
 			log.WithFields(previousEpochSummaryFields).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
