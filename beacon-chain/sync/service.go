@@ -64,7 +64,7 @@ var (
 )
 
 // Common type for functional p2p validation options.
-type validationFn func(ctx context.Context) pubsub.ValidationResult
+type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // Config to set up the regular sync service.
 type Config struct {

@@ -76,7 +76,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
@@ -299,7 +299,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		AggregationBits: aggBits,
 	})
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(blockAtt.AggregationBits, committee)
 	require.NoError(t, err)
@@ -333,7 +333,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, copied.SetSlot(beaconState.Slot()+1))
 	randaoReveal, err := util.RandaoReveal(copied, currentEpoch, privKeys)
 	require.NoError(t, err)
-	proposerIndex, err := helpers.BeaconProposerIndex(copied)
+	proposerIndex, err := helpers.BeaconProposerIndex(context.Background(), copied)
 	require.NoError(t, err)
 	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -582,10 +582,9 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 }
 
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
-	ctx := context.Background()
 	s, _ := util.DeterministicGenesisState(t, 1)
 	r := []byte{'a'}
-	s, err := transition.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }
