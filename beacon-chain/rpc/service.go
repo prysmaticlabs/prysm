@@ -192,6 +192,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		BeaconDB:               s.cfg.BeaconDB,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,

@@ -711,7 +711,28 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st st
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
-	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
+	parentBlock, err := vs.HeadFetcher.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	blks := make([]block.SignedBeaconBlock, 0, params.BeaconConfig().SlotsPerEpoch)
+	for {
+		if parentBlock.Block().Slot()+params.BeaconConfig().SlotsPerEpoch < vs.TimeFetcher.CurrentSlot() {
+			break
+		}
+		blks = append(blks, parentBlock)
+		parentBlock, err = vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(parentBlock.Block().ParentRoot()))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	validAtts, err := proposerAtts(atts).filterByBlocks(ctx, blks)
+	if err != nil {
+		return nil, err
+	}
+
+	validAtts, invalidAtts := validAtts.filterByValidation(ctx, st)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}

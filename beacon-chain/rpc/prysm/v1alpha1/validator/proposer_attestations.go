@@ -12,17 +12,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
+var hashFn = hash.HashProto
+
 type proposerAtts []*ethpb.Attestation
 
-// filter separates attestation list into two groups: valid and invalid attestations.
+// filterByValidation separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
+func (a proposerAtts) filterByValidation(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
@@ -51,6 +55,66 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 		invalidAtts = append(invalidAtts, att)
 	}
 	return validAtts, invalidAtts
+}
+
+func (a proposerAtts) filterByBlocks(ctx context.Context, blks []block.SignedBeaconBlock) (proposerAtts, error) {
+	seenBits := make(map[[32]byte][]bitfield.Bitlist)
+	for _, blk := range blks {
+		for _, att := range blk.Block().Body().Attestations() {
+			r, err := hashFn(att.Data)
+			if err != nil {
+				return nil, err
+			}
+			bits, ok := seenBits[r]
+			if ok {
+				exists := false
+				for _, b := range bits {
+					c, err := b.Contains(att.AggregationBits)
+					if err != nil {
+						return nil, err
+					}
+					if c {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					seenBits[r] = append(seenBits[r], att.AggregationBits)
+				}
+			} else {
+				seenBits[r] = []bitfield.Bitlist{att.AggregationBits}
+			}
+		}
+	}
+
+	filteredAtts := make(proposerAtts, 0, len(a))
+	for _, att := range a {
+		r, err := hashFn(att.Data)
+		if err != nil {
+			return nil, err
+		}
+		bits, ok := seenBits[r]
+		hasSeen := false
+		if ok {
+			for _, b := range bits {
+				c, err := b.Contains(att.AggregationBits)
+				if err != nil {
+					return nil, err
+				}
+				if c {
+					hasSeen = true
+					break
+				}
+			}
+		} else {
+			filteredAtts = append(filteredAtts, att)
+		}
+		if !hasSeen {
+			filteredAtts = append(filteredAtts, att)
+		}
+	}
+
+	return filteredAtts, nil
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
