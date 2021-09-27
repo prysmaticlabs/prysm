@@ -1,4 +1,4 @@
-package helpers
+package signing
 
 import (
 	fssz "github.com/ferranbt/fastssz"

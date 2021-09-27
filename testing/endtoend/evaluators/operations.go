@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -312,7 +313,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	signingData, err := corehelpers.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
+	signingData, err := signing.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
 	if err != nil {
 		return err
 	}
