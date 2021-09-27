@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -102,13 +103,13 @@ func VerifyExitAndSignature(
 	if err := verifyExitConditions(validator, currentSlot, exit); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
+	domain, err := signing.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
 	if err != nil {
 		return err
 	}
 	valPubKey := validator.PublicKey()
-	if err := helpers.VerifySigningRoot(exit, valPubKey[:], signed.Signature, domain); err != nil {
-		return helpers.ErrSigFailedToVerify
+	if err := signing.VerifySigningRoot(exit, valPubKey[:], signed.Signature, domain); err != nil {
+		return signing.ErrSigFailedToVerify
 	}
 	return nil
 }

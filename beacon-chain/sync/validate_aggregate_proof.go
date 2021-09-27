@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -288,12 +289,12 @@ func validateSelectionIndex(
 		return nil, err
 	}
 
-	d, err := helpers.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
+	d, err := signing.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
 	sszUint := types.SSZUint64(data.Slot)
-	root, err := helpers.ComputeSigningRoot(&sszUint, d)
+	root, err := signing.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}
@@ -316,11 +317,11 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 	}
 
 	epoch := core.SlotToEpoch(a.Message.Aggregate.Data.Slot)
-	d, err := helpers.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
+	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(a.Message, d)
+	root, err := signing.ComputeSigningRoot(a.Message, d)
 	if err != nil {
 		return nil, err
 	}

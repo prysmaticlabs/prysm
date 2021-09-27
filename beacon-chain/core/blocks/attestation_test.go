@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -46,7 +47,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
-		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att1.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, 0, att1.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	require.NoError(t, err)
 	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
-		sb, err := helpers.ComputeDomainAndSign(beaconState, 0, att2.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, 0, att2.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -304,7 +305,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	for _, tt := range tests {
 		var sig []bls.Signature
 		for _, idx := range tt.attestation.AttestingIndices {
-			sb, err := helpers.ComputeDomainAndSign(state, tt.attestation.Data.Target.Epoch, tt.attestation.Data, params.BeaconConfig().DomainBeaconAttester, keys[idx])
+			sb, err := signing.ComputeDomainAndSign(state, tt.attestation.Data.Target.Epoch, tt.attestation.Data, params.BeaconConfig().DomainBeaconAttester, keys[idx])
 			require.NoError(t, err)
 			validatorSig, err := bls.SignatureFromBytes(sb)
 			require.NoError(t, err)
@@ -413,9 +414,9 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 			Slot: 1,
 		},
 	})
-	prevDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	prevDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
-	root, err := helpers.ComputeSigningRoot(att1.Data, prevDomain)
+	root, err := signing.ComputeSigningRoot(att1.Data, prevDomain)
 	require.NoError(t, err)
 	var sigs []bls.Signature
 	for i, u := range comm1 {
@@ -433,9 +434,9 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 			CommitteeIndex: 1,
 		},
 	})
-	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	currDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
-	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
+	root, err = signing.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
 	sigs = nil
 	for i, u := range comm2 {
@@ -472,9 +473,9 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 			Slot: 1,
 		},
 	})
-	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
-	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
 	var sigs []bls.Signature
 	for i, u := range comm1 {
@@ -492,7 +493,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 			CommitteeIndex: 1,
 		},
 	})
-	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	root, err = signing.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sigs = nil
 	for i, u := range comm2 {
@@ -536,9 +537,9 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 			Slot: 1,
 		},
 	})
-	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
-	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
 	var sigs []bls.Signature
 	for i, u := range comm1 {
@@ -556,7 +557,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 			CommitteeIndex: 1,
 		},
 	})
-	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	root, err = signing.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sigs = nil
 	for i, u := range comm2 {
