@@ -712,7 +712,6 @@ message ValidatorPerformanceResponse {
     float average_active_validator_balance = 10;
     // The public keys in the order they are in of the response.
     repeated bytes public_keys = 11 [(ethereum.eth.ext.ssz_size) = "?,48"];
-
     // The inactivity score of the validator tracks validator participation. [New in Altair]
     repeated uint64 inactivity_scores = 12;
 }
