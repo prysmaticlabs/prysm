@@ -44,12 +44,25 @@ func V1Alpha1ToV1SignedBlock(alphaBlk *ethpbalpha.SignedBeaconBlock) (*ethpbv1.S
 }
 
 // V1ToV1Alpha1SignedBlock converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
-func V1ToV1Alpha1SignedBlock(alphaBlk *ethpbv1.SignedBeaconBlock) (*ethpbalpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := proto.Marshal(alphaBlk)
+func V1ToV1Alpha1SignedBlock(v1Blk *ethpbv1.SignedBeaconBlock) (*ethpbalpha.SignedBeaconBlock, error) {
+	marshaledBlk, err := proto.Marshal(v1Blk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1alpha1Block := &ethpbalpha.SignedBeaconBlock{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
+// AltairToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockAltair proto to a v1alpha1 proto.
+func AltairToV1Alpha1SignedBlock(altairBlk *ethpbv2.SignedBeaconBlockAltair) (*ethpbalpha.SignedBeaconBlockAltair, error) {
+	marshaledBlk, err := proto.Marshal(altairBlk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBeaconBlockAltair{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
