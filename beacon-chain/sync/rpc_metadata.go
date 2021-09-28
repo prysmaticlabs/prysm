@@ -63,9 +63,11 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 				})
 		}
 	case p2p.SchemaVersionV2:
+	case p2p.SchemaVersionV3:
 		// We have a v0 metadata object saved locally, so we
 		// convert it to a v1 metadata object.
-		if currMd.Version() != version.Altair {
+		if currMd.Version() != version.Altair &&
+			currMd.Version() != version.Merge {
 			currMd = wrapper.WrappedMetadataV1(
 				&pb.MetaDataV1{
 					Attnets:   currMd.AttnetsBitfield(),

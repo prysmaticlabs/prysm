@@ -20,6 +20,8 @@ func TestExtractBlockDataType(t *testing.T) {
 	require.NoError(t, err)
 	altairDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
+	mergeDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
 
 	type args struct {
 		digest []byte
@@ -75,6 +77,19 @@ func TestExtractBlockDataType(t *testing.T) {
 			},
 			want: func() block.SignedBeaconBlock {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "merge fork version",
+			args: args{
+				digest: mergeDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
 				require.NoError(t, err)
 				return wsb
 			}(),

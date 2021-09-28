@@ -97,6 +97,48 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				assert.Equal(t, true, rpcMap[p2p.RPCMetaDataTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
 			},
 		},
+		{
+			name: "merge fork in the next epoch",
+			svcCreator: func(t *testing.T) *Service {
+				p2p := p2ptest.NewTestP2P(t)
+				chainService := &mockChain.ChainService{
+					Genesis:        time.Now().Add(-14 * oneEpoch()),
+					ValidatorsRoot: [32]byte{'A'},
+				}
+				bCfg := params.BeaconConfig()
+				bCfg.MergeForkEpoch = 15
+				params.OverrideBeaconConfig(bCfg)
+				params.BeaconConfig().InitializeForkSchedule()
+				ctx, cancel := context.WithCancel(context.Background())
+				r := &Service{
+					ctx:    ctx,
+					cancel: cancel,
+					cfg: &Config{
+						P2P:           p2p,
+						Chain:         chainService,
+						StateNotifier: chainService.StateNotifier(),
+						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					},
+					chainStarted: abool.New(),
+					subHandler:   newSubTopicHandler(),
+				}
+				return r
+			},
+			currEpoch: 14,
+			wantErr:   false,
+			postSvcCheck: func(t *testing.T, s *Service) {
+				genRoot := s.cfg.Chain.GenesisValidatorRoot()
+				digest, err := forks.ForkDigestFromEpoch(15, genRoot[:])
+				assert.NoError(t, err)
+				assert.Equal(t, true, s.subHandler.digestExists(digest))
+				rpcMap := make(map[string]bool)
+				for _, p := range s.cfg.P2P.Host().Mux().Protocols() {
+					rpcMap[p] = true
+				}
+				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRangeTopicV3+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
+				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRootTopicV3+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -230,6 +272,80 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				assert.Equal(t, false, pMap[p2p.RPCMetaDataTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
 				assert.Equal(t, false, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
 				assert.Equal(t, false, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+			},
+		},
+		{
+			name: "merge fork in the previous epoch",
+			svcCreator: func(t *testing.T) *Service {
+				p2p := p2ptest.NewTestP2P(t)
+				chainService := &mockChain.ChainService{
+					Genesis:        time.Now().Add(-14 * oneEpoch()),
+					ValidatorsRoot: [32]byte{'A'},
+				}
+				bCfg := params.BeaconConfig()
+				bCfg.MergeForkEpoch = 13
+				params.OverrideBeaconConfig(bCfg)
+				params.BeaconConfig().InitializeForkSchedule()
+				ctx, cancel := context.WithCancel(context.Background())
+				r := &Service{
+					ctx:    ctx,
+					cancel: cancel,
+					cfg: &Config{
+						P2P:           p2p,
+						Chain:         chainService,
+						StateNotifier: chainService.StateNotifier(),
+						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					},
+					chainStarted: abool.New(),
+					subHandler:   newSubTopicHandler(),
+				}
+				prevGenesis := chainService.Genesis
+				// To allow registration of v2 handlers
+				chainService.Genesis = time.Now().Add(-1 * oneEpoch())
+				r.registerRPCHandlers()
+
+				chainService.Genesis = prevGenesis
+				r.registerRPCHandlersMerge()
+
+				genRoot := r.cfg.Chain.GenesisValidatorRoot()
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
+				assert.NoError(t, err)
+				r.registerSubscribers(0, digest)
+				assert.Equal(t, true, r.subHandler.digestExists(digest))
+
+				digest, err = forks.ForkDigestFromEpoch(13, genRoot[:])
+				assert.NoError(t, err)
+				r.registerSubscribers(13, digest)
+				assert.Equal(t, true, r.subHandler.digestExists(digest))
+
+				return r
+			},
+			currEpoch: 14,
+			wantErr:   false,
+			postSvcCheck: func(t *testing.T, s *Service) {
+				genRoot := s.cfg.Chain.GenesisValidatorRoot()
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
+				assert.NoError(t, err)
+				assert.Equal(t, false, s.subHandler.digestExists(digest))
+				digest, err = forks.ForkDigestFromEpoch(13, genRoot[:])
+				assert.NoError(t, err)
+				assert.Equal(t, true, s.subHandler.digestExists(digest))
+
+				ptcls := s.cfg.P2P.Host().Mux().Protocols()
+				pMap := make(map[string]bool)
+				for _, p := range ptcls {
+					pMap[p] = true
+				}
+				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCPingTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCMetaDataTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRangeTopicV3+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRootTopicV3+s.cfg.P2P.Encoding().ProtocolSuffix()])
+
+				//assert.Equal(t, false, pMap[p2p.RPCMetaDataTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				//assert.Equal(t, false, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				//assert.Equal(t, false, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
 			},
 		},
 	}

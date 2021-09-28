@@ -233,6 +233,8 @@ func TestExtractMetaDataType(t *testing.T) {
 	require.NoError(t, err)
 	altairDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
+	mergeDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
 
 	type args struct {
 		digest []byte
@@ -284,6 +286,15 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "altair fork version",
 			args: args{
 				digest: altairDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),
+			wantErr: false,
+		},
+		{
+			name: "merge fork version", // metadata should not change in merge
+			args: args{
+				digest: mergeDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
 			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),

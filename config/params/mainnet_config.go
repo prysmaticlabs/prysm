@@ -24,6 +24,8 @@ const (
 	// Altair Fork Epoch for mainnet config.
 	// Placeholder until fork epoch is decided.
 	mainnetAltairForkEpoch = math.MaxUint64
+	// Placeholder for the merge epoch until it is decided
+	mainnetMergeForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -191,13 +193,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkVersion:           []byte{1, 0, 0, 0},
 	AltairForkEpoch:             mainnetAltairForkEpoch,
 	MergeForkVersion:            []byte{2, 0, 0, 0},
-	MergeForkEpoch:              math.MaxUint64,
+	MergeForkEpoch:              mainnetMergeForkEpoch,
 	ShardingForkVersion:         []byte{3, 0, 0, 0},
 	ShardingForkEpoch:           math.MaxUint64,
 	MinAnchorPowBlockDifficulty: 4294967296,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
+		{2, 0, 0, 0}: mainnetMergeForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 

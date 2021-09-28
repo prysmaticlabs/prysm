@@ -16,6 +16,9 @@ const SchemaVersionV1 = "/1"
 // SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
 const SchemaVersionV2 = "/2"
 
+// SchemaVersionV3 specifies the third schema version for our rpc protocol ID.
+const SchemaVersionV3 = "/3"
+
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
 
@@ -59,6 +62,12 @@ const (
 	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
 	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
 	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
+
+	// V3 RPC Topics
+	// RPCBlocksByRangeTopicV3 defines v3 the topic for the blocks by range rpc method.
+	RPCBlocksByRangeTopicV3 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV3
+	// RPCBlocksByRootTopicV3 defines the v3 topic for the blocks by root rpc method.
+	RPCBlocksByRootTopicV3 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV3
 )
 
 // RPC errors for topic parsing.
@@ -106,6 +115,12 @@ var altairMapping = map[string]bool{
 	BeaconBlocksByRangeMessageName: true,
 	BeaconBlocksByRootsMessageName: true,
 	MetadataMessageName:            true,
+}
+
+// Maps all the RPC messages which are to updated in merge.
+var mergeMapping = map[string]bool{
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
 }
 
 var versionMapping = map[string]bool{
@@ -229,8 +244,9 @@ func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
 	version := SchemaVersionV1
-	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
-	if isAltair && altairMapping[msg] {
+	if epoch >= params.BeaconConfig().MergeForkEpoch && mergeMapping[msg] {
+		version = SchemaVersionV3
+	} else if epoch >= params.BeaconConfig().AltairForkEpoch && altairMapping[msg] {
 		version = SchemaVersionV2
 	}
 	return protocolPrefix + msg + version, nil
