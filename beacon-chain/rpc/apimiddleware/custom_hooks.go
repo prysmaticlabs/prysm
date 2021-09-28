@@ -196,6 +196,9 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	}{}
 
 	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
 	if err := json.Unmarshal(buf, &s); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
 	}
