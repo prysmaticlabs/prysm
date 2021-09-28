@@ -27,7 +27,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

@@ -48,11 +48,6 @@ type eth1DataSingleVote struct {
 	blockHeight *big.Int
 }
 
-type eth1DataAggregatedVote struct {
-	data  eth1DataSingleVote
-	votes int
-}
-
 // blockData required to create a beacon block.
 type blockData struct {
 	ParentRoot        []byte
