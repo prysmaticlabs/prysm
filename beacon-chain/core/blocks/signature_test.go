@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -13,6 +14,53 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
+
+func TestVerifyBlockHeaderSignature(t *testing.T) {
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	validators := make([]*ethpb.Validator, 1)
+	validators[0] = &ethpb.Validator{
+		PublicKey:             privKey.PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+		EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+	}
+	err = beaconState.SetValidators(validators)
+	require.NoError(t, err)
+
+	// Sign the block header.
+	blockHeader := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:          0,
+			ProposerIndex: 0,
+		},
+	})
+	domain, err := signing.Domain(
+		beaconState.Fork(),
+		0,
+		params.BeaconConfig().DomainBeaconProposer,
+		beaconState.GenesisValidatorRoot(),
+	)
+	require.NoError(t, err)
+	htr, err := blockHeader.Header.HashTreeRoot()
+	require.NoError(t, err)
+	container := &ethpb.SigningData{
+		ObjectRoot: htr[:],
+		Domain:     domain,
+	}
+	require.NoError(t, err)
+	signingRoot, err := container.HashTreeRoot()
+	require.NoError(t, err)
+
+	// Set the signature in the block header.
+	blockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
+
+	// Sig should verify.
+	err = blocks.VerifyBlockHeaderSignature(beaconState, blockHeader)
+	require.NoError(t, err)
+}
 
 func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
