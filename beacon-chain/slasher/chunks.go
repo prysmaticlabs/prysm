@@ -519,7 +519,10 @@ func setChunkDataAtEpoch(
 	epochInChunk,
 	targetEpoch types.Epoch,
 ) error {
-	distance := epochDistance(targetEpoch, epochInChunk)
+	distance, err := epochDistance(targetEpoch, epochInChunk)
+	if err != nil {
+		return err
+	}
 	return setChunkRawDistance(params, chunk, validatorIdx, epochInChunk, distance)
 }
 
@@ -543,6 +546,9 @@ func setChunkRawDistance(
 // Computes a distance between two epochs. Given the result stored in
 // min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
 // distance can be represented as a uint16 safely.
-func epochDistance(epoch, baseEpoch types.Epoch) uint16 {
-	return uint16(epoch.Sub(uint64(baseEpoch)))
+func epochDistance(epoch, baseEpoch types.Epoch) (uint16, error) {
+	if baseEpoch > epoch {
+		return 0, fmt.Errorf("base epoch %d cannot be less than epoch %d", baseEpoch, epoch)
+	}
+	return uint16(epoch.Sub(uint64(baseEpoch))), nil
 }

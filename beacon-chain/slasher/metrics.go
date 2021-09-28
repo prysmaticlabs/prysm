@@ -10,7 +10,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "slasher_attestation_distance_epochs",
 			Help:    "The number of epochs between att target and source",
-			Buckets: []float64{1, 2, 3, 4, 5, 10, 20, 50, 100},
+			Buckets: []float64{0, 1, 2, 3, 4, 5, 10, 20, 50, 100},
 		},
 	)
 	chunksSavedTotal = promauto.NewCounter(prometheus.CounterOpts{
