@@ -6,9 +6,6 @@ package sync
 
 import (
 	"context"
-	"sync"
-	"time"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -17,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/async/abool"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -37,6 +35,8 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"sync"
+	"time"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -68,18 +68,21 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P               p2p.P2P
-	DB                db.NoHeadAccessDatabase
-	AttPool           attestations.Pool
-	ExitPool          voluntaryexits.PoolManager
-	SlashingPool      slashings.PoolManager
-	SyncCommsPool     synccommittee.Pool
-	Chain             blockchainService
-	InitialSync       Checker
-	StateNotifier     statefeed.Notifier
-	BlockNotifier     blockfeed.Notifier
-	OperationNotifier operation.Notifier
-	StateGen          *stategen.State
+	AttestationNotifier     operation.Notifier
+	P2P                     p2p.P2P
+	DB                      db.NoHeadAccessDatabase
+	AttPool                 attestations.Pool
+	ExitPool                voluntaryexits.PoolManager
+	SlashingPool            slashings.PoolManager
+	SyncCommsPool           synccommittee.Pool
+	Chain                   blockchainService
+	InitialSync             Checker
+	StateNotifier           statefeed.Notifier
+	BlockNotifier           blockfeed.Notifier
+	OperationNotifier       operation.Notifier
+	StateGen                *stategen.State
+	SlasherAttestationsFeed *event.Feed
+	SlasherBlockHeadersFeed *event.Feed
 }
 
 // This defines the interface for interacting with block chain service

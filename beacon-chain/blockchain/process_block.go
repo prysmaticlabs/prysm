@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -104,6 +105,32 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
+	}
+
+	// If slasher is configured, forward the attestations in the block via
+	// an event feed for processing.
+	if features.Get().EnableSlasher {
+		// Feed the indexed attestation to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			for _, att := range signed.Block().Body().Attestations() {
+				committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
+				if err != nil {
+					log.WithError(err).Error("Could not get attestation committee")
+					tracing.AnnotateError(span, err)
+					return
+				}
+				// Using a different context to prevent timeouts as this operation can be expensive
+				// and we want to avoid affecting the critical code path.
+				indexedAtt, err := attestation.ConvertToIndexed(context.TODO(), att, committee)
+				if err != nil {
+					log.WithError(err).Error("Could not convert to indexed attestation")
+					tracing.AnnotateError(span, err)
+					return
+				}
+				s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
+			}
+		}()
 	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
