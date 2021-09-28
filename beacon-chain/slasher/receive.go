@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -107,11 +108,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			slashings, err := s.checkSlashableAttestations(ctx, validAtts)
-			if err != nil {
-				log.WithError(err).Error("Could not check slashable attestations")
-				continue
-			}
+			// TODO(#9212): Detect slashings.
+			slashings := make([]*ethpb.AttesterSlashing, 0)
 
 			// Process attester slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
@@ -147,11 +145,9 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 			}).Info("New slot, processing queued blocks for slashing detection")
 
 			start := time.Now()
-			slashings, err := s.detectProposerSlashings(ctx, blocks)
-			if err != nil {
-				log.WithError(err).Error("Could not detect slashable blocks")
-				continue
-			}
+			// Check for slashings.
+			// TODO(#9212): Detect slashings.
+			slashings := make([]*ethpb.ProposerSlashing, 0)
 
 			// Process proposer slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
