@@ -26,8 +26,6 @@ type chunkUpdateArgs struct {
 // min spans used for surround vote detection in slasher. The interface defines methods used to check
 // if an attestation is slashable for a validator index based on the contents of
 // the chunk as well as the ability to update the data in the chunk with incoming information.
-// For detailed information on what a chunk is and how it works, refer to our design document:
-// https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
 type Chunker interface {
 	NeutralElement() uint16
 	Chunk() []uint16
@@ -48,10 +46,9 @@ type Chunker interface {
 }
 
 // MinSpanChunksSlice represents a slice containing a chunk for K different validator's min spans.
-// MinSpans and chunks are defined in our design document: https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
 //
 // For a given epoch, e, and attestations a validator index has produced, atts,
-// such that min_spans[e] is defined as min((att.target.epoch - e) for att in attestations)
+// min_spans[e] is defined as min((att.target.epoch - e) for att in attestations)
 // where att.source.epoch > e. That is, it is the minimum distance between the
 // specified epoch and all attestation target epochs a validator has created
 // where att.source.epoch > e.
@@ -269,11 +266,10 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating
 // down to e_c - H where H is the historyLength we keep for each span. This historyLength
-// corresponds to the weak subjectivity period of eth2, see:
-// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/weak-subjectivity.md.
+// corresponds to the weak subjectivity period of Ethereum consensus.
 // This means our updates are done in a sliding window manner. For example, if the current epoch
 // is 20 and the historyLength is 12, then we will update every value for the validator's min span
-// from epoch 20 down to epoch 8 (since 20 - 12 = 8).
+// from epoch 20 down to epoch 9.
 //
 // Recall that for an epoch, e, min((att.target - e) for att in attestations where att.source > e)
 // That is, it is the minimum distance between the specified epoch and all attestation
@@ -302,7 +298,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // chunk the min span into arrays each of length 2.
 //
 // So assume we get an epoch 4 and validator 0, then, we need to update every epoch in the span from
-// 4 down to 2. First, we find out which chunk epoch 4 falls into, which is calculated as:
+// 4 down to 3. First, we find out which chunk epoch 4 falls into, which is calculated as:
 // chunk_idx = (epoch % H) / C = (4 % 2) / 2 = 0
 //
 //
@@ -312,7 +308,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 //                                     |
 //                                     |-> epoch 4 for validator 0
 //
-// Next up, we proceed with the update process for validator index 0, starting epoch 4
+// Next up, we proceed with the update process for validator index 0, starting at epoch 4
 // all the way down to epoch 2. We will need to go down the array as far as we can get. If the
 // lowest epoch we need to update is < the lowest epoch of a chunk, we need to proceed to
 // a different chunk index.
@@ -320,7 +316,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // Once we finish updating a chunk, we need to move on to the next chunk. This function
 // returns a boolean named keepGoing which allows the caller to determine if we should
 // continue and update another chunk index. We stop whenever we reach the min epoch we need
-// to update, in our example, we stop at 2, which is still part of chunk 0, so no need
+// to update. In our example, we stop at 2, which is still part of chunk 0, so no need
 // to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
@@ -328,9 +324,8 @@ func (m *MinSpanChunksSlice) Update(
 	startEpoch,
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
-	// The lowest epoch we need to update. This is a sliding window from (current epoch - H) where
-	// H is the history length a min span for a validator stores.
-	var minEpoch types.Epoch
+	// The lowest epoch we need to update.
+	minEpoch := types.Epoch(0)
 	if args.currentEpoch > (m.params.historyLength - 1) {
 		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
 	}
@@ -357,7 +352,6 @@ func (m *MinSpanChunksSlice) Update(
 			// if we did not meet the minimum condition, there is nothing to update.
 			return
 		}
-		// We decrease our epoch index variable as long as it is > 0.
 		if epochInChunk > 0 {
 			epochInChunk -= 1
 		}
@@ -370,7 +364,9 @@ func (m *MinSpanChunksSlice) Update(
 
 // Update a max span chunk for a validator index starting at a given start epoch, e_c, then updating
 // up to the current epoch according to the definition of max spans. If we need to continue updating
-// a next chunk, this function returns a boolean letting the caller know it should keep going.
+// a next chunk, this function returns a boolean letting the caller know it should keep going. To understand
+// more about how update exactly works, refer to the detailed documentation for the Update function for
+// MinSpanChunksSlice.
 func (m *MaxSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
 	validatorIndex types.ValidatorIndex,
@@ -378,8 +374,8 @@ func (m *MaxSpanChunksSlice) Update(
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
 	epochInChunk := startEpoch
-	// We go down the chunk for the validator, updating every value starting at start_epoch up to.
-	// and including the current epoch as long as the epoch, e, in the same chunk index and e <= currentEpoch,
+	// We go down the chunk for the validator, updating every value starting at start_epoch up to
+	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
 		var chunkTarget types.Epoch
@@ -400,7 +396,6 @@ func (m *MaxSpanChunksSlice) Update(
 			// if we did not meet the condition, there is nothing to update.
 			return
 		}
-		// We increase our epoch index variable.
 		epochInChunk++
 	}
 	// If the epoch to update now lies beyond the current chunk, then
@@ -412,7 +407,7 @@ func (m *MaxSpanChunksSlice) Update(
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a min span chunk for use in chunk updates. To compute this value, we look at the difference between
 // H = historyLength and the current epoch. Then, we check if the source epoch > difference. If so,
-// then the start epoch is source epoch - 1. Otherwise, we return the caller a boolean signifying
+// then the start epoch is source epoch - 1. Otherwise, we return to the caller a boolean signifying
 // the input argumets are invalid for the chunk and the start epoch does not exist.
 func (m *MinSpanChunksSlice) StartEpoch(
 	sourceEpoch, currentEpoch types.Epoch,
@@ -420,7 +415,7 @@ func (m *MinSpanChunksSlice) StartEpoch(
 	// Given min span chunks are used for detecting surrounding votes, we have no need
 	// for a start epoch of the chunk if the source epoch is 0 in the input arguments.
 	// To further clarify, min span chunks are updated in reverse order [a, b, c, d] where
-	// if the start epoch is d, then we down the chunk updating everything from d, c, b, to
+	// if the start epoch is d, then we go down the chunk updating everything from d, c, b, to
 	// a. If the source epoch is 0, this would correspond to a, which means there is nothing
 	// more to update.
 	if sourceEpoch == 0 {
@@ -461,7 +456,7 @@ func (m *MaxSpanChunksSlice) StartEpoch(
 //                         |          |          |
 //  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
-// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
+// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3 then the next start
 // epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
 //
 //  last_epoch(chunkIndex(startEpoch)-1)
@@ -485,19 +480,19 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 //  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
+// epoch is the start epoch of chunk 2, which is epoch 4. This is computed as:
 //
 //  first_epoch(chunkIndex(startEpoch)+1)
 //  first_epoch(chunkIndex(3)+1)
 //  first_epoch(1 + 1)
 //  first_epoch(2)
-//  6
+//  4
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }
 
 // Given a validator index and epoch, retrieves the target epoch at its specific
-// index for the validator index + epoch pair in a min/max span chunk.
+// index for the validator index and epoch in a min/max span chunk.
 func chunkDataAtEpoch(
 	params *Parameters, chunk []uint16, validatorIdx types.ValidatorIndex, epoch types.Epoch,
 ) (types.Epoch, error) {
@@ -528,8 +523,8 @@ func setChunkDataAtEpoch(
 	return setChunkRawDistance(params, chunk, validatorIdx, epochInChunk, distance)
 }
 
-// Updates the value at a specific index in a chunk for a validator index + epoch
-// pair to a specified, raw distance value.
+// Updates the value at a specific index in a chunk for a validator index and epoch
+// to a specified, raw distance value.
 func setChunkRawDistance(
 	params *Parameters,
 	chunk []uint16,
@@ -546,7 +541,7 @@ func setChunkRawDistance(
 }
 
 // Computes a distance between two epochs. Given the result stored in
-// min/max spans is maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
+// min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
 // distance can be represented as a uint16 safely.
 func epochDistance(epoch, baseEpoch types.Epoch) uint16 {
 	return uint16(epoch.Sub(uint64(baseEpoch)))
