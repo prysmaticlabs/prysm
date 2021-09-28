@@ -773,6 +773,13 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 	atts = append(atts, uAtts...)
 
+	// Remove duplicates from both aggregated/unaggregated attestations. This
+	// prevents inefficient aggregates being created.
+	atts, err = proposerAtts(atts).dedup()
+	if err != nil {
+		return nil, err
+	}
+
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 	for _, att := range atts {
 		attDataRoot, err := att.Data.HashTreeRoot()
