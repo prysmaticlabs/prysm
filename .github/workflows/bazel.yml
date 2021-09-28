@@ -1,0 +1,71 @@
+name: Bazel
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04  # TODO: To run all all of the tests successfully, 
+                           #       the necessary system dependencies need to be installed.
+                           #       An alternative is to use a pre-built image.
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/bazel
+          key: bazel-${{ github.sha }}
+          restore-keys: |
+            bazel-
+
+      - name: Setup build tools
+        run: |
+          TOOLS_DIR="${HOME}/.cache/tools"
+          mkdir -p "${TOOLS_DIR}/bin/"
+          # bazelisk
+          curl -Ls -o "${TOOLS_DIR}/bin/bazel" "https://github.com/bazelbuild/bazelisk/releases/download/v1.3.0/bazelisk-linux-amd64"
+          chmod +x "${TOOLS_DIR}/bin/bazel"
+          # buildifier
+          curl -Ls -o "${TOOLS_DIR}/bin/buildifier" "https://github.com/bazelbuild/buildtools/releases/download/0.29.0/buildifier"
+          chmod +x "${TOOLS_DIR}/bin/buildifier"
+          echo "${TOOLS_DIR}/bin" >> $GITHUB_PATH
+          
+      - name: A Sample Build
+        run: |
+          bazel build //math:go_default_library
+
+      - name: A Sample Test
+        run: |
+          bazel test //math:go_default_test
+
+      # TODO: Enable the following in a separate PR
+      #       We have to make sure that bazel builds and tests pass.
+
+      # - name: Bazel Build
+      #   run: |
+      #     bazel build //...
+
+      # - name: Bazel Test
+      #   run: |
+      #     bazel test //...
+
+      # # Formatting check for BUILD, BUILD.bazel files
+      # - name: Check
+      #   run: |
+      #     find . -type f \(\
+      #       -name '*.bzl' \
+      #       -o -name '*.sky' \
+      #       -o -name BUILD \
+      #       -o -name BUILD.bazel \
+      #       -o -name WORKSPACE \
+      #       -o -name WORKSPACE.bazel \
+      #     \) | xargs buildifier \
+      #       -mode=check \
+      #       -lint=warn \
+      #       --warnings=-module-docstring,-function-docstring,-function-docstring-header,-function-docstring-args,-function-docstring-return,-print
