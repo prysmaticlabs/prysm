@@ -98,6 +98,7 @@ type POWBlockFetcher interface {
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -113,6 +114,7 @@ type RPCDataFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
 	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
 // RPCClient defines the rpc methods required to interact with the eth1 node.

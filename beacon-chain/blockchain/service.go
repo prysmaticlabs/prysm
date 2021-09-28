@@ -83,6 +83,7 @@ type Config struct {
 	AttService              *attestations.Service
 	StateGen                *stategen.State
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	BlockFetcher            powchain.POWBlockFetcher
 }
 
 // NewService instantiates a new block service instance that will

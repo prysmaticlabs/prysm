@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/merge"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -308,6 +309,22 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	enabled, err := merge.IsExecutionEnabled(state, blk.Body())
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not check if execution is enabled")
+	}
+	if enabled {
+		payload, err := blk.Body().ExecutionPayload()
+		if err != nil {
+			return nil, err
+		}
+		state, err = merge.ProcessExecutionPayload(state, payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process execution payload")
+		}
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())

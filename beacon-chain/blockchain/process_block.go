@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/merge"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -101,6 +104,41 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+	body := signed.Block().Body()
+	executionEnabled, err := merge.IsExecutionEnabled(preState, body)
+	if err != nil {
+		return err
+	}
+	if executionEnabled {
+		_, err = body.ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		// TODO: Call execute_payload(self: ExecutionEngine, execution_payload: ExecutionPayload)
+	}
+	mergeBlock, err := merge.IsMergeBlock(preState, body)
+	if err != nil {
+		return err
+	}
+	if mergeBlock {
+		payload, err := body.ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		transitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, common.BytesToHash(payload.ParentHash))
+		if err != nil {
+			return err
+		}
+		parentTransitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, transitionBlk.ParentHash())
+		if err != nil {
+			return err
+		}
+		if !isValidTerminalPoWBlock(transitionBlk, parentTransitionBlk) {
+			return errors.New("incorrect transition block")
+		}
+	}
+
+	// TODO: Call notify_consensus_validated(self: ExecutionEngine, block_hash: Hash32, valid: bool)
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
@@ -139,6 +177,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+
+	// TODO: Call notify_forkchoice_updated(self: ExecutionEngine, head_block_hash: Hash32, finalized_block_hash: Hash32)
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
@@ -438,4 +478,20 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 		}
 	}
 	return nil
+}
+
+// def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
+//    if block.block_hash == TERMINAL_BLOCK_HASH:
+//        return True
+//
+//    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
+//    return is_total_difficulty_reached and is_parent_total_difficulty_valid
+
+func isValidTerminalPoWBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
+	if transitionBlock.Hash() == params.BeaconConfig().TerminalBlockHash {
+		return true
+	}
+	// TODO: how to get total difficulty?
+	return false
 }

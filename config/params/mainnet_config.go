@@ -236,4 +236,5 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Merge.
 	MaxExecutionTransactions:     16384,
 	MaxBytesPerOpaqueTransaction: 1048576,
+	TerminalBlockHash:            [32]byte{},
 }
