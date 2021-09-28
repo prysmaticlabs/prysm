@@ -15,7 +15,7 @@ func (s *Service) detectProposerSlashings(
 	ctx context.Context,
 	proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*ethpb.ProposerSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "Slasher.detectProposerSlashings")
+	ctx, span := trace.StartSpan(ctx, "slasher.detectProposerSlashings")
 	defer span.End()
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to each other.
