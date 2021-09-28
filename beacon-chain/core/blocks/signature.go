@@ -92,7 +92,7 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.Sig
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
+	return signing.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
 }
 
 // VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
