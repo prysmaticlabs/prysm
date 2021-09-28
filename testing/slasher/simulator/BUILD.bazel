@@ -7,7 +7,7 @@ go_library(
         "block_generator.go",
         "simulator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator",
+    importpath = "github.com/prysmaticlabs/prysm/testing/slasher/simulator",
     visibility = [
         "//endtoend:__subpackages__",
     ],
