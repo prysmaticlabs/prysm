@@ -25,6 +25,7 @@ type AttestationStateFetcher interface {
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
+	AttestationStateFetcher
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
