@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "chunks.go",
         "detect_attestations.go",
+        "detect_blocks.go",
         "doc.go",
         "helpers.go",
         "metrics.go",
@@ -47,6 +48,7 @@ go_test(
     srcs = [
         "chunks_test.go",
         "detect_attestations_test.go",
+        "detect_blocks_test.go",
         "helpers_test.go",
         "params_test.go",
         "process_slashings_test.go",

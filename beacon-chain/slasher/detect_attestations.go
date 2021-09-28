@@ -29,10 +29,10 @@ func (s *Service) checkSlashableAttestations(
 			currentEpoch:        currentEpoch,
 		}, batch)
 
-		slashings = append(slashings, attSlashings...)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not detect slashable attestations")
 		}
+		slashings = append(slashings, attSlashings...)
 		indices = append(indices, s.params.validatorIndicesInChunk(validatorChunkIdx)...)
 	}
 	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {

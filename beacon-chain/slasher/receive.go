@@ -151,8 +151,11 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 
 			start := time.Now()
 			// Check for slashings.
-			// TODO(#8331): Detect slashings.
-			slashings := make([]*ethpb.ProposerSlashing, 0)
+			slashings, err := s.detectProposerSlashings(ctx, blocks)
+			if err != nil {
+				log.WithError(err).Error("Could not detect proposer slashings")
+				continue
+			}
 
 			// Process proposer slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
