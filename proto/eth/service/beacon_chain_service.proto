@@ -123,7 +123,7 @@ service BeaconChain {
   // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
   // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
   // still broadcast but a different status code is returned (202).
-  rpc SubmitBlock(v1.BeaconBlockContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlock(v2.SignedBeaconBlockContainerV2) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
       body: "*"
