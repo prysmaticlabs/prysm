@@ -108,7 +108,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			// TODO(#9212): Detect slashings.
+			// TODO(#8331): Detect slashings.
 			slashings := make([]*ethpb.AttesterSlashing, 0)
 
 			// Process attester slashings by verifying their signatures, submitting
@@ -146,7 +146,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 
 			start := time.Now()
 			// Check for slashings.
-			// TODO(#9212): Detect slashings.
+			// TODO(#8331): Detect slashings.
 			slashings := make([]*ethpb.ProposerSlashing, 0)
 
 			// Process proposer slashings by verifying their signatures, submitting
