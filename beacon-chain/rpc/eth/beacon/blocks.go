@@ -144,39 +144,80 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockContainer) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainerV2) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	blk := req.Message
-	rBlock, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: blk, Signature: req.Signature})
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-	}
-	v1alpha1Block := wrapper.WrappedPhase0SignedBeaconBlock(rBlock)
+	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+	if ok {
+		phase0Blk := phase0BlkContainer.Phase0Block
+		v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: req.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		}
+		wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
 
-	root, err := blk.HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
+		root, err := phase0Blk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+		}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: v1alpha1Block},
-		})
-	}()
+		// Do not block proposal critical path with debug logging or block feed updates.
+		defer func() {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+				"Block proposal received via RPC")
+			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
+			})
+		}()
 
-	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, v1alpha1Block.Proto()); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
 
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, v1alpha1Block, root); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+	} else {
+		altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not get Altair block from request")
+		}
+		altairBlk := altairBlkContainer.AltairBlock
+		v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: req.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		}
+		wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
+		}
+
+		root, err := altairBlk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+		}
+
+		// Do not block proposal critical path with debug logging or block feed updates.
+		defer func() {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+				"Block proposal received via RPC")
+			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
+			})
+		}()
+
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
 	}
 
 	return &emptypb.Empty{}, nil
@@ -245,7 +286,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
 			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Block:     &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 		}, nil
@@ -261,7 +302,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	return &ethpbv2.BlockResponseV2{
 		Version: ethpbv2.Version_ALTAIR,
 		Data: &ethpbv2.SignedBeaconBlockContainerV2{
-			Block:     &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+			Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 			Signature: blk.Signature(),
 		},
 	}, nil
