@@ -24,7 +24,7 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
-// Broadcasts a message to the p2p network, the message is assumed to be
+// Broadcast a message to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
