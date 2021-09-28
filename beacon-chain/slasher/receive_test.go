@@ -302,3 +302,24 @@ func TestService_processQueuedBlocks(t *testing.T) {
 	<-exitChan
 	assert.LogsContain(t, hook, "New slot, processing queued")
 }
+
+func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	header := &ethpb.BeaconBlockHeader{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    params2.BeaconConfig().ZeroHash[:],
+		StateRoot:     bytesutil.PadTo(signingRoot, 32),
+		BodyRoot:      params2.BeaconConfig().ZeroHash[:],
+	}
+	signRoot, err := header.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header:    header,
+			Signature: params2.BeaconConfig().EmptySignature[:],
+		},
+		SigningRoot: signRoot,
+	}
+}
