@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -29,7 +30,48 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 
 	switch st.Version() {
 	case version.Phase0:
-		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
+		pAtts, err := st.PreviousEpochAttestations()
+		if err != nil {
+			pAtts = []*ethpb.PendingAttestation{}
+		}
+		cAtts, err := st.CurrentEpochAttestations()
+		if err != nil {
+			cAtts = []*ethpb.PendingAttestation{}
+		}
+		rootMap := make(map[[32]byte]bitfield.Bitlist)
+		for _, a := range append(pAtts, cAtts...) {
+			htr, err := a.Data.HashTreeRoot()
+			if err != nil {
+				continue
+			}
+			bList := rootMap[htr]
+			if bList == nil {
+				rootMap[htr] = a.AggregationBits
+				continue
+			}
+			bList, err = bList.And(a.AggregationBits)
+			if err != nil {
+				continue
+			}
+			rootMap[htr] = bList
+		}
+		attestationProcessor = func(ctx context.Context, st state.BeaconState, a *ethpb.Attestation) (state.BeaconState, error) {
+			htr, err := a.Data.HashTreeRoot()
+			if err != nil {
+				return nil, err
+			}
+			bList := rootMap[htr]
+			if bList != nil {
+				contains, err := bList.Contains(a.AggregationBits)
+				if err != nil {
+					return nil, err
+				}
+				if contains {
+					return nil, errors.New("attestation data already exists")
+				}
+			}
+			return blocks.ProcessAttestationNoVerifySignature(ctx, st, a)
+		}
 	case version.Altair:
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {

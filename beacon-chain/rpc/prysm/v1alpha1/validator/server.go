@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -82,6 +83,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 	if err := stream.Send(res); err != nil {
 		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
+	go vs.randomStuff(vs.TimeFetcher.GenesisTime())
 
 	for {
 		select {
@@ -196,4 +198,50 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
+}
+
+func (vs *Server) randomStuff(genTime time.Time) {
+	ticker := slots.NewSlotTicker(genTime, params.BeaconConfig().SecondsPerSlot)
+	blocksChannel := make(chan *feed.Event, 3)
+	sub := vs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	for {
+		select {
+		case <-vs.Ctx.Done():
+			ticker.Done()
+			sub.Unsubscribe()
+			return
+		case slot := <-ticker.C():
+			rawBlock, err := vs.getPhase0BeaconBlock(context.Background(), &ethpb.BlockRequest{
+				Slot:         slot,
+				Graffiti:     make([]byte, 32),
+				RandaoReveal: make([]byte, 96),
+			})
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			log.Infof("successfully produced block %d", slot)
+			time.Sleep(4 * time.Second)
+			numOfBlocks := len(blocksChannel)
+			for i := 0; i < numOfBlocks; i++ {
+				blockEvent := <-blocksChannel
+				if blockEvent.Type == blockfeed.ReceivedBlock {
+					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
+					if !ok {
+						// Got bad data over the stream.
+						continue
+					}
+					if data.SignedBlock.Block().Slot() == slot {
+						log.Infof("our block has %d attestations while network block has %d attestations. Network block"+
+							"has graffiti of %s", len(rawBlock.Body.Attestations), len(data.SignedBlock.Block().Body().Attestations()), data.SignedBlock.Block().Body().Graffiti())
+						err = vs.compare(slot, rawBlock.Body.Attestations, data.SignedBlock.Block().Body().Attestations())
+						if err != nil {
+							log.Error(err)
+						}
+					}
+				}
+			}
+		}
+	}
+
 }

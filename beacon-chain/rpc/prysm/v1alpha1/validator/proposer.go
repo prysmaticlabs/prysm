@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -807,15 +809,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st st
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	deduped, err := validAtts.dedup()
-	if err != nil {
-		return nil, err
-	}
-	sorted, err := deduped.sortByProfitability()
-	if err != nil {
-		return nil, err
-	}
-	return sorted.limitToMaxAttestations(), nil
+	return validAtts, nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -864,44 +858,143 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	}
 
 	// If there is any room left in the block, consider unaggregated attestations as well.
-	numAtts := uint64(len(atts))
-	if numAtts < params.BeaconConfig().MaxAttestations {
-		uAtts, err := vs.AttPool.UnaggregatedAttestations()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get unaggregated attestations")
-		}
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not filter attestations")
-		}
-		atts = append(atts, uAtts...)
 
-		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
-		for _, att := range atts {
-			attDataRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
-		}
-
-		attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
-		for _, as := range attsByDataRoot {
-			as, err := attaggregation.Aggregate(as)
-			if err != nil {
-				return nil, err
-			}
-			attsForInclusion = append(attsForInclusion, as...)
-		}
-		deduped, err := attsForInclusion.dedup()
-		if err != nil {
-			return nil, err
-		}
-		sorted, err := deduped.sortByProfitability()
-		if err != nil {
-			return nil, err
-		}
-		atts = sorted.limitToMaxAttestations()
+	uAtts, err := vs.AttPool.UnaggregatedAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get unaggregated attestations")
 	}
+	uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+	atts = append(atts, uAtts...)
+
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	for _, att := range atts {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	for _, as := range attsByDataRoot {
+		as, err := attaggregation.Aggregate(as)
+		if err != nil {
+			return nil, err
+		}
+		attsForInclusion = append(attsForInclusion, as...)
+	}
+	deduped, err := attsForInclusion.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	atts = sorted.limitToMaxAttestations()
 	return atts, nil
+}
+
+func (vs *Server) compare(currSlot types.Slot, attA []*ethpb.Attestation, attB []*ethpb.Attestation) error {
+	rootMap := make(map[[32]byte]*ethpb.Attestation)
+	attsByDataRootA := make(map[[32]byte][]*ethpb.Attestation, len(attA))
+	for _, att := range attA {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		rootMap[attDataRoot] = att
+		attsByDataRootA[attDataRoot] = append(attsByDataRootA[attDataRoot], att)
+	}
+	attsByDataRootB := make(map[[32]byte][]*ethpb.Attestation, len(attB))
+	for _, att := range attB {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		rootMap[attDataRoot] = att
+		attsByDataRootB[attDataRoot] = append(attsByDataRootB[attDataRoot], att)
+	}
+	sortedRoots := [][32]byte{}
+	for root := range rootMap {
+		sortedRoots = append(sortedRoots, root)
+	}
+	sort.Slice(sortedRoots, func(i, j int) bool {
+		return (currSlot - rootMap[sortedRoots[i]].Data.Slot) < (currSlot - rootMap[sortedRoots[j]].Data.Slot)
+	})
+
+	hState, err := vs.StateGen.StateBySlot(context.Background(), currSlot-1)
+	if err != nil {
+		return err
+	}
+	pAtts, err := hState.PreviousEpochAttestations()
+	if err != nil {
+		return err
+	}
+	cAtts, err := hState.CurrentEpochAttestations()
+	if err != nil {
+		return err
+	}
+	cAtts = append(cAtts, pAtts...)
+	pendingAttDataRoot := make(map[[32]byte]bitfield.Bitlist, len(attB))
+	for _, att := range cAtts {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		bField := pendingAttDataRoot[attDataRoot]
+		if bField == nil {
+			pendingAttDataRoot[attDataRoot] = att.AggregationBits
+			continue
+		}
+		bField, err = bField.And(att.AggregationBits)
+		if err != nil {
+			return err
+		}
+		pendingAttDataRoot[attDataRoot] = bField
+	}
+	for _, root := range sortedRoots {
+		attSetA := attsByDataRootA[root]
+		bfieldA := joinBitfields(rootMap[root].AggregationBits.Len(), attSetA)
+		attSetB := attsByDataRootB[root]
+		bfieldB := joinBitfields(rootMap[root].AggregationBits.Len(), attSetB)
+		log.Infof("Root %#x for set A has %d bits while set B has %d bits with inclusion delay %d", root, bfieldA.Count(), bfieldB.Count(), currSlot-rootMap[root].Data.Slot)
+		nField := pendingAttDataRoot[root]
+		if nField == nil {
+			continue
+		}
+		contains, err := nField.Contains(bfieldA)
+		if err != nil {
+			return err
+		}
+		if contains && bfieldA.Count() != 0 {
+			log.Infof("state already accounts for root %#x in set A", root)
+		}
+		contains, err = nField.Contains(bfieldB)
+		if err != nil {
+			return err
+		}
+		if contains && bfieldB.Count() != 0 {
+			log.Infof("state already accounts for root %#x in set B", root)
+		}
+	}
+	return nil
+}
+
+func joinBitfields(length uint64, atts []*ethpb.Attestation) bitfield.Bitlist {
+	if len(atts) == 0 {
+		return bitfield.NewBitlist(length)
+	}
+	first := atts[0].AggregationBits
+	for i := 1; i < len(atts); i++ {
+		var err error
+		first, err = first.And(atts[i].AggregationBits)
+		if err != nil {
+			continue
+		}
+	}
+	return first
 }
