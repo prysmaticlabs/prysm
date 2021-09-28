@@ -94,7 +94,7 @@ func (s *Service) detectAllAttesterSlashings(
 	}
 
 	// Consolidate all slashings into a slice.
-	slashings := make([]*ethpb.AttesterSlashing, 0)
+	slashings := make([]*ethpb.AttesterSlashing, 0, len(doubleVoteSlashings)+len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, doubleVoteSlashings...)
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
