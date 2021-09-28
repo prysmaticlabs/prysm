@@ -110,8 +110,11 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			// TODO(#8331): Detect slashings.
-			slashings := make([]*ethpb.AttesterSlashing, 0)
+			slashings, err := s.checkSlashableAttestations(ctx, validAtts)
+			if err != nil {
+				log.WithError(err).Error("Could not check slashable attestations")
+				continue
+			}
 
 			// Process attester slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
