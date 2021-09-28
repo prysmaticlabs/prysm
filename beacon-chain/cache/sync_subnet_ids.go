@@ -6,10 +6,10 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 type syncSubnetIDs struct {
@@ -86,7 +86,7 @@ func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 		// epoch of the validator's assignments.
 		committees = append(committees, idxs[1:]...)
 	}
-	return sliceutil.SetUint64(committees)
+	return slice.SetUint64(committees)
 }
 
 // AddSyncCommitteeSubnets adds the relevant committee for that particular validator along with its

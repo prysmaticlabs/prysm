@@ -12,15 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -109,23 +109,23 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
-	if featureconfig.Get().EnableSlasher {
+	if features.Get().EnableSlasher {
 		// Feed the indexed attestation to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
 			for _, att := range signed.Block().Body().Attestations() {
-				committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
+				committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
 				if err != nil {
 					log.WithError(err).Error("Could not get attestation committee")
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return
 				}
 				// Using a different context to prevent timeouts as this operation can be expensive
 				// and we want to avoid affecting the critical code path.
-				indexedAtt, err := attestationutil.ConvertToIndexed(context.TODO(), att, committee)
+				indexedAtt, err := attestation.ConvertToIndexed(context.TODO(), att, committee)
 				if err != nil {
 					log.WithError(err).Error("Could not convert to indexed attestation")
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					return
 				}
 				s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
@@ -134,7 +134,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		go func() {
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
@@ -155,34 +155,32 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
-	if featureconfig.Get().UpdateHeadTimely {
-		if newFinalized {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = postState.FinalizedCheckpoint()
+	if newFinalized {
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save new justified")
 		}
-
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-
-		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
-			return err
-		}
-
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        signed.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: signed,
-				Verified:    true,
-			},
-		})
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
+
+	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+		log.WithError(err).Warn("Could not update head")
+	}
+
+	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+		return err
+	}
+
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        signed.Block().Slot(),
+			BlockRoot:   blockRoot,
+			SignedBlock: signed,
+			Verified:    true,
+		},
+	})
 
 	// Update finalized check point.
 	if newFinalized {
@@ -192,11 +190,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
-		}
-		if !featureconfig.Get().UpdateHeadTimely {
-			if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save new justified")
-			}
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
@@ -336,10 +329,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		if featureconfig.Get().UpdateHeadTimely {
-			s.prevFinalizedCheckpt = s.finalizedCheckpt
-			s.finalizedCheckpt = fCheckpoint
-		}
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = fCheckpoint
 	}
 	return nil
 }
@@ -359,7 +350,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -377,7 +368,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(postState, core.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
 			return err
 		}
 	}
@@ -399,11 +390,11 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	}
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(st, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return err
 		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return err
 		}
@@ -449,7 +440,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
 func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b block.SignedBeaconBlock) error {
-	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+	if !features.Get().CorrectlyPruneCanonicalAtts {
 		return nil
 	}
 

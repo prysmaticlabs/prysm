@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 func TestScorers_BlockProvider_Score(t *testing.T) {
@@ -57,7 +57,7 @@ func TestScorers_BlockProvider_Score(t *testing.T) {
 				batchWeight := scorer.Params().ProcessedBatchWeight
 				scorer.IncrementProcessedBlocks("peer1", batchSize*3)
 				assert.Equal(t, roundScore(batchWeight*3), scorer.Score("peer1"), "Unexpected score")
-				scorer.Touch("peer1", timeutils.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
+				scorer.Touch("peer1", time.Now().Add(-1*scorer.Params().StalePeerRefreshInterval))
 			},
 			check: func(scorer *scorers.BlockProviderScorer) {
 				assert.Equal(t, scorer.MaxScore(), scorer.Score("peer1"), "Unexpected score")
@@ -462,7 +462,7 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 	}
 
 	t.Run("peer scorer disabled", func(t *testing.T) {
-		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		resetCfg := features.InitWithReset(&features.Flags{
 			EnablePeerScorer: false,
 		})
 		defer resetCfg()

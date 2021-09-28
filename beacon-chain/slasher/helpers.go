@@ -1,13 +1,14 @@
 package slasher
 
 import (
+	"bytes"
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -105,8 +106,20 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	return sourceEpoch < targetEpoch
 }
 
+// Validates the signed beacon block header integrity, ensuring we have no nil values.
+func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
+	// If a signed block header is malformed, we drop it.
+	if header == nil ||
+		header.Header == nil ||
+		len(header.Signature) != params.BeaconConfig().BLSSignatureLength ||
+		bytes.Equal(header.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength)) {
+		return false
+	}
+	return true
+}
+
 func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
-	indices := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	indices := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	log.WithFields(logrus.Fields{
 		"validatorIndex":  indices,
 		"prevSourceEpoch": slashing.Attestation_1.Data.Source.Epoch,

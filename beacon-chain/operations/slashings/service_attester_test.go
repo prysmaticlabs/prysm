@@ -6,18 +6,18 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func validAttesterSlashingForValIdx(t *testing.T, beaconState state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
 	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
-		slashing, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privs[idx], types.ValidatorIndex(idx))
+		slashing, err := util.GenerateAttesterSlashingForValidator(beaconState, privs[idx], types.ValidatorIndex(idx))
 		require.NoError(t, err)
 		slashings = append(slashings, slashing)
 	}
@@ -74,11 +74,11 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		slashings []*ethpb.AttesterSlashing
 	}
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
@@ -299,11 +299,11 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 2)
 	slashings := make([]*ethpb.AttesterSlashing, 2)
 	for i := 0; i < 2; i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
@@ -453,11 +453,11 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 		all     bool
 	}
 	params.SetupTestConfigCleanup(t)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
@@ -519,7 +519,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	val, err := beaconState.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.Slashed = true
@@ -532,7 +532,7 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	pendingSlashings2 := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
@@ -586,11 +586,11 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 3)
 	slashings := make([]*ethpb.AttesterSlashing, 3)
 	for i := 0; i < 2; i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,

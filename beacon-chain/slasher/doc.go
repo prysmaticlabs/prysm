@@ -1,4 +1,4 @@
-// Package slasher defines an optimized implementation of eth2 slashing
+// Package slasher defines an optimized implementation of Ethereum proof-of-stake slashing
 // detection, namely focused on catching "surround vote" slashable
 // offenses as explained here: https://blog.ethereum.org/2020/01/13/validated-staking-on-eth2-1-incentives/.
 //
@@ -11,7 +11,7 @@
 //
 // Attesting histories are kept for each validator in two separate arrays known
 // as min and max spans, which are explained in our design document:
-// https://hackmd.io/@Yl0VNGYRR6aeDrHHQNhuaA/prysm-slasher.
+// https://hackmd.io/@prysmaticlabs/slasher.
 //
 // A regular pair of min and max spans for a validator look as follows
 // with length = H where H is the amount of epochs worth of history

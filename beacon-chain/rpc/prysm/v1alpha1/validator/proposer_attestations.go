@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/aggregation"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 type proposerAtts []*ethpb.Attestation
@@ -58,7 +58,7 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	if featureconfig.Get().ProposerAttsSelectionUsingMaxCover {
+	if features.Get().ProposerAttsSelectionUsingMaxCover {
 		return a.sortByProfitabilityUsingMaxCover()
 	}
 	sort.Slice(a, func(i, j int) bool {

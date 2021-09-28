@@ -6,12 +6,13 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
@@ -71,15 +72,15 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 
 func Test_slashableProposalCheck(t *testing.T) {
 	ctx := context.Background()
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		RemoteSlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	block := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
@@ -132,20 +133,20 @@ func Test_slashableProposalCheck(t *testing.T) {
 }
 
 func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
-	config := &featureconfig.Flags{
+	config := &features.Flags{
 		RemoteSlasherProtection: true,
 	}
-	reset := featureconfig.InitWithReset(config)
+	reset := features.InitWithReset(config)
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 
-	m.slasherClient.EXPECT().IsSlashableBlock(
+	m.nodeClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.ProposerSlashingResponse{ProposerSlashings: []*ethpb.ProposerSlashing{{}}}, nil /*err*/)

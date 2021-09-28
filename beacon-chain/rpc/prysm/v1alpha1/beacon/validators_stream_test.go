@@ -6,10 +6,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
@@ -69,7 +69,7 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	is := &infostream{
@@ -119,7 +119,7 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
@@ -167,7 +167,7 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 		},
 	}
 
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	is := &infostream{

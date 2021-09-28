@@ -11,11 +11,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -37,13 +37,13 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	topic, ok := GossipTypeMapping[reflect.TypeOf(msg)]
 	if !ok {
-		traceutil.AnnotateError(span, ErrMessageNotMapped)
+		tracing.AnnotateError(span, ErrMessageNotMapped)
 		return ErrMessageNotMapped
 	}
 	castMsg, ok := msg.(ssz.Marshaler)
@@ -61,7 +61,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
@@ -79,7 +79,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 			return errors.New("failed to find peers for subnet")
 		}(); err != nil {
 			log.WithError(err).Error("Failed to find peers")
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 		}
 	}
 	// In the event our attestation is outdated and beyond the
@@ -138,7 +138,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest)); err != nil {
 		log.WithError(err).Error("Failed to broadcast attestation")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 	}
 }
 
@@ -181,7 +181,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 			return errors.New("failed to find peers for subnet")
 		}(); err != nil {
 			log.WithError(err).Error("Failed to find peers")
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 		}
 	}
 	// In the event our sync message is outdated and beyond the
@@ -193,7 +193,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 
 	if err := s.broadcastObject(ctx, sMsg, syncCommitteeToTopic(subnet, forkDigest)); err != nil {
 		log.WithError(err).Error("Failed to broadcast sync committee message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 	}
 }
 
@@ -207,18 +207,18 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	buf := new(bytes.Buffer)
 	if _, err := s.Encoding().EncodeGossip(buf, obj); err != nil {
 		err := errors.Wrap(err, "could not encode message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	if span.IsRecordingEvents() {
-		id := hashutil.FastSum64(buf.Bytes())
+		id := hash.FastSum64(buf.Bytes())
 		messageLen := int64(buf.Len())
 		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	return nil

@@ -11,18 +11,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// AttestationStateFetcher is able to retrieve a beacon state for an attestation
-// target checkpoint, useful for verifying attestation signatures.
+// AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
+// root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
-	AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (state.BeaconState, error)
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
 }
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -50,15 +50,15 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 // AttestationTargetState returns the pre state of attestation.
-func (s *Service) AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (state.BeaconState, error) {
-	ss, err := core.StartSlot(attTarget.Epoch)
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+	ss, err := core.StartSlot(target.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
-	return s.getAttPreState(ctx, attTarget)
+	return s.getAttPreState(ctx, target)
 }
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
@@ -120,7 +120,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 		log.Warn("Genesis time received, now available to process attestations")
 	}
 
-	st := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-s.ctx.Done():

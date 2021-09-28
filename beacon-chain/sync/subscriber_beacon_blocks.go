@@ -6,11 +6,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -39,7 +39,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
-	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+	if !features.Get().CorrectlyPruneCanonicalAtts {
 		// Delete attestations from the block in the pool to avoid inclusion in future block.
 		if err := s.deleteAttsInPool(block.Body().Attestations()); err != nil {
 			log.Debugf("Could not delete attestations in pool: %v", err)

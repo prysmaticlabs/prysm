@@ -9,8 +9,8 @@ go_library(
         "//tools/interop/convert-keys:__pkg__",
     ],
     deps = [
-        "//shared/bls:go_default_library",
-        "//shared/interop:go_default_library",
+        "//crypto/bls:go_default_library",
+        "//runtime/interop:go_default_library",
         "//tools/unencrypted-keys-gen/keygen:go_default_library",
     ],
 )
@@ -26,8 +26,8 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "//tools/unencrypted-keys-gen/keygen:go_default_library",
     ],
 )

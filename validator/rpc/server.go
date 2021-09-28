@@ -11,13 +11,13 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -58,7 +58,7 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	logsStreamer              logutil.Streamer
+	logsStreamer              logs.Streamer
 	streamLogsBufferSize      int
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
@@ -102,7 +102,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	return &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
-		logsStreamer:             logutil.NewStreamServer(),
+		logsStreamer:             logs.NewStreamServer(),
 		streamLogsBufferSize:     1000, // Enough to handle most bursts of logs in the validator client.
 		host:                     cfg.Host,
 		port:                     cfg.Port,
@@ -147,7 +147,7 @@ func (s *Server) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),

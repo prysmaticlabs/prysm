@@ -7,12 +7,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -32,9 +32,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, types.Epoch(8192), params.BeaconConfig().EpochsPerSlashingsVector, "EpochsPerSlashingsVector should be 8192 for these tests to pass")
 
 	genesisTime := uint64(99999)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
+	deposits, _, err := util.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	newState, err := transition.GenesisBeaconState(context.Background(), deposits, genesisTime, eth1Data)
 	require.NoError(t, err, "Could not execute GenesisBeaconState")
@@ -91,7 +91,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(100)
+	deposits, _, err := util.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
 	state1, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
@@ -103,8 +103,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	pbstate, err := v1.ProtobufBeaconState(state.CloneInnerState())
 	require.NoError(t, err)
 
-	root1, err1 := hashutil.HashProto(pbState1)
-	root2, err2 := hashutil.HashProto(pbstate)
+	root1, err1 := hash.HashProto(pbState1)
+	root2, err2 := hash.HashProto(pbstate)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

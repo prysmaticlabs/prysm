@@ -7,17 +7,17 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetBeaconState(t *testing.T) {
-	fakeState, err := sharedtestutil.NewBeaconState()
+	fakeState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
@@ -33,7 +33,7 @@ func TestGetBeaconState(t *testing.T) {
 
 func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
-		fakeState, err := sharedtestutil.NewBeaconState()
+		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
@@ -48,7 +48,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		fakeState, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 1)
+		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
@@ -64,7 +64,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 }
 
 func TestGetBeaconStateSSZ(t *testing.T) {
-	fakeState, err := sharedtestutil.NewBeaconState()
+	fakeState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	sszState, err := fakeState.MarshalSSZ()
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestGetBeaconStateSSZ(t *testing.T) {
 
 func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
-		fakeState, err := sharedtestutil.NewBeaconState()
+		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		sszState, err := fakeState.MarshalSSZ()
 		require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.DeepEqual(t, sszState, resp.Data)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		fakeState, _ := sharedtestutil.DeterministicGenesisStateAltair(t, 1)
+		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
 		sszState, err := fakeState.MarshalSSZ()
 		require.NoError(t, err)
 

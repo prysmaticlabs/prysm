@@ -6,10 +6,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -77,7 +77,7 @@ func (v *validator) LogNextDutyTimeLeft(slot types.Slot) error {
 		if err != nil {
 			return err
 		}
-		timeLeft := time.Duration(nextDutyTime.Unix() - timeutils.Now().Unix()).Nanoseconds()
+		timeLeft := time.Duration(nextDutyTime.Unix() - prysmTime.Now().Unix()).Nanoseconds()
 		// There is not much value to log if time left is less than one slot.
 		if uint64(timeLeft) >= params.BeaconConfig().SecondsPerSlot {
 			log.WithFields(

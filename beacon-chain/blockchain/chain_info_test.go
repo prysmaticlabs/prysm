@@ -10,13 +10,13 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -122,7 +122,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := &Service{cfg: &Config{BeaconDB: beaconDB}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -134,7 +134,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := setupBeaconChain(t, beaconDB)
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 }
 
 func TestService_HeadValidatorsIndices(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 
 	c.head = &head{}
@@ -248,7 +248,7 @@ func TestService_HeadValidatorsIndices(t *testing.T) {
 }
 
 func TestService_HeadSeed(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -265,7 +265,7 @@ func TestService_HeadSeed(t *testing.T) {
 }
 
 func TestService_HeadGenesisValidatorRoot(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
@@ -298,7 +298,7 @@ func TestService_ChainHeads(t *testing.T) {
 }
 
 func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -313,8 +313,22 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
 
+func TestService_HeadPublicKeyToValidatorIndexNil(t *testing.T) {
+	c := &Service{}
+	c.head = nil
+
+	idx, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	require.Equal(t, false, e)
+	require.Equal(t, types.ValidatorIndex(0), idx)
+
+	c.head = &head{state: nil}
+	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	require.Equal(t, false, e)
+	require.Equal(t, types.ValidatorIndex(0), i)
+}
+
 func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -325,4 +339,18 @@ func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, bytesutil.ToBytes48(v.PublicKey), p)
+}
+
+func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
+	c := &Service{}
+	c.head = nil
+
+	p, err := c.HeadValidatorIndexToPublicKey(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, [48]byte{}, p)
+
+	c.head = &head{state: nil}
+	p, err = c.HeadValidatorIndexToPublicKey(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, [48]byte{}, p)
 }

@@ -17,9 +17,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -90,14 +90,14 @@ func decrypt(cliCtx *cli.Context) error {
 	if keystorePath == "" {
 		return errors.New("--keystore must be set")
 	}
-	fullPath, err := fileutil.ExpandPath(keystorePath)
+	fullPath, err := file.ExpandPath(keystorePath)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", keystorePath)
 	}
 	password := cliCtx.String(passwordFlag.Name)
 	isPasswordSet := cliCtx.IsSet(passwordFlag.Name)
 	if !isPasswordSet {
-		password, err = promptutil.PasswordPrompt("Input the keystore(s) password", func(s string) error {
+		password, err = prompt.PasswordPrompt("Input the keystore(s) password", func(s string) error {
 			// Any password is valid.
 			return nil
 		})
@@ -105,7 +105,7 @@ func decrypt(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	isDir, err := fileutil.HasDir(fullPath)
+	isDir, err := file.HasDir(fullPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if path exists: %s", fullPath)
 	}
@@ -137,7 +137,7 @@ func encrypt(cliCtx *cli.Context) error {
 	password := cliCtx.String(passwordFlag.Name)
 	isPasswordSet := cliCtx.IsSet(passwordFlag.Name)
 	if !isPasswordSet {
-		password, err = promptutil.PasswordPrompt("Input the keystore(s) password", func(s string) error {
+		password, err = prompt.PasswordPrompt("Input the keystore(s) password", func(s string) error {
 			// Any password is valid.
 			return nil
 		})
@@ -153,12 +153,12 @@ func encrypt(cliCtx *cli.Context) error {
 	if outputPath == "" {
 		return errors.New("--output-path must be set")
 	}
-	fullPath, err := fileutil.ExpandPath(outputPath)
+	fullPath, err := file.ExpandPath(outputPath)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand path: %s", outputPath)
 	}
-	if fileutil.FileExists(fullPath) {
-		response, err := promptutil.ValidatePrompt(
+	if file.FileExists(fullPath) {
+		response, err := prompt.ValidatePrompt(
 			os.Stdin,
 			fmt.Sprintf("file at path %s already exists, are you sure you want to overwrite it? [y/n]", fullPath),
 			func(s string) error {
@@ -170,7 +170,7 @@ func encrypt(cliCtx *cli.Context) error {
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "could not validate prompt confirmation")
+			return errors.Wrap(err, "could not validate userprompt confirmation")
 		}
 		if response == "n" {
 			return nil
@@ -208,7 +208,7 @@ func encrypt(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not json marshal keystore")
 	}
-	if err := fileutil.WriteFile(fullPath, encodedFile); err != nil {
+	if err := file.WriteFile(fullPath, encodedFile); err != nil {
 		return errors.Wrapf(err, "could not write file at path: %s", fullPath)
 	}
 	fmt.Printf(

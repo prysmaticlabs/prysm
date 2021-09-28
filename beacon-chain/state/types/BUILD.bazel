@@ -5,12 +5,12 @@ go_library(
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/types",
     visibility = ["//beacon-chain:__subpackages__"],
-    deps = ["//shared/version:go_default_library"],
+    deps = ["//runtime/version:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["types_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/assert:go_default_library"],
+    deps = ["//testing/assert:go_default_library"],
 )

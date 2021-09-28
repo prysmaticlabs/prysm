@@ -10,13 +10,13 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -135,12 +135,12 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
 
 	// This defer will be the last to execute in this func.
-	resetCfgFalse := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfgFalse := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: false,
 	})
 	defer resetCfgFalse()
 
-	resetCfgTrue := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfgTrue := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
 	defer resetCfgTrue()
@@ -151,7 +151,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	// Password File should have been written.
 	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.FileExists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
@@ -325,7 +325,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 
 func Test_writeWalletPasswordToDisk(t *testing.T) {
 	walletDir := setupWalletDir(t)
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: false,
 	})
 	defer resetCfg()
@@ -334,8 +334,8 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 
 	// Expected a silent failure if the feature flag is not enabled.
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, false, fileutil.FileExists(passwordFilePath))
-	resetCfg = featureconfig.InitWithReset(&featureconfig.Flags{
+	assert.Equal(t, false, file.FileExists(passwordFilePath))
+	resetCfg = features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
 	defer resetCfg()
@@ -343,7 +343,7 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	// File should have been written.
-	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.FileExists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")

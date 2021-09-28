@@ -8,18 +8,19 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context) {
-	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(s.indexedAttsChan)
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
+	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case att := <-s.indexedAttsChan:
+		case att := <-indexedAttsChan:
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
@@ -43,13 +44,15 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 }
 
 // Receive beacon blocks from some source event feed,
-func (s *Service) receiveBlocks(ctx context.Context) {
-	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(s.beaconBlockHeadersChan)
-	defer close(s.beaconBlockHeadersChan)
+func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader) {
+	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case blockHeader := <-s.beaconBlockHeadersChan:
+		case blockHeader := <-beaconBlockHeadersChan:
+			if !validateBlockHeaderIntegrity(blockHeader) {
+				continue
+			}
 			signingRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of signed block header")

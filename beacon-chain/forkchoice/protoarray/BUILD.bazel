@@ -14,10 +14,10 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//fuzz:__pkg__",
+        "//testing/fuzz:__pkg__",
     ],
     deps = [
-        "//shared/params:go_default_library",
+        "//config/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -38,11 +38,11 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//shared/bytesutil:go_default_library",
-        "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//config/params:go_default_library",
+        "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

@@ -7,17 +7,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
@@ -35,7 +35,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := core.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
@@ -43,9 +43,9 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -57,7 +57,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	block.Block.StateRoot = stateRoot[:]
 
-	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -69,7 +69,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 }
 
 func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
@@ -87,7 +87,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 	epoch := core.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
@@ -95,9 +95,9 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -109,7 +109,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 
 	block.Block.StateRoot = stateRoot[:]
 
-	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -158,4 +158,13 @@ func TestCalculateStateRootAltair_OK(t *testing.T) {
 	r, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, params.BeaconConfig().ZeroHash, r)
+}
+
+func TestProcessBlockDifferentVersion(t *testing.T) {
+	beaconState, _ := util.DeterministicGenesisState(t, 64) // Phase 0 state
+	_, block := createFullAltairBlockWithOperations(t)
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block) // Altair block
+	require.NoError(t, err)
+	_, _, err = transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
+	require.ErrorContains(t, "state and block are different version. 0 != 1", err)
 }

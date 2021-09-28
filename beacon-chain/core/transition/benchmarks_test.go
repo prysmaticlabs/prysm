@@ -9,22 +9,22 @@ import (
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/benchutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/benchmark"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
 var runAmount = 25
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
-	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PreGenState1Epoch()
+	benchmark.SetBenchmarkConfig()
+	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
-	block, err := benchutil.PreGenFullBlock()
+	block, err := benchmark.PreGenFullBlock()
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -35,12 +35,12 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	benchutil.SetBenchmarkConfig()
+	benchmark.SetBenchmarkConfig()
 
-	beaconState, err := benchutil.PreGenState1Epoch()
+	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
-	block, err := benchutil.PreGenFullBlock()
+	block, err := benchmark.PreGenFullBlock()
 	require.NoError(b, err)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
@@ -61,8 +61,8 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PreGenstateFullEpochs()
+	benchmark.SetBenchmarkConfig()
+	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
@@ -82,7 +82,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 }
 
 func BenchmarkHashTreeRoot_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenstateFullEpochs()
+	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -93,7 +93,7 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 }
 
 func BenchmarkHashTreeRootState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenstateFullEpochs()
+	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
 	ctx := context.Background()
@@ -110,7 +110,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 }
 
 func BenchmarkMarshalState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenstateFullEpochs()
+	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)
@@ -134,7 +134,7 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 }
 
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
-	beaconState, err := benchutil.PreGenstateFullEpochs()
+	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)

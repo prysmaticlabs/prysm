@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -15,10 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ServiceConfig for the slasher service in the beacon node.
@@ -53,7 +53,7 @@ type Service struct {
 	blksQueue              *blocksQueue
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	slotTicker             *slotutil.SlotTicker
+	slotTicker             *slots.SlotTicker
 	genesisTime            time.Time
 }
 
@@ -110,15 +110,17 @@ func (s *Service) run() {
 
 	stateSub.Unsubscribe()
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	s.slotTicker = slotutil.NewSlotTicker(s.genesisTime, secondsPerSlot)
+	s.slotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
 
 	s.waitForSync(s.genesisTime)
 
+	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
+	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
 	log.Info("Completed chain sync, starting slashing detection")
 	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
 	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
-	go s.receiveAttestations(s.ctx)
-	go s.receiveBlocks(s.ctx)
+	go s.receiveAttestations(s.ctx, indexedAttsChan)
+	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
 	go s.pruneSlasherData(s.ctx, s.slotTicker.C())
 }
 
@@ -137,7 +139,7 @@ func (s *Service) Status() error {
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {
-	if slotutil.SlotsSinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
+	if slots.SlotsSinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
 		return
 	}
 	for {

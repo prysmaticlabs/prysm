@@ -7,19 +7,19 @@ import (
 	"time"
 
 	gcache "github.com/patrickmn/go-cache"
+	"github.com/prysmaticlabs/prysm/async/abool"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
@@ -75,8 +75,8 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testutil.NewBeaconBlock()
-	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg := util.NewBeaconBlock()
+	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
@@ -155,8 +155,8 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 
-	msg := testutil.NewBeaconBlock()
-	msg.Block.ParentRoot = testutil.Random32Bytes(t)
+	msg := util.NewBeaconBlock()
+	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.Digest, err = r.currentForkDigest()
 	r.cfg.BlockNotifier = chainService.BlockNotifier()
@@ -194,7 +194,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	p2p.ReceivePubSub(topic, msg)
 	// wait for message to be sent
-	testutil.WaitTimeout(wg, 2*time.Second)
+	util.WaitTimeout(wg, 2*time.Second)
 }
 
 func TestSyncService_StopCleanly(t *testing.T) {

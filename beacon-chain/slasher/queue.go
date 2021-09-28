@@ -63,8 +63,8 @@ func (q *blocksQueue) push(blk *slashertypes.SignedBlockHeaderWrapper) {
 }
 
 func (q *blocksQueue) dequeue() []*slashertypes.SignedBlockHeaderWrapper {
-	q.lock.RLock()
-	defer q.lock.RUnlock()
+	q.lock.Lock()
+	defer q.lock.Unlock()
 	items := q.items
 	q.items = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 	return items

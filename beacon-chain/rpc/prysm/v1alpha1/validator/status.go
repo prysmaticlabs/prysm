@@ -7,12 +7,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -238,14 +239,14 @@ func (vs *Server) validatorStatus(
 	}
 	vStatus, idx, err := statusForPubKey(headState, pubKey)
 	if err != nil && err != errPubkeyDoesNotExist {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return resp, nonExistentIndex
 	}
 	resp.Status = vStatus
 	if err != errPubkeyDoesNotExist {
 		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return resp, idx
 		}
 		resp.ActivationEpoch = val.ActivationEpoch()
@@ -259,11 +260,11 @@ func (vs *Server) validatorStatus(
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
-		deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+		dep, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp, nonExistentIndex
 		}
-		domain, err := helpers.ComputeDomain(
+		domain, err := signing.ComputeDomain(
 			params.BeaconConfig().DomainDeposit,
 			nil, /*forkVersion*/
 			nil, /*genesisValidatorsRoot*/
@@ -272,13 +273,13 @@ func (vs *Server) validatorStatus(
 			log.Warn("Could not compute domain")
 			return resp, nonExistentIndex
 		}
-		if err := depositutil.VerifyDepositSignature(deposit.Data, domain); err != nil {
+		if err := deposit.VerifyDepositSignature(dep.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
 			log.Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
 		}
 		// Set validator deposit status if their deposit is visible.
-		resp.Status = depositStatus(deposit.Data.Amount)
+		resp.Status = depositStatus(dep.Data.Amount)
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 		return resp, nonExistentIndex

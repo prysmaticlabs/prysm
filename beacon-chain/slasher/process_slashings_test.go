@@ -5,16 +5,16 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -23,7 +23,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	beaconDB := dbtest.SetupDB(t)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	privKey, err := bls.RandKey()
@@ -50,21 +50,21 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		},
 	}
 
-	firstAtt := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	firstAtt := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
 	})
-	secondAtt := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	secondAtt := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
 	})
 
-	domain, err := helpers.Domain(
+	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconAttester,
 		beaconState.GenesisValidatorRoot(),
 	)
 	require.NoError(t, err)
-	signingRoot, err := helpers.ComputeSigningRoot(firstAtt.Data, domain)
+	signingRoot, err := signing.ComputeSigningRoot(firstAtt.Data, domain)
 	require.NoError(t, err)
 
 	t.Run("first_att_valid_sig_second_invalid", func(tt *testing.T) {
@@ -130,7 +130,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	beaconDB := dbtest.SetupDB(t)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	privKey, err := bls.RandKey()
@@ -161,14 +161,14 @@ func TestService_processProposerSlashings(t *testing.T) {
 	err = s.serviceCfg.StateGen.SaveState(ctx, parentRoot, beaconState)
 	require.NoError(t, err)
 
-	firstBlockHeader := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	firstBlockHeader := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
 			ParentRoot:    parentRoot[:],
 		},
 	})
-	secondBlockHeader := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	secondBlockHeader := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
@@ -176,7 +176,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		},
 	})
 
-	domain, err := helpers.Domain(
+	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,

@@ -1,25 +1,25 @@
 package validator
 
 import (
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // StreamBlocksAltair to clients every single time a block is received by the beacon node.
-func (bs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
+func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
 	if req.VerifiedOnly {
-		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
+		blockSub = vs.StateNotifier.StateFeed().Subscribe(blocksChannel)
 	} else {
-		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+		blockSub = vs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
 	}
 	defer blockSub.Unsubscribe()
 
@@ -65,7 +65,7 @@ func (bs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 						// One nil block shouldn't stop the stream.
 						continue
 					}
-					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					headState, err := vs.HeadFetcher.HeadState(vs.Ctx)
 					if err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
 						continue
@@ -99,7 +99,7 @@ func (bs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 			}
 		case <-blockSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
-		case <-bs.Ctx.Done():
+		case <-vs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")

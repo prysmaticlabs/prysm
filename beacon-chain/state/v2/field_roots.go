@@ -1,18 +1,20 @@
 package v2
 
 import (
+	"context"
 	"encoding/binary"
 	"sync"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -47,22 +49,25 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *ethpb.BeaconStateAltair) ([][]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRootsWithHasher(state)
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
+	if features.Get().EnableSSZCache {
+		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
-	return nocachedHasher.computeFieldRootsWithHasher(state)
+	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAltair) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
+	defer span.End()
+
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
 
 	// Genesis time root.
-	genesisRoot := htrutils.Uint64Root(state.GenesisTime)
+	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
@@ -71,11 +76,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAl
 	fieldRoots[1] = r[:]
 
 	// Slot root.
-	slotRoot := htrutils.Uint64Root(uint64(state.Slot))
+	slotRoot := ssz.Uint64Root(uint64(state.Slot))
 	fieldRoots[2] = slotRoot[:]
 
 	// Fork data structure root.
-	forkHashTreeRoot, err := htrutils.ForkRoot(state.Fork)
+	forkHashTreeRoot, err := ssz.ForkRoot(state.Fork)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute fork merkleization")
 	}
@@ -103,7 +108,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAl
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := htrutils.HistoricalRootsRoot(state.HistoricalRoots)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -151,7 +156,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAl
 	fieldRoots[13] = randaoRootsRoot[:]
 
 	// Slashings array root.
-	slashingsRootsRoot, err := htrutils.SlashingsRoot(state.Slashings)
+	slashingsRootsRoot, err := ssz.SlashingsRoot(state.Slashings)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute slashings merkleization")
 	}
@@ -176,21 +181,21 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAl
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.
-	prevCheckRoot, err := htrutils.CheckpointRoot(hasher, state.PreviousJustifiedCheckpoint)
+	prevCheckRoot, err := ssz.CheckpointRoot(hasher, state.PreviousJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous justified checkpoint merkleization")
 	}
 	fieldRoots[18] = prevCheckRoot[:]
 
 	// CurrentJustifiedCheckpoint data structure root.
-	currJustRoot, err := htrutils.CheckpointRoot(hasher, state.CurrentJustifiedCheckpoint)
+	currJustRoot, err := ssz.CheckpointRoot(hasher, state.CurrentJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current justified checkpoint merkleization")
 	}
 	fieldRoots[19] = currJustRoot[:]
 
 	// FinalizedCheckpoint data structure root.
-	finalRoot, err := htrutils.CheckpointRoot(hasher, state.FinalizedCheckpoint)
+	finalRoot, err := ssz.CheckpointRoot(hasher, state.FinalizedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
@@ -29,12 +30,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -154,7 +154,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not hash tree root genesis state: %v", err)
 		}
-		go slotutil.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()), gRoot)
+		go slots.CountdownToGenesis(s.ctx, s.genesisTime, uint64(gState.NumValidators()), gRoot)
 
 		justifiedCheckpoint, err := s.cfg.BeaconDB.JustifiedCheckpoint(s.ctx)
 		if err != nil {
@@ -254,7 +254,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slotutil.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
+	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.
@@ -298,7 +298,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(genesisState); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
 		return nil, err
 	}
 

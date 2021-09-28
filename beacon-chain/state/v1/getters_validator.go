@@ -9,12 +9,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
@@ -306,8 +306,8 @@ func (b *BeaconState) slashings() []uint64 {
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, len(validators))
-	emptyKey := hashutil.FastSum256(hashKeyElements)
-	hasher := hashutil.CustomSHA256Hasher()
+	emptyKey := hash.FastSum256(hashKeyElements)
+	hasher := hash.CustomSHA256Hasher()
 	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
 		val, err := h.validatorRoot(hasher, validators[i])
@@ -319,14 +319,14 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 		bytesProcessed += 32
 	}
 
-	hashKey := hashutil.FastSum256(hashKeyElements)
+	hashKey := hash.FastSum256(hashKeyElements)
 	if hashKey != emptyKey && h.rootsCache != nil {
 		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
 
-	validatorsRootsRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
+	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -337,14 +337,14 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	// We need to mix in the length of the slice.
 	var validatorsRootsBufRoot [32]byte
 	copy(validatorsRootsBufRoot[:], validatorsRootsBuf.Bytes())
-	res := htrutils.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
+	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
 	if hashKey != emptyKey && h.rootsCache != nil {
 		h.rootsCache.Set(string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }
 
-func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	if validator == nil {
 		return [32]byte{}, errors.New("nil validator")
 	}
@@ -372,7 +372,7 @@ func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb
 // a list of validator structs according to the Ethereum
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
+	if features.Get().EnableSSZCache {
 		return cachedHasher.validatorRegistryRoot(vals)
 	}
 	return nocachedHasher.validatorRegistryRoot(vals)

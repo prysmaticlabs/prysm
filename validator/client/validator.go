@@ -18,17 +18,17 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -69,7 +69,7 @@ type validator struct {
 	highestValidSlot                   types.Slot
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
-	ticker                             slotutil.Ticker
+	ticker                             slots.Ticker
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
@@ -185,7 +185,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
@@ -206,7 +206,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	for {
 		select {
 		// Poll every half slot.
-		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
+		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
@@ -221,6 +221,40 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
+<<<<<<< HEAD
+=======
+// SlasherReady checks if slasher that was configured as external protection
+// is reachable.
+func (v *validator) SlasherReady(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
+	defer span.End()
+	if features.Get().SlasherProtection {
+		err := v.protector.Status()
+		if err == nil {
+			return nil
+		}
+		ticker := time.NewTicker(reconnectPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
+				err = v.protector.Status()
+				if err != nil {
+					continue
+				}
+				log.Info("Slasher connection is ready")
+				return nil
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting reconnect external protection")
+				return ctx.Err()
+			}
+		}
+	}
+	return nil
+}
+
+>>>>>>> develop
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
@@ -358,7 +392,7 @@ func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 // CheckDoppelGanger checks if the current actively provided keys have
 // any duplicates active in the network.
 func (v *validator) CheckDoppelGanger(ctx context.Context) error {
-	if !featureconfig.Get().EnableDoppelGanger {
+	if !features.Get().EnableDoppelGanger {
 		return nil
 	}
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
@@ -665,7 +699,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 		return false, err
 	}
 
-	b := hashutil.Hash(slotSig)
+	b := hash.Hash(slotSig)
 
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }

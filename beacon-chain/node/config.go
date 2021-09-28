@@ -2,15 +2,15 @@ package node
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
 func configureTracing(cliCtx *cli.Context) error {
-	return tracing.Setup(
+	return tracing2.Setup(
 		"beacon-chain", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),

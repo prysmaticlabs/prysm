@@ -40,12 +40,12 @@ import (
 	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -139,7 +139,7 @@ func (s *Service) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_opentracing.StreamServerInterceptor(),
@@ -147,7 +147,7 @@ func (s *Service) Start() {
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),
@@ -214,7 +214,7 @@ func (s *Service) Start() {
 	}
 
 	nodeServer := &nodev1alpha1.Server{
-		LogsStreamer:         logutil.NewStreamServer(),
+		LogsStreamer:         logs.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.cfg.BeaconDB,
 		Server:               s.grpcServer,
@@ -377,7 +377,7 @@ func (s *Service) validatorUnaryConnectionInterceptor(
 }
 
 func (s *Service) logNewClientConnection(ctx context.Context) {
-	if featureconfig.Get().DisableGRPCConnectionLogs {
+	if features.Get().DisableGRPCConnectionLogs {
 		return
 	}
 	if clientInfo, ok := peer.FromContext(ctx); ok {

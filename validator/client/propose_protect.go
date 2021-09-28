@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -50,16 +50,16 @@ func (v *validator) slashableProposalCheck(
 	// than or equal to the minimum signed proposal present in the DB for that public key.
 	// In the case the slot of the incoming block is equal to the minimum signed proposal, we
 	// then also check the signing root is different.
-	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= block.Slot() {
+	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= blk.Slot() {
 		return fmt.Errorf(
 			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
 			lowestSignedProposalSlot,
-			block.Slot(),
+			blk.Slot(),
 		)
 	}
 
-	if featureconfig.Get().RemoteSlasherProtection {
-		blockHdr, err := blockutil.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
+	if features.Get().RemoteSlasherProtection {
+		blockHdr, err := blocks.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}

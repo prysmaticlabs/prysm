@@ -9,8 +9,8 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 var (
@@ -491,12 +491,8 @@ func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
 				params: tt.params,
 			}
 			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
-			if tt.shouldNotExist && gotExists {
-				t.Errorf("StartEpoch() gotExists false")
-			}
-			if !tt.shouldNotExist && gotEpoch != tt.wantEpoch {
-				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
-			}
+			assert.Equal(t, false, tt.shouldNotExist && gotExists)
+			assert.Equal(t, false, !tt.shouldNotExist && gotEpoch != tt.wantEpoch)
 		})
 	}
 }
@@ -547,12 +543,8 @@ func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
 				params: tt.params,
 			}
 			gotEpoch, gotExists := m.StartEpoch(tt.args.sourceEpoch, tt.args.currentEpoch)
-			if tt.shouldNotExist && gotExists {
-				t.Errorf("StartEpoch() gotExists false")
-			}
-			if !tt.shouldNotExist && gotEpoch != tt.wantEpoch {
-				t.Errorf("StartEpoch() gotEpoch = %v, want %v", gotEpoch, tt.wantEpoch)
-			}
+			assert.Equal(t, false, tt.shouldNotExist && gotExists)
+			assert.Equal(t, false, !tt.shouldNotExist && gotEpoch != tt.wantEpoch)
 		})
 	}
 }
@@ -597,9 +589,8 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 			m := &MinSpanChunksSlice{
 				params: tt.params,
 			}
-			if got := m.NextChunkStartEpoch(tt.startEpoch); got != tt.want {
-				t.Errorf("NextChunkStartEpoch() = %v, want %v", got, tt.want)
-			}
+			got := m.NextChunkStartEpoch(tt.startEpoch)
+			assert.Equal(t, true, got == tt.want)
 		})
 	}
 }
@@ -635,9 +626,8 @@ func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 			m := &MaxSpanChunksSlice{
 				params: tt.params,
 			}
-			if got := m.NextChunkStartEpoch(tt.startEpoch); got != tt.want {
-				t.Errorf("NextChunkStartEpoch() = %v, want %v", got, tt.want)
-			}
+			got := m.NextChunkStartEpoch(tt.startEpoch)
+			assert.Equal(t, true, got == tt.want)
 		})
 	}
 }

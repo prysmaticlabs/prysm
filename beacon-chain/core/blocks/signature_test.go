@@ -4,19 +4,19 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestVerifyBlockHeaderSignature(t *testing.T) {
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	privKey, err := bls.RandKey()
@@ -31,13 +31,13 @@ func TestVerifyBlockHeaderSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	// Sign the block header.
-	blockHeader := testutil.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	blockHeader := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
 		},
 	})
-	domain, err := helpers.Domain(
+	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
@@ -68,8 +68,8 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	bCfg.AltairForkEpoch = 100
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 100
 	params.OverrideBeaconConfig(bCfg)
-	bState, keys := testutil.DeterministicGenesisState(t, 100)
-	altairBlk := testutil.NewBeaconBlockAltair()
+	bState, keys := util.DeterministicGenesisState(t, 100)
+	altairBlk := util.NewBeaconBlockAltair()
 	altairBlk.Block.ProposerIndex = 0
 	altairBlk.Block.Slot = params.BeaconConfig().SlotsPerEpoch * 100
 	fData := &ethpb.Fork{
@@ -77,9 +77,9 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	}
-	domain, err := helpers.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	assert.NoError(t, err)
-	rt, err := helpers.ComputeSigningRoot(altairBlk.Block, domain)
+	rt, err := signing.ComputeSigningRoot(altairBlk.Block, domain)
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig

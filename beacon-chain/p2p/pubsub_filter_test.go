@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +25,7 @@ func TestService_CanSubscribe(t *testing.T) {
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
 	valRoot := [32]byte{}
-	digest, err := p2putils.CreateForkDigest(genesisTime, valRoot[:])
+	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type test struct {
 		name  string
@@ -211,7 +211,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
 	valRoot := [32]byte{}
-	digest, err := p2putils.CreateForkDigest(genesisTime, valRoot[:])
+	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type args struct {
 		id   peer.ID
@@ -347,7 +347,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 		n = notifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
-				StartTime:             timeutils.Now(),
+				StartTime:             prysmTime.Now(),
 				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
 			},
 		})

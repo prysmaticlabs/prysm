@@ -35,7 +35,7 @@ message BlockRequestV2 {
 
 message BlockResponseV2 {
   v2.Version version = 1;
-  BeaconBlockContainerV2 data = 2;
+  SignedBeaconBlockContainerV2 data = 2;
 }
 
 message BlockSSZResponseV2 {
@@ -45,8 +45,15 @@ message BlockSSZResponseV2 {
 
 message BeaconBlockContainerV2 {
   oneof block {
-    v1.BeaconBlock phase0Block = 1;
-    BeaconBlockAltair altairBlock = 2;
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+  }
+}
+
+message SignedBeaconBlockContainerV2 {
+  oneof block {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
   }
 
   // 96 byte BLS signature from the validator that produced this block.

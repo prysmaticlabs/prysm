@@ -4,15 +4,15 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
 // participationBitsRoot computes the HashTreeRoot merkleization of
 // participation roots.
 func participationBitsRoot(bits []byte) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	chunkedRoots, err := packParticipationBits(bits)
 	if err != nil {
 		return [32]byte{}, err
@@ -27,14 +27,14 @@ func participationBitsRoot(bits []byte) ([32]byte, error) {
 		}
 	}
 
-	bytesRoot, err := htrutils.BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), limit)
+	bytesRoot, err := ssz.BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), limit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}
 
 	bytesRootBufRoot := make([]byte, 32)
 	binary.LittleEndian.PutUint64(bytesRootBufRoot[:8], uint64(len(bits)))
-	return htrutils.MixInLength(bytesRoot, bytesRootBufRoot), nil
+	return ssz.MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
 // packParticipationBits into chunks. It'll pad the last chunk with zero bytes if

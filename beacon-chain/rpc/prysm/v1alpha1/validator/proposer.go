@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -20,19 +19,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	synccontribution "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	synccontribution "github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -91,7 +90,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 //
-// DEPRECATED: Use GetBeaconBlock instead ot handle blocks pre and post-Altair hard fork. This endpoint
+// DEPRECATED: Use GetBeaconBlock instead to handle blocks pre and post-Altair hard fork. This endpoint
 // cannot handle blocks after the Altair fork epoch.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
@@ -213,7 +212,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get head state %v", err)
 	}
 
-	if featureconfig.Get().EnableNextSlotStateCache {
+	if features.Get().EnableNextSlotStateCache {
 		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
@@ -245,7 +244,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
 	// Calculate new proposer index.
-	idx, err := helpers.BeaconProposerIndex(head)
+	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
@@ -344,7 +343,7 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
 
 	// Each sync subcommittee is 128 bits and the sync committee is 512 bits for mainnet.
-	bitsHolder := [][]byte{}
+	var bitsHolder [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 		bitsHolder = append(bitsHolder, ethpb.NewSyncCommitteeAggregationBits())
 	}
@@ -469,66 +468,6 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	return core.VotingPeriodStartTime(startTime, slot)
 }
 
-func (vs *Server) inRangeVotes(ctx context.Context,
-	beaconState state.ReadOnlyBeaconState,
-	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
-
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-
-	var inRangeVotes []eth1DataSingleVote
-	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
-		if err != nil {
-			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
-		}
-		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-		if eth1Data.DepositCount < currentETH1Data.DepositCount {
-			continue
-		}
-		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
-		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
-		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
-		}
-	}
-
-	return inRangeVotes, nil
-}
-
-func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
-	var voteCount []eth1DataAggregatedVote
-	for _, singleVote := range votes {
-		newVote := true
-		for i, aggregatedVote := range voteCount {
-			aggregatedData := aggregatedVote.data
-			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
-				voteCount[i].votes++
-				newVote = false
-				break
-			}
-		}
-
-		if newVote {
-			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
-		}
-	}
-	if len(voteCount) == 0 {
-		return eth1DataAggregatedVote{}
-	}
-	currentVote := voteCount[0]
-	for _, aggregatedVote := range voteCount[1:] {
-		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
-		if aggregatedVote.votes > currentVote.votes ||
-			(aggregatedVote.votes == currentVote.votes &&
-				aggregatedVote.data.blockHeight.Cmp(currentVote.data.blockHeight) == 1) {
-			currentVote = aggregatedVote
-		}
-	}
-
-	return currentVote
-}
-
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
@@ -550,8 +489,8 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 	}
 	var enc []byte
 	enc = fastssz.MarshalUint64(enc, uint64(core.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
-	depRoot := hashutil.Hash(enc)
-	blockHash := hashutil.Hash(depRoot[:])
+	depRoot := hash.Hash(enc)
+	blockHash := hash.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
@@ -572,8 +511,8 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
 	randGen := rand.NewGenerator()
-	depRoot := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
-	blockHash := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	depRoot := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	blockHash := hash.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
@@ -698,11 +637,11 @@ func (vs *Server) canonicalEth1Data(
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trie.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
 	defer span.End()
 
-	var depositTrie *trieutil.SparseMerkleTrie
+	var depositTrie *trie.SparseMerkleTrie
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
@@ -729,7 +668,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 // rebuilds our deposit trie by recreating it from all processed deposits till
 // specified eth1 block height.
-func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trie.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.rebuildDepositTrie")
 	defer span.End()
 
@@ -742,7 +681,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 		}
 		trieItems = append(trieItems, depHash[:])
 	}
-	depositTrie, err := trieutil.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -756,7 +695,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 }
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
-func (vs *Server) validateDepositTrie(trie *trieutil.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}
@@ -765,37 +704,6 @@ func (vs *Server) validateDepositTrie(trie *trieutil.SparseMerkleTrie, canonical
 		return false, errors.Errorf("wanted the canonical deposit root of %#x but received %#x", canonicalEth1Data.DepositRoot, rt)
 	}
 	return true, nil
-}
-
-// in case no vote for new eth1data vote considered best vote we
-// default into returning the latest deposit root and the block
-// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
-// latest block.
-func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	if depositsTillHeight == 0 {
-		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
-	}
-	// // Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-	if depositsTillHeight < currentETH1Data.DepositCount {
-		return currentETH1Data, nil
-	}
-	return &ethpb.Eth1Data{
-		DepositRoot:  depositRoot[:],
-		BlockHash:    blockHash[:],
-		DepositCount: depositsTillHeight,
-	}, nil
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
@@ -841,7 +749,7 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestatio
 	return nil
 }
 
-func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
+func constructMerkleProof(trie *trie.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)
