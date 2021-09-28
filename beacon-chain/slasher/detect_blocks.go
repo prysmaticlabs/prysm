@@ -56,7 +56,7 @@ func (s *Service) saveSafeProposals(
 	proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
 	proposerSlashings []*ethpb.ProposerSlashing,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "Slasher.saveSafeProposals")
+	ctx, span := trace.StartSpan(ctx, "slasher.saveSafeProposals")
 	defer span.End()
 	return s.serviceCfg.Database.SaveBlockProposals(
 		ctx,
