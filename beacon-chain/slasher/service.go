@@ -1,6 +1,8 @@
 package slasher
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -26,8 +28,9 @@ type ServiceConfig struct {
 
 // Service for running slasher mode in a beacon node.
 type Service struct {
-	params     *Parameters
-	serviceCfg *ServiceConfig
-	blksQueue  *blocksQueue
-	attsQueue  *attestationsQueue
+	params      *Parameters
+	serviceCfg  *ServiceConfig
+	blksQueue   *blocksQueue
+	attsQueue   *attestationsQueue
+	genesisTime time.Time
 }
