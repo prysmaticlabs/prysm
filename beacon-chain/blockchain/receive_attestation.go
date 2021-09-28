@@ -19,10 +19,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
+// root of an attestation's target checkpoint.
+type AttestationStateFetcher interface {
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+}
+
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
+	AttestationStateFetcher
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -43,16 +49,16 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	return nil
 }
 
-// AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
-	ss, err := core.StartSlot(att.Data.Target.Epoch)
+// AttestationTargetState returns the pre state of attestation.
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+	ss, err := core.StartSlot(target.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
-	return s.getAttPreState(ctx, att.Data.Target)
+	return s.getAttPreState(ctx, target)
 }
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
