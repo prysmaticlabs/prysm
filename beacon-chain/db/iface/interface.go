@@ -12,11 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
@@ -129,6 +129,9 @@ type SlasherDatabase interface {
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.IndexedAttestationWrapper, error)
+	BlockProposalForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+	) (*slashertypes.SignedBlockHeaderWrapper, error)
 	CheckAttesterDoubleVotes(
 		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
@@ -151,7 +154,7 @@ type SlasherDatabase interface {
 // Database interface with full access.
 type Database interface {
 	io.Closer
-	backup.BackupExporter
+	backuputil.BackupExporter
 	HeadAccessDatabase
 
 	DatabasePath() string
