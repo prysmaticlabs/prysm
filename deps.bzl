@@ -828,9 +828,6 @@ def prysm_deps():
         sum = "h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=",
         version = "v1.9.0",
     )
-
-    # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
-    # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
