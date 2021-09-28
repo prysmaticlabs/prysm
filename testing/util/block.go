@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -501,6 +502,59 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 		b.Eth1Data = &v1.Eth1Data{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
+}
+
+// HydrateV2SignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2SignedBeaconBlock(b *v2.SignedBeaconBlockAltair) *v2.SignedBeaconBlockAltair {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Message = HydrateV2BeaconBlock(b.Message)
+	return b
+}
+
+// HydrateV2BeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BeaconBlock(b *v2.BeaconBlockAltair) *v2.BeaconBlockAltair {
+	if b == nil {
+		b = &v2.BeaconBlockAltair{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateV2BeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateV2BeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAltair {
+	if b == nil {
+		b = &v2.BeaconBlockBodyAltair{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &v1.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}
 	return b

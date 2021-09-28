@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -18,7 +22,7 @@ import (
 
 func TestWrapAttestationArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		unwrappedAtts := []*attestationJson{{AggregationBits: "1010"}}
@@ -40,7 +44,7 @@ func TestWrapAttestationArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
 		var body bytes.Buffer
@@ -58,7 +62,7 @@ func TestWrapAttestationArray(t *testing.T) {
 
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &dutiesRequestJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
@@ -81,7 +85,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &dutiesRequestJson{},
 		}
 		var body bytes.Buffer
@@ -99,7 +103,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		unwrappedAggs := []*signedAggregateAttestationAndProofJson{{Signature: "sig"}}
@@ -121,7 +125,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitAggregateAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -139,7 +143,7 @@ func TestWrapSignedAggregateAndProofArray(t *testing.T) {
 
 func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		unwrappedSubs := []*beaconCommitteeSubscribeJson{{
@@ -171,7 +175,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitBeaconCommitteeSubscriptionsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -189,7 +193,7 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		unwrappedSubs := []*syncCommitteeSubscriptionJson{
@@ -226,7 +230,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSubscriptionRequestJson{},
 		}
 		var body bytes.Buffer
@@ -244,7 +248,7 @@ func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
 
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		unwrappedSigs := []*syncCommitteeMessageJson{{
@@ -274,7 +278,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitSyncCommitteeSignaturesRequestJson{},
 		}
 		var body bytes.Buffer
@@ -292,7 +296,7 @@ func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 
 func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		unwrapped := []*signedContributionAndProofJson{
@@ -343,7 +347,7 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 
 	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := apimiddleware.Endpoint{
+		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitContributionAndProofsRequestJson{},
 		}
 		var body bytes.Buffer
@@ -359,45 +363,96 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 }
 
-func TestPrepareGraffiti(t *testing.T) {
-	endpoint := apimiddleware.Endpoint{
-		PostRequest: &signedBeaconBlockContainerJson{
-			Message: &beaconBlockJson{
-				Body: &beaconBlockBodyJson{},
+func TestSetInitialPublishBlockPostRequest(t *testing.T) {
+	endpoint := &apimiddleware.Endpoint{}
+	s := struct {
+		Message struct {
+			Slot string
+		}
+	}{}
+	t.Run("Phase 0", func(t *testing.T) {
+		s.Message = struct{ Slot string }{Slot: "0"}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+	t.Run("Altair", func(t *testing.T) {
+		slot, err := core.StartSlot(params.BeaconConfig().AltairForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+}
+
+func TestPreparePublishedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockContainerJson{
+				Message: &beaconBlockJson{
+					Body: &beaconBlockBodyJson{},
+				},
 			},
-		},
-	}
+		}
+		preparePublishedBlock(endpoint, nil, nil)
+		_, ok := endpoint.PostRequest.(*phase0PublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
 
+	t.Run("Altair", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockAltairContainerJson{
+				Message: &beaconBlockAltairJson{
+					Body: &beaconBlockBodyAltairJson{},
+				},
+			},
+		}
+		preparePublishedBlock(endpoint, nil, nil)
+		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+}
+
+func TestPrepareGraffiti(t *testing.T) {
 	t.Run("32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
-
-		prepareGraffiti(endpoint, nil, nil)
+		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 32)))
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 
-	t.Run("less_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = "foo"
-
-		prepareGraffiti(endpoint, nil, nil)
+	t.Run("graffiti_less_than_32_bytes", func(t *testing.T) {
+		result := prepareGraffiti("foo")
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 
-	t.Run("more_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
-
-		prepareGraffiti(endpoint, nil, nil)
+	t.Run("graffiti_more_than_32_bytes", func(t *testing.T) {
+		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 33)))
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 }
