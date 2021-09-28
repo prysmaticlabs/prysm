@@ -321,10 +321,12 @@ func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.Va
 	if err != nil {
 		t.Fatal(err)
 	}
+	someSig := make([]byte, params2.BeaconConfig().BLSSignatureLength)
+	copy(someSig, "foobar")
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
 			Header:    header,
-			Signature: params2.BeaconConfig().EmptySignature[:],
+			Signature: someSig,
 		},
 		SigningRoot: signRoot,
 	}
