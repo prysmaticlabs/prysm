@@ -33,6 +33,7 @@ const (
 	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
 	fileBufferSize      = 64 * 1024
 	maxFileBufferSize   = 1024 * 1024
+	AltairE2EForkEpoch  = 6
 )
 
 // Graffiti is a list of sample graffiti strings.

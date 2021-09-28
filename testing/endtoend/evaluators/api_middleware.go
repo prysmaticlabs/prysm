@@ -12,10 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	sharedparams "github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -43,7 +43,7 @@ type validatorContainerJson struct {
 // This ensures our API Middleware returns good data compared to gRPC.
 var APIMiddlewareVerifyIntegrity = e2etypes.Evaluator{
 	Name:       "api_middleware_verify_integrity_epoch_%d",
-	Policy:     policies.OnEpoch(sharedparams.AltairE2EForkEpoch),
+	Policy:     policies.OnEpoch(helpers.AltairE2EForkEpoch),
 	Evaluation: apiMiddlewareVerify,
 }
 
@@ -207,7 +207,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	validatorClient := service.NewBeaconValidatorClient(conn)
 	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
-		Epoch: sharedparams.AltairE2EForkEpoch,
+		Epoch: helpers.AltairE2EForkEpoch,
 		Index: []types.ValidatorIndex{0},
 	})
 	if err != nil {
@@ -217,7 +217,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	reqJSON := []string{"0"}
 	respJSON := &attesterDutiesResponseJson{}
 	if err := doMiddlewareJSONPostRequestV1(
-		"/validator/duties/attester/"+strconv.Itoa(sharedparams.AltairE2EForkEpoch),
+		"/validator/duties/attester/"+strconv.Itoa(helpers.AltairE2EForkEpoch),
 		beaconNodeIdx,
 		reqJSON,
 		respJSON,
