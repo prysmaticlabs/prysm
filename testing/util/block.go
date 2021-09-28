@@ -554,7 +554,7 @@ func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAl
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &v1.SyncAggregate{
-			SyncCommitteeBits:      bitfield.NewBitvector512(),
+			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}
