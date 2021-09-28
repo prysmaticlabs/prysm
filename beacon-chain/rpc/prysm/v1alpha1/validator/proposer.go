@@ -715,15 +715,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st st
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	deduped, err := validAtts.dedup()
-	if err != nil {
-		return nil, err
-	}
-	sorted, err := deduped.sortByProfitability()
-	if err != nil {
-		return nil, err
-	}
-	return sorted.limitToMaxAttestations(), nil
+	return validAtts, nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -771,45 +763,41 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
 
-	// If there is any room left in the block, consider unaggregated attestations as well.
-	numAtts := uint64(len(atts))
-	if numAtts < params.BeaconConfig().MaxAttestations {
-		uAtts, err := vs.AttPool.UnaggregatedAttestations()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get unaggregated attestations")
-		}
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not filter attestations")
-		}
-		atts = append(atts, uAtts...)
-
-		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
-		for _, att := range atts {
-			attDataRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
-		}
-
-		attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
-		for _, as := range attsByDataRoot {
-			as, err := attaggregation.Aggregate(as)
-			if err != nil {
-				return nil, err
-			}
-			attsForInclusion = append(attsForInclusion, as...)
-		}
-		deduped, err := attsForInclusion.dedup()
-		if err != nil {
-			return nil, err
-		}
-		sorted, err := deduped.sortByProfitability()
-		if err != nil {
-			return nil, err
-		}
-		atts = sorted.limitToMaxAttestations()
+	uAtts, err := vs.AttPool.UnaggregatedAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get unaggregated attestations")
 	}
+	uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+	atts = append(atts, uAtts...)
+
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	for _, att := range atts {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	for _, as := range attsByDataRoot {
+		as, err := attaggregation.Aggregate(as)
+		if err != nil {
+			return nil, err
+		}
+		attsForInclusion = append(attsForInclusion, as...)
+	}
+	deduped, err := attsForInclusion.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	atts = sorted.limitToMaxAttestations()
 	return atts, nil
 }
