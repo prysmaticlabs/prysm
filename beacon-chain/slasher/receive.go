@@ -15,7 +15,7 @@ import (
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
-func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan <-chan *ethpb.IndexedAttestation) {
+func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
@@ -44,7 +44,7 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan <-cha
 }
 
 // Receive beacon blocks from some source event feed,
-func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan <-chan *ethpb.SignedBeaconBlockHeader) {
+func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader) {
 	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
