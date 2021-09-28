@@ -956,6 +956,7 @@ func (vs *Server) compare(currSlot types.Slot, attA []*ethpb.Attestation, attB [
 		}
 		pendingAttDataRoot[attDataRoot] = bField
 	}
+	scoreA, scoreB := float64(0), float64(0)
 	for _, root := range sortedRoots {
 		attSetA := attsByDataRootA[root]
 		bfieldA := joinBitfields(rootMap[root].AggregationBits.Len(), attSetA)
@@ -964,6 +965,14 @@ func (vs *Server) compare(currSlot types.Slot, attA []*ethpb.Attestation, attB [
 		log.Infof("Root %#x for set A has %d bits while set B has %d bits with inclusion delay %d", root, bfieldA.Count(), bfieldB.Count(), currSlot-rootMap[root].Data.Slot)
 		nField := pendingAttDataRoot[root]
 		if nField == nil {
+			if bfieldA.Count() != 0 {
+				inclusionDelay := currSlot - rootMap[root].Data.Slot
+				scoreA += float64(bfieldA.Count()) / float64(inclusionDelay)
+			}
+			if bfieldB.Count() != 0 {
+				inclusionDelay := currSlot - rootMap[root].Data.Slot
+				scoreB += float64(bfieldB.Count()) / float64(inclusionDelay)
+			}
 			continue
 		}
 		contains, err := nField.Contains(bfieldA)
@@ -973,14 +982,23 @@ func (vs *Server) compare(currSlot types.Slot, attA []*ethpb.Attestation, attB [
 		if contains && bfieldA.Count() != 0 {
 			log.Infof("state already accounts for root %#x in set A", root)
 		}
-		contains, err = nField.Contains(bfieldB)
+		containsB, err := nField.Contains(bfieldB)
 		if err != nil {
 			return err
 		}
-		if contains && bfieldB.Count() != 0 {
+		if containsB && bfieldB.Count() != 0 {
 			log.Infof("state already accounts for root %#x in set B", root)
 		}
+		if bfieldA.Count() != 0 && !contains {
+			inclusionDelay := currSlot - rootMap[root].Data.Slot
+			scoreA += float64(bfieldA.Count()) / float64(inclusionDelay)
+		}
+		if bfieldB.Count() != 0 && !containsB {
+			inclusionDelay := currSlot - rootMap[root].Data.Slot
+			scoreB += float64(bfieldB.Count()) / float64(inclusionDelay)
+		}
 	}
+	log.Infof("Set A has score of %f and set b has score of %f", scoreA, scoreB)
 	return nil
 }
 

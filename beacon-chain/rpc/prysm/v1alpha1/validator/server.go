@@ -202,7 +202,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 
 func (vs *Server) randomStuff(genTime time.Time) {
 	ticker := slots.NewSlotTicker(genTime, params.BeaconConfig().SecondsPerSlot)
-	blocksChannel := make(chan *feed.Event, 3)
+	blocksChannel := make(chan *feed.Event, 8)
 	sub := vs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
 	for {
 		select {
@@ -211,6 +211,9 @@ func (vs *Server) randomStuff(genTime time.Time) {
 			sub.Unsubscribe()
 			return
 		case slot := <-ticker.C():
+			if slot%4 != 0 {
+				continue
+			}
 			rawBlock, err := vs.getPhase0BeaconBlock(context.Background(), &ethpb.BlockRequest{
 				Slot:         slot,
 				Graffiti:     make([]byte, 32),
