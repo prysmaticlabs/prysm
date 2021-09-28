@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -76,14 +75,4 @@ func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Vali
 		h.rootsCache.Set(string(enc), valRoot, 32)
 	}
 	return valRoot, nil
-}
-
-// ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
-// a list of validator structs according to the eth2
-// Simple Serialize specification.
-func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	if features.Get().EnableSSZCache {
-		return cachedHasher.validatorRegistryRoot(vals)
-	}
-	return nocachedHasher.validatorRegistryRoot(vals)
 }

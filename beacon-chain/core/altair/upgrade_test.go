@@ -14,18 +14,19 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestTranslateParticipation(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	ctx := context.Background()
+	s, _ := util.DeterministicGenesisStateAltair(t, 64)
 	st, ok := s.(*stateAltair.BeaconState)
 	require.Equal(t, true, ok)
 	require.NoError(t, st.SetSlot(st.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	var err error
-	newState, err := altair.TranslateParticipation(st, nil)
+	newState, err := altair.TranslateParticipation(ctx, st, nil)
 	require.NoError(t, err)
 	participation, err := newState.PreviousEpochParticipation()
 	require.NoError(t, err)
@@ -50,13 +51,13 @@ func TestTranslateParticipation(t *testing.T) {
 		})
 	}
 
-	newState, err = altair.TranslateParticipation(newState, pendingAtts)
+	newState, err = altair.TranslateParticipation(ctx, newState, pendingAtts)
 	require.NoError(t, err)
 	participation, err = newState.PreviousEpochParticipation()
 	require.NoError(t, err)
 	require.DeepNotSSZEqual(t, make([]byte, 64), participation)
 
-	committee, err := helpers.BeaconCommitteeFromState(st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestTranslateParticipation(t *testing.T) {
 }
 
 func TestUpgradeToAltair(t *testing.T) {
-	st, _ := testutil.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
 	aState, err := altair.UpgradeToAltair(context.Background(), st)
 	require.NoError(t, err)

@@ -18,11 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -33,7 +33,7 @@ import (
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
 func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDutiesRequest) (*ethpbv1.AttesterDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAttesterDuties")
+	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
 	defer span.End()
 
 	if vs.SyncChecker.Syncing() {
@@ -56,11 +56,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(s, req.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -107,7 +107,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 
 // GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
 func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDutiesRequest) (*ethpbv1.ProposerDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.GetProposerDuties")
+	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
 	defer span.End()
 
 	if vs.SyncChecker.Syncing() {
@@ -130,7 +130,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(s, req.Epoch)
+	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -221,7 +221,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.ProduceBlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceBlock")
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
 	defer span.End()
 
 	block, err := vs.v1BeaconBlock(ctx, req)
@@ -278,7 +278,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
 func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.ProduceAttestationDataRequest) (*ethpbv1.ProduceAttestationDataResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceAttestationData")
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceAttestationData")
 	defer span.End()
 
 	v1alpha1req := &ethpbalpha.AttestationDataRequest{
@@ -297,7 +297,7 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	ctx, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
@@ -326,7 +326,7 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
 	for _, agg := range req.Data {
@@ -376,7 +376,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
 func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorv1.SubmitBeaconCommitteeSubscription")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
 	if vs.SyncChecker.Syncing() {

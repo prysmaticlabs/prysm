@@ -12,7 +12,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
@@ -125,7 +125,7 @@ func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(block)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeaderNoVerify(s, block.Slot, block.ProposerIndex, block.ParentRoot, []byte{})
+		_, err = ProcessBlockHeaderNoVerify(context.Background(), s, block.Slot, block.ProposerIndex, block.ParentRoot, []byte{})
 		_ = err
 	}
 }

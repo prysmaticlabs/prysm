@@ -9,10 +9,15 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"gopkg.in/yaml.v2"
 )
+
+var placeholderFields = []string{
+	"TERMINAL_TOTAL_DIFFICULTY",
+	"TERMINAL_BLOCK_HASH",
+}
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
@@ -105,16 +110,19 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
-		mainnetConfigFile := presetsFilePath(t, "mainnet")
+		mainnetPresetsFile := presetsFilePath(t, "mainnet")
+		params.LoadChainConfigFile(mainnetPresetsFile)
+		mainnetConfigFile := configFilePath(t, "mainnet")
 		params.LoadChainConfigFile(mainnetConfigFile)
-		fields := fieldsFromYaml(t, mainnetConfigFile)
+		fields := fieldsFromYamls(t, []string{mainnetPresetsFile, mainnetConfigFile})
 		assertVals("mainnet", fields, params.MainnetConfig(), params.BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		minimalConfigFile := presetsFilePath(t, "minimal")
-		params.LoadChainConfigFile(minimalConfigFile)
-		fields := fieldsFromYaml(t, minimalConfigFile)
+		minimalPresetsFile := presetsFilePath(t, "minimal")
+		params.LoadChainConfigFile(minimalPresetsFile)
+		minimalConfigFile := configFilePath(t, "minimal")
+		fields := fieldsFromYamls(t, []string{minimalPresetsFile, minimalConfigFile})
 		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
 }
@@ -226,19 +234,21 @@ func presetsFilePath(t *testing.T, config string) string {
 	return configFilePath
 }
 
-func fieldsFromYaml(t *testing.T, fp string) []string {
-	yamlFile, err := ioutil.ReadFile(fp)
-	require.NoError(t, err)
-	m := make(map[string]interface{})
-	require.NoError(t, yaml.Unmarshal(yamlFile, &m))
-
+func fieldsFromYamls(t *testing.T, fps []string) []string {
 	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
+	for _, fp := range fps {
+		yamlFile, err := ioutil.ReadFile(fp)
+		require.NoError(t, err)
+		m := make(map[string]interface{})
+		require.NoError(t, yaml.Unmarshal(yamlFile, &m))
 
-	if len(keys) == 0 {
-		t.Errorf("No fields loaded from yaml file %s", fp)
+		for k := range m {
+			keys = append(keys, k)
+		}
+
+		if len(keys) == 0 {
+			t.Errorf("No fields loaded from yaml file %s", fp)
+		}
 	}
 
 	return keys
@@ -252,6 +262,11 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 		for i := 0; i < ft1.NumField(); i++ {
 			v, ok := ft1.Field(i).Tag.Lookup("yaml")
 			if ok && v == field {
+				if isPlaceholderField(v) {
+					// If you see this error, remove the field from placeholderFields.
+					t.Errorf("beacon config has a placeholder field defined, remove %s from the placeholder fields variable", v)
+					continue
+				}
 				found = true
 				v1 := reflect.ValueOf(*c1).Field(i).Interface()
 				v2 := reflect.ValueOf(*c2).Field(i).Interface()
@@ -263,8 +278,17 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 				break
 			}
 		}
-		if !found {
+		if !found && !isPlaceholderField(field) { // Ignore placeholder fields
 			t.Errorf("No struct tag found `yaml:%s`", field)
 		}
 	}
+}
+
+func isPlaceholderField(field string) bool {
+	for _, f := range placeholderFields {
+		if f == field {
+			return true
+		}
+	}
+	return false
 }

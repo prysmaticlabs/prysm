@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
@@ -98,7 +98,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //    return sync_committee_indices
 func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
 	epoch := core.NextEpoch(s)
-	indices, err := helpers.ActiveValidatorIndices(s, epoch)
+	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
 		return nil, err
 	}

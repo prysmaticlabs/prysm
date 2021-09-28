@@ -29,10 +29,10 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 }
 
 // Copy returns a copy of the config object.
-func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
+func (b *BeaconChainConfig) Copy() *BeaconChainConfig {
 	beaconConfigLock.RLock()
 	defer beaconConfigLock.RUnlock()
-	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
+	config, ok := deepcopy.Copy(*b).(BeaconChainConfig)
 	if !ok {
 		config = *beaconConfig
 	}

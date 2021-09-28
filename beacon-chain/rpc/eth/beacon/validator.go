@@ -12,9 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,14 +39,17 @@ func (e *invalidValidatorIdError) Error() string {
 
 // GetValidator returns a validator specified by state and id or public key along with status and balance.
 func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.GetValidator")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	if len(req.ValidatorId) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Validator ID is required")
 	}
-	valContainer, err := valContainersByRequestIds(state, [][]byte{req.ValidatorId})
+	valContainer, err := valContainersByRequestIds(st, [][]byte{req.ValidatorId})
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -57,12 +61,15 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 
 // ListValidators returns filterable list of validators with their balance, status and index.
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListValidators")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	valContainers, err := valContainersByRequestIds(state, req.Id)
+	valContainers, err := valContainersByRequestIds(st, req.Id)
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -80,7 +87,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 		filterStatus[ss] = true
 	}
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := core.SlotToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
 		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
@@ -104,12 +111,15 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 
 // ListValidatorBalances returns a filterable list of validator balances.
 func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListValidatorBalances")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	valContainers, err := valContainersByRequestIds(state, req.Id)
+	valContainers, err := valContainersByRequestIds(st, req.Id)
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -126,16 +136,19 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 // ListCommittees retrieves the committees for the given state at the given epoch.
 // If the requested slot and index are defined, only those committees are returned.
 func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListCommittees")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := core.SlotToEpoch(st.Slot())
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
-	activeCount, err := corehelpers.ActiveValidatorCount(state, epoch)
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -158,7 +171,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
-			committee, err := corehelpers.BeaconCommitteeFromState(state, slot, index)
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}

@@ -34,14 +34,14 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/sirupsen/logrus"
 )
@@ -823,13 +823,13 @@ func (s *Service) run(done <-chan struct{}) {
 				chainstartTicker.Stop()
 				continue
 			}
-			s.logTillChainStart()
+			s.logTillChainStart(context.Background())
 		}
 	}
 }
 
 // logs the current thresholds required to hit chainstart every minute.
-func (s *Service) logTillChainStart() {
+func (s *Service) logTillChainStart(ctx context.Context) {
 	if s.chainStartData.Chainstarted {
 		return
 	}
@@ -838,7 +838,7 @@ func (s *Service) logTillChainStart() {
 		log.Error(err)
 		return
 	}
-	valCount, genesisTime := s.currentCountAndTime(blockTime)
+	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	valNeeded := uint64(0)
 	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
 		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount

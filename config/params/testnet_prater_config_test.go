@@ -7,8 +7,10 @@ import (
 )
 
 func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
+	presetFP := presetsFilePath(t, "mainnet")
+	params.LoadChainConfigFile(presetFP)
 	configFP := testnetConfigFilePath(t, "prater")
 	params.LoadChainConfigFile(configFP)
-	fields := fieldsFromYaml(t, configFP)
+	fields := fieldsFromYamls(t, []string{configFP, presetFP})
 	assertYamlFieldsMatch(t, "prater", fields, params.BeaconConfig(), params.PraterConfig())
 }

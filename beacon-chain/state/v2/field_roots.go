@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"encoding/binary"
 	"sync"
 
@@ -10,9 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -47,14 +49,17 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *ethpb.BeaconStateAltair) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRootsWithHasher(state)
+		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
-	return nocachedHasher.computeFieldRootsWithHasher(state)
+	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateAltair) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
+	defer span.End()
+
 	if state == nil {
 		return nil, errors.New("nil state")
 	}

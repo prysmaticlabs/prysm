@@ -47,7 +47,7 @@ var (
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
-		Value: "max_cover",
+		Value: "opt_max_cover",
 	}
 	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-opt-maxcover",
@@ -92,10 +92,6 @@ var (
 	disableNextSlotStateCache = &cli.BoolFlag{
 		Name:  "disable-next-slot-state-cache",
 		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
-	}
-	disableUpdateHeadTimely = &cli.BoolFlag{
-		Name:  "disable-update-head-timely",
-		Usage: "Disables updating head right after state transition",
 	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
@@ -162,14 +158,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableDoppelGangerProtection,
 }...)
 
-// SlasherFlags contains a list of all the feature flags that apply to the slasher client.
-var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	disableLookbackFlag,
-	PyrmontTestnet,
-	PraterTestnet,
-	Mainnet,
-}...)
-
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--enable-doppelganger",
@@ -190,7 +178,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	disableUpdateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,

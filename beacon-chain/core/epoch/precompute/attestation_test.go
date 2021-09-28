@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestUpdateValidator_Works(t *testing.T) {
@@ -70,7 +70,7 @@ func TestUpdateBalance(t *testing.T) {
 }
 
 func TestSameHead(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetSlot(1))
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -90,7 +90,7 @@ func TestSameHead(t *testing.T) {
 }
 
 func TestSameTarget(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetSlot(1))
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -110,7 +110,7 @@ func TestSameTarget(t *testing.T) {
 }
 
 func TestAttestedPrevEpoch(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -128,7 +128,7 @@ func TestAttestedPrevEpoch(t *testing.T) {
 }
 
 func TestAttestedCurrentEpoch(t *testing.T) {
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1}}}
@@ -150,7 +150,7 @@ func TestProcessAttestations(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(128)
-	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState, _ := util.DeterministicGenesisState(t, validators)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	c := helpers.SlotCommitteeCount(validators)
 	bf := bitfield.NewBitlist(c)
@@ -181,7 +181,7 @@ func TestProcessAttestations(t *testing.T) {
 	pVals, _, err = precompute.ProcessAttestations(context.Background(), beaconState, pVals, &precompute.Balance{})
 	require.NoError(t, err)
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestation.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestProcessAttestations(t *testing.T) {
 			t.Error("Not a prev epoch attester")
 		}
 	}
-	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(context.Background(), beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err = attestation.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)

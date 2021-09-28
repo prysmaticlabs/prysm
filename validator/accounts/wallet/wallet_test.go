@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/sirupsen/logrus"
 )

@@ -30,9 +30,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -296,7 +296,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(genesisState); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
 		return nil, err
 	}
 

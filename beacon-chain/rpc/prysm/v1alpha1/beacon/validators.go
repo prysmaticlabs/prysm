@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -421,7 +421,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(requestedState, core.CurrentEpoch(requestedState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, core.CurrentEpoch(requestedState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -603,7 +603,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, headState, core.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -680,7 +680,7 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 		}
 	}
-	validatorSummary := []*precompute.Validator{}
+	var validatorSummary []*precompute.Validator
 	switch headState.Version() {
 	case version.Phase0:
 		vp, bp, err := precompute.New(ctx, headState)

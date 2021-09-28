@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -80,7 +80,7 @@ func (bs *Server) ListValidatorAssignments(
 		}
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, requestedEpoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, requestedState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
@@ -102,7 +102,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	// Initialize all committee related data.
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(requestedState, requestedEpoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, requestedState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}

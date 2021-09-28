@@ -13,17 +13,17 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	grpc "google.golang.org/grpc"
@@ -151,7 +151,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Signature:       make([]byte, 96),
 	}
 
-	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
+	root, err := signing.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
 	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
@@ -454,13 +454,13 @@ func TestSignAttestation(t *testing.T) {
 		Epoch:           0,
 	}
 	genesisValidatorRoot := [32]byte{0x01, 0x02}
-	attesterDomain, err := helpers.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
+	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: attesterDomain}, nil)
 	ctx := context.Background()
-	att := testutil.NewAttestation()
+	att := util.NewAttestation()
 	att.Data.Source.Epoch = 100
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999
