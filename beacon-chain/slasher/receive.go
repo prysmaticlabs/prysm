@@ -150,9 +150,10 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 			}).Info("New slot, processing queued blocks for slashing detection")
 
 			start := time.Now()
+			// Check for slashings.
 			slashings, err := s.detectProposerSlashings(ctx, blocks)
 			if err != nil {
-				log.WithError(err).Error("Could not detect slashable blocks")
+				log.WithError(err).Error("Could not detect proposer slashings")
 				continue
 			}
 

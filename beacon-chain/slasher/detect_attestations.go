@@ -8,26 +8,16 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
-
-// A struct encapsulating input arguments to
-// functions used for attester slashing detection and
-// loading, saving, and updating min/max span chunks.
-type chunkUpdateArgs struct {
-	kind                slashertypes.ChunkKind
-	chunkIndex          uint64
-	validatorChunkIndex uint64
-	currentEpoch        types.Epoch
-}
 
 // Takes in a list of indexed attestation wrappers and returns any
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
-	currentEpoch := slotutil.EpochsSinceGenesis(s.genesisTime)
+	currentEpoch := slots.EpochsSinceGenesis(s.genesisTime)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	indices := make([]types.ValidatorIndex, 0)
 
@@ -39,10 +29,10 @@ func (s *Service) checkSlashableAttestations(
 			currentEpoch:        currentEpoch,
 		}, batch)
 
-		slashings = append(slashings, attSlashings...)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not detect slashable attestations")
 		}
+		slashings = append(slashings, attSlashings...)
 		indices = append(indices, s.params.validatorIndicesInChunk(validatorChunkIdx)...)
 	}
 	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
@@ -104,7 +94,7 @@ func (s *Service) detectAllAttesterSlashings(
 	}
 
 	// Consolidate all slashings into a slice.
-	slashings := make([]*ethpb.AttesterSlashing, 0)
+	slashings := make([]*ethpb.AttesterSlashing, 0, len(doubleVoteSlashings)+len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, doubleVoteSlashings...)
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)

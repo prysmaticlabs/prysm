@@ -6,17 +6,17 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -26,7 +26,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	// Initialize validators in the state.
@@ -44,7 +44,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	}
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
-	domain, err := helpers.Domain(
+	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
@@ -114,7 +114,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	currentSlot := types.Slot(4)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
@@ -146,25 +146,4 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
-}
-
-func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
-	header := &ethpb.BeaconBlockHeader{
-		Slot:          slot,
-		ProposerIndex: proposerIndex,
-		ParentRoot:    params.BeaconConfig().ZeroHash[:],
-		StateRoot:     bytesutil.PadTo(signingRoot, 32),
-		BodyRoot:      params.BeaconConfig().ZeroHash[:],
-	}
-	signRoot, err := header.HashTreeRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &slashertypes.SignedBlockHeaderWrapper{
-		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-			Header:    header,
-			Signature: params.BeaconConfig().EmptySignature[:],
-		},
-		SigningRoot: signRoot,
-	}
 }

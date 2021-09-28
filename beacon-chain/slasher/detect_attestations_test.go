@@ -10,17 +10,17 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -187,7 +187,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 			genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
-			beaconState, err := testutil.NewBeaconState()
+			beaconState, err := util.NewBeaconState()
 			require.NoError(t, err)
 			slot, err := core.StartSlot(tt.args.currentEpoch)
 			require.NoError(t, err)
@@ -212,7 +212,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			}
 			err = beaconState.SetValidators(validators)
 			require.NoError(t, err)
-			domain, err := helpers.Domain(
+			domain, err := signing.Domain(
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconAttester,
@@ -222,7 +222,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			// Create valid signatures for all input attestations in the test.
 			for _, attestationWrapper := range tt.args.attestationQueue {
-				signingRoot, err := helpers.ComputeSigningRoot(attestationWrapper.IndexedAttestation.Data, domain)
+				signingRoot, err := signing.ComputeSigningRoot(attestationWrapper.IndexedAttestation.Data, domain)
 				require.NoError(t, err)
 				attestingIndices := attestationWrapper.IndexedAttestation.AttestingIndices
 				sigs := make([]bls.Signature, len(attestingIndices))
@@ -285,7 +285,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mockChain := &mock.ChainService{
 		State: beaconState,
@@ -351,7 +351,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mockChain := &mock.ChainService{
 		State: beaconState,
@@ -761,7 +761,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	slasherDB := dbtest.SetupSlasherDB(t)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	slot, err := core.StartSlot(1)
 	require.NoError(t, err)
@@ -802,7 +802,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
 	slasherDB := dbtest.SetupSlasherDB(b)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(b, err)
 	slot := types.Slot(0)
 	mockChain := &mock.ChainService{
