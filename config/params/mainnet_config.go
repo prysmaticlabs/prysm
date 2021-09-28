@@ -22,8 +22,7 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	// Placeholder until fork epoch is decided.
-	mainnetAltairForkEpoch = math.MaxUint64
+	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -237,4 +236,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxExecutionTransactions:     16384,
 	MaxBytesPerOpaqueTransaction: 1048576,
 	TerminalBlockHash:            [32]byte{},
+	// Light client
+	MinSyncCommitteeParticipants: 1,
 }

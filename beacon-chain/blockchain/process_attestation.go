@@ -80,7 +80,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	}
 
 	// Use the target state to verify attesting indices are valid.
-	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

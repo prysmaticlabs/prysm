@@ -178,9 +178,12 @@ type BeaconChainConfig struct {
 	// Gas.
 	GasLimitDenominator          uint64      `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"`            // GasLimitDenominator for merge.
 	MinGasLimit                  uint64      `yaml:"MIN_GAS_LIMIT" spec:"true"`                    // MinGasLimit for merge.
+	// Merge.
 	MaxExecutionTransactions     uint64      `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
 	MaxBytesPerOpaqueTransaction uint64      `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MAX_BYTES_PER_OPAQUE_TRANSACTION of beacon chain.
 	TerminalBlockHash            common.Hash `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
+	// Light client
+	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

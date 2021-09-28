@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -56,7 +57,7 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 		return err
 	}
 	if !rSig.Verify(publicKey, root[:]) {
-		return helpers.ErrSigFailedToVerify
+		return signing.ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -67,7 +68,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
 	currentEpoch := core.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,22 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
+	return signing.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
+}
+
+// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
+func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
+	currentEpoch := core.SlotToEpoch(beaconState.Slot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	proposer, err := beaconState.ValidatorAtIndex(header.Header.ProposerIndex)
+	if err != nil {
+		return err
+	}
+	proposerPubKey := proposer.PublicKey
+	return signing.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
 }
 
 // VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
@@ -88,7 +104,7 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	if err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -97,7 +113,7 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
+	return signing.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
@@ -106,7 +122,7 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	currentEpoch := core.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -115,15 +131,17 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
+	return signing.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
 }
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object
 // from a block and its corresponding state.
-func RandaoSignatureSet(beaconState state.ReadOnlyBeaconState,
+func RandaoSignatureSet(
+	ctx context.Context,
+	beaconState state.ReadOnlyBeaconState,
 	reveal []byte,
 ) (*bls.SignatureSet, error) {
-	buf, proposerPub, domain, err := randaoSigningData(beaconState)
+	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +153,8 @@ func RandaoSignatureSet(beaconState state.ReadOnlyBeaconState,
 }
 
 // retrieves the randao related signing data from the state.
-func randaoSigningData(beaconState state.ReadOnlyBeaconState) ([]byte, []byte, []byte, error) {
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconState) ([]byte, []byte, []byte, error) {
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
@@ -146,7 +164,7 @@ func randaoSigningData(beaconState state.ReadOnlyBeaconState) ([]byte, []byte, [
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -169,7 +187,7 @@ func createAttestationSignatureSet(
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.Signature
-		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
+		c, err := helpers.BeaconCommitteeFromState(ctx, beaconState, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +210,7 @@ func createAttestationSignatureSet(
 		}
 		pks[i] = aggP
 
-		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
+		root, err := signing.ComputeSigningRoot(ia.Data, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root of object")
 		}
@@ -230,7 +248,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 
 	// Check attestations from before the fork.
 	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig set.
-		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
+		prevDomain, err := signing.Domain(fork, fork.Epoch-1, dt, gvr)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +267,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 
 	if len(postForkAtts) > 0 {
 		// Then check attestations from after the fork.
-		currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
+		currDomain, err := signing.Domain(fork, fork.Epoch, dt, gvr)
 		if err != nil {
 			return nil, err
 		}

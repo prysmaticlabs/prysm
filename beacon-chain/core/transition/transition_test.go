@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -76,7 +77,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
 	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
@@ -221,7 +222,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
 		},
 	})
-	header1.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header1.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
@@ -231,7 +232,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
@@ -251,9 +252,9 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
@@ -269,7 +270,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		AttestingIndices: []uint64{0, 1},
 	})
 
-	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	require.NoError(t, err)
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
@@ -299,12 +300,12 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		AggregationBits: aggBits,
 	})
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(blockAtt.AggregationBits, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	hashTreeRoot, err = helpers.ComputeSigningRoot(blockAtt.Data, domain)
+	hashTreeRoot, err = signing.ComputeSigningRoot(blockAtt.Data, domain)
 	assert.NoError(t, err)
 	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
@@ -319,7 +320,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			Epoch:          0,
 		},
 	}
-	exit.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privKeys[exit.Exit.ValidatorIndex])
+	exit.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privKeys[exit.Exit.ValidatorIndex])
 	require.NoError(t, err)
 
 	header := beaconState.LatestBlockHeader()
@@ -333,7 +334,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, copied.SetSlot(beaconState.Slot()+1))
 	randaoReveal, err := util.RandaoReveal(copied, currentEpoch, privKeys)
 	require.NoError(t, err)
-	proposerIndex, err := helpers.BeaconProposerIndex(copied)
+	proposerIndex, err := helpers.BeaconProposerIndex(context.Background(), copied)
 	require.NoError(t, err)
 	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -582,10 +583,9 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 }
 
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
-	ctx := context.Background()
 	s, _ := util.DeterministicGenesisState(t, 1)
 	r := []byte{'a'}
-	s, err := transition.ProcessSlotsUsingNextSlotCache(ctx, s, r, 5)
+	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }
