@@ -235,7 +235,7 @@ func configFilePath(t *testing.T, config string) string {
 func presetsFilePath(t *testing.T, config string) []string {
 	filepath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
-	return []string {
+	return []string{
 		path.Join(filepath, "presets", config, "phase0.yaml"),
 		path.Join(filepath, "presets", config, "altair.yaml"),
 	}
