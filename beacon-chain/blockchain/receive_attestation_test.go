@@ -23,6 +23,11 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var (
+	_ = AttestationReceiver(&Service{})
+	_ = AttestationStateFetcher(&Service{})
+)
+
 func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	helpers.ClearCache()
 	beaconDB := testDB.SetupDB(t)
@@ -31,7 +36,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService.genesisTime = time.Now()
 
 	e := types.Epoch(core.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
-	_, err := chainService.AttestationPreState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
+	_, err := chainService.AttestationTargetState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
 

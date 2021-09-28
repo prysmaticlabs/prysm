@@ -99,7 +99,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						log.WithError(err).Debug("Could not verify FFG consistency")
 						continue
 					}
-					preState, err := s.cfg.Chain.AttestationPreState(ctx, att.Aggregate)
+					preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Aggregate)
 					if err != nil {
 						log.WithError(err).Debug("Could not retrieve attestation prestate")
 						continue
