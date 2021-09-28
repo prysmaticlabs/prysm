@@ -11,7 +11,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -218,7 +218,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 			return pubsub.ValidationIgnore, err
 		}
 		rawBytes := p2ptypes.SSZBytes(m.BlockRoot)
-		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+		sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
