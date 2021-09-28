@@ -15,10 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -224,140 +223,6 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		delete(b.dirtyFields, field)
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
-}
-
-// ToProto returns a protobuf *v1.BeaconState representation of the state.
-func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
-	sourceFork := b.Fork()
-	sourceLatestBlockHeader := b.LatestBlockHeader()
-	sourceEth1Data := b.Eth1Data()
-	sourceEth1DataVotes := b.Eth1DataVotes()
-	sourceValidators := b.Validators()
-	sourcePrevEpochAtts, err := b.PreviousEpochAttestations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get previous epoch attestations")
-	}
-	sourceCurrEpochAtts, err := b.CurrentEpochAttestations()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current epoch attestations")
-	}
-	sourcePrevJustifiedCheckpoint := b.PreviousJustifiedCheckpoint()
-	sourceCurrJustifiedCheckpoint := b.CurrentJustifiedCheckpoint()
-	sourceFinalizedCheckpoint := b.FinalizedCheckpoint()
-
-	resultEth1DataVotes := make([]*v1.Eth1Data, len(sourceEth1DataVotes))
-	for i, vote := range sourceEth1DataVotes {
-		resultEth1DataVotes[i] = &v1.Eth1Data{
-			DepositRoot:  vote.DepositRoot,
-			DepositCount: vote.DepositCount,
-			BlockHash:    vote.BlockHash,
-		}
-	}
-	resultValidators := make([]*v1.Validator, len(sourceValidators))
-	for i, validator := range sourceValidators {
-		resultValidators[i] = &v1.Validator{
-			Pubkey:                     validator.PublicKey,
-			WithdrawalCredentials:      validator.WithdrawalCredentials,
-			EffectiveBalance:           validator.EffectiveBalance,
-			Slashed:                    validator.Slashed,
-			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
-			ActivationEpoch:            validator.ActivationEpoch,
-			ExitEpoch:                  validator.ExitEpoch,
-			WithdrawableEpoch:          validator.WithdrawableEpoch,
-		}
-	}
-	resultPrevEpochAtts := make([]*v1.PendingAttestation, len(sourcePrevEpochAtts))
-	for i, att := range sourcePrevEpochAtts {
-		data := att.Data
-		resultPrevEpochAtts[i] = &v1.PendingAttestation{
-			AggregationBits: att.AggregationBits,
-			Data: &v1.AttestationData{
-				Slot:            data.Slot,
-				Index:           data.CommitteeIndex,
-				BeaconBlockRoot: data.BeaconBlockRoot,
-				Source: &v1.Checkpoint{
-					Epoch: data.Source.Epoch,
-					Root:  data.Source.Root,
-				},
-				Target: &v1.Checkpoint{
-					Epoch: data.Target.Epoch,
-					Root:  data.Target.Root,
-				},
-			},
-			InclusionDelay: att.InclusionDelay,
-			ProposerIndex:  att.ProposerIndex,
-		}
-	}
-	resultCurrEpochAtts := make([]*v1.PendingAttestation, len(sourceCurrEpochAtts))
-	for i, att := range sourceCurrEpochAtts {
-		data := att.Data
-		resultCurrEpochAtts[i] = &v1.PendingAttestation{
-			AggregationBits: att.AggregationBits,
-			Data: &v1.AttestationData{
-				Slot:            data.Slot,
-				Index:           data.CommitteeIndex,
-				BeaconBlockRoot: data.BeaconBlockRoot,
-				Source: &v1.Checkpoint{
-					Epoch: data.Source.Epoch,
-					Root:  data.Source.Root,
-				},
-				Target: &v1.Checkpoint{
-					Epoch: data.Target.Epoch,
-					Root:  data.Target.Root,
-				},
-			},
-			InclusionDelay: att.InclusionDelay,
-			ProposerIndex:  att.ProposerIndex,
-		}
-	}
-	result := &v1.BeaconState{
-		GenesisTime:           b.GenesisTime(),
-		GenesisValidatorsRoot: b.GenesisValidatorRoot(),
-		Slot:                  b.Slot(),
-		Fork: &v1.Fork{
-			PreviousVersion: sourceFork.PreviousVersion,
-			CurrentVersion:  sourceFork.CurrentVersion,
-			Epoch:           sourceFork.Epoch,
-		},
-		LatestBlockHeader: &v1.BeaconBlockHeader{
-			Slot:          sourceLatestBlockHeader.Slot,
-			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
-			ParentRoot:    sourceLatestBlockHeader.ParentRoot,
-			StateRoot:     sourceLatestBlockHeader.StateRoot,
-			BodyRoot:      sourceLatestBlockHeader.BodyRoot,
-		},
-		BlockRoots:      b.BlockRoots(),
-		StateRoots:      b.StateRoots(),
-		HistoricalRoots: b.HistoricalRoots(),
-		Eth1Data: &v1.Eth1Data{
-			DepositRoot:  sourceEth1Data.DepositRoot,
-			DepositCount: sourceEth1Data.DepositCount,
-			BlockHash:    sourceEth1Data.BlockHash,
-		},
-		Eth1DataVotes:             resultEth1DataVotes,
-		Eth1DepositIndex:          b.Eth1DepositIndex(),
-		Validators:                resultValidators,
-		Balances:                  b.Balances(),
-		RandaoMixes:               b.RandaoMixes(),
-		Slashings:                 b.Slashings(),
-		PreviousEpochAttestations: resultPrevEpochAtts,
-		CurrentEpochAttestations:  resultCurrEpochAtts,
-		JustificationBits:         b.JustificationBits(),
-		PreviousJustifiedCheckpoint: &v1.Checkpoint{
-			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
-			Root:  sourcePrevJustifiedCheckpoint.Root,
-		},
-		CurrentJustifiedCheckpoint: &v1.Checkpoint{
-			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
-			Root:  sourceCurrJustifiedCheckpoint.Root,
-		},
-		FinalizedCheckpoint: &v1.Checkpoint{
-			Epoch: sourceFinalizedCheckpoint.Epoch,
-			Root:  sourceFinalizedCheckpoint.Root,
-		},
-	}
-
-	return result, nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

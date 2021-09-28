@@ -176,21 +176,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return &Signature{s: signature.ToAffine()}
 }
 
-// Aggregate is an alias for AggregateSignatures, defined to conform to BLS specification.
-//
-// In IETF draft BLS specification:
-// Aggregate(signature_1, ..., signature_n) -> signature: an
-//      aggregation algorithm that compresses a collection of signatures
-//      into a single signature.
-//
-// In the Ethereum proof of stake specification:
-// def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
-//
-// Deprecated: Use AggregateSignatures.
-func Aggregate(sigs []common.Signature) common.Signature {
-	return AggregateSignatures(sigs)
-}
-
 // VerifyMultipleSignatures verifies a non-singular set of signatures and its respective pubkeys and messages.
 // This method provides a safe way to verify multiple signatures at once. We pick a number randomly from 1 to max
 // uint64 and then multiply the signature by it. We continue doing this for all signatures and its respective pubkeys.

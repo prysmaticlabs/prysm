@@ -13,9 +13,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,10 +24,10 @@ func TestDeleteAttsInPool(t *testing.T) {
 		cfg: &Config{AttPool: attestations.NewPool()},
 	}
 
-	att1 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
-	att3 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
-	att4 := testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
+	att1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
+	att2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
+	att3 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
+	att4 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
 	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att1))
 	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att2))
 	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att3))
@@ -43,9 +43,9 @@ func TestDeleteAttsInPool(t *testing.T) {
 func TestService_beaconBlockSubscriber(t *testing.T) {
 	pooledAttestations := []*ethpb.Attestation{
 		// Aggregated.
-		testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00011111}}),
+		util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00011111}}),
 		// Unaggregated.
-		testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00010001}}),
+		util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00010001}}),
 	}
 
 	type args struct {
@@ -61,7 +61,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			name: "invalid block does not remove attestations",
 			args: args{
 				msg: func() *ethpb.SignedBeaconBlock {
-					b := testutil.NewBeaconBlock()
+					b := util.NewBeaconBlock()
 					b.Block.Body.Attestations = pooledAttestations
 					return b
 				}(),

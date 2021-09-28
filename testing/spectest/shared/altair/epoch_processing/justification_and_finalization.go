@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 )
 
@@ -28,7 +28,7 @@ func RunJustificationAndFinalizationTests(t *testing.T, config string) {
 
 func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, err := altair.InitializeEpochValidators(ctx, st)
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, st)
 	require.NoError(t, err)
 	_, bp, err = altair.ProcessEpochParticipation(ctx, st, bp, vp)
 	require.NoError(t, err)
