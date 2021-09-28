@@ -206,7 +206,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if slot < uint64(params.AltairE2EForkEpoch) {
+	if slot < uint64(params.BeaconConfig().AltairForkEpoch) {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 	} else {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
