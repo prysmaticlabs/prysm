@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -236,5 +237,25 @@ func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
+	}
+}
+
+func TestIncreaseBadBalance_NotOK(t *testing.T) {
+	tests := []struct {
+		i  types.ValidatorIndex
+		b  []uint64
+		nb uint64
+	}{
+		{i: 0, b: []uint64{math.MaxUint64, math.MaxUint64, math.MaxUint64}, nb: 1},
+		{i: 2, b: []uint64{math.MaxUint64, math.MaxUint64, math.MaxUint64}, nb: 33 * 1e9},
+	}
+	for _, test := range tests {
+		state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+			Validators: []*ethpb.Validator{
+				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
+			Balances: test.b,
+		})
+		require.NoError(t, err)
+		require.ErrorContains(t, "addition overflows", IncreaseBalance(state, test.i, test.nb))
 	}
 }

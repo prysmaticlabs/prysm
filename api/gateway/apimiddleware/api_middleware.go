@@ -59,8 +59,8 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, w http.Respo
 
 // HookCollection contains hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	OnPreDeserializeRequestBodyIntoContainer      func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) (RunDefault, ErrorJson)
-	OnPostDeserializeRequestBodyIntoContainer     func(endpoint Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
+	OnPreDeserializeRequestBodyIntoContainer      func(endpoint *Endpoint, w http.ResponseWriter, req *http.Request) (RunDefault, ErrorJson)
+	OnPostDeserializeRequestBodyIntoContainer     func(endpoint *Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson
 	OnPreDeserializeGrpcResponseBodyIntoContainer func([]byte, interface{}) (RunDefault, ErrorJson)
 	OnPreSerializeMiddlewareResponseIntoJson      func(interface{}) (RunDefault, []byte, ErrorJson)
 }
@@ -170,7 +170,7 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {
 	runDefault := true
 	if endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer != nil {
-		run, errJson := endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer(*endpoint, w, req)
+		run, errJson := endpoint.Hooks.OnPreDeserializeRequestBodyIntoContainer(endpoint, w, req)
 		if errJson != nil {
 			return errJson
 		}
@@ -184,7 +184,7 @@ func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Re
 		}
 	}
 	if endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer != nil {
-		if errJson := endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer(*endpoint, w, req); errJson != nil {
+		if errJson := endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer(endpoint, w, req); errJson != nil {
 			return errJson
 		}
 	}

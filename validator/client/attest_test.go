@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
