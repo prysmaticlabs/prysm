@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -316,7 +317,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := core.CurrentEpoch(beaconState)
-	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
 	_, err = proposerServer.ComputeStateRoot(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(req))
@@ -1237,75 +1238,6 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 	}
 }
 
-func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.UseMinimalConfig()
-	ctx := context.Background()
-
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	deps := []*dbpb.DepositContainer{
-		{
-			Index:           0,
-			Eth1BlockHeight: 8,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-		{
-			Index:           1,
-			Eth1BlockHeight: 14,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
-					Signature:             make([]byte, 96),
-					WithdrawalCredentials: make([]byte, 32),
-				}},
-		},
-	}
-	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	require.NoError(t, err, "Could not setup deposit trie")
-
-	depositCache, err := depositcache.New()
-	require.NoError(t, err)
-
-	for _, dp := range deps {
-		assert.NoError(t, depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
-	}
-
-	p := &mockPOW.POWChain{
-		LatestBlockNumber: height,
-		HashesByHeight: map[int][]byte{
-			0:  []byte("hash0"),
-			12: []byte("hash12"),
-		},
-	}
-	proposerServer := &Server{
-		ChainStartFetcher:      p,
-		Eth1InfoFetcher:        p,
-		Eth1BlockFetcher:       p,
-		DepositFetcher:         depositCache,
-		PendingDepositsFetcher: depositCache,
-	}
-
-	defEth1Data := &ethpb.Eth1Data{
-		DepositCount: 10,
-		BlockHash:    []byte{'t', 'e', 's', 't'},
-		DepositRoot:  []byte{'r', 'o', 'o', 't'},
-	}
-
-	p.Eth1Data = defEth1Data
-
-	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(16))
-	require.NoError(t, err)
-
-	if !proto.Equal(result, defEth1Data) {
-		t.Errorf("Did not receive default eth1data. Wanted %v but got %v", defEth1Data, result)
-	}
-}
-
 func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 	slot := types.Slot(64)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
@@ -1913,14 +1845,14 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
-					domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					zeroSig := [96]byte{}
 					atts[i].Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {
-						hashTreeRoot, err := helpers.ComputeSigningRoot(atts[i].Data, domain)
+						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
 						require.NoError(t, err)
 						sig := privKeys[indice].Sign(hashTreeRoot[:])
 						sigs[i] = sig

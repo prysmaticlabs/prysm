@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -38,7 +39,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -112,7 +113,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -148,7 +149,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 	for i, indice := range indices {
 		if syncBits.BitAt(uint64(i)) {
 			b := p2pType.SSZBytes(pbr)
-			sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+			sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 			require.NoError(t, err)
 			sig, err := bls.SignatureFromBytes(sb)
 			require.NoError(t, err)
@@ -221,7 +222,7 @@ func Test_VerifySyncCommitteeSig(t *testing.T) {
 	pks := make([]bls.PublicKey, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)

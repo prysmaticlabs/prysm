@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",

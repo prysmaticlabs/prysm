@@ -16,7 +16,7 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -597,7 +597,7 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	genRoot := r.cfg.Chain.GenesisValidatorRoot()
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
 	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
@@ -637,7 +637,7 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
 	genRoot := r.cfg.Chain.GenesisValidatorRoot()
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 
 	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
@@ -662,14 +662,14 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 
 func TestIsDigestValid(t *testing.T) {
 	genRoot := [32]byte{'A'}
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	valid, err := isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid)
 
 	// Compute future fork digest that will be invalid currently.
-	digest, err = helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
+	digest, err = signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	valid, err = isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
 	assert.NoError(t, err)

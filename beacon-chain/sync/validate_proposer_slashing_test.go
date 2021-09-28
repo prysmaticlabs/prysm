@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -76,7 +76,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot[:],
 		},
 	}
-	header1.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header1.Signature, err = signing.ComputeDomainAndSign(state, core.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
@@ -88,7 +88,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot2[:],
 		},
 	}
-	header2.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header2.Signature, err = signing.ComputeDomainAndSign(state, core.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{

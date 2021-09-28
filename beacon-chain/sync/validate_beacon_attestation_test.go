@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -256,9 +257,9 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			if tt.validAttestationSignature {
 				com, err := helpers.BeaconCommitteeFromState(context.Background(), savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
 				require.NoError(t, err)
-				domain, err := helpers.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
+				domain, err := signing.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
 				require.NoError(t, err)
-				attRoot, err := helpers.ComputeSigningRoot(tt.msg.Data, domain)
+				attRoot, err := signing.ComputeSigningRoot(tt.msg.Data, domain)
 				require.NoError(t, err)
 				for i := 0; ; i++ {
 					if tt.msg.AggregationBits.BitAt(uint64(i)) {

@@ -15,7 +15,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -242,7 +242,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode.Set(entry)
 
-	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
+	want, err := signing.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
 	require.NoError(t, err)
 
 	resp, err := forkEntry(localNode.Node().Record())
