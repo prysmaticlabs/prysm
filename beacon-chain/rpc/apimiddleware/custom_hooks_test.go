@@ -359,45 +359,59 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 	})
 }
 
-func TestPrepareGraffiti(t *testing.T) {
-	endpoint := &apimiddleware.Endpoint{
-		PostRequest: &signedBeaconBlockContainerJson{
-			Message: &beaconBlockJson{
-				Body: &beaconBlockBodyJson{},
+func TestPreparePublishedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockContainerJson{
+				Message: &beaconBlockJson{
+					Body: &beaconBlockBodyJson{},
+				},
 			},
-		},
-	}
+		}
+		preparePublishedBlock(endpoint, nil, nil)
+		_, ok := endpoint.PostRequest.(*phase0PublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
 
+	t.Run("Altair", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockAltairContainerJson{
+				Message: &beaconBlockAltairJson{
+					Body: &beaconBlockBodyAltairJson{},
+				},
+			},
+		}
+		preparePublishedBlock(endpoint, nil, nil)
+		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+}
+
+func TestPrepareGraffiti(t *testing.T) {
 	t.Run("32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
-
-		preparePublishedBlock(endpoint, nil, nil)
+		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 32)))
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 
-	t.Run("less_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = "foo"
-
-		preparePublishedBlock(endpoint, nil, nil)
+	t.Run("graffiti_less_than_32_bytes", func(t *testing.T) {
+		result := prepareGraffiti("foo")
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 
-	t.Run("more_than_32_bytes", func(t *testing.T) {
-		endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
-
-		preparePublishedBlock(endpoint, nil, nil)
+	t.Run("graffiti_more_than_32_bytes", func(t *testing.T) {
+		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 33)))
 		assert.Equal(
 			t,
 			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			endpoint.PostRequest.(*signedBeaconBlockContainerJson).Message.Body.Graffiti,
+			result,
 		)
 	})
 }
