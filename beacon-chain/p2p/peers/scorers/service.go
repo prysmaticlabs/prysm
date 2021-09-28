@@ -2,7 +2,6 @@ package scorers
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"time"
 
@@ -107,13 +106,7 @@ func (s *Service) Score(pid peer.ID) float64 {
 	defer s.store.RUnlock()
 
 	score := float64(0)
-
-	// Maybe use s.store.PeerDataGetOrCreate(pid) instead of PeerData(pid) ? This is possible race condition
 	if _, ok := s.store.PeerData(pid); !ok {
-		log.WithField("pid", pid).
-			WithField("peers", s.store.Peers()).
-			WithField("badPeers", s.BadPeers()).
-			Warn("Peer data is not present")
 		return 0
 	}
 	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)

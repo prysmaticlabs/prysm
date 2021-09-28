@@ -26,7 +26,7 @@ func (bs *Server) StreamMinimalConsensusInfo(
 ) error {
 
 	sender := func(epoch types.Epoch, state iface.BeaconState) error {
-		if latestSendEpoch == 0 || latestSendEpoch == epoch-1 {
+		if latestSendEpoch == 0 || latestSendEpoch != epoch {
 			epochInfo, err := bs.prepareEpochInfo(epoch, state)
 			if err != nil {
 				return status.Errorf(codes.Internal,
@@ -36,7 +36,10 @@ func (bs *Server) StreamMinimalConsensusInfo(
 				return status.Errorf(codes.Unavailable,
 					"Could not send over stream: %v  err: %v", epoch, err)
 			}
-			log.WithField("epoch", epoch).Info("Sent epoch info to orchestrator")
+			log.WithField("epoch", epoch).Info("Published epoch info")
+			log.WithField("epoch", epoch).
+				WithField("epochInfo", fmt.Sprintf("%+v", epochInfo)).
+				Debug("Sent epoch info")
 			latestSendEpoch = epoch
 		}
 		return nil
@@ -72,10 +75,13 @@ func (bs *Server) StreamMinimalConsensusInfo(
 	startEpoch := req.FromEpoch
 	endEpoch := cp.Epoch
 	latestSendEpoch = req.FromEpoch
+	if latestSendEpoch > 0 {
+		latestSendEpoch--
+	}
 
 	log.WithField("startEpoch", startEpoch).
 		WithField("endEpoch", endEpoch).
-		Debug("Sending previous epoch infos")
+		Info("Publishing previous epoch infos")
 
 	if startEpoch == 0 || startEpoch < endEpoch {
 		if err := batchSender(startEpoch, endEpoch); err != nil {
@@ -104,7 +110,8 @@ func (bs *Server) StreamMinimalConsensusInfo(
 					firstTime = false
 					log.WithField("startEpoch", latestSendEpoch+1).
 						WithField("endEpoch", curEpoch).
-						Debug("Sending left over epoch infos")
+						WithField("liveSyncStart", curEpoch+1).
+						Info("Publishing left over epoch infos")
 
 					startEpoch = latestSendEpoch + 1
 					endEpoch = curEpoch

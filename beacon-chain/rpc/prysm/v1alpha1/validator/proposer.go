@@ -448,7 +448,7 @@ func (vs *Server) deposits(
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
-		return nil, err
+		return []*ethpb.Deposit{}, nil
 	}
 
 	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()

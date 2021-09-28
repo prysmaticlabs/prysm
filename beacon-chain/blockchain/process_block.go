@@ -108,10 +108,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	// Vanguard: Validated by vanguard node. Now intercepting the execution and publishing the block
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
-		//if err := s.verifyPandoraShardInfo(signed); err != nil {
-		//	log.WithError(err).Error("Failed to process block")
-		//	return err
-		//}
 		// publish block to orchestrator and rpc service for sending minimal consensus info
 		s.publishBlock(signed, preState)
 		if s.orcVerification {
@@ -267,8 +263,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
 		for i, b := range blks {
-			// publish block to orchestrator and rpc service for sending minimal consensus info
+			// publish block and trigger rpc service for sending minimal consensus info
 			s.publishBlock(b, preStates[blockRoots[i]])
+			s.triggerEpochInfoPublisher(b.Block().Slot(), preStates[blockRoots[i]])
 		}
 	}
 	for r, st := range boundaries {

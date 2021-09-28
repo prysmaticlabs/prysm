@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	vanTypes "github.com/prysmaticlabs/prysm/shared/params"
 	"sort"
@@ -33,7 +35,7 @@ var (
 
 // PendingBlocksFetcher retrieves the cached un-confirmed beacon blocks from cache
 type PendingBlocksFetcher interface {
-	SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error)
+	SortedUnConfirmedBlocksFromCache() ([]interfaces.BeaconBlock, error)
 }
 
 // BlockProposal interface use when validator calls GetBlock api for proposing new beancon block
@@ -58,13 +60,13 @@ func (s *Service) CanPropose() error {
 }
 
 // UnConfirmedBlocksFromCache retrieves all the cached blocks from cache and send it back to event api
-func (s *Service) SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error) {
+func (s *Service) SortedUnConfirmedBlocksFromCache() ([]interfaces.BeaconBlock, error) {
 	blks, err := s.pendingBlockCache.PendingBlocks()
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not retrieve cached unconfirmed blocks from cache")
 	}
 	sort.Slice(blks, func(i, j int) bool {
-		return blks[i].Slot < blks[j].Slot
+		return blks[i].Slot() < blks[j].Slot()
 	})
 	return blks, nil
 }
@@ -88,36 +90,39 @@ func (s *Service) OrcVerification() bool {
 	return s.orcVerification
 }
 
-// publishBlock publishes downloaded blocks to orchestrator
-func (s *Service) publishBlock(signedBlk *ethpb.SignedBeaconBlock, curState iface.BeaconState) {
-	s.blockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.UnConfirmedBlock,
-		Data: &blockfeed.UnConfirmedBlockData{Block: signedBlk.Block},
-	})
-
+// triggerEpochInfoPublisher publishes slot and state for publishing epoch info
+func (s *Service) triggerEpochInfoPublisher(headSlot types.Slot, curState iface.BeaconState) {
 	// Send notification of the processed block to the state feed.
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockVerified,
 		Data: &statefeed.BlockPreVerifiedData{
-			Slot:         signedBlk.Block.Slot,
+			Slot:         headSlot,
 			CurrentState: curState.Copy(),
 		},
+	})
+}
+
+// publishBlock publishes downloaded blocks to orchestrator
+func (s *Service) publishBlock(signedBlk interfaces.SignedBeaconBlock, curState iface.BeaconState) {
+	s.blockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.UnConfirmedBlock,
+		Data: &blockfeed.UnConfirmedBlockData{Block: signedBlk.Block()},
 	})
 }
 
 // publishAndWaitForOrcConfirmation publish the block to orchestrator and store the block into pending queue cache
 func (s *Service) waitForConfirmation(
 	ctx context.Context,
-	signedBlk *ethpb.SignedBeaconBlock,
+	signedBlk interfaces.SignedBeaconBlock,
 ) error {
 	// Storing pending block into pendingBlockCache
-	if err := s.pendingBlockCache.AddPendingBlock(signedBlk.Block); err != nil {
-		return errors.Wrapf(err, "could not cache block of slot %d", signedBlk.Block.Slot)
+	if err := s.pendingBlockCache.AddPendingBlock(signedBlk.Block()); err != nil {
+		return errors.Wrapf(err, "could not cache block of slot %d", signedBlk.Block().Slot())
 	}
 	// Wait for final confirmation from orchestrator node
 	if err := s.waitForConfirmationBlock(ctx, signedBlk); err != nil {
 		log.WithError(err).
-			WithField("slot", signedBlk.Block.Slot).
+			WithField("slot", signedBlk.Block().Slot()).
 			Warn("could not validate by orchestrator so discard the block")
 		return err
 	}
@@ -194,7 +199,7 @@ func (s *Service) fetchConfirmations(ctx context.Context) error {
 //	- Re-check new response from orchestrator
 //  - Decrease the re-try limit if it gets pending status again
 //	- If it reaches the maximum limit then return error
-func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
+func (s *Service) waitForConfirmationBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
 	confirmedBlocksCh := make(chan *feed.Event, 1)
 	var confirmedBlockSub event.Subscription
 
@@ -211,13 +216,13 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 					continue
 				}
 				// Checks slot number with incoming confirmation data slot
-				if data.Slot == b.Block.Slot {
+				if data.Slot == b.Block().Slot() {
 					switch status := data.Status; status {
 					case vanTypes.Verified:
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", fmt.Sprintf("%#x", data.BlockRootHash)).Debug(
 							"got verified status from orchestrator")
-						if err := s.pendingBlockCache.Delete(b.Block.Slot); err != nil {
+						if err := s.pendingBlockCache.Delete(b.Block().Slot()); err != nil {
 							log.WithError(err).Error("couldn't delete the verified blocks from cache")
 							return err
 						}
@@ -282,7 +287,7 @@ func (s *Service) sortedPendingSlots() ([]*vanTypes.ConfirmationReqData, error) 
 			return nil, err
 		}
 		reqData = append(reqData, &vanTypes.ConfirmationReqData{
-			Slot: blk.Slot,
+			Slot: blk.Slot(),
 			Hash: blockRoot,
 		})
 	}
@@ -299,9 +304,10 @@ func (s *Service) verifyPandoraShardInfo(signedBlk *ethpb.SignedBeaconBlock) err
 		return errInvalidPandoraShardInfoLength
 	}
 	headBlk := s.headBlock()
-	if headBlk != nil && len(headBlk.Block.Body.PandoraShard) > 0 {
-		canonicalHash := common.BytesToHash(headBlk.Block.Body.PandoraShard[0].Hash)
-		canonicalBlkNum := headBlk.Block.Body.PandoraShard[0].BlockNumber
+	pandoraShards := headBlk.Block().Body().PandoraShards()
+	if headBlk != nil && len(pandoraShards) > 0 {
+		canonicalHash := common.BytesToHash(pandoraShards[0].Hash)
+		canonicalBlkNum := pandoraShards[0].BlockNumber
 
 		parentHash := common.BytesToHash(signedBlk.Block.Body.PandoraShard[0].ParentHash)
 		blockNumber := signedBlk.Block.Body.PandoraShard[0].BlockNumber

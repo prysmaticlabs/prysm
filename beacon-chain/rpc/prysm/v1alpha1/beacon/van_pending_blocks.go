@@ -16,12 +16,6 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 	batchSender := func(start, end types.Epoch) error {
 		for i := start; i <= end; i++ {
 			blks, _, err := bs.BeaconDB.Blocks(bs.Ctx, filters.NewFilter().SetStartEpoch(i).SetEndEpoch(i))
-
-			log.WithField("blocksLen", len(blks)).
-				WithField("startEpoch", start).
-				WithField("endEpoch", end).
-				Debug("Sending previous blocks to orchestrator")
-
 			if err != nil {
 				return status.Errorf(codes.Internal,
 					"Could not send over stream: %v", err)
@@ -42,10 +36,6 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 				}
 			}
 		}
-
-		log.WithField("startEpoch", start).
-			WithField("endEpoch", end).
-			Debug("Sent previous blocks to orchestrator")
 		return nil
 	}
 
@@ -54,12 +44,6 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 		if err != nil {
 			return err
 		}
-
-		log.WithField("blocksLen", len(blks)).
-			WithField("startSlot", start).
-			WithField("endSlot", end).
-			Debug("Sending previous blocks to orchestrator")
-
 		for _, blk := range blks {
 			unwrappedBlk, err := blk.PbPhase0Block()
 			if err != nil {
@@ -71,12 +55,6 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 					"Could not send over stream: %v", err)
 			}
 		}
-
-		log.WithField("blocksLen", len(blks)).
-			WithField("startSlot", start).
-			WithField("endSlot", end).
-			Info("Sent previous blocks to orchestrator")
-
 		return nil
 	}
 
@@ -88,13 +66,14 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 
 	epochStart := helpers.SlotToEpoch(request.FromSlot)
 	epochEnd := cp.Epoch
-	log.WithField("startEpoch", epochStart).
-		WithField("endEpoch", epochEnd).
-		Debug("Sending previous block in batch")
+
 	if epochStart <= epochEnd {
 		if err := batchSender(epochStart, epochEnd); err != nil {
 			return err
 		}
+		log.WithField("startEpoch", epochStart).
+			WithField("endEpoch", epochEnd).
+			Info("Published previous blocks in batch")
 	}
 	// Getting un-confirmed blocks from cache and sends those blocks to orchestrator
 	pBlocks, err := bs.UnconfirmedBlockFetcher.SortedUnConfirmedBlocksFromCache()
@@ -122,6 +101,9 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 				return status.Errorf(codes.Unavailable,
 					"Could not send over stream: %v", err)
 			}
+			log.WithField("startSlot", pBlocks[0].Slot()).
+				WithField("endSlot", pBlocks[len(pBlocks)-1].Slot()).
+				Info("Published unconfirmed blocks")
 		}
 		// sending till unconfirmed first block's slot
 		endSlot = pBlocks[0].Slot()
@@ -129,6 +111,9 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 			if err := sender(startSlot, endSlot); err != nil {
 				return err
 			}
+			log.WithField("startSlot", startSlot+1).
+				WithField("endSlot", endSlot).
+				Info("Published blocks from last sent epoch to unconfirmed block")
 		}
 	}
 
@@ -152,7 +137,8 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 					endSlot = data.Block.Slot()
 					log.WithField("startSlot", startSlot).
 						WithField("endSlot", endSlot).
-						Debug("Sending left over blocks")
+						WithField("liveSyncStart", endSlot+1).
+						Info("Sending left over blocks")
 					if startSlot < endSlot {
 						if err := sender(startSlot, endSlot); err != nil {
 							return err
@@ -171,7 +157,7 @@ func (bs *Server) StreamNewPendingBlocks(request *ethpb.StreamPendingBlocksReque
 						"Could not send over stream: %v", err)
 				}
 
-				log.WithField("slot", data.Block.Slot).Info(
+				log.WithField("slot", data.Block.Slot()).Debug(
 					"Sent block to orchestrator")
 			}
 		case <-pBlockSub.Err():
