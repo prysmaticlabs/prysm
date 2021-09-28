@@ -13,12 +13,12 @@ import (
 type PoolInserter interface {
 	InsertAttesterSlashing(
 		ctx context.Context,
-		state state.BeaconState,
+		state state.ReadOnlyBeaconState,
 		slashing *ethpb.AttesterSlashing,
 	) error
 	InsertProposerSlashing(
 		ctx context.Context,
-		state state.BeaconState,
+		state state.ReadOnlyBeaconState,
 		slashing *ethpb.ProposerSlashing,
 	) error
 }
@@ -27,8 +27,8 @@ type PoolInserter interface {
 // This pool is used by proposers to insert data into new blocks.
 type PoolManager interface {
 	PoolInserter
-	PendingAttesterSlashings(ctx context.Context, state state.BeaconState, noLimit bool) []*ethpb.AttesterSlashing
-	PendingProposerSlashings(ctx context.Context, state state.BeaconState, noLimit bool) []*ethpb.ProposerSlashing
+	PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing
+	PendingProposerSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing
 	MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing)
 	MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing)
 }
