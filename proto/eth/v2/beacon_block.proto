@@ -51,7 +51,7 @@ message BeaconBlockContainerV2 {
 }
 
 message SignedBeaconBlockContainerV2 {
-  oneof block {
+  oneof message {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
   }
