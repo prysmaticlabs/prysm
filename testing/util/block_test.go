@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -179,7 +179,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 }
 
 func TestHydrateSignedBeaconBlock_NoError(t *testing.T) {
-	b := &eth.SignedBeaconBlock{}
+	b := &ethpbalpha.SignedBeaconBlock{}
 	b = HydrateSignedBeaconBlock(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestHydrateSignedBeaconBlock_NoError(t *testing.T) {
 }
 
 func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
-	b := &v1.SignedBeaconBlock{}
+	b := &ethpbv1.SignedBeaconBlock{}
 	b = HydrateV1SignedBeaconBlock(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
@@ -200,8 +200,19 @@ func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestHydrateV2SignedBeaconBlockAltair_NoError(t *testing.T) {
-	b := &v2.SignedBeaconBlockAltair{}
+func TestHydrateV2SignedBeaconBlock_NoError(t *testing.T) {
+	b := &ethpbv2.SignedBeaconBlockAltair{}
+	b = HydrateV2SignedBeaconBlock(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
+	b := &ethpbalpha.SignedBeaconBlockAltair{}
 	b = HydrateSignedBeaconBlockAltair(b)
 
 	// HTR should not error. It errors with incorrect field length sizes.
