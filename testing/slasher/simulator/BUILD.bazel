@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "attestation_generator.go",
         "block_generator.go",
