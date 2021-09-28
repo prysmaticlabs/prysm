@@ -5,19 +5,19 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -152,20 +152,20 @@ func (s *Simulator) Stop() error {
 
 func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 	// Add a small offset to producing blocks and attestations a little bit after a slot starts.
-	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
+	ticker := slots.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	for {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
 			totalEpochs := types.Epoch(s.srvConfig.Params.NumEpochs)
-			if helpers.SlotToEpoch(slot) >= totalEpochs {
+			if core.SlotToEpoch(slot) >= totalEpochs {
 				return
 			}
 
 			// Since processing slashings requires at least one slot, we do nothing
 			// if we are a few slots from the end of the simulation.
-			endSlot, err := helpers.StartSlot(totalEpochs)
+			endSlot, err := core.StartSlot(totalEpochs)
 			if err != nil {
 				log.WithError(err).Fatal("Could not get epoch start slot")
 			}

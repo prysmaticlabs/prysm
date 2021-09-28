@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
@@ -27,7 +27,7 @@ func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
 	for i := 0; i < len(epoch3Atts); i += 2 {
 		goodAtt := epoch3Atts[i]
 		surroundAtt := epoch4Atts[i+1]
-		require.Equal(t, true, slashutil.IsSurround(surroundAtt, goodAtt))
+		require.Equal(t, true, slashings.IsSurround(surroundAtt, goodAtt))
 	}
 }
 
