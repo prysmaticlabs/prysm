@@ -406,6 +406,62 @@ func Test_validateAttestationIntegrity(t *testing.T) {
 	}
 }
 
+func Test_validateBlockHeaderIntegrity(t *testing.T) {
+	type args struct {
+		header *ethpb.SignedBeaconBlockHeader
+	}
+	fakeSig := make([]byte, 96)
+	copy(fakeSig, "hi")
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "nil header",
+			args: args{
+				header: nil,
+			},
+			want: false,
+		},
+		{
+			name: "nil inner header",
+			args: args{
+				header: &ethpb.SignedBeaconBlockHeader{},
+			},
+			want: false,
+		},
+		{
+			name: "bad signature",
+			args: args{
+				header: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{}, Signature: []byte("hi")},
+			},
+			want: false,
+		},
+		{
+			name: "empty signature",
+			args: args{
+				header: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{}},
+			},
+			want: false,
+		},
+		{
+			name: "OK",
+			args: args{
+				header: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{}, Signature: fakeSig},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validateBlockHeaderIntegrity(tt.args.header); got != tt.want {
+				t.Errorf("validateBlockHeaderIntegrity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_isDoubleProposal(t *testing.T) {
 	type args struct {
 		incomingSigningRoot [32]byte

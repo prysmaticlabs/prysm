@@ -25,20 +25,22 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
 		},
-		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
-		attsQueue:       newAttestationsQueue(),
+		attsQueue: newAttestationsQueue(),
 	}
+	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	defer close(indexedAttsChan)
+
 	exitChan := make(chan struct{})
 	go func() {
-		s.receiveAttestations(ctx)
+		s.receiveAttestations(ctx, indexedAttsChan)
 		exitChan <- struct{}{}
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
 	att1 := createAttestationWrapper(t, 1, 2, firstIndices, nil)
 	att2 := createAttestationWrapper(t, 1, 2, secondIndices, nil)
-	s.indexedAttsChan <- att1.IndexedAttestation
-	s.indexedAttsChan <- att2.IndexedAttestation
+	indexedAttsChan <- att1.IndexedAttestation
+	indexedAttsChan <- att2.IndexedAttestation
 	cancel()
 	<-exitChan
 	wanted := []*slashertypes.IndexedAttestationWrapper{
@@ -206,22 +208,25 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
 		},
-		attsQueue:       newAttestationsQueue(),
-		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
+		attsQueue: newAttestationsQueue(),
 	}
+	indexedAttsChan := make(chan *ethpb.IndexedAttestation)
+	defer close(indexedAttsChan)
+
 	exitChan := make(chan struct{})
+	defer close(exitChan)
 	go func() {
-		s.receiveAttestations(ctx)
+		s.receiveAttestations(ctx, indexedAttsChan)
 		exitChan <- struct{}{}
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
 	// Add a valid attestation.
 	validAtt := createAttestationWrapper(t, 1, 2, firstIndices, nil)
-	s.indexedAttsChan <- validAtt.IndexedAttestation
+	indexedAttsChan <- validAtt.IndexedAttestation
 	// Send an invalid, bad attestation which will not
 	// pass integrity checks at it has invalid attestation data.
-	s.indexedAttsChan <- &ethpb.IndexedAttestation{
+	indexedAttsChan <- &ethpb.IndexedAttestation{
 		AttestingIndices: secondIndices,
 	}
 	cancel()
@@ -241,19 +246,20 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 			BeaconBlockHeadersFeed: new(event.Feed),
 			StateNotifier:          &mock.MockStateNotifier{},
 		},
-		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader),
-		blksQueue:              newBlocksQueue(),
+		blksQueue: newBlocksQueue(),
 	}
+	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader)
+	defer close(beaconBlockHeadersChan)
 	exitChan := make(chan struct{})
 	go func() {
-		s.receiveBlocks(ctx)
+		s.receiveBlocks(ctx, beaconBlockHeadersChan)
 		exitChan <- struct{}{}
 	}()
 
 	block1 := createProposalWrapper(t, 0, 1, nil).SignedBeaconBlockHeader
 	block2 := createProposalWrapper(t, 0, 2, nil).SignedBeaconBlockHeader
-	s.beaconBlockHeadersChan <- block1
-	s.beaconBlockHeadersChan <- block2
+	beaconBlockHeadersChan <- block1
+	beaconBlockHeadersChan <- block2
 	cancel()
 	<-exitChan
 	wanted := []*slashertypes.SignedBlockHeaderWrapper{

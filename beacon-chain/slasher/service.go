@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,10 +26,8 @@ type ServiceConfig struct {
 
 // Service for running slasher mode in a beacon node.
 type Service struct {
-	params                 *Parameters
-	serviceCfg             *ServiceConfig
-	blksQueue              *blocksQueue
-	attsQueue              *attestationsQueue
-	indexedAttsChan        chan *ethpb.IndexedAttestation
-	beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader
+	params     *Parameters
+	serviceCfg *ServiceConfig
+	blksQueue  *blocksQueue
+	attsQueue  *attestationsQueue
 }

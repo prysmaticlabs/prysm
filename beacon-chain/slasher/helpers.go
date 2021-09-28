@@ -1,6 +1,7 @@
 package slasher
 
 import (
+	"bytes"
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -103,6 +104,15 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 
 	// All valid attestations must have source epoch < target epoch.
 	return sourceEpoch < targetEpoch
+}
+
+// Validates the signed beacon block header integrity, ensuring we have no nil values.
+func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
+	// If a signed block header is malformed, we drop it.
+	if header == nil || header.Header == nil || len(header.Signature) < 96 || bytes.Equal(header.Signature, make([]byte, 96)) {
+		return false
+	}
+	return true
 }
 
 func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
