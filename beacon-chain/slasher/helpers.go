@@ -109,7 +109,10 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 // Validates the signed beacon block header integrity, ensuring we have no nil values.
 func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
 	// If a signed block header is malformed, we drop it.
-	if header == nil || header.Header == nil || len(header.Signature) < 96 || bytes.Equal(header.Signature, make([]byte, 96)) {
+	if header == nil ||
+		header.Header == nil ||
+		len(header.Signature) != params.BeaconConfig().BLSSignatureLength ||
+		bytes.Equal(header.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength)) {
 		return false
 	}
 	return true
