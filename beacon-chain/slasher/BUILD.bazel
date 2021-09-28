@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chunks.go",
+        "detect_attestations.go",
         "detect_blocks.go",
         "doc.go",
         "helpers.go",
@@ -31,6 +32,7 @@ go_library(
         "//container/slice:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -45,6 +47,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "chunks_test.go",
+        "detect_attestations_test.go",
         "detect_blocks_test.go",
         "helpers_test.go",
         "params_test.go",
@@ -56,6 +59,7 @@ go_test(
     deps = [
         "//async/event:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
