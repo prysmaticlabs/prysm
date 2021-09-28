@@ -19,6 +19,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
+// root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
 	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
 }
