@@ -175,7 +175,7 @@ func (p *Pool) InsertAttesterSlashing(
 // has been included recently, the validator is already exited, or the validator was already slashed.
 func (p *Pool) InsertProposerSlashing(
 	ctx context.Context,
-	state state.ReadOnlyBeaconState,
+	state state.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	p.lock.Lock()

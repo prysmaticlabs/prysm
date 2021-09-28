@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 // ServiceConfig for the slasher service in the beacon node.
