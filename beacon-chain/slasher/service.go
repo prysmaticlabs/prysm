@@ -18,6 +18,7 @@ type ServiceConfig struct {
 	Database                db.SlasherDatabase
 	AttestationStateFetcher blockchain.AttestationStateFetcher
 	IndexedAttestationsFeed *event.Feed
+	BeaconBlockHeadersFeed  *event.Feed
 	StateGen                stategen.StateManager
 	SlashingPoolInserter    slashings.PoolManager
 	StateNotifier           statefeed.Notifier
@@ -26,9 +27,10 @@ type ServiceConfig struct {
 
 // Service for running slasher mode in a beacon node.
 type Service struct {
-	params          *Parameters
-	serviceCfg      *ServiceConfig
-	blksQueue       *blocksQueue
-	attsQueue       *attestationsQueue
-	indexedAttsChan chan *ethpb.IndexedAttestation
+	params                 *Parameters
+	serviceCfg             *ServiceConfig
+	blksQueue              *blocksQueue
+	attsQueue              *attestationsQueue
+	indexedAttsChan        chan *ethpb.IndexedAttestation
+	beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader
 }
