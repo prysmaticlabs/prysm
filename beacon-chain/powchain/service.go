@@ -616,6 +616,16 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
+
+		// when a node pauses for some time and starts again, the deposits to finalize
+		// accumulates. we finalize them here before we are ready to receive a block.
+		// Otherwise, the first few blocks will be slower to compute as we will
+		// hold the lock and be busy finalizing the deposits.
+		s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
+		// Deposit proofs are only used during state transition and can be safely removed to save space.
+		if err = s.cfg.DepositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
+			return errors.Wrap(err, "could not prune deposit proofs")
+		}
 	}
 	validDepositsCount.Add(float64(currIndex))
 	// Only add pending deposits if the container slice length
