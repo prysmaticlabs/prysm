@@ -206,7 +206,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Slot:                      epoch2Start,
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
-			EpochTransition:           false,
+			EpochTransition:           true,
 			PreviousDutyDependentRoot: genesisRoot[:],
 			CurrentDutyDependentRoot:  make([]byte, 32),
 		}
