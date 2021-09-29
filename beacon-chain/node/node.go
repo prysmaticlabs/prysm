@@ -366,6 +366,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	log.Infof("Deposit contract: %#x", addr.Bytes())
 	return nil
 }
+
 func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	if !features.Get().EnableSlasher {
 		return nil

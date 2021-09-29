@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "countdown.go",
-        "epochticker.go",
         "slotticker.go",
         "slottime.go",
     ],
@@ -23,7 +22,6 @@ go_test(
     size = "small",
     srcs = [
         "countdown_test.go",
-        "epochticker_test.go",
         "slotticker_test.go",
         "slottime_test.go",
         "slotutil_test.go",

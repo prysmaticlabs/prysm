@@ -113,12 +113,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		// Feed the indexed attestation to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-<<<<<<< HEAD
-=======
 			// Using a different context to prevent timeouts as this operation can be expensive
 			// and we want to avoid affecting the critical code path.
 			ctx := context.TODO()
->>>>>>> develop
 			for _, att := range signed.Block().Body().Attestations() {
 				committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
 				if err != nil {
@@ -126,13 +123,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					tracing.AnnotateError(span, err)
 					return
 				}
-<<<<<<< HEAD
-				// Using a different context to prevent timeouts as this operation can be expensive
-				// and we want to avoid affecting the critical code path.
-				indexedAtt, err := attestation.ConvertToIndexed(context.TODO(), att, committee)
-=======
 				indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
->>>>>>> develop
 				if err != nil {
 					log.WithError(err).Error("Could not convert to indexed attestation")
 					tracing.AnnotateError(span, err)
