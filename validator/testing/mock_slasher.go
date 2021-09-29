@@ -12,12 +12,10 @@ import (
 
 // MockSlasher mocks the slasher rpc server.
 type MockSlasher struct {
-	SlashAttestation                     bool
-	SlashBlock                           bool
-	IsSlashableAttestationCalled         bool
-	IsSlashableAttestationNoUpdateCalled bool
-	IsSlashableBlockCalled               bool
-	IsSlashableBlockNoUpdateCalled       bool
+	SlashAttestation             bool
+	SlashBlock                   bool
+	IsSlashableAttestationCalled bool
+	IsSlashableBlockCalled       bool
 }
 
 // HighestAttestations will return an empty array of attestations.
@@ -49,15 +47,6 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 	return nil, nil
 }
 
-// IsSlashableAttestationNoUpdate returns slashbale if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestationNoUpdate(_ context.Context, _ *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
-	ms.IsSlashableAttestationNoUpdateCalled = true
-	return &slashpb.Slashable{
-		Slashable: ms.SlashAttestation,
-	}, nil
-
-}
-
 // IsSlashableBlock returns proposer slashing if slash block is set to true.
 func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
 	ms.IsSlashableBlockCalled = true
@@ -77,12 +66,4 @@ func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBl
 		}, nil
 	}
 	return nil, nil
-}
-
-// IsSlashableBlockNoUpdate returns slashbale if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlockNoUpdate(_ context.Context, _ *eth.BeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
-	ms.IsSlashableBlockNoUpdateCalled = true
-	return &slashpb.Slashable{
-		Slashable: ms.SlashBlock,
-	}, nil
 }
