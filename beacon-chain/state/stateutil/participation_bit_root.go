@@ -1,4 +1,4 @@
-package v2
+package stateutil
 
 import (
 	"encoding/binary"
@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
-// participationBitsRoot computes the HashTreeRoot merkleization of
+// ParticipationBitsRoot computes the HashTreeRoot merkleization of
 // participation roots.
-func participationBitsRoot(bits []byte) ([32]byte, error) {
+func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	chunkedRoots, err := packParticipationBits(bits)
 	if err != nil {
