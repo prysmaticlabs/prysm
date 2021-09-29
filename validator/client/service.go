@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -64,7 +63,6 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             iface.Validator
-	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -82,7 +80,6 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingiface.Protector
 	Endpoint                   string
 	Validator                  iface.Validator
 	ValDB                      db.Database
@@ -112,7 +109,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:           cfg.GrpcRetriesFlag,
 		grpcRetryDelay:        cfg.GrpcRetryDelay,
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:             cfg.Protector,
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
@@ -188,7 +184,6 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,

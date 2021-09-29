@@ -36,20 +36,17 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// reconnectPeriod is the frequency that we try to restart our
-// slasher connection when the slasher client connection is not ready.
-var reconnectPeriod = 5 * time.Second
-
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
-var keyRefetchPeriod = 30 * time.Second
+var (
+	keyRefetchPeriod = 30 * time.Second
+)
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
@@ -81,7 +78,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingiface.Protector
+	slashingProtectionClient           ethpb.SlasherClient
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
@@ -224,6 +221,8 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
+<<<<<<< HEAD
+=======
 // SlasherReady checks if slasher that was configured as external protection
 // is reachable.
 func (v *validator) SlasherReady(ctx context.Context) error {
@@ -255,6 +254,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 	return nil
 }
 
+>>>>>>> develop
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
