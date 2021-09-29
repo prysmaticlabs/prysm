@@ -17,7 +17,10 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/slasher",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/slasher/simulator:__subpackages__",
+    ],
     deps = [
         "//async/event:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
