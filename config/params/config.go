@@ -176,8 +176,8 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
 
 	// Gas.
-	GasLimitDenominator          uint64      `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"`            // GasLimitDenominator for merge.
-	MinGasLimit                  uint64      `yaml:"MIN_GAS_LIMIT" spec:"true"`                    // MinGasLimit for merge.
+	GasLimitDenominator uint64 `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"` // GasLimitDenominator for merge.
+	MinGasLimit         uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`         // MinGasLimit for merge.
 	// Merge.
 	MaxExecutionTransactions     uint64      `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
 	MaxBytesPerOpaqueTransaction uint64      `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MAX_BYTES_PER_OPAQUE_TRANSACTION of beacon chain.
