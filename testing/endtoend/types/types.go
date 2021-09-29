@@ -17,7 +17,7 @@ type E2EConfig struct {
 	TestDeposits        bool
 	EpochsToRun         uint64
 	TracingSinkEndpoint string
-	Evaluators          []Evaluator // Evaluators that run on regular beacon nodes in the E2E test.
+	Evaluators          []Evaluator
 	BeaconFlags         []string
 	ValidatorFlags      []string
 }
