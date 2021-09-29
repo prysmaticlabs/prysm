@@ -184,6 +184,12 @@ var (
 		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
 			"eth2-clients/eth2-testnets repository on github.",
 	}
+	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
+	MinPeersPerSubnet = &cli.Uint64Flag{
+		Name:  "minimum-peers-per-subnet",
+		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
+		Value: 6,
+	}
 	// EnableMerge enables necessary features to run merge testnet.
 	EnableMerge = &cli.BoolFlag{
 		Name:  "merge",
