@@ -1,4 +1,4 @@
-package v2
+package stateutil
 
 import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -6,10 +6,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// syncCommitteeRoot computes the HashTreeRoot Merkleization of a commitee root.
+// SyncCommitteeRoot computes the HashTreeRoot Merkleization of a commitee root.
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
-func syncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
+func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][32]byte
 	if committee == nil {
