@@ -6,7 +6,6 @@ package endtoend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -79,38 +79,53 @@ func (r *testRunner) run() {
 	// ETH1 node.
 	eth1Node := components.NewEth1Node()
 	g.Go(func() error {
-		return eth1Node.Start(ctx)
+		if err := eth1Node.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start eth1node")
+		}
+		return nil
 	})
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
-			return fmt.Errorf("sending and mining deposits require ETH1 node to run: %w", err)
+			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
 		}
-		return components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */)
+		if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
+			return errors.Wrap(err, "failed to send and mine deposits")
+		}
+		return nil
 	})
 
 	// Boot node.
 	bootNode := components.NewBootNode()
 	g.Go(func() error {
-		return bootNode.Start(ctx)
+		if err := bootNode.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start bootnode")
+		}
+		return nil
 	})
 
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
-			return fmt.Errorf("beacon nodes require ETH1 and boot node to run: %w", err)
+			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
-		return beaconNodes.Start(ctx)
+		if err := beaconNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start beacon nodes")
+		}
+		return nil
 	})
 
 	// Validator nodes.
 	validatorNodes := components.NewValidatorNodeSet(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-			return fmt.Errorf("validator nodes require beacon nodes to run: %w", err)
+			return errors.Wrap(err, "validator nodes require beacon nodes to run")
 		}
-		return validatorNodes.Start(ctx)
+		if err := validatorNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start validator nodes")
+		}
+		return nil
 	})
 
 	// Run E2E evaluators and tests.
@@ -129,7 +144,7 @@ func (r *testRunner) run() {
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
-			return fmt.Errorf("components take too long to start: %w", err)
+			return errors.Wrap(err, "components take too long to start")
 		}
 
 		// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
@@ -169,7 +184,7 @@ func (r *testRunner) run() {
 
 		// Run assigned evaluators.
 		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
-			return err
+			return errors.Wrap(err, "one or more evaluators failed")
 		}
 
 		// If requested, run sync test.
@@ -177,9 +192,12 @@ func (r *testRunner) run() {
 			return nil
 		}
 		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
-			return err
+			return errors.Wrap(err, "beacon chain sync test failed")
 		}
-		return r.testDoppelGangerProtection(ctx)
+		if err := r.testDoppelGangerProtection(ctx); err != nil {
+			return errors.Wrap(err, "doppel ganger protection check failed")
+		}
+		return nil
 	})
 
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
