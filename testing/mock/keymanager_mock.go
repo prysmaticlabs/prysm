@@ -14,25 +14,25 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockRemoteSignerClient is a mock of RemoteSignerClient interface.
+// MockRemoteSignerClient is a mock of RemoteSignerClient interface
 type MockRemoteSignerClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRemoteSignerClientMockRecorder
 }
 
-// MockRemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient.
+// MockRemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient
 type MockRemoteSignerClientMockRecorder struct {
 	mock *MockRemoteSignerClient
 }
 
-// NewMockRemoteSignerClient creates a new mock instance.
+// NewMockRemoteSignerClient creates a new mock instance
 func NewMockRemoteSignerClient(ctrl *gomock.Controller) *MockRemoteSignerClient {
 	mock := &MockRemoteSignerClient{ctrl: ctrl}
 	mock.recorder = &MockRemoteSignerClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockRemoteSignerClient) EXPECT() *MockRemoteSignerClientMockRecorder {
 	return m.recorder
 }
@@ -50,7 +50,7 @@ func (m *MockRemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, 
 	return ret0, ret1
 }
 
-// ListValidatingPublicKeys indicates an expected call of ListValidatingPublicKeys.
+// ListValidatingPublicKeys indicates an expected call of ListValidatingPublicKeys
 func (mr *MockRemoteSignerClientMockRecorder) ListValidatingPublicKeys(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
@@ -70,7 +70,7 @@ func (m *MockRemoteSignerClient) Sign(arg0 context.Context, arg1 *v2.SignRequest
 	return ret0, ret1
 }
 
-// Sign indicates an expected call of Sign.
+// Sign indicates an expected call of Sign
 func (mr *MockRemoteSignerClientMockRecorder) Sign(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
