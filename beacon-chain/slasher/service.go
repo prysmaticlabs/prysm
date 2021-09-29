@@ -40,6 +40,9 @@ type ServiceConfig struct {
 type SlashingChecker interface {
 	IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
 	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
+	HighestAttestations(
+		ctx context.Context, indices []uint64,
+	) ([]*ethpb.HighestAttestation, error)
 }
 
 // Service defining a slasher implementation as part of
