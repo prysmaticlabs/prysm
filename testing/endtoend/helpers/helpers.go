@@ -109,7 +109,7 @@ random:
 }
 
 // LogOutput logs the output of all log files made.
-func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
+func LogOutput(t *testing.T) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))

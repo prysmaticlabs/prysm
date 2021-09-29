@@ -130,7 +130,7 @@ func (r *testRunner) run() {
 		}
 
 		// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
-		defer helpers.LogOutput(t, config)
+		defer helpers.LogOutput(t)
 		if config.UsePprof {
 			defer func() {
 				log.Info("Writing output pprof files")
