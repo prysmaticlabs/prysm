@@ -38,7 +38,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	if usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch-1
+		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
 	const tracingEndpoint = "127.0.0.1:9411"
 	evals := []types.Evaluator{
