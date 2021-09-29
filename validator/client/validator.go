@@ -36,20 +36,17 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// reconnectPeriod is the frequency that we try to restart our
-// slasher connection when the slasher client connection is not ready.
-var reconnectPeriod = 5 * time.Second
-
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
-var keyRefetchPeriod = 30 * time.Second
+var (
+	keyRefetchPeriod = 30 * time.Second
+)
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
@@ -81,7 +78,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingiface.Protector
+	slashingProtectionClient           ethpb.SlasherClient
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
@@ -222,37 +219,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 			return errors.New("context has been canceled, exiting goroutine")
 		}
 	}
-}
-
-// SlasherReady checks if slasher that was configured as external protection
-// is reachable.
-func (v *validator) SlasherReady(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
-	defer span.End()
-	if features.Get().RemoteSlasherProtection {
-		err := v.protector.Status()
-		if err == nil {
-			return nil
-		}
-		ticker := time.NewTicker(reconnectPeriod)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
-				err = v.protector.Status()
-				if err != nil {
-					continue
-				}
-				log.Info("Slasher connection is ready")
-				return nil
-			case <-ctx.Done():
-				log.Debug("Context closed, exiting reconnect external protection")
-				return ctx.Err()
-			}
-		}
-	}
-	return nil
 }
 
 // ReceiveBlocks starts a gRPC client stream listener to obtain
