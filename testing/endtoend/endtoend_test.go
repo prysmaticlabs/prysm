@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -206,6 +207,7 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
+		wg := new(sync.WaitGroup)
 		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
 			// in a separate goroutine.
@@ -214,11 +216,14 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 			if !evaluator.Policy(types.Epoch(currentEpoch)) {
 				continue
 			}
-			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+			wg.Add(1)
+			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				err := evaluator.Evaluation(conns...)
 				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+				wg.Done()
 			})
 		}
+		wg.Wait()
 
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
