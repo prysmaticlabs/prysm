@@ -58,6 +58,8 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
 	}
 	// TODO(#9166): remove this block once v2 changes are live.
 	if !usePrysmSh {
@@ -74,17 +76,12 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		},
 		ValidatorFlags:      []string{},
 		EpochsToRun:         uint64(epochsToRun),
-		EpochsToRunPostSync: 1,
 		TestSync:            true,
 		TestDeposits:        true,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
-		PostSyncEvaluators: []types.Evaluator{
-			ev.FinishedSyncing,
-			ev.AllNodesHaveSameHead,
-		},
 	}
 
 	newTestRunner(t, testConfig).run()
