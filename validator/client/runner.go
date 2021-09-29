@@ -212,10 +212,18 @@ func run(ctx context.Context, v iface.Validator) {
 					}(role, pubKey)
 				}
 			}
-			// Wait for all processes to complete, then report span complete.
 
+			// Wait for all processes to complete, then report span complete.
 			go func() {
 				wg.Wait()
+				defer span.End()
+				defer func() {
+					if err := recover(); err != nil { // catch any panic in logging
+						log.WithField("err", err).
+							Error("Panic occurred when logging validator report. This" +
+								" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
+					}
+				}()
 				// Log this client performance in the previous epoch
 				v.LogAttestationsSubmitted()
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
@@ -224,7 +232,6 @@ func run(ctx context.Context, v iface.Validator) {
 				if err := v.LogNextDutyTimeLeft(slot); err != nil {
 					log.WithError(err).Error("Could not report next count down")
 				}
-				span.End()
 			}()
 		}
 	}
