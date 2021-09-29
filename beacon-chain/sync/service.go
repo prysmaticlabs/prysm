@@ -6,6 +6,9 @@ package sync
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -35,8 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"sync"
-	"time"
 )
 
 var _ runtime.Service = (*Service)(nil)
