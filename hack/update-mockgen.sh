@@ -3,7 +3,7 @@
 # Script to update mock files after proto/prysm/v1alpha1/services.proto changes.
 # Use a space to separate mock destination from its interfaces.
 
-mock_path="shared/mock"
+mock_path="testing/mock"
 mocks=(
       "$mock_path/beacon_service_mock.go BeaconChainClient,BeaconChain_StreamChainHeadClient,BeaconChain_StreamAttestationsClient,BeaconChain_StreamBlocksClient,BeaconChain_StreamValidatorsInfoClient,BeaconChain_StreamIndexedAttestationsClient"
       "$mock_path/beacon_chain_service_mock.go BeaconChain_StreamChainHeadServer,BeaconChain_StreamAttestationsServer,BeaconChain_StreamBlocksServer,BeaconChain_StreamValidatorsInfoServer,BeaconChain_StreamIndexedAttestationsServer"
@@ -25,4 +25,3 @@ done
 goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
 
-GO11MODULE=on mockgen -package=mock -destination="shared/slasher_client_mock.go" github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1 SlasherClient

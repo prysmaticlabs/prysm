@@ -18,7 +18,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
+	mock "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -29,9 +29,9 @@ import (
 )
 
 type mocks struct {
-	validatorClient *mock2.MockBeaconNodeValidatorClient
-	nodeClient      *mock2.MockNodeClient
-	slasherClient   *mock2.MockSlasherClient
+	validatorClient *mock.MockBeaconNodeValidatorClient
+	nodeClient      *mock.MockNodeClient
+	slasherClient   *mock.MockSlasherClient
 	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -68,9 +68,9 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
-		nodeClient:      mock2.NewMockNodeClient(ctrl),
-		slasherClient:   mock2.NewMockSlasherClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		nodeClient:      mock.NewMockNodeClient(ctrl),
+		slasherClient:   mock.NewMockSlasherClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -87,6 +87,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		db:                             valDB,
 		keyManager:                     km,
 		validatorClient:                m.validatorClient,
+		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -877,7 +878,7 @@ func TestSignAltairBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	pubKey := [48]byte{'a'}
 	tests := []struct {
@@ -960,7 +961,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
