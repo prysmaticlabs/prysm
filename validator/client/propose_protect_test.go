@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
@@ -102,7 +101,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	mock.slasherClient.EXPECT().IsSlashableBlock(
+	mocks.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Times(2).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)
@@ -146,7 +145,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 
-	m.nodeClient.EXPECT().IsSlashableBlock(
+	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.ProposerSlashingResponse{ProposerSlashings: []*ethpb.ProposerSlashing{{}}}, nil /*err*/)

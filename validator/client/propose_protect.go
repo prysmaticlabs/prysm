@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -20,8 +19,8 @@ func (v *validator) slashableProposalCheck(
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
-	block := signedBlock.Block()
-	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot())
+	blk := signedBlock.Block()
+	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, blk.Slot())
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -59,7 +58,7 @@ func (v *validator) slashableProposalCheck(
 	}
 
 	if features.Get().RemoteSlasherProtection {
-		blockHdr, err := blocks.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
+		blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
@@ -74,7 +73,7 @@ func (v *validator) slashableProposalCheck(
 			return errors.New(failedBlockSignExternalErr)
 		}
 	}
-	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Slot(), signingRoot[:]); err != nil {
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, blk.Slot(), signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}

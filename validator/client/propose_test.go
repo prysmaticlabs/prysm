@@ -31,6 +31,7 @@ import (
 type mocks struct {
 	validatorClient *mock2.MockBeaconNodeValidatorClient
 	nodeClient      *mock2.MockNodeClient
+	slasherClient   *mock2.MockSlasherClient
 	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -69,6 +70,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	m := &mocks{
 		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock2.NewMockNodeClient(ctrl),
+		slasherClient:   mock2.NewMockSlasherClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
