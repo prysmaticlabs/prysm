@@ -641,7 +641,7 @@ func (b *BeaconNode) registerRPCService() error {
 	}
 
 	var slasherService *slasher.Service
-	if featureconfig.Get().EnableSlasher {
+	if features.Get().EnableSlasher {
 		if err := b.services.FetchService(&slasherService); err != nil {
 			return err
 		}
