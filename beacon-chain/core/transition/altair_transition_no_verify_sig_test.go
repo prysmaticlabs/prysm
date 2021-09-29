@@ -2,6 +2,7 @@ package transition_test
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -205,6 +206,24 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 	verified, err := set.Verify()
 	require.NoError(t, err)
 	require.Equal(t, true, verified, "Could not verify signature set")
+}
+
+func TestProcessEpoch_BadBalanceAltair(t *testing.T) {
+	s, _ := util.DeterministicGenesisStateAltair(t, 100)
+	assert.NoError(t, s.SetSlot(63))
+	assert.NoError(t, s.UpdateBalancesAtIndex(0, math.MaxUint64))
+	participation := byte(0)
+	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyHeadFlagIndex)
+	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelySourceFlagIndex)
+	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyTargetFlagIndex)
+
+	epochParticipation, err := s.CurrentEpochParticipation()
+	assert.NoError(t, err)
+	epochParticipation[0] = participation
+	assert.NoError(t, s.SetCurrentParticipationBits(epochParticipation))
+	assert.NoError(t, s.SetPreviousParticipationBits(epochParticipation))
+	_, err = altair.ProcessEpoch(context.Background(), s)
+	assert.ErrorContains(t, "addition overflows", err)
 }
 
 func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconStateAltair,
