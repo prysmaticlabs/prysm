@@ -95,21 +95,6 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.Sig
 	return signing.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
 }
 
-// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
-func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
-	currentEpoch := core.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return err
-	}
-	proposer, err := beaconState.ValidatorAtIndex(header.Header.ProposerIndex)
-	if err != nil {
-		return err
-	}
-	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
-}
-
 // VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
 // from the above method by not using fork data from the state and instead retrieving it
 // via the respective epoch.
