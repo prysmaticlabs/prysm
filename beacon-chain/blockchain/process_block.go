@@ -107,7 +107,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	justifiedEpoch := s.justifiedCheckpt.Epoch
+	currJustifiedEpoch := s.justifiedCheckpt.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > justifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
