@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//testing/endtoend:__subpackages__",
         "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
     ],

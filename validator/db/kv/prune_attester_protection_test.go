@@ -39,7 +39,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 }
 
 func TestPruneAttestations_OK(t *testing.T) {
-	numKeys := uint64(2048)
+	numKeys := uint64(64)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
