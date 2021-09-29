@@ -10,11 +10,11 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	slashersimulator "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	slashersimulator "github.com/prysmaticlabs/prysm/testing/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
