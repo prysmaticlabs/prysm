@@ -3,8 +3,8 @@ package slasher
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type MockSlashingChecker struct {

@@ -102,7 +102,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	mocks.slasherClient.EXPECT().IsSlashableBlock(
+	mock.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Times(2).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)

@@ -17,6 +17,11 @@ func (s *Server) IsSlashableBlock(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block is slashable: %v", err)
 	}
+	if proposerSlashing == nil {
+		return &ethpb.ProposerSlashingResponse{
+			ProposerSlashings: []*ethpb.ProposerSlashing{},
+		}, nil
+	}
 	return &ethpb.ProposerSlashingResponse{
 		ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing},
 	}, nil

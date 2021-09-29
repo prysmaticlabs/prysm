@@ -147,3 +147,24 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
 }
+
+func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	header := &ethpb.BeaconBlockHeader{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    params.BeaconConfig().ZeroHash[:],
+		StateRoot:     bytesutil.PadTo(signingRoot, 32),
+		BodyRoot:      params.BeaconConfig().ZeroHash[:],
+	}
+	signRoot, err := header.HashTreeRoot()
+	require.NoError(t, err)
+	fakeSig := make([]byte, 96)
+	copy(fakeSig, "hello")
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header:    header,
+			Signature: fakeSig,
+		},
+		SigningRoot: signRoot,
+	}
+}

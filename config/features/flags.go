@@ -33,11 +33,6 @@ var (
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to external slasher to prevent it from " +
-			"transmitting a slashable offense over the network, will be deprecated soon",
-	}
-	enableNewExternalSlasherProtectionFlag = &cli.BoolFlag{
-		Name: "enable-new-external-slasher-protection",
 		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
 			"for remote slashing protection",
 	}
@@ -100,7 +95,7 @@ var (
 	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
-		Usage: "Enables a slasher in the beacon node for detecting slashable offenses on eth2",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
 	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
