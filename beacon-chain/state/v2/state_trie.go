@@ -338,9 +338,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case slashings:
 		return ssz.SlashingsRoot(b.state.Slashings)
 	case previousEpochParticipationBits:
-		return participationBitsRoot(b.state.PreviousEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.state.PreviousEpochParticipation)
 	case currentEpochParticipationBits:
-		return participationBitsRoot(b.state.CurrentEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.state.CurrentEpochParticipation)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
@@ -352,9 +352,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case inactivityScores:
 		return stateutil.Uint64ListRootWithRegistryLimit(b.state.InactivityScores)
 	case currentSyncCommittee:
-		return syncCommitteeRoot(b.state.CurrentSyncCommittee)
+		return stateutil.SyncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:
-		return syncCommitteeRoot(b.state.NextSyncCommittee)
+		return stateutil.SyncCommitteeRoot(b.state.NextSyncCommittee)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

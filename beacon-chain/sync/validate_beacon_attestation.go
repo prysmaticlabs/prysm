@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"go.opencensus.io/trace"
 )
 
@@ -66,7 +67,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 	// of a received unaggregated attestation.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.UnaggregatedAttReceived,
 		Data: &operation.UnAggregatedAttReceivedData{
 			Attestation: att,
@@ -82,6 +83,35 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
 		return pubsub.ValidationReject, err
+	}
+
+	if features.Get().EnableSlasher {
+		// Feed the indexed attestation to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			// Using a different context to prevent timeouts as this operation can be expensive
+			// and we want to avoid affecting the critical code path.
+			ctx := context.TODO()
+			preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Data.Target)
+			if err != nil {
+				log.WithError(err).Error("Could not retrieve pre state")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
+			if err != nil {
+				log.WithError(err).Error("Could not get attestation committee")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+			if err != nil {
+				log.WithError(err).Error("Could not convert to indexed attestation")
+				tracing.AnnotateError(span, err)
+				return
+			}
+			s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
+		}()
 	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
