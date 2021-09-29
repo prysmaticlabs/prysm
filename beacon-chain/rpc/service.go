@@ -34,7 +34,7 @@ import (
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
-	slasher2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/slasher"
+	slasherv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/slasher"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -237,7 +237,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	slasherServer := &slasher2.Server{
+	slasherServer := &slasherv1alpha1.Server{
 		SlashingChecker: s.cfg.SlashingChecker,
 	}
 

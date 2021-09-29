@@ -2,8 +2,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["mock.go"],
     testonly = True,
+    srcs = ["mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing",
     visibility = [
         "//beacon-chain:__subpackages__",
