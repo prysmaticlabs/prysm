@@ -77,7 +77,7 @@ func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
 
 func TestEIP3076SpecTests(t *testing.T) {
 	config := &features.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := features.InitWithReset(config)
 	defer reset()
