@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -290,42 +289,83 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 }
 
 func TestServer_ProposeBlock_OK(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	t.Run("Phase 0", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
 
-	genesis := util.NewBeaconBlock()
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+		genesis := util.NewBeaconBlock()
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
-	numDeposits := uint64(64)
-	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
-	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	beaconChainServer := &Server{
-		BeaconDB:         beaconDB,
-		BlockReceiver:    c,
-		ChainInfoFetcher: c,
-		BlockNotifier:    c.BlockNotifier(),
-		Broadcaster:      mockp2p.NewTestP2P(t),
-	}
-	req := util.NewBeaconBlock()
-	req.Block.Slot = 5
-	req.Block.ParentRoot = bsRoot[:]
-	v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
-	blockReq := &ethpbv1.BeaconBlockContainer{
-		Message:   v1Block.Block,
-		Signature: v1Block.Signature,
-	}
-	_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
-	assert.NoError(t, err, "Could not propose block correctly")
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+		}
+		req := util.NewBeaconBlock()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
+		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
+			Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Block.Block},
+			Signature: v1Block.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockAltair()
+		wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapped), "Could not save genesis block")
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+		}
+		req := util.NewBeaconBlockAltair()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
+		require.NoError(t, err)
+		wrapped, err = wrapper.WrappedAltairSignedBeaconBlock(req)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
+		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
+			Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Block},
+			Signature: req.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
 }
 
 func TestServer_GetBlock(t *testing.T) {
@@ -538,7 +578,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
 
-				phase0Block, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+				phase0Block, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
@@ -655,7 +695,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				altairBlock, ok := blk.Data.Block.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+				altairBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")

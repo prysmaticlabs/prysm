@@ -106,22 +106,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
-	}
-
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+	currJustifiedEpoch := s.justifiedCheckpt.Epoch
+	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -154,6 +141,27 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			Verified:    true,
 		},
 	})
+
+	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+	if features.Get().EnableNextSlotStateCache {
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
+	}
+
+	// Save justified check point to db.
+	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+			return err
+		}
+	}
 
 	// Update finalized check point.
 	if newFinalized {
