@@ -24,46 +24,7 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !bytes.Equal(h.ParentHash, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.Coinbase, make([]byte, 20)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.StateRoot, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.ReceiptRoot, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.LogsBloom, make([]byte, 256)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.Random, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.BaseFeePerGas, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.BlockHash, make([]byte, 32)) {
-		return true, nil
-	}
-	if !bytes.Equal(h.TransactionsRoot, make([]byte, 32)) {
-		return true, nil
-	}
-	if h.BlockNumber != 0 {
-		return true, nil
-	}
-	if h.GasLimit != 0 {
-		return true, nil
-	}
-	if h.GasUsed != 0 {
-		return true, nil
-	}
-	if h.Timestamp != 0 {
-		return true, nil
-	}
-	return false, nil
+	return !ssz.DeepEqual(h, emptyPayload()), nil
 }
 
 // IsMergeBlock returns true if input block is the merge block.
@@ -84,46 +45,7 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	if bytes.Equal(payload.ParentHash, make([]byte, 32)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.Coinbase, make([]byte, 20)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.StateRoot, make([]byte, 32)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.ReceiptRoot, make([]byte, 32)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.LogsBloom, make([]byte, 256)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.Random, make([]byte, 32)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.BaseFeePerGas, make([]byte, 32)) {
-		return false, nil
-	}
-	if bytes.Equal(payload.BlockHash, make([]byte, 32)) {
-		return false, nil
-	}
-	if payload.Transactions == nil {
-		return false, nil
-	}
-	if payload.BlockNumber == 0 {
-		return false, nil
-	}
-	if payload.GasLimit == 0 {
-		return false, nil
-	}
-	if payload.GasUsed == 0 {
-		return false, nil
-	}
-	if payload.Timestamp == 0 {
-		return false, nil
-	}
-	return true, nil
+	return !ssz.DeepEqual(payload, emptyPayloadHeader()), nil
 }
 
 // IsExecutionEnabled returns true if the execution is enabled.
@@ -274,4 +196,42 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: txRoot[:],
 	}, nil
+}
+
+func emptyPayload() *ethpb.ExecutionPayload {
+	return &ethpb.ExecutionPayload{
+		ParentHash:    make([]byte, 32),
+		Coinbase:      make([]byte, 20),
+		StateRoot:     make([]byte, 32),
+		ReceiptRoot:   make([]byte, 32),
+		LogsBloom:     make([]byte, 256),
+		Random:        make([]byte, 32),
+		BlockNumber:   0,
+		GasLimit:      0,
+		GasUsed:       0,
+		Timestamp:     0,
+		ExtraData:     nil,
+		BaseFeePerGas: make([]byte, 32),
+		BlockHash:     make([]byte, 32),
+		Transactions:  nil,
+	}
+}
+
+func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
+	return &ethpb.ExecutionPayloadHeader{
+		ParentHash:    make([]byte, 32),
+		Coinbase:      make([]byte, 20),
+		StateRoot:     make([]byte, 32),
+		ReceiptRoot:   make([]byte, 32),
+		LogsBloom:     make([]byte, 256),
+		Random:        make([]byte, 32),
+		BlockNumber:   0,
+		GasLimit:      0,
+		GasUsed:       0,
+		Timestamp:     0,
+		ExtraData:     nil,
+		BaseFeePerGas: make([]byte, 32),
+		BlockHash:     make([]byte, 32),
+		TransactionsRoot: make([]byte, 32),
+	}
 }
