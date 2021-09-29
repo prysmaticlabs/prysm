@@ -27,7 +27,7 @@ func (s *Server) IsSlashableAttestation(
 
 // HighestAttestations returns the highest source and target epochs attested for
 // validator indices that have been observed by slasher.
-func (s *Server) HighestAttestations(
+func (_ *Server) HighestAttestations(
 	ctx context.Context, req *ethpb.HighestAttestationRequest,
 ) (*ethpb.HighestAttestationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Unimplemented")

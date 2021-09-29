@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -19,14 +18,14 @@ type MockSlasher struct {
 }
 
 // HighestAttestations will return an empty array of attestations.
-func (ms MockSlasher) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest, _ ...grpc.CallOption) (*slashpb.HighestAttestationResponse, error) {
-	return &slashpb.HighestAttestationResponse{
+func (_ MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAttestationRequest, _ ...grpc.CallOption) (*eth.HighestAttestationResponse, error) {
+	return &eth.HighestAttestationResponse{
 		Attestations: nil,
 	}, nil
 }
 
 // IsSlashableAttestation returns slashbale attestation if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
+func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
 	ms.IsSlashableAttestationCalled = true
 	if ms.SlashAttestation {
 
@@ -40,7 +39,7 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 			Attestation_2: slashingAtt,
 		},
 		}
-		return &slashpb.AttesterSlashingResponse{
+		return &eth.AttesterSlashingResponse{
 			AttesterSlashings: slashings,
 		}, nil
 	}
@@ -48,7 +47,7 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 }
 
 // IsSlashableBlock returns proposer slashing if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
+func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*eth.ProposerSlashingResponse, error) {
 	ms.IsSlashableBlockCalled = true
 	if ms.SlashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
@@ -61,7 +60,7 @@ func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBl
 			Header_2: slashingBlk,
 		},
 		}
-		return &slashpb.ProposerSlashingResponse{
+		return &eth.ProposerSlashingResponse{
 			ProposerSlashings: slashings,
 		}, nil
 	}
