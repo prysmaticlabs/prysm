@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -79,7 +80,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
@@ -100,34 +101,45 @@ func Test_slashableProposalCheck(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	sBlock := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	require.NoError(t, err)
 
 	mocks.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
-		gomock.Any(),
-	).Times(2).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)
+		blockHdr,
+	).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)
 
 	// We expect the same block sent out with the same root should not be slasahble.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), dummySigningRoot)
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, dummySigningRoot)
 	require.NoError(t, err)
 
 	// We expect the same block sent out with a different signing root should be slasahble.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{2})
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, [32]byte{2})
 	require.ErrorContains(t, failedBlockSignLocalErr, err)
 
 	// We save a proposal at slot 11 with a nil signing root.
-	block.Block.Slot = 11
-	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, block.Block.Slot, nil)
+	blk.Block.Slot = 11
+	sBlock = wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, blk.Block.Slot, nil)
 	require.NoError(t, err)
 
 	// We expect the same block sent out should return slashable error even
 	// if we had a nil signing root stored in the database.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{2})
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, [32]byte{2})
 	require.ErrorContains(t, failedBlockSignLocalErr, err)
 
 	// A block with a different slot for which we do not have a proposing history
 	// should not be failing validation.
-	block.Block.Slot = 9
-	err = validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{3})
+	blk.Block.Slot = 9
+	sBlock = wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	blockHdr, err = block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	require.NoError(t, err)
+	mocks.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		blockHdr,
+	).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, [32]byte{3})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 
@@ -142,22 +154,24 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	block := util.NewBeaconBlock()
-	block.Block.Slot = 10
-
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 10
+	sBlock := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	require.NoError(t, err)
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		blockHdr,
 	).Return(&ethpb.ProposerSlashingResponse{ProposerSlashings: []*ethpb.ProposerSlashing{{}}}, nil /*err*/)
 
-	err := validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{2})
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, [32]byte{2})
 	require.ErrorContains(t, failedBlockSignExternalErr, err)
 
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		blockHdr,
 	).Return(&ethpb.ProposerSlashingResponse{}, nil /*err*/)
 
-	err = validator.slashableProposalCheck(context.Background(), pubKey, wrapper.WrappedPhase0SignedBeaconBlock(block), [32]byte{2})
+	err = validator.slashableProposalCheck(context.Background(), pubKey, sBlock, [32]byte{2})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
