@@ -1,5 +1,5 @@
 /*
-Package featureconfig defines which features are enabled for runtime
+Package features defines which features are enabled for runtime
 in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:

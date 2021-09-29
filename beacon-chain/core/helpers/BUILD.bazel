@@ -29,6 +29,7 @@ go_library(
         "//testing/benchmark/benchmark_files:__subpackages__",
         "//testing/endtoend/evaluators:__pkg__",
         "//testing/fuzz:__pkg__",
+        "//testing/slasher/simulator:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
         "//tools:__subpackages__",

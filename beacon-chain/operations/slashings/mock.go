@@ -36,11 +36,11 @@ func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ state.ReadOnlyBea
 }
 
 // MarkIncludedAttesterSlashing --
-func (m *PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
+func (_ *PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
 	panic("implement me")
 }
 
 // MarkIncludedProposerSlashing --
-func (m *PoolMock) MarkIncludedProposerSlashing(_ *ethpb.ProposerSlashing) {
+func (_ *PoolMock) MarkIncludedProposerSlashing(_ *ethpb.ProposerSlashing) {
 	panic("implement me")
 }
