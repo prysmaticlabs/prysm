@@ -137,10 +137,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if features.Get().EnableSlasher {
-		if err := beacon.startSlasherDB(cliCtx); err != nil {
-			return nil, err
-		}
+	if err := beacon.startSlasherDB(cliCtx); err != nil {
+		return nil, err
 	}
 
 	beacon.startStateGen()
@@ -175,10 +173,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if features.Get().EnableSlasher {
-		if err := beacon.registerSlasherService(); err != nil {
-			return nil, err
-		}
+	if err := beacon.registerSlasherService(); err != nil {
+		return nil, err
 	}
 
 	if err := beacon.registerRPCService(); err != nil {
@@ -372,6 +368,9 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 }
 
 func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
+	if !features.Get().EnableSlasher {
+		return nil
+	}
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
@@ -598,6 +597,9 @@ func (b *BeaconNode) registerInitialSyncService() error {
 }
 
 func (b *BeaconNode) registerSlasherService() error {
+	if !features.Get().EnableSlasher {
+		return nil
+	}
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err

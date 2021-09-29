@@ -75,7 +75,7 @@ func (v *validator) postBlockSignUpdate(
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return errors.New(failedPreBlockSignExternalErr)
+			return errors.New(failedPostBlockSignErr)
 		}
 	}
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, blk.Block().Slot(), signingRoot[:]); err != nil {
