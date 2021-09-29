@@ -56,20 +56,6 @@ func (v *validator) preBlockSignValidations(
 			blk.Slot(),
 		)
 	}
-
-	if features.Get().SlasherProtection && v.protector != nil {
-		blockHdr, err := block.BeaconBlockHeaderFromBlockInterface(blk)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		if !v.protector.CheckBlockSafety(ctx, blockHdr) {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPreBlockSignExternalErr)
-		}
-	}
-
 	return nil
 }
 
@@ -80,20 +66,16 @@ func (v *validator) postBlockSignUpdate(
 	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if features.Get().SlasherProtection && v.protector != nil {
-		sbh, err := block.SignedBeaconBlockHeaderFromBlockInterface(blk)
+	if features.Get().RemoteSlasherProtection && v.protector != nil {
+		blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(blk)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
-		valid, err := v.protector.CommitBlock(ctx, sbh)
-		if err != nil {
-			return err
-		}
-		if !valid {
+		if !v.protector.CheckBlockSafety(ctx, blockHdr) {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(failedPostBlockSignErr)
+			return errors.New(failedPostBlockSignErr)
 		}
 	}
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, blk.Block().Slot(), signingRoot[:]); err != nil {
