@@ -21,11 +21,11 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
-	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -125,7 +125,6 @@ func (r *testRunner) run() {
 		requiredComponents := []e2etypes.ComponentRunner{
 			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
-
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
@@ -207,15 +206,43 @@ func (r *testRunner) waitForChainStart() {
 func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime time.Time) error {
 	t, config := r.t, r.config
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	ticker := slots.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		wg := new(sync.WaitGroup)
-		for _, ev := range config.Evaluators {
+		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
 			// in a separate goroutine.
-			evaluator := ev
+			evaluator := eval
 			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
+			if !evaluator.Policy(currentEpoch) {
+				continue
+			}
+			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+				err := evaluator.Evaluation(conns...)
+				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+			})
+		}
+
+		if t.Failed() || currentEpoch >= types.Epoch(config.EpochsToRun)-1 {
+			ticker.Done()
+			if t.Failed() {
+				return errors.New("test failed")
+			}
+			break
+		}
+	}
+	return nil
+}
+
+// runSyncEvaluators executes assigned evaluators for synced beacon nodes.
+func (r *testRunner) runSyncEvaluators(conns []*grpc.ClientConn, tickingStartTime time.Time) error {
+	t, config := r.t, r.config
+	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	ticker := slots.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	var wg sync.WaitGroup
+	for currentEpoch := range ticker.C() {
+		for _, evaluator := range config.PostSyncEvaluators {
+			// Only run if the policy says so.
+			if !evaluator.Policy(currentEpoch) {
 				continue
 			}
 
@@ -230,7 +257,7 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 		}
 		// Wait for all evaluators to finish their evaluation for the epoch.
 		wg.Wait()
-		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
+		if t.Failed() || uint64(currentEpoch) >= uint64(types.Epoch(config.EpochsToRunPostSync)-1) {
 			ticker.Done()
 			if t.Failed() {
 				return errors.New("test failed")
@@ -266,7 +293,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount
-	syncBeaconNode := components.NewBeaconNode(config, index, enr)
+	syncBeaconNode := components.NewBeaconNode(config, index, enr, true) // is sync node.
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
@@ -295,14 +322,10 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 
 	// Sleep a slot to make sure the synced state is made.
 	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
-	for _, evaluator := range syncEvaluators {
-		t.Run(evaluator.Name, func(t *testing.T) {
-			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
-		})
+	if err := r.runEvaluators(conns, tickingStartTime); err != nil {
+		return err
 	}
-
-	return nil
+	return r.runSyncEvaluators(conns, tickingStartTime)
 }
 
 func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {

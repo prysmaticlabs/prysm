@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethtypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -27,10 +28,12 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipating ensures the expected amount of validators are active.
-var ValidatorsParticipating = types.Evaluator{
-	Name:       "validators_participating_epoch_%d",
-	Policy:     policies.AfterNthEpoch(2),
-	Evaluation: validatorsParticipating,
+var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+	return types.Evaluator{
+		Name:       "validators_participating_epoch_%d",
+		Policy:     policies.AfterNthEpoch(epoch),
+		Evaluation: validatorsParticipating,
+	}
 }
 
 // ValidatorSyncParticipation ensures the expected amount of sync committee participants

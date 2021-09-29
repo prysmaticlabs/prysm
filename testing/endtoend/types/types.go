@@ -15,11 +15,13 @@ type E2EConfig struct {
 	UsePrysmShValidator bool
 	UsePprof            bool
 	TestDeposits        bool
-	TestSlasher         bool
 	EpochsToRun         uint64
+	EpochsToRunPostSync uint64
 	TracingSinkEndpoint string
-	Evaluators          []Evaluator
+	Evaluators          []Evaluator // Evaluators that run on regular beacon nodes in the E2E test.
+	PostSyncEvaluators  []Evaluator // Evaluators that will be run after a beacon node syncs.
 	BeaconFlags         []string
+	SyncingBeaconFlags  []string // Flags for a beacon node that will attempt to sync after e2e evaluation.
 	ValidatorFlags      []string
 }
 
