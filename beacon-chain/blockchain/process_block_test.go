@@ -958,7 +958,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
 	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
 
-	// The update should persis in DB.
+	// The update should persist in DB.
 	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	require.Equal(t, j.Epoch, service.CurrentJustifiedCheckpt().Epoch)
