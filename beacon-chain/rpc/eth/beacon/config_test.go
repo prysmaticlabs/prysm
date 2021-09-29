@@ -50,7 +50,6 @@ func TestGetSpec(t *testing.T) {
 	config.MergeForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
-	config.MinAnchorPowBlockDifficulty = 1000
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25

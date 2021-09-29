@@ -158,14 +158,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateMe
 	fieldRoots[14] = slashingsRootsRoot[:]
 
 	// PreviousEpochParticipation slice root.
-	prevParticipationRoot, err := participationBitsRoot(state.PreviousEpochParticipation)
+	prevParticipationRoot, err := stateutil.ParticipationBitsRoot(state.PreviousEpochParticipation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous epoch participation merkleization")
 	}
 	fieldRoots[15] = prevParticipationRoot[:]
 
 	// CurrentEpochParticipation slice root.
-	currParticipationRoot, err := participationBitsRoot(state.CurrentEpochParticipation)
+	currParticipationRoot, err := stateutil.ParticipationBitsRoot(state.CurrentEpochParticipation)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current epoch participation merkleization")
 	}
@@ -204,14 +204,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateMe
 	fieldRoots[21] = inactivityScoresRoot[:]
 
 	// Current sync committee root.
-	currentSyncCommitteeRoot, err := syncCommitteeRoot(state.CurrentSyncCommittee)
+	currentSyncCommitteeRoot, err := stateutil.SyncCommitteeRoot(state.CurrentSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}
 	fieldRoots[22] = currentSyncCommitteeRoot[:]
 
 	// Next sync committee root.
-	nextSyncCommitteeRoot, err := syncCommitteeRoot(state.NextSyncCommittee)
+	nextSyncCommitteeRoot, err := stateutil.SyncCommitteeRoot(state.NextSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}

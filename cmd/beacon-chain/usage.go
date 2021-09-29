@@ -121,7 +121,10 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpt,
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
-			flags.MinPeersPerSubnet,
+			flags.EnableMerge,
+			flags.TerminalTotalDifficultyOverride,
+			flags.TerminalBlockHashOverride,
+			flags.FeeRecipient,
 		},
 	},
 	{

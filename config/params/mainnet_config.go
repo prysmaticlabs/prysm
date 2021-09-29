@@ -196,7 +196,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MergeForkEpoch:              math.MaxUint64,
 	ShardingForkVersion:         []byte{3, 0, 0, 0},
 	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,

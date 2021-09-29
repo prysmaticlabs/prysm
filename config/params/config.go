@@ -139,8 +139,6 @@ type BeaconChainConfig struct {
 	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
-	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of the merge.
-	TransitionTotalDifficulty   uint64                  `yaml:"TRANSITION_TOTAL_DIFFICULTY" spec:"true"`     // TransitionTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -178,10 +176,15 @@ type BeaconChainConfig struct {
 	// Gas.
 	GasLimitDenominator uint64 `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"` // GasLimitDenominator for merge.
 	MinGasLimit         uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`         // MinGasLimit for merge.
+
 	// Merge.
+	EnabledMerge bool // EnabledMerge is true if merge feature is enabled.
 	MaxExecutionTransactions     uint64      `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
-	MaxBytesPerOpaqueTransaction uint64      `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MAX_BYTES_PER_OPAQUE_TRANSACTION of beacon chain.
+	MaxBytesPerOpaqueTransaction uint64      `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
 	TerminalBlockHash            common.Hash `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
+	TerminalTotalDifficulty      []byte      `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	FeeRecipient common.Address       // FeeRecipient where the transaction fee goes to.
+
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
 }

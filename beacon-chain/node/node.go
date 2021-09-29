@@ -105,6 +105,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	configureEth1Config(cliCtx)
 	configureNetwork(cliCtx)
 	configureInteropConfig(cliCtx)
+	configureExecutionMode(cliCtx)
+
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
