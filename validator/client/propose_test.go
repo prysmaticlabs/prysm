@@ -18,7 +18,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
+	mock "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -29,8 +29,9 @@ import (
 )
 
 type mocks struct {
-	validatorClient *mock2.MockBeaconNodeValidatorClient
-	nodeClient      *mock2.MockNodeClient
+	validatorClient *mock.MockBeaconNodeValidatorClient
+	nodeClient      *mock.MockNodeClient
+	slasherClient   *mock.MockSlasherClient
 	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -67,8 +68,9 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
-		nodeClient:      mock2.NewMockNodeClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		nodeClient:      mock.NewMockNodeClient(ctrl),
+		slasherClient:   mock.NewMockSlasherClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -85,6 +87,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		db:                             valDB,
 		keyManager:                     km,
 		validatorClient:                m.validatorClient,
+		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -296,10 +299,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsContain(t, hook, failedBlockSignLocalErr)
 }
 
 func TestProposeBlockAltair_BlocksDoubleProposal(t *testing.T) {
@@ -356,10 +359,10 @@ func TestProposeBlockAltair_BlocksDoubleProposal(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsContain(t, hook, failedBlockSignLocalErr)
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
@@ -408,10 +411,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
-	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsContain(t, hook, failedBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
@@ -449,7 +452,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
 	past := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod - 400))
 	blk2 := util.NewBeaconBlock()
@@ -459,7 +462,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(),
 	).Return(blk2.Block, nil /*err*/)
 	validator.ProposeBlock(context.Background(), past, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
@@ -497,7 +500,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
 	blk2 := util.NewBeaconBlock()
 	blk2.Block.Slot = farAhead - 4
@@ -507,7 +510,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Return(blk2.Block, nil /*err*/)
 
 	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
@@ -875,7 +878,7 @@ func TestSignAltairBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	pubKey := [48]byte{'a'}
 	tests := []struct {
@@ -958,7 +961,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock2.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).

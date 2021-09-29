@@ -21,7 +21,7 @@ go_library(
         "//testing/fuzz:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
-        "//validator/accounts:__pkg__",
+        "//validator:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core:go_default_library",
