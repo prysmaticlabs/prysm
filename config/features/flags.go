@@ -33,11 +33,6 @@ var (
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to external slasher to prevent it from " +
-			"transmitting a slashable offense over the network, will be deprecated soon",
-	}
-	enableNewExternalSlasherProtectionFlag = &cli.BoolFlag{
-		Name: "enable-new-external-slasher-protection",
 		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
 			"for remote slashing protection",
 	}

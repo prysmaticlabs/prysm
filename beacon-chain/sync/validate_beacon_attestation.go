@@ -101,7 +101,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 			if err != nil {
 				log.WithError(err).Error("Could not convert to indexed attestation")
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return
 			}
 			s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
