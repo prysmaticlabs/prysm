@@ -123,8 +123,15 @@ func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
 			t.Fatal(err)
 		}
 		LogErrorOutput(t, validatorLogFile, "validator client", i)
-	}
 
+		if config.TestSlasher {
+			slasherLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			LogErrorOutput(t, slasherLogFile, "slasher client", i)
+		}
+	}
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
