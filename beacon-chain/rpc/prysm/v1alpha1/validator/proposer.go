@@ -51,11 +51,6 @@ type eth1DataSingleVote struct {
 	blockHeight *big.Int
 }
 
-type eth1DataAggregatedVote struct {
-	data  eth1DataSingleVote
-	votes int
-}
-
 // blockData required to create a beacon block.
 type blockData struct {
 	ParentRoot        []byte
@@ -710,8 +705,8 @@ func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
 	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
@@ -761,22 +756,27 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	defer span.End()
 
 	atts := vs.AttPool.AggregatedAttestations()
-	atts, err := vs.filterAttestationsForBlockInclusion(ctx, latestState, atts)
+	atts, err := vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
-
-	// If there is any room left in the block, consider unaggregated attestations as well.
 
 	uAtts, err := vs.AttPool.UnaggregatedAttestations()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get unaggregated attestations")
 	}
-	uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
+	uAtts, err = vs.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
 	atts = append(atts, uAtts...)
+
+	// Remove duplicates from both aggregated/unaggregated attestations. This
+	// prevents inefficient aggregates being created.
+	atts, err = proposerAtts(atts).dedup()
+	if err != nil {
+		return nil, err
+	}
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 	for _, att := range atts {
