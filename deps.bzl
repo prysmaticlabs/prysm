@@ -830,10 +830,16 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ferranbt_fastssz",
-        importpath = "github.com/ferranbt/fastssz",
+        importpath = "github.com/ferranbt/fastssz",  # keep
+        commit = "a925534fb297c4c24bd20b99ab3e1e1964a022ae",  # keep
+        remote = "https://github.com/kasey/fastssz",  # keep
         nofuzz = True,
-        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
-        version = "v0.0.0-20210905181407-59cf6761a7d5",
+        replace = None,  # keep
+        sum = None,  # keep
+        vcs = "git",  # keep
+        version = None,  # keep
+        #sum = " h1:0Ir0OnKCM00t/3cGgQrZzxMbIpfgkgZCoz3H2ehJDOY=",
+        #version = "v0.0.0-20210929230234-a925534fb297",
     )
 
     go_repository(
