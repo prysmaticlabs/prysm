@@ -20,7 +20,7 @@ func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interf
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestContainer); err != nil {
 		if strings.Contains(err.Error(), "json: unknown field") {
-			e := errors.Wrapf(err, "could not decode request body")
+			e := errors.Wrap(err, "could not decode request body")
 			return &DefaultErrorJson{
 				Message: e.Error(),
 				Code:    http.StatusBadRequest,
