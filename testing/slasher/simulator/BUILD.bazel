@@ -10,7 +10,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/testing/slasher/simulator",
     visibility = [
-        "//endtoend:__subpackages__",
+        "//testing/endtoend:__subpackages__",
     ],
     deps = [
         "//async/event:go_default_library",

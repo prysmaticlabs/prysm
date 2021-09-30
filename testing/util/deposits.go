@@ -247,7 +247,6 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
 func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
-	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -290,6 +289,8 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trie.SparseMerkleTrie,
 
 // resetCache clears out the old trie, private keys and deposits.
 func resetCache() {
+	lock.Lock()
+	defer lock.Unlock()
 	t = nil
 	privKeys = []bls.SecretKey{}
 	cachedDeposits = []*ethpb.Deposit{}
