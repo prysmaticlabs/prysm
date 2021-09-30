@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -49,7 +49,7 @@ func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, no
 	}
 	pending := make([]*ethpb.SignedVoluntaryExit, 0, maxExits)
 	for _, e := range p.pending {
-		if e.Exit.Epoch > core.SlotToEpoch(slot) {
+		if e.Exit.Epoch > time.SlotToEpoch(slot) {
 			continue
 		}
 		if v, err := state.ValidatorAtIndexReadOnly(e.Exit.ValidatorIndex); err == nil &&

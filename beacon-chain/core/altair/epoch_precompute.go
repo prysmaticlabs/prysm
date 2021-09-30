@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
@@ -19,8 +19,8 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 	defer span.End()
 	vals := make([]*precompute.Validator, beaconState.NumValidators())
 	bal := &precompute.Balance{}
-	prevEpoch := core.PrevEpoch(beaconState)
-	currentEpoch := core.CurrentEpoch(beaconState)
+	prevEpoch := time.PrevEpoch(beaconState)
+	currentEpoch := time.CurrentEpoch(beaconState)
 	inactivityScores, err := beaconState.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -74,7 +74,7 @@ func ProcessInactivityScores(
 	defer span.End()
 
 	cfg := params.BeaconConfig()
-	if core.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
+	if time.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
 		return beaconState, vals, nil
 	}
 
@@ -85,7 +85,7 @@ func ProcessInactivityScores(
 
 	bias := cfg.InactivityScoreBias
 	recoveryRate := cfg.InactivityScoreRecoveryRate
-	prevEpoch := core.PrevEpoch(beaconState)
+	prevEpoch := time.PrevEpoch(beaconState)
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	for i, v := range vals {
 		if !precompute.EligibleForRewards(v) {
@@ -182,7 +182,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 ) (state.BeaconStateAltair, error) {
 	// Don't process rewards and penalties in genesis epoch.
 	cfg := params.BeaconConfig()
-	if core.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
+	if time.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
 		return beaconState, nil
 	}
 
@@ -227,7 +227,7 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	penalties = make([]uint64, numOfVals)
 
 	cfg := params.BeaconConfig()
-	prevEpoch := core.PrevEpoch(beaconState)
+	prevEpoch := time.PrevEpoch(beaconState)
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	increment := cfg.EffectiveBalanceIncrement
 	factor := cfg.BaseRewardFactor

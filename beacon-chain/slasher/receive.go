@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -81,7 +81,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 		select {
 		case currentSlot := <-slotTicker:
 			attestations := s.attsQueue.dequeue()
-			currentEpoch := core.SlotToEpoch(currentSlot)
+			currentEpoch := coreTime.SlotToEpoch(currentSlot)
 			// We take all the attestations in the queue and filter out
 			// those which are valid now and valid in the future.
 			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
@@ -139,7 +139,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 		select {
 		case currentSlot := <-slotTicker:
 			blocks := s.blksQueue.dequeue()
-			currentEpoch := core.SlotToEpoch(currentSlot)
+			currentEpoch := coreTime.SlotToEpoch(currentSlot)
 
 			receivedBlocksTotal.Add(float64(len(blocks)))
 
@@ -178,7 +178,7 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 	for {
 		select {
 		case <-slotTicker:
-			headEpoch := core.SlotToEpoch(s.serviceCfg.HeadStateFetcher.HeadSlot())
+			headEpoch := coreTime.SlotToEpoch(s.serviceCfg.HeadStateFetcher.HeadSlot())
 			if err := s.pruneSlasherDataWithinSlidingWindow(ctx, headEpoch); err != nil {
 				log.WithError(err).Error("Could not prune slasher data")
 				continue

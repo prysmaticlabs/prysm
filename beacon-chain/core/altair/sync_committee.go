@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -97,7 +97,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //        i += 1
 //    return sync_committee_indices
 func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
-	epoch := core.NextEpoch(s)
+	epoch := coreTime.NextEpoch(s)
 	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
 		return nil, err
@@ -185,15 +185,15 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
 func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
-	if err := core.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
+	if err := coreTime.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
-	messageTime, err := core.SlotToTime(uint64(genesisTime.Unix()), slot)
+	messageTime, err := coreTime.SlotToTime(uint64(genesisTime.Unix()), slot)
 	if err != nil {
 		return err
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	slotStartTime, err := core.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
+	currentSlot := coreTime.SlotsSince(genesisTime)
+	slotStartTime, err := coreTime.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
 	if err != nil {
 		return err
 	}

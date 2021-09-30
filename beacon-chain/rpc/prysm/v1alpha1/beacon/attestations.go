@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/api/pagination"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -302,7 +302,7 @@ func (bs *Server) StreamIndexedAttestations(
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot, err := core.StartSlot(targetEpoch)
+			startSlot, err := time.StartSlot(targetEpoch)
 			if err != nil {
 				log.Error(err)
 				continue

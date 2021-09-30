@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -110,7 +110,7 @@ func makeGenesisTime(currentSlot types.Slot) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := types.Slot(64)
 	gt := makeGenesisTime(currentSlot)
-	require.Equal(t, currentSlot, core.SlotsSince(gt))
+	require.Equal(t, currentSlot, coreTime.SlotsSince(gt))
 }
 
 // helper function for sequences of block slots
@@ -320,7 +320,7 @@ func connectPeerHavingBlocks(
 
 	p.Connect(host)
 
-	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := coreTime.SlotToEpoch(finalizedSlot)
 	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
 	require.NoError(t, err)
 
