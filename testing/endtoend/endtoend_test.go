@@ -280,7 +280,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount
-	syncBeaconNode := components.NewBeaconNode(config, index, enr) // is sync node.
+	syncBeaconNode := components.NewBeaconNode(config, index, enr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
