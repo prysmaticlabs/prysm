@@ -40,7 +40,8 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
-	const tracingEndpoint = "127.0.0.1:9411"
+	tracingPort := 9411 + e2eParams.TestParams.TestShardIndex
+	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
 		ev.PeersConnect,
 		ev.HealthzCheck,
