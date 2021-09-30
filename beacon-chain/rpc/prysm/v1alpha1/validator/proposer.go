@@ -870,7 +870,9 @@ func (vs *Server) compare(currSlot types.Slot, attA []*ethpb.Attestation, attB [
 		bfieldA := joinBitfields(rootMap[root].AggregationBits.Len(), attSetA)
 		attSetB := attsByDataRootB[root]
 		bfieldB := joinBitfields(rootMap[root].AggregationBits.Len(), attSetB)
-		log.Infof("Root %#x for set A has %d bits while set B has %d bits with inclusion delay %d", root, bfieldA.Count(), bfieldB.Count(), currSlot-rootMap[root].Data.Slot)
+		if bfieldA.Count() != bfieldB.Count() {
+			log.Infof("Root %#x for set A has %d bits while set B has %d bits with inclusion delay %d", root, bfieldA.Count(), bfieldB.Count(), currSlot-rootMap[root].Data.Slot)
+		}
 		nField := pendingAttDataRoot[root]
 		if nField == nil {
 			if bfieldA.Count() != 0 {
