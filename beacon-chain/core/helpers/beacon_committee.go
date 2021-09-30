@@ -318,17 +318,14 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState) error {
-	// The cache uses the state root at the (current epoch - 2)'s slot as key. (e.g. for epoch 2, the key is root at slot 31)
+	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
 	// Which is the reason why we skip genesis epoch.
 	if core.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
 
-	// Use state root from (current_epoch - 1 - lookahead))
-	wantedEpoch := core.CurrentEpoch(state) - 1
-	if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch -= params.BeaconConfig().MinSeedLookahead
-	}
+	// Use state root from (current_epoch - 1))
+	wantedEpoch := core.PrevEpoch(state)
 	s, err := core.EndSlot(wantedEpoch)
 	if err != nil {
 		return err
