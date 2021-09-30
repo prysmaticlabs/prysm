@@ -441,7 +441,7 @@ func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
 		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  CopyTransactions(payload.Transactions),
+		//Transactions:  CopyTransactions(payload.Transactions),
 	}
 }
 
