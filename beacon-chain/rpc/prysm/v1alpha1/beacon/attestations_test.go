@@ -12,11 +12,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -608,7 +608,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	epoch := types.Epoch(50)
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := coreTime.StartSlot(epoch)
 	require.NoError(t, err)
 
 	for i := startSlot; i < count; i++ {

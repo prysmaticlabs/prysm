@@ -8,12 +8,12 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -145,8 +145,8 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
-	if core.SlotToEpoch(attSlot) > core.SlotToEpoch(bs.Slot()) {
-		startSlot, err := core.StartSlot(core.SlotToEpoch(attSlot))
+	if time.SlotToEpoch(attSlot) > time.SlotToEpoch(bs.Slot()) {
+		startSlot, err := time.StartSlot(time.SlotToEpoch(attSlot))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -282,7 +282,7 @@ func validateSelectionIndex(
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof
-	epoch := core.SlotToEpoch(data.Slot)
+	epoch := time.SlotToEpoch(data.Slot)
 
 	v, err := bs.ValidatorAtIndex(validatorIndex)
 	if err != nil {
@@ -320,7 +320,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 
-	epoch := core.SlotToEpoch(a.Message.Aggregate.Data.Slot)
+	epoch := time.SlotToEpoch(a.Message.Aggregate.Data.Slot)
 	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err

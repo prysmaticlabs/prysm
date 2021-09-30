@@ -9,8 +9,8 @@ go_library(
         "//testing/spectest:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/features:go_default_library",
@@ -32,8 +32,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",

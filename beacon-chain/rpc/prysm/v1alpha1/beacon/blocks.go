@@ -6,12 +6,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -523,21 +523,21 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		}
 	}
 
-	fSlot, err := core.StartSlot(finalizedCheckpoint.Epoch)
+	fSlot, err := time.StartSlot(finalizedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	jSlot, err := core.StartSlot(justifiedCheckpoint.Epoch)
+	jSlot, err := time.StartSlot(justifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	pjSlot, err := core.StartSlot(prevJustifiedCheckpoint.Epoch)
+	pjSlot, err := time.StartSlot(prevJustifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block().Slot(),
-		HeadEpoch:                  core.SlotToEpoch(headBlock.Block().Slot()),
+		HeadEpoch:                  time.SlotToEpoch(headBlock.Block().Slot()),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
@@ -561,7 +561,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
 	}
-	wsSlot, err := core.StartSlot(wsEpoch)
+	wsSlot, err := time.StartSlot(wsEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
 	}
