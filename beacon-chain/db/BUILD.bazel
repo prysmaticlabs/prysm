@@ -13,6 +13,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
         "//testing/fuzz:__pkg__",
+        "//testing/slasher/simulator:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [

@@ -110,19 +110,23 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
-		mainnetPresetsFile := presetsFilePath(t, "mainnet")
-		params.LoadChainConfigFile(mainnetPresetsFile)
+		mainnetPresetsFiles := presetsFilePath(t, "mainnet")
+		for _, fp := range mainnetPresetsFiles {
+			params.LoadChainConfigFile(fp)
+		}
 		mainnetConfigFile := configFilePath(t, "mainnet")
 		params.LoadChainConfigFile(mainnetConfigFile)
-		fields := fieldsFromYamls(t, []string{mainnetPresetsFile, mainnetConfigFile})
+		fields := fieldsFromYamls(t, append(mainnetPresetsFiles, mainnetConfigFile))
 		assertVals("mainnet", fields, params.MainnetConfig(), params.BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		minimalPresetsFile := presetsFilePath(t, "minimal")
-		params.LoadChainConfigFile(minimalPresetsFile)
+		minimalPresetsFiles := presetsFilePath(t, "minimal")
+		for _, fp := range minimalPresetsFiles {
+			params.LoadChainConfigFile(fp)
+		}
 		minimalConfigFile := configFilePath(t, "minimal")
-		fields := fieldsFromYamls(t, []string{minimalPresetsFile, minimalConfigFile})
+		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
 		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
 }
@@ -225,13 +229,16 @@ func configFilePath(t *testing.T, config string) string {
 	return configFilePath
 }
 
-// presetsFilePath sets the proper preset and returns the relevant
-// preset file path from eth2-spec-tests directory.
-func presetsFilePath(t *testing.T, config string) string {
+// presetsFilePath returns the relevant preset file paths from eth2-spec-tests
+// directory. This method returns a preset file path for each hard fork or
+// major network upgrade, in order.
+func presetsFilePath(t *testing.T, config string) []string {
 	filepath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "presets", config, "phase0.yaml")
-	return configFilePath
+	return []string{
+		path.Join(filepath, "presets", config, "phase0.yaml"),
+		path.Join(filepath, "presets", config, "altair.yaml"),
+	}
 }
 
 func fieldsFromYamls(t *testing.T, fps []string) []string {

@@ -33,8 +33,8 @@ var (
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to external slasher to prevent it from " +
-			"transmitting a slashable offence over the network.",
+		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
+			"for remote slashing protection",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
@@ -93,6 +93,10 @@ var (
 		Name:  "disable-next-slot-state-cache",
 		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
+	enableSlasherFlag = &cli.BoolFlag{
+		Name:  "slasher",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
+	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
 		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
@@ -144,6 +148,7 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
+	enablePeerScorer,
 	forceOptMaxCoverAggregationStategy,
 	enableGetBlockOptimizations,
 	enableBatchGossipVerification,
@@ -183,6 +188,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
