@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -53,7 +53,7 @@ func (s *Service) RefreshENR() {
 		return
 	}
 	// Compare current epoch with our fork epochs
-	currEpoch := core.SlotToEpoch(core.CurrentSlot(uint64(s.genesisTime.Unix())))
+	currEpoch := coreTime.SlotToEpoch(coreTime.CurrentSlot(uint64(s.genesisTime.Unix())))
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	// Altair Behaviour

@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -651,7 +651,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			}
 			require.NoError(t, d.SaveStateSummaries(context.Background(), stateSummaries))
 			require.NoError(t, d.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{
-				Epoch: core.SlotToEpoch(stateSummaries[len(stateSummaries)-1].Slot),
+				Epoch: coreTime.SlotToEpoch(stateSummaries[len(stateSummaries)-1].Slot),
 				Root:  stateSummaries[len(stateSummaries)-1].Root,
 			}))
 		}
@@ -700,7 +700,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			}
 			require.NoError(t, d.SaveStateSummaries(context.Background(), stateSummaries))
 			require.NoError(t, d.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{
-				Epoch: core.SlotToEpoch(stateSummaries[len(stateSummaries)-1].Slot),
+				Epoch: coreTime.SlotToEpoch(stateSummaries[len(stateSummaries)-1].Slot),
 				Root:  stateSummaries[len(stateSummaries)-1].Root,
 			}))
 		}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	stateutil "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -30,8 +30,8 @@ func BeaconStateFuzz(input []byte) {
 		panic(err)
 	}
 	validateStateHTR(s)
-	nextEpoch := core.SlotToEpoch(s.Slot()) + 1
-	slot, err := core.StartSlot(nextEpoch)
+	nextEpoch := time.SlotToEpoch(s.Slot()) + 1
+	slot, err := time.StartSlot(nextEpoch)
 	if err != nil {
 		return
 	}

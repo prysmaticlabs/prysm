@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -282,7 +282,7 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 		return false, err
 	}
 	// Checking if the validator is slashable.
-	if !helpers.IsSlashableValidatorUsingTrie(validator, core.CurrentEpoch(state)) {
+	if !helpers.IsSlashableValidatorUsingTrie(validator, time.CurrentEpoch(state)) {
 		return false, nil
 	}
 	return true, nil

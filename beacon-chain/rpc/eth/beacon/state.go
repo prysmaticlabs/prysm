@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -136,7 +136,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (state.BeaconState, error) {
 	if req.epoch != nil {
-		slot, err := core.StartSlot(*req.epoch)
+		slot, err := time.StartSlot(*req.epoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
