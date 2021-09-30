@@ -9,8 +9,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -189,7 +189,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			beaconState, err := util.NewBeaconState()
 			require.NoError(t, err)
-			slot, err := core.StartSlot(tt.args.currentEpoch)
+			slot, err := coreTime.StartSlot(tt.args.currentEpoch)
 			require.NoError(t, err)
 			require.NoError(t, beaconState.SetSlot(slot))
 			mockChain := &mock.ChainService{
@@ -322,7 +322,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		att := createAttestationWrapper(t, source, target, []uint64{0}, sr[:])
 		s.attsQueue = newAttestationsQueue()
 		s.attsQueue.push(att)
-		slot, err := core.StartSlot(i)
+		slot, err := coreTime.StartSlot(i)
 		require.NoError(t, err)
 		require.NoError(t, mockChain.State.SetSlot(slot))
 		s.serviceCfg.HeadStateFetcher = mockChain
@@ -384,7 +384,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.attsQueue = newAttestationsQueue()
 	s.attsQueue.push(att1)
 	s.attsQueue.push(att2)
-	slot, err := core.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
+	slot, err := coreTime.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
 	require.NoError(t, err)
 	mockChain.Slot = &slot
 	s.serviceCfg.HeadStateFetcher = mockChain
@@ -763,7 +763,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	slot, err := core.StartSlot(1)
+	slot, err := coreTime.StartSlot(1)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	mockChain := &mock.ChainService{

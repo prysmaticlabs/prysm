@@ -7,9 +7,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -159,13 +159,13 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
 			totalEpochs := types.Epoch(s.srvConfig.Params.NumEpochs)
-			if core.SlotToEpoch(slot) >= totalEpochs {
+			if coreTime.SlotToEpoch(slot) >= totalEpochs {
 				return
 			}
 
 			// Since processing slashings requires at least one slot, we do nothing
 			// if we are a few slots from the end of the simulation.
-			endSlot, err := core.StartSlot(totalEpochs)
+			endSlot, err := coreTime.StartSlot(totalEpochs)
 			if err != nil {
 				log.WithError(err).Fatal("Could not get epoch start slot")
 			}

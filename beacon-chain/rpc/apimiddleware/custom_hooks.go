@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -208,7 +208,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if core.SlotToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+	if time.SlotToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 	} else {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}

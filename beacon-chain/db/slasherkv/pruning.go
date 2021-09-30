@@ -7,7 +7,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -88,7 +88,7 @@ func (s *Store) PruneProposalsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	var endPruneSlot types.Slot
-	endPruneSlot, err = core.EndSlot(maxEpoch)
+	endPruneSlot, err = time.EndSlot(maxEpoch)
 	if err != nil {
 		return
 	}
