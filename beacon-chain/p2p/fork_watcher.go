@@ -15,7 +15,8 @@ func (s *Service) forkWatcher() {
 		select {
 		case currSlot := <-slotTicker.C():
 			currEpoch := core.SlotToEpoch(currSlot)
-			if currEpoch == params.BeaconConfig().AltairForkEpoch {
+			if currEpoch == params.BeaconConfig().AltairForkEpoch ||
+				currEpoch == params.BeaconConfig().MergeForkEpoch {
 				// If we are in the fork epoch, we update our enr with
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
