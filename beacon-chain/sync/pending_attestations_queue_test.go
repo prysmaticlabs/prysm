@@ -63,9 +63,9 @@ func TestProcessPendingAtts_BlockArrivesAfterAtt(t *testing.T) {
 
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	genesisState, privKeys := util.DeterministicGenesisState(t, validators)
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisBlockRoot))
 
 	targetBlock := util.NewBeaconBlock()
+	targetBlock.Block.Body.Graffiti = bytesutil.PadTo([]byte("hello-world"), 32)
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -118,6 +118,7 @@ func TestProcessPendingAtts_BlockArrivesAfterAtt(t *testing.T) {
 			DB:  db,
 			Chain: &mock.ChainService{Genesis: time.Now(),
 				State: genesisState,
+				Root:  genesisBlockRoot[:],
 				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Root:  genesisBlockRoot[:],
 					Epoch: 0,
