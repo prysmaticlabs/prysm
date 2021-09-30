@@ -482,15 +482,10 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
 	if !features.Get().EnableGetBlockOptimizations {
-		lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
+		_, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
 		if err != nil {
 			log.WithError(err).Error("Could not get last block by earliest valid time")
 			return vs.randomETH1DataVote(ctx)
-		}
-		// Increment the earliest block if the original block's time is before valid time.
-		// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
-		if lastBlockByEarliestValidTime.Time < earliestValidTime {
-			lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
 		}
 	}
 
