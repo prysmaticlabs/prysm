@@ -204,22 +204,14 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
-	// There is an epoch lookahead for validator proposals
-	// for the next epoch from the start of our current epoch. We
-	// use the randao mix at the end of the previous epoch as the seed
-	// to determine proposals.
-	// Seed for Next Epoch => Derived From Randao Mix at the end of the Previous Epoch.
-	// Which is why we simply set the slot over here.
-	nextEpoch := core.NextEpoch(parentState)
-	expectedEpoch := core.SlotToEpoch(blk.Block().Slot())
-	if expectedEpoch <= nextEpoch {
-		err = parentState.SetSlot(blk.Block().Slot())
+	// In the event the block is more than an epoch ahead from its
+	// parent state, we have to advance the state forward.
+	if features.Get().EnableNextSlotStateCache {
+		parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
 		if err != nil {
 			return err
 		}
 	} else {
-		// In the event the block is more than an epoch ahead from its
-		// parent state, we have to advance the state forward.
 		parentState, err = transition.ProcessSlots(ctx, parentState, blk.Block().Slot())
 		if err != nil {
 			return err
