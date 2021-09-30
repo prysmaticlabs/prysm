@@ -6,8 +6,8 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -118,7 +118,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 // Signs input slot with domain selection proof. This is used to create the signature for aggregator selection.
 func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [48]byte, slot types.Slot) (signature []byte, err error) {
-	domain, err := v.domainData(ctx, core.SlotToEpoch(slot), params.BeaconConfig().DomainSelectionProof[:])
+	domain, err := v.domainData(ctx, coreTime.SlotToEpoch(slot), params.BeaconConfig().DomainSelectionProof[:])
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 // This returns the signature of validator signing over aggregate and
 // proof object.
 func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, agg *ethpb.AggregateAttestationAndProof) ([]byte, error) {
-	d, err := v.domainData(ctx, core.SlotToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
+	d, err := v.domainData(ctx, coreTime.SlotToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		return nil, err
 	}

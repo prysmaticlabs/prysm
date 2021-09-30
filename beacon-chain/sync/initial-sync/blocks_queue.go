@@ -7,7 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -221,7 +221,7 @@ func (q *blocksQueue) loop() {
 						"highestExpectedSlot":       q.highestExpectedSlot,
 						"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
 						"event":                     eventTick,
-						"epoch":                     core.SlotToEpoch(fsm.start),
+						"epoch":                     coreTime.SlotToEpoch(fsm.start),
 						"start":                     fsm.start,
 						"error":                     err.Error(),
 					}).Debug("Can not trigger event")
@@ -263,7 +263,7 @@ func (q *blocksQueue) loop() {
 				if err := fsm.trigger(eventDataReceived, response); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
-						"epoch": core.SlotToEpoch(fsm.start),
+						"epoch": coreTime.SlotToEpoch(fsm.start),
 						"error": err.Error(),
 					}).Debug("Can not process event")
 					fsm.setState(stateNew)
@@ -419,16 +419,16 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
 		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
-			q.staleEpochs[core.SlotToEpoch(startSlot)]++
+			q.staleEpochs[coreTime.SlotToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
-			if q.staleEpochs[core.SlotToEpoch(startSlot)] >= maxResetAttempts {
-				delete(q.staleEpochs, core.SlotToEpoch(startSlot))
+			if q.staleEpochs[coreTime.SlotToEpoch(startSlot)] >= maxResetAttempts {
+				delete(q.staleEpochs, coreTime.SlotToEpoch(startSlot))
 				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
 				if err == nil {
 					return stateSkipped, q.resetFromFork(ctx, fork)
 				}
 				log.WithFields(logrus.Fields{
-					"epoch": core.SlotToEpoch(startSlot),
+					"epoch": coreTime.SlotToEpoch(startSlot),
 					"error": err.Error(),
 				}).Debug("Can not explore alternative branches")
 			}

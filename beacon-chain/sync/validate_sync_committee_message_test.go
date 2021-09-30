@@ -13,8 +13,8 @@ import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -226,7 +226,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = coreTime.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
 				digest, err := s.currentForkDigest()
@@ -274,7 +274,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = coreTime.PrevSlot(hState.Slot())
 
 				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
@@ -317,9 +317,9 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = coreTime.PrevSlot(hState.Slot())
 
-				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), coreTime.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
@@ -370,7 +370,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				numOfVals := hState.NumValidators()
 
 				chosenVal := numOfVals - 10
-				d, err := signing.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), coreTime.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				rawBytes := p2ptypes.SSZBytes(headRoot[:])
 				sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
@@ -387,7 +387,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = coreTime.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
 				digest, err := s.currentForkDigest()

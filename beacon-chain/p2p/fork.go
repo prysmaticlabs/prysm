@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -88,8 +88,8 @@ func addForkEntry(
 	if err != nil {
 		return nil, err
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	currentSlot := coreTime.SlotsSince(genesisTime)
+	currentEpoch := coreTime.SlotToEpoch(currentSlot)
 	if prysmTime.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}

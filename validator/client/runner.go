@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -170,7 +170,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			// Start fetching domain data for the next epoch.
-			if core.IsEpochEnd(slot) {
+			if coreTime.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -105,7 +105,7 @@ func SetParticipationAndRewardProposer(
 	indices []uint64,
 	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, error) {
 	var epochParticipation []byte
-	currentEpoch := core.CurrentEpoch(beaconState)
+	currentEpoch := time.CurrentEpoch(beaconState)
 	var err error
 	if targetEpoch == currentEpoch {
 		epochParticipation, err = beaconState.CurrentEpochParticipation()
@@ -240,7 +240,7 @@ func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposer
 //
 //    return participation_flag_indices
 func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
-	currEpoch := core.CurrentEpoch(beaconState)
+	currEpoch := time.CurrentEpoch(beaconState)
 	var justifiedCheckpt *ethpb.Checkpoint
 	if data.Target.Epoch == currEpoch {
 		justifiedCheckpt = beaconState.CurrentJustifiedCheckpoint()

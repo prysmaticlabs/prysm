@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -29,7 +29,7 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := core.StartSlot(helpers.AltairE2EForkEpoch)
+	fSlot, err := time.StartSlot(helpers.AltairE2EForkEpoch)
 	if err != nil {
 		return err
 	}

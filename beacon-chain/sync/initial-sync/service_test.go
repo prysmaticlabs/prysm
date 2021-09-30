@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -119,7 +119,7 @@ func TestService_InitStartStop(t *testing.T) {
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
-						Epoch: core.SlotToEpoch(futureSlot),
+						Epoch: coreTime.SlotToEpoch(futureSlot),
 					},
 					Genesis:        makeGenesisTime(futureSlot),
 					ValidatorsRoot: [32]byte{},
@@ -407,7 +407,7 @@ func TestService_Resync(t *testing.T) {
 					Root:  genesisRoot[:],
 					DB:    beaconDB,
 					FinalizedCheckPoint: &eth.Checkpoint{
-						Epoch: core.SlotToEpoch(futureSlot),
+						Epoch: coreTime.SlotToEpoch(futureSlot),
 					},
 					Genesis:        time.Now(),
 					ValidatorsRoot: [32]byte{},
