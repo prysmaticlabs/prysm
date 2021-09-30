@@ -21,8 +21,8 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.ChurnLimitQuotient = 65536
 
 	// Time parameters.
-	e2eConfig.SecondsPerSlot = 10
-	e2eConfig.SlotsPerEpoch = 6
+	e2eConfig.SecondsPerSlot = 6
+	e2eConfig.SlotsPerEpoch = 8
 	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
