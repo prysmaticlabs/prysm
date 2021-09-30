@@ -83,6 +83,15 @@ func TestDeserializeRequestBodyIntoContainer(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode request body"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
+
+	t.Run("unknown field", func(t *testing.T) {
+		var bodyJson bytes.Buffer
+		bodyJson.Write([]byte("{\"foo\":\"foo\"}"))
+		errJson := DeserializeRequestBodyIntoContainer(&bodyJson, &testRequestContainer{})
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode request body"))
+		assert.Equal(t, http.StatusBadRequest, errJson.StatusCode())
+	})
 }
 
 func TestProcessRequestContainerFields(t *testing.T) {
