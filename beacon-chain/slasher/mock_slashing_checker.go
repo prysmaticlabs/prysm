@@ -15,7 +15,7 @@ type MockSlashingChecker struct {
 }
 
 func (s *MockSlashingChecker) HighestAttestations(
-	ctx context.Context, indices []types.ValidatorIndex,
+	_ context.Context, indices []types.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
 	atts := make([]*ethpb.HighestAttestation, 0, len(indices))
 	for _, valIdx := range indices {
