@@ -35,28 +35,6 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
 	currEpoch := core.SlotToEpoch(s.cfg.Chain.CurrentSlot())
-	// Register handlers if we are past merge fork
-	if currEpoch >= params.BeaconConfig().MergeForkEpoch {
-		s.registerRPC(
-			p2p.RPCStatusTopicV1,
-			s.statusRPCHandler,
-		)
-		s.registerRPC(
-			p2p.RPCGoodByeTopicV1,
-			s.goodbyeRPCHandler,
-		)
-		s.registerRPC(
-			p2p.RPCPingTopicV1,
-			s.pingHandler,
-		)
-		// MetaDataTopic should have been upgraded to V2 in Altair
-		s.registerRPC(
-			p2p.RPCMetaDataTopicV2,
-			s.metaDataHandler,
-		)
-		s.registerRPCHandlersMerge()
-		return
-	}
 	// Register V2 handlers if we are past altair fork epoch.
 	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
 		s.registerRPC(
@@ -71,7 +49,6 @@ func (s *Service) registerRPCHandlers() {
 			p2p.RPCPingTopicV1,
 			s.pingHandler,
 		)
-
 		s.registerRPCHandlersAltair()
 		return
 	}
@@ -117,18 +94,6 @@ func (s *Service) registerRPCHandlersAltair() {
 	)
 }
 
-// registerRPCHandlers for merge.
-func (s *Service) registerRPCHandlersMerge() {
-	s.registerRPC(
-		p2p.RPCBlocksByRangeTopicV3,
-		s.beaconBlocksByRangeRPCHandler,
-	)
-	s.registerRPC(
-		p2p.RPCBlocksByRootTopicV3,
-		s.beaconBlocksRootRPCHandler,
-	)
-}
-
 // Remove all v1 Stream handlers that are no longer supported
 // from altair onwards.
 func (s *Service) unregisterPhase0Handlers() {
@@ -139,16 +104,6 @@ func (s *Service) unregisterPhase0Handlers() {
 	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
 	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
 	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
-}
-
-// Remove all v2 Stream handlers that are no longer supported
-// from merge onwards.
-func (s *Service) unregisterAltairHandlers() {
-	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV2 + s.cfg.P2P.Encoding().ProtocolSuffix()
-	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV2 + s.cfg.P2P.Encoding().ProtocolSuffix()
-
-	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
-	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
