@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -41,7 +42,7 @@ type SlashingChecker interface {
 	IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
 	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
 	HighestAttestations(
-		ctx context.Context, indices []uint64,
+		ctx context.Context, indices []types.ValidatorIndex,
 	) ([]*ethpb.HighestAttestation, error)
 }
 

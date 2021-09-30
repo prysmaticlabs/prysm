@@ -13,9 +13,9 @@ import (
 
 // HighestAttestations committed for an input list of validator indices.
 func (s *Service) HighestAttestations(
-	ctx context.Context, indices []types.ValidatorIndex,
+	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
-	atts, err := s.serviceCfg.Database.HighestAttestations(ctx, indices)
+	atts, err := s.serviceCfg.Database.HighestAttestations(ctx, validatorIndices)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get highest attestations from database")
 	}

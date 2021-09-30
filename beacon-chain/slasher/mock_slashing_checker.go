@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -10,6 +11,21 @@ import (
 type MockSlashingChecker struct {
 	AttesterSlashingFound bool
 	ProposerSlashingFound bool
+	HighestAtts           map[types.ValidatorIndex]*ethpb.HighestAttestation
+}
+
+func (s *MockSlashingChecker) HighestAttestations(
+	ctx context.Context, indices []types.ValidatorIndex,
+) ([]*ethpb.HighestAttestation, error) {
+	atts := make([]*ethpb.HighestAttestation, 0, len(indices))
+	for _, valIdx := range indices {
+		att, ok := s.HighestAtts[valIdx]
+		if !ok {
+			continue
+		}
+		atts = append(atts, att)
+	}
+	return atts, nil
 }
 
 func (s *MockSlashingChecker) IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {

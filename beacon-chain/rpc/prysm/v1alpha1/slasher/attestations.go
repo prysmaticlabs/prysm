@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,7 +31,11 @@ func (s *Server) IsSlashableAttestation(
 func (s *Server) HighestAttestations(
 	ctx context.Context, req *ethpb.HighestAttestationRequest,
 ) (*ethpb.HighestAttestationResponse, error) {
-	atts, err := s.SlashingChecker.HighestAttestations(ctx, req.ValidatorIndices)
+	valIndices := make([]types.ValidatorIndex, len(req.ValidatorIndices))
+	for i, valIdx := range req.ValidatorIndices {
+		valIndices[i] = types.ValidatorIndex(valIdx)
+	}
+	atts, err := s.SlashingChecker.HighestAttestations(ctx, valIndices)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get highest attestations: %v", err)
 	}
