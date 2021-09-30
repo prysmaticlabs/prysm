@@ -229,9 +229,6 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		wantedEpoch := core.PrevEpoch(state)
-		if wantedEpoch >= params.BeaconConfig().MinSeedLookahead {
-			wantedEpoch -= params.BeaconConfig().MinSeedLookahead
-		}
 		s, err := core.EndSlot(wantedEpoch)
 		if err != nil {
 			return 0, err
