@@ -59,4 +59,3 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
-
