@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -16,12 +16,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunUpgradeToAltair is a helper function that runs Altair's fork spec tests.
-// It unmarshals a pre and post state to check `UpgradeToAltair` comply with spec implementation.
-func RunUpgradeToAltair(t *testing.T, config string) {
+// RunUpgradeToMerge is a helper function that runs Merge's fork spec tests.
+// It unmarshals a pre and post state to check `UpgradeToMerge` comply with spec implementation.
+func RunUpgradeToMerge(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork/fork/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "merge", "fork/fork/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -31,15 +31,15 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			preStateSSZ, err := snappy.Decode(nil /* dst */, preStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			preStateBase := &ethpb.BeaconStateAltair{}
+			preStateBase := &ethpb.BeaconStateMerge{}
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := statealtair.InitializeFromProto(preStateBase)
+			preState, err := v3.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
-			postState, err := altair.UpgradeToAltair(context.Background(), preState)
+			postState, err := execution.UpgradeToMerge(context.Background(), preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
