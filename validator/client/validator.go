@@ -20,7 +20,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -458,7 +457,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ss, err := coreTime.StartSlot(coreTime.SlotToEpoch(slot) + 1)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
 		return err
 	}
@@ -615,7 +614,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		// broadcasts signatures for `slot - 1` for inclusion in `slot`. At the last slot of the epoch,
 		// the validator checks whether it's in the sync committee of following epoch.
 		inSyncCommittee := false
-		if coreTime.IsEpochEnd(slot) {
+		if slots.IsEpochEnd(slot) {
 			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
 				inSyncCommittee = true
@@ -717,7 +716,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 		params.BeaconConfig().DomainSelectionProof[:],
 		params.BeaconConfig().DomainAggregateAndProof[:],
 	} {
-		_, err := v.domainData(ctx, coreTime.SlotToEpoch(slot), d)
+		_, err := v.domainData(ctx, slots.ToEpoch(slot), d)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}

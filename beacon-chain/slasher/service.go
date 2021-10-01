@@ -143,7 +143,7 @@ func (s *Service) Status() error {
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {
-	if slots.SlotsSinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
+	if slots.SinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
 		return
 	}
 	for {

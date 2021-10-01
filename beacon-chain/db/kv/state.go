@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -666,7 +666,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	if err != nil {
 		return err
 	}
-	finalizedSlot, err := time.StartSlot(f.Epoch)
+	finalizedSlot, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
 	}

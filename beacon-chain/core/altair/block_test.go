@@ -18,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
@@ -33,7 +34,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := time.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
@@ -107,7 +108,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := time.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
@@ -142,7 +143,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := time.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, 0, len(indices))
@@ -215,7 +216,7 @@ func Test_VerifySyncCommitteeSig(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := time.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))

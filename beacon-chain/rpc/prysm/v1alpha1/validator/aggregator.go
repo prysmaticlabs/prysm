@@ -5,10 +5,10 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -37,7 +37,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
-	epoch := time.SlotToEpoch(req.Slot)
+	epoch := slots.ToEpoch(req.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)

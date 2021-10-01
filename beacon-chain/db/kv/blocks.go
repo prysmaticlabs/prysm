@@ -8,7 +8,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -479,11 +479,11 @@ func blockRootsBySlotRange(
 	endEpoch, endEpochOk := endEpochEncoded.(types.Epoch)
 	var err error
 	if startEpochOk && endEpochOk {
-		startSlot, err = time.StartSlot(startEpoch)
+		startSlot, err = slots.EpochStart(startEpoch)
 		if err != nil {
 			return nil, err
 		}
-		endSlot, err = time.StartSlot(endEpoch)
+		endSlot, err = slots.EpochStart(endEpoch)
 		if err != nil {
 			return nil, err
 		}

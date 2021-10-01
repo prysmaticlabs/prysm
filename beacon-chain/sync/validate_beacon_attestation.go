@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -171,7 +171,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
-	valCount, err := helpers.ActiveValidatorCount(ctx, bs, time.SlotToEpoch(a.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.Data.Slot))
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err

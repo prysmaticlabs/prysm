@@ -16,7 +16,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -32,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -552,7 +552,7 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	slot := r.cfg.Chain.CurrentSlot()
-	currEpoch := coreTime.SlotToEpoch(slot)
+	currEpoch := slots.ToEpoch(slot)
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), currEpoch, []uint64{0, 1}, 10*time.Second)
 	digest, err := r.currentForkDigest()
 	assert.NoError(t, err)

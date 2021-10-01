@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -268,7 +269,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, nil, err
 		}
 		// Save potential boundary states.
-		if coreTime.IsEpochStart(preState.Slot()) {
+		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
@@ -367,7 +368,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		var err error
-		s.nextEpochBoundarySlot, err = coreTime.StartSlot(coreTime.NextEpoch(postState))
+		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
