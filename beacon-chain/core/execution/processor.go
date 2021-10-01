@@ -184,7 +184,7 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 	 */
 	var txRoot [32]byte
 	empty32 := make([]byte, 32)
-	copy(txRoot[:], empty32[:])
+	copy(txRoot[:], empty32)
 
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
