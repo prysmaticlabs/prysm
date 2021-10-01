@@ -1,4 +1,4 @@
-package merge
+package execution
 
 import (
 	"bytes"
@@ -64,7 +64,7 @@ func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, 
 	return IsMergeComplete(st)
 }
 
-// ProcessExecutionPayload processes execution payload.
+// ProcessPayload processes execution payload.
 //
 // Spec code:
 // def process_execution_payload(state: BeaconState, payload: ExecutionPayload, execution_engine: ExecutionEngine) -> None:
@@ -97,8 +97,8 @@ func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, 
 //        block_hash=payload.block_hash,
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
-func ProcessExecutionPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (state.BeaconState, error) {
-	if err := verifyExecutionPayload(st, payload); err != nil {
+func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (state.BeaconState, error) {
+	if err := verifyPayload(st, payload); err != nil {
 		return nil, err
 	}
 	random, err := helpers.RandaoMix(st, core.CurrentEpoch(st))
@@ -129,7 +129,7 @@ func ProcessExecutionPayload(st state.BeaconState, payload *ethpb.ExecutionPaylo
 }
 
 // This verifies if `payload` is valid according to `state`. It exits early if merge is not yet ready.
-func verifyExecutionPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
+func verifyPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
 	complete, err := IsMergeComplete(st)
 	if err != nil {
 		return err

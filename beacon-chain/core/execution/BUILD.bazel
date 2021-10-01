@@ -6,7 +6,7 @@ go_library(
         "processor.go",
         "upgrader.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/merge",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/execution",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core:go_default_library",

@@ -36,7 +36,6 @@ go_library(
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/merge:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",

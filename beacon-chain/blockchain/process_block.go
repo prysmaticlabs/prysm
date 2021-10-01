@@ -106,7 +106,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 	body := signed.Block().Body()
-	executionEnabled, err := merge.IsExecutionEnabled(preState, body)
+	executionEnabled, err := execution.IsExecutionEnabled(preState, body)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 		// TODO: Call execute_payload(self: ExecutionEngine, execution_payload: ExecutionPayload)
 	}
-	mergeBlock, err := merge.IsMergeBlock(preState, body)
+	mergeBlock, err := execution.IsMergeBlock(preState, body)
 	if err != nil {
 		return err
 	}

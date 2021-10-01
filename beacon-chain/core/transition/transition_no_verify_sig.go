@@ -311,7 +311,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	enabled, err := merge.IsExecutionEnabled(state, blk.Body())
+	enabled, err := execution.IsExecutionEnabled(state, blk.Body())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not check if execution is enabled")
@@ -321,7 +321,7 @@ func ProcessBlockForStateRoot(
 		if err != nil {
 			return nil, err
 		}
-		state, err = merge.ProcessExecutionPayload(state, payload)
+		state, err = execution.ProcessExecutionPayload(state, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process execution payload")
 		}

@@ -275,7 +275,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 
 		if CanUpgradeToMerge(state.Slot()) {
-			state, err = merge.UpgradeToMerge(ctx, state)
+			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
