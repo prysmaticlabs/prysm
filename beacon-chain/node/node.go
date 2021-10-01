@@ -107,7 +107,6 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	configureInteropConfig(cliCtx)
 	configureExecutionMode(cliCtx)
 
-
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
 
@@ -493,6 +492,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		BeaconDB:                b.db,
 		DepositCache:            b.depositCache,
 		ChainStartFetcher:       web3Service,
+		ExecutionEngineCaller:   web3Service,
 		AttPool:                 b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingPool:            b.slashingsPool,

@@ -86,6 +86,7 @@ type Config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            powchain.POWBlockFetcher
+	ExecutionEngineCaller   powchain.CatalystClient
 }
 
 // NewService instantiates a new block service instance that will

@@ -131,14 +131,14 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	MergeForkVersion            []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
-	MergeForkEpoch              types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
-	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
-	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	MergeForkVersion    []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
+	MergeForkEpoch      types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
+	ShardingForkVersion []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch   types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -178,12 +178,12 @@ type BeaconChainConfig struct {
 	MinGasLimit         uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`         // MinGasLimit for merge.
 
 	// Merge.
-	EnabledMerge bool // EnabledMerge is true if merge feature is enabled.
-	MaxExecutionTransactions     uint64      `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
-	MaxBytesPerOpaqueTransaction uint64      `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
-	TerminalBlockHash            common.Hash `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
-	TerminalTotalDifficulty      []byte      `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
-	FeeRecipient common.Address       // FeeRecipient where the transaction fee goes to.
+	EnabledMerge                 bool           // EnabledMerge is true if merge feature is enabled.
+	MaxExecutionTransactions     uint64         `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
+	MaxBytesPerOpaqueTransaction uint64         `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
+	TerminalBlockHash            common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
+	TerminalTotalDifficulty      []byte         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	FeeRecipient                 common.Address // FeeRecipient where the transaction fee goes to.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
