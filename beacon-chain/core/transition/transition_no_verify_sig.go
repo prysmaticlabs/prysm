@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/merge"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -321,7 +321,7 @@ func ProcessBlockForStateRoot(
 		if err != nil {
 			return nil, err
 		}
-		state, err = execution.ProcessExecutionPayload(state, payload)
+		state, err = execution.ProcessPayload(state, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process execution payload")
 		}
