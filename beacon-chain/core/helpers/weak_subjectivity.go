@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
@@ -132,9 +133,9 @@ func IsWithinWeakSubjectivityPeriod(
 		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
 			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
 	}
-	if time.SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+	if slots.ToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
 		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
-			time.SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+			slots.ToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
@@ -142,7 +143,7 @@ func IsWithinWeakSubjectivityPeriod(
 	if err != nil {
 		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
 	}
-	wsStateEpoch := time.SlotToEpoch(wsState.Slot())
+	wsStateEpoch := slots.ToEpoch(wsState.Slot())
 
 	return currentEpoch <= wsStateEpoch+wsPeriod, nil
 }

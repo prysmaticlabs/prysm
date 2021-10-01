@@ -141,7 +141,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot,
 				NewHeadState: newStateRoot,
-				Epoch:        time.SlotToEpoch(newHeadSlot),
+				Epoch:        slots.ToEpoch(newHeadSlot),
 			},
 		})
 
@@ -336,15 +336,15 @@ func (s *Service) notifyNewHeadEvent(
 	currentDutyDependentRoot := s.genesisRoot[:]
 
 	var previousDutyEpoch types.Epoch
-	currentDutyEpoch := time.SlotToEpoch(newHeadSlot)
+	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
-	currentDutySlot, err := time.StartSlot(currentDutyEpoch)
+	currentDutySlot, err := slots.EpochStart(currentDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
-	previousDutySlot, err := time.StartSlot(previousDutyEpoch)
+	previousDutySlot, err := slots.EpochStart(previousDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
@@ -366,7 +366,7 @@ func (s *Service) notifyNewHeadEvent(
 			Slot:                      newHeadSlot,
 			Block:                     newHeadRoot,
 			State:                     newHeadStateRoot,
-			EpochTransition:           time.IsEpochStart(newHeadSlot),
+			EpochTransition:           slots.IsEpochStart(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},

@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Initialize the state cache for sync committees.
@@ -62,14 +62,14 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot type
 // rather than for the range
 // [compute_start_slot_at_epoch(epoch), compute_start_slot_at_epoch(epoch) + SLOTS_PER_EPOCH)
 func (s *Service) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
-	nextSlotEpoch := time.SlotToEpoch(slot + 1)
-	currentEpoch := time.SlotToEpoch(slot)
+	nextSlotEpoch := slots.ToEpoch(slot + 1)
+	currentEpoch := slots.ToEpoch(slot)
 
 	switch {
-	case time.SyncCommitteePeriod(nextSlotEpoch) == time.SyncCommitteePeriod(currentEpoch):
+	case slots.SyncCommitteePeriod(nextSlotEpoch) == slots.SyncCommitteePeriod(currentEpoch):
 		return s.headCurrentSyncCommitteeIndices(ctx, index, slot)
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
-	case time.SyncCommitteePeriod(nextSlotEpoch) == time.SyncCommitteePeriod(currentEpoch)+1:
+	case slots.SyncCommitteePeriod(nextSlotEpoch) == slots.SyncCommitteePeriod(currentEpoch)+1:
 		return s.headNextSyncCommitteeIndices(ctx, index, slot)
 	default:
 		// Impossible condition.
@@ -105,11 +105,11 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 		return nil, err
 	}
 
-	nextSlotEpoch := time.SlotToEpoch(headState.Slot() + 1)
-	currEpoch := time.SlotToEpoch(headState.Slot())
+	nextSlotEpoch := slots.ToEpoch(headState.Slot() + 1)
+	currEpoch := slots.ToEpoch(headState.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
-	if currEpoch == nextSlotEpoch || time.SyncCommitteePeriod(currEpoch) == time.SyncCommitteePeriod(nextSlotEpoch) {
+	if currEpoch == nextSlotEpoch || slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -130,7 +130,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 	if err != nil {
 		return nil, err
 	}
-	return signing.Domain(headState.Fork(), time.SlotToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
+	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.

@@ -11,7 +11,6 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -19,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -523,21 +523,21 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		}
 	}
 
-	fSlot, err := time.StartSlot(finalizedCheckpoint.Epoch)
+	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	jSlot, err := time.StartSlot(justifiedCheckpoint.Epoch)
+	jSlot, err := slots.EpochStart(justifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	pjSlot, err := time.StartSlot(prevJustifiedCheckpoint.Epoch)
+	pjSlot, err := slots.EpochStart(prevJustifiedCheckpoint.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block().Slot(),
-		HeadEpoch:                  time.SlotToEpoch(headBlock.Block().Slot()),
+		HeadEpoch:                  slots.ToEpoch(headBlock.Block().Slot()),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
@@ -561,7 +561,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
 	}
-	wsSlot, err := time.StartSlot(wsEpoch)
+	wsSlot, err := slots.EpochStart(wsEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
 	}

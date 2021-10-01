@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -25,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
@@ -161,7 +161,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
 	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := coreTime.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
@@ -425,7 +425,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 
 	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := coreTime.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))

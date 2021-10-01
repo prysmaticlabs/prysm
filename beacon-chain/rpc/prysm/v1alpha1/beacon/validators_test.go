@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -57,7 +58,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
 			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
-				Epoch: coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -84,7 +85,7 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
-				Epoch: coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1478,7 +1479,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -2094,7 +2095,7 @@ func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator
 func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &ethpb.IndividualVotesRequest{
-		Epoch: coreTime.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+		Epoch: slots.ToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
 	wanted := errNoEpochInfoError
 	_, err := ds.GetIndividualVotes(context.Background(), req)

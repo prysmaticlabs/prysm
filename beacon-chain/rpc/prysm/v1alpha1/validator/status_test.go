@@ -10,7 +10,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -24,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -300,7 +300,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 
 	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
 	slot := types.Slot(10000)
-	epoch := coreTime.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	block := util.NewBeaconBlock()
@@ -360,7 +360,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := types.Slot(10000)
-	epoch := coreTime.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -417,7 +417,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 	// Exit because only exit epoch is =< current epoch.
 	slot := types.Slot(10000)
-	epoch := coreTime.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -790,7 +790,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	slot := types.Slot(10000)
-	epoch := coreTime.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
 	beaconState := &ethpb.BeaconState{
 		Slot: 4000,

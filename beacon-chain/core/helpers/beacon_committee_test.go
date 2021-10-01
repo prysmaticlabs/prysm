@@ -17,6 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
@@ -190,7 +191,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
-			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, time.SlotToEpoch(tt.slot))
+			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, slots.ToEpoch(tt.slot))
 			require.NoError(t, err, "Failed to determine CommitteeAssignments")
 			cac := validatorIndexToCommittee[tt.index]
 			assert.Equal(t, tt.committeeIndex, cac.CommitteeIndex, "Unexpected committeeIndex for validator index %d", tt.index)
@@ -261,9 +262,9 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 		}
 	}
 	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerEpoch), uint64(len(slotsWithProposers)), "Unexpected slots")
-	startSlot, err := time.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	require.NoError(t, err)
-	endSlot, err := time.StartSlot(epoch + 1)
+	endSlot, err := slots.EpochStart(epoch + 1)
 	require.NoError(t, err)
 	for i := startSlot; i < endSlot; i++ {
 		hasProposer := slotsWithProposers[i]

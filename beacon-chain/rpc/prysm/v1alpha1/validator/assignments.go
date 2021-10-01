@@ -108,7 +108,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 // Compute the validator duties from the head state's corresponding epoch
 // for validators public key / indices requested.
 func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	currentEpoch := coreTime.SlotToEpoch(vs.TimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.Unavailable, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
@@ -119,7 +119,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	epochStartSlot, err := coreTime.StartSlot(req.Epoch)
+	epochStartSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -198,9 +198,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			// Next epoch sync committee duty is assigned with next period sync committee only during
 			// sync period epoch boundary (ie. EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1). Else wise
 			// next epoch sync committee duty is the same as current epoch.
-			nextSlotToEpoch := coreTime.SlotToEpoch(s.Slot() + 1)
+			nextSlotToEpoch := slots.ToEpoch(s.Slot() + 1)
 			currentEpoch := coreTime.CurrentEpoch(s)
-			if coreTime.SyncCommitteePeriod(nextSlotToEpoch) == coreTime.SyncCommitteePeriod(currentEpoch)+1 {
+			if slots.SyncCommitteePeriod(nextSlotToEpoch) == slots.SyncCommitteePeriod(currentEpoch)+1 {
 				nextAssignment.IsSyncCommittee, err = helpers.IsNextPeriodSyncCommittee(s, idx)
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
@@ -258,7 +258,7 @@ func registerSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch types.Epoc
 	if err != nil {
 		return err
 	}
-	syncCommPeriod := coreTime.SyncCommitteePeriod(epoch)
+	syncCommPeriod := slots.SyncCommitteePeriod(epoch)
 	registerSyncSubnet(epoch, syncCommPeriod, pubKey, committee, status)
 	return nil
 }
@@ -268,7 +268,7 @@ func registerSyncSubnetNextPeriod(s beaconState.BeaconState, epoch types.Epoch, 
 	if err != nil {
 		return err
 	}
-	syncCommPeriod := coreTime.SyncCommitteePeriod(epoch)
+	syncCommPeriod := slots.SyncCommitteePeriod(epoch)
 	registerSyncSubnet(epoch, syncCommPeriod+1, pubKey, committee, status)
 	return nil
 }
@@ -281,7 +281,7 @@ func registerSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
 		return
 	}
 	startEpoch := types.Epoch(syncPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
-	currPeriod := coreTime.SyncCommitteePeriod(currEpoch)
+	currPeriod := slots.SyncCommitteePeriod(currEpoch)
 	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)
 	if ok && expTime.After(prysmTime.Now()) {

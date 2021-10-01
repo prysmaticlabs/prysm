@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -95,7 +96,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Error(codes.Internal, "Could not lookup parent state from head.")
 	}
 
-	if time.CurrentEpoch(headState) < time.SlotToEpoch(req.Slot) {
+	if time.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) {
 		if features.Get().EnableNextSlotStateCache {
 			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
 			if err != nil {
@@ -110,7 +111,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	targetEpoch := time.CurrentEpoch(headState)
-	epochStartSlot, err := time.StartSlot(targetEpoch)
+	epochStartSlot, err := slots.EpochStart(targetEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	})
 
 	// Determine subnet to broadcast attestation to
-	wantedEpoch := time.SlotToEpoch(att.Data.Slot)
+	wantedEpoch := slots.ToEpoch(att.Data.Slot)
 	vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 	if err != nil {
 		return nil, err
@@ -208,7 +209,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 	}
 
 	fetchValsLen := func(slot types.Slot) (uint64, error) {
-		wantedEpoch := time.SlotToEpoch(slot)
+		wantedEpoch := slots.ToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
@@ -222,16 +223,16 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 	}
-	currEpoch := time.SlotToEpoch(req.Slots[0])
+	currEpoch := slots.ToEpoch(req.Slots[0])
 
 	for i := 0; i < len(req.Slots); i++ {
 		// If epoch has changed, re-request active validators length
-		if currEpoch != time.SlotToEpoch(req.Slots[i]) {
+		if currEpoch != slots.ToEpoch(req.Slots[i]) {
 			currValsLen, err = fetchValsLen(req.Slots[i])
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 			}
-			currEpoch = time.SlotToEpoch(req.Slots[i])
+			currEpoch = slots.ToEpoch(req.Slots[i])
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, req.CommitteeIds[i], req.Slots[i])
 		cache.SubnetIDs.AddAttesterSubnetID(req.Slots[i], subnet)

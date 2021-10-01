@@ -25,7 +25,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
@@ -43,6 +42,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -891,7 +891,7 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 // determines the earliest voting block from which to start caching all our previous headers from.
 func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
 	genesisTime := s.chainStartData.GenesisTime
-	currSlot := coreTime.CurrentSlot(genesisTime)
+	currSlot := slots.CurrentSlot(genesisTime)
 
 	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
 	if genesisTime == 0 || currSlot == 0 {
@@ -901,7 +901,7 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		}
 		return earliestBlk, nil
 	}
-	votingTime := coreTime.VotingPeriodStartTime(genesisTime, currSlot)
+	votingTime := slots.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)

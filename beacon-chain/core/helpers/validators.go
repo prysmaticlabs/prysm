@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -229,7 +230,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		wantedEpoch := time.PrevEpoch(state)
-		s, err := time.EndSlot(wantedEpoch)
+		s, err := slots.EpochEnd(wantedEpoch)
 		if err != nil {
 			return 0, err
 		}

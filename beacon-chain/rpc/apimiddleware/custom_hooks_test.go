@@ -12,12 +12,12 @@ import (
 
 	"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestWrapAttestationArray(t *testing.T) {
@@ -384,7 +384,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
-		slot, err := time.StartSlot(params.BeaconConfig().AltairForkEpoch)
+		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		require.NoError(t, err)
 		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
 		j, err := json.Marshal(s)

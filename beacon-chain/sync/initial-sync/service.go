@@ -14,13 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,8 +87,8 @@ func (s *Service) Start() {
 		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
 		return
 	}
-	currentSlot := coreTime.SlotsSince(genesis)
-	if coreTime.SlotToEpoch(currentSlot) == 0 {
+	currentSlot := slots.Since(genesis)
+	if slots.ToEpoch(currentSlot) == 0 {
 		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
 		s.markSynced(genesis)
 		return
@@ -96,7 +96,7 @@ func (s *Service) Start() {
 	s.chainStarted.Set()
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
-	if coreTime.SlotToEpoch(s.cfg.Chain.HeadSlot()) == coreTime.SlotToEpoch(currentSlot) {
+	if slots.ToEpoch(s.cfg.Chain.HeadSlot()) == slots.ToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
 		s.markSynced(genesis)
 		return
