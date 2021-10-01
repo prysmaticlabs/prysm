@@ -16,9 +16,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var expectedParticipation = 0.95 // 95% participation to make room for minor issues.
+var expectedParticipation = float64(1)
 
-var expectedSyncParticipation = 0.95 // 95% participation for sync committee members.
+var expectedSyncParticipation = float64(1)
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
