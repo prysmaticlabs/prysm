@@ -60,13 +60,3 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	return epochStart && altairEpoch
 }
 
-// slots.SlotStartTime -> slots.StartTime
-//slots.SlotsSinceGenesis -> slots.SinceGenesis
-//slots.ToEpoch -> slots.ToEpoch
-//slots.EpochStart -> slots.EpochStart
-//slots.EpochEnd -> slots.EpochEnd
-//slots.SlotsSinceEpochStarts -> slots.SinceEpochStarts
-//slots.ToTime -> slots.ToTime
-//slots.Since -> slots.Since
-//slots.ValidateClock -> slots.ValidateClock
-// slots.VerifyTime -> slots.VerifyTime
