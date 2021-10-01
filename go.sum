@@ -630,8 +630,8 @@ github.com/kami-zh/go-capturer v0.0.0-20171211120116-e492ea43421d/go.mod h1:P2vi
 github.com/karalabe/usb v0.0.0-20190919080040-51dc0efba356/go.mod h1:Od972xHfMJowv7NGVDiWVxk2zxnWgjLlJzE+F4F7AGU=
 github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 h1:ZHuwnjpP8LsVsUYqTqeVAI+GfDfJ6UNPrExZF+vX/DQ=
 github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9/go.mod h1:Od972xHfMJowv7NGVDiWVxk2zxnWgjLlJzE+F4F7AGU=
-github.com/kasey/fastssz v0.0.0-20210929230234-a925534fb297 h1:0Ir0OnKCM00t/3cGgQrZzxMbIpfgkgZCoz3H2ehJDOY=
-github.com/kasey/fastssz v0.0.0-20210929230234-a925534fb297/go.mod h1:S8yiDeAXy8f88W4Ul+0dBMPx49S05byYbmZD6Uv94K4=
+github.com/kasey/fastssz v0.0.0-20211001172543-d0fc941e79bf h1:FYVlgwMD0jLjx0t1+Jz8UHEa5jgXt6PFlRzc1uJZkWc=
+github.com/kasey/fastssz v0.0.0-20211001172543-d0fc941e79bf/go.mod h1:S8yiDeAXy8f88W4Ul+0dBMPx49S05byYbmZD6Uv94K4=
 github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca h1:qNtd6alRqd3qOdPrKXMZImV192ngQ0WSh1briEO33Tk=
 github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca/go.mod h1:ph+C5vpnCcQvKBwJwKLTK3JLNGnBXYlG7m7JjoC/zYA=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=

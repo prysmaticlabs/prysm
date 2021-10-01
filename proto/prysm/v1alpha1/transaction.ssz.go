@@ -15,6 +15,7 @@ import (
 // SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayload object
 // fastssz is not currently able to handle union types so it generates an incorrect
 // implementation for this method.
+/*
 func (e *ExecutionPayload) SizeSSZ() int {
 	size := 508
 
@@ -31,6 +32,8 @@ func (e *ExecutionPayload) SizeSSZ() int {
 
 	return size
 }
+
+*/
 
 // MarshalSSZ ssz marshals the Transaction object
 func (t *Transaction) MarshalSSZ() ([]byte, error) {
@@ -89,7 +92,7 @@ func (t *Transaction) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith ssz hashes the Transaction object with a hasher
-func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) (error) {
+func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 	idx := hh.Index()
 
 	switch t.TransactionOneof.(type) {

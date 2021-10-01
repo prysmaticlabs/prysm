@@ -3892,6 +3892,19 @@ func (e *ExecutionPayload) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
+// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayload object
+func (e *ExecutionPayload) SizeSSZ() (size int) {
+	size = 508
+
+	// Field (10) 'ExtraData'
+	size += len(e.ExtraData)
+
+	// Field (13) 'Transactions'
+	size += len(e.Transactions) * 0
+
+	return
+}
+
 // HashTreeRoot ssz hashes the ExecutionPayload object
 func (e *ExecutionPayload) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
@@ -3990,6 +4003,69 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			}
 		}
 		hh.MerkleizeWithMixin(subIndx, num, 16384)
+	}
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the Transaction object
+func (t *Transaction) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(t)
+}
+
+// MarshalSSZTo ssz marshals the Transaction object to a target array
+func (t *Transaction) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'TransactionOneof'
+	if t.TransactionOneof == nil {
+		t.TransactionOneof = new()
+	}
+	if dst, err = t.TransactionOneof.MarshalSSZTo(dst); err != nil {
+		return
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the Transaction object
+func (t *Transaction) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 0 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'TransactionOneof'
+	if t.TransactionOneof == nil {
+		t.TransactionOneof = new()
+	}
+	if err = t.TransactionOneof.UnmarshalSSZ(buf[0:0]); err != nil {
+		return err
+	}
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Transaction object
+func (t *Transaction) SizeSSZ() (size int) {
+	size = 0
+	return
+}
+
+// HashTreeRoot ssz hashes the Transaction object
+func (t *Transaction) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(t)
+}
+
+// HashTreeRootWith ssz hashes the Transaction object with a hasher
+func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'TransactionOneof'
+	if err = t.TransactionOneof.HashTreeRootWith(hh); err != nil {
+		return
 	}
 
 	hh.Merkleize(indx)
