@@ -7,7 +7,7 @@
 package validatorpb
 
 import (
-	"context"
+	context "context"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
