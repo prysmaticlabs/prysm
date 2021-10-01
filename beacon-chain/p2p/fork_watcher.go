@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -14,7 +13,7 @@ func (s *Service) forkWatcher() {
 	for {
 		select {
 		case currSlot := <-slotTicker.C():
-			currEpoch := core.SlotToEpoch(currSlot)
+			currEpoch := slots.ToEpoch(currSlot)
 			if currEpoch == params.BeaconConfig().AltairForkEpoch {
 				// If we are in the fork epoch, we update our enr with
 				// the updated fork digest. These repeatedly does

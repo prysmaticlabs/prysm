@@ -13,10 +13,10 @@ go_library(
         "//testing/fuzz:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],

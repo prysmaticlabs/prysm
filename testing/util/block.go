@@ -6,15 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -150,7 +151,7 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, core.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +201,7 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	})
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
@@ -253,7 +254,7 @@ func GenerateAttesterSlashingForValidator(
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -353,7 +354,7 @@ func generateVoluntaryExits(
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -363,7 +364,7 @@ func generateVoluntaryExits(
 		}
 		exit := &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          core.PrevEpoch(bState),
+				Epoch:          time.PrevEpoch(bState),
 				ValidatorIndex: valIndex,
 			},
 		}
@@ -377,7 +378,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
@@ -501,6 +502,59 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 		b.Eth1Data = &v1.Eth1Data{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
+}
+
+// HydrateV2SignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2SignedBeaconBlock(b *v2.SignedBeaconBlockAltair) *v2.SignedBeaconBlockAltair {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Message = HydrateV2BeaconBlock(b.Message)
+	return b
+}
+
+// HydrateV2BeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BeaconBlock(b *v2.BeaconBlockAltair) *v2.BeaconBlockAltair {
+	if b == nil {
+		b = &v2.BeaconBlockAltair{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateV2BeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateV2BeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAltair {
+	if b == nil {
+		b = &v2.BeaconBlockBodyAltair{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &v1.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}
 	return b

@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -21,6 +20,7 @@ import (
 	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,7 +59,7 @@ func GenerateAttestations(
 		slot--
 		generateHeadState = true
 	}
-	currentEpoch := core.SlotToEpoch(slot)
+	currentEpoch := slots.ToEpoch(slot)
 
 	targetRoot := make([]byte, 32)
 	var headRoot []byte

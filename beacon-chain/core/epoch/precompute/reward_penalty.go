@@ -3,8 +3,8 @@ package precompute
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
@@ -23,7 +23,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	proRewardsFunc proposerRewardsFunc,
 ) (state.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
-	if core.CurrentEpoch(state) == 0 {
+	if time.CurrentEpoch(state) == 0 {
 		return state, nil
 	}
 
@@ -47,7 +47,10 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 		// Compute the post balance of the validator after accounting for the
 		// attester and proposer rewards and penalties.
-		validatorBals[i] = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		validatorBals[i], err = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		if err != nil {
+			return nil, err
+		}
 		validatorBals[i] = helpers.DecreaseBalanceWithVal(validatorBals[i], attsPenalties[i])
 
 		vp[i].AfterEpochTransitionBalance = validatorBals[i]
@@ -66,7 +69,7 @@ func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
-	prevEpoch := core.PrevEpoch(state)
+	prevEpoch := time.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
 	sqrtActiveCurrentEpoch := math.IntegerSquareRoot(pBal.ActiveCurrentEpoch)

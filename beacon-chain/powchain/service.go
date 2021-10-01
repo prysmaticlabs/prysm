@@ -24,7 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -43,6 +42,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -616,6 +616,16 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
+
+		// when a node pauses for some time and starts again, the deposits to finalize
+		// accumulates. we finalize them here before we are ready to receive a block.
+		// Otherwise, the first few blocks will be slower to compute as we will
+		// hold the lock and be busy finalizing the deposits.
+		s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
+		// Deposit proofs are only used during state transition and can be safely removed to save space.
+		if err = s.cfg.DepositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
+			return errors.Wrap(err, "could not prune deposit proofs")
+		}
 	}
 	validDepositsCount.Add(float64(currIndex))
 	// Only add pending deposits if the container slice length
@@ -881,7 +891,7 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 // determines the earliest voting block from which to start caching all our previous headers from.
 func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock uint64) (uint64, error) {
 	genesisTime := s.chainStartData.GenesisTime
-	currSlot := core.CurrentSlot(genesisTime)
+	currSlot := slots.CurrentSlot(genesisTime)
 
 	// In the event genesis has not occurred yet, we just request go back follow_distance blocks.
 	if genesisTime == 0 || currSlot == 0 {
@@ -891,7 +901,7 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		}
 		return earliestBlk, nil
 	}
-	votingTime := core.VotingPeriodStartTime(genesisTime, currSlot)
+	votingTime := slots.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)

@@ -10,9 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,7 +58,11 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 	if !s.cfg.P2P.Peers().IsBad(id) {
 		return
 	}
-	goodbyeCode := p2ptypes.ErrToGoodbyeCode(s.cfg.P2P.Peers().Scorers().ValidationError(id))
+	err := s.cfg.P2P.Peers().Scorers().ValidationError(id)
+	goodbyeCode := p2ptypes.ErrToGoodbyeCode(err)
+	if err == nil {
+		goodbyeCode = p2ptypes.GoodbyeCodeBanned
+	}
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
 		log.Debugf("Error when disconnecting with bad peer: %v", err)
 	}
@@ -92,7 +96,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, slots.ToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return err
 	}

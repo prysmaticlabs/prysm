@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -39,7 +39,7 @@ const signExitErr = "could not sign voluntary exit proposal"
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
-	currEpoch := core.SlotToEpoch(slot)
+	currEpoch := slots.ToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)
@@ -119,16 +119,9 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wrapper.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
+	if err := v.slashableProposalCheck(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -252,16 +245,6 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wb, signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wb, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
-	}
-
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
@@ -270,9 +253,10 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	if err := v.postBlockSignUpdate(ctx, pubKey, wsb, signingRoot); err != nil {
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wb, sig),
+			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()

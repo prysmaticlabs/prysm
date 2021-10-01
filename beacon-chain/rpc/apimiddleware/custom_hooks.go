@@ -5,19 +5,23 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapAttestationsArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -39,7 +43,7 @@ func wrapAttestationsArray(
 // Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
 func wrapValidatorIndicesArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -61,7 +65,7 @@ func wrapValidatorIndicesArray(
 // https://ethereum.github.io/beacon-apis/#/Validator/publishAggregateAndProofs expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSignedAggregateAndProofArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -83,7 +87,7 @@ func wrapSignedAggregateAndProofArray(
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconCommitteeSubnet expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapBeaconCommitteeSubscriptionsArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -105,7 +109,7 @@ func wrapBeaconCommitteeSubscriptionsArray(
 // https://ethereum.github.io/beacon-APIs/#/Validator/prepareSyncCommitteeSubnets expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSyncCommitteeSubscriptionsArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -127,7 +131,7 @@ func wrapSyncCommitteeSubscriptionsArray(
 // https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolSyncCommitteeSignatures expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSyncCommitteeSignaturesArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -149,7 +153,7 @@ func wrapSyncCommitteeSignaturesArray(
 // https://ethereum.github.io/beacon-APIs/#/Validator/publishContributionAndProofs expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapSignedContributionAndProofsArray(
-	endpoint apimiddleware.Endpoint,
+	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
@@ -168,13 +172,80 @@ func wrapSignedContributionAndProofsArray(
 	return true, nil
 }
 
-// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(endpoint apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
+type phase0PublishBlockRequestJson struct {
+	Phase0Block *beaconBlockJson `json:"phase0_block"`
+	Signature   string           `json:"signature" hex:"true"`
+}
+
+type altairPublishBlockRequestJson struct {
+	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
+	Signature   string                 `json:"signature" hex:"true"`
+}
+
+// setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
+// We don't know which version of the block got posted, but we can determine it from the slot.
+// We know that both Phase 0 and Altair blocks have a Message field with a Slot field,
+// so we deserialize the request into a struct s, which has the right fields, to obtain the slot.
+// Once we know the slot, we can determine what the PostRequest field of the endpoint should be, and we set it appropriately.
+func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	s := struct {
+		Message struct {
+			Slot string
+		}
+	}{}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
+	if err := json.Unmarshal(buf, &s); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+	}
+	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
+	}
+	if slots.ToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
+	} else {
+		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	return true, nil
+}
+
+// In preparePublishedBlock we transform the PostRequest.
+// gRPC expects either a phase0_block or an altair_block field in the JSON object, but we have a message field at this point.
+// We do a simple conversion depending on the type of endpoint.PostRequest (which was filled out previously in setInitialPublishBlockPostRequest)
+func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
-		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
-		block.Message.Body.Graffiti = hexutil.Encode(b[:])
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &phase0PublishBlockRequestJson{
+			Phase0Block: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
+	}
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &altairPublishBlockRequestJson{
+			AltairBlock: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
 	}
 	return nil
+}
+
+// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
+func prepareGraffiti(graffiti string) string {
+	b := bytesutil.ToBytes32([]byte(graffiti))
+	return hexutil.Encode(b[:])
 }
 
 type tempSyncCommitteesResponseJson struct {

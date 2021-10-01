@@ -83,7 +83,6 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	assert.NoError(t, err)
 	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
@@ -123,15 +122,11 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
-	sb = util.NewBeaconBlock()
-	r32, err := sb.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
+	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, root))
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
+	r.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
 	atts, err := r.cfg.AttPool.UnaggregatedAttestations()
@@ -199,7 +194,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	assert.NoError(t, err)
 	attesterDomain, err := signing.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
@@ -273,7 +267,6 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	assert.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	assert.NoError(t, err)
 	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
@@ -316,15 +309,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		seenAggregatedAttestationCache: lruwrpr.New(10),
 	}
 
-	sb = util.NewBeaconBlock()
-	r32, err := sb.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(sb)))
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
+	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, root))
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
+	r.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
 	require.NoError(t, r.processPendingAtts(context.Background()))
 
 	assert.Equal(t, 1, len(r.cfg.AttPool.AggregatedAttestations()), "Did not save aggregated att")

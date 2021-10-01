@@ -101,9 +101,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/headers/{block_id}":
 		endpoint.GetResponse = &blockHeaderResponseJson{}
 	case "/eth/v1/beacon/blocks":
-		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPostDeserializeRequestBodyIntoContainer: prepareGraffiti,
+			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
+			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlock,
 		}
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockResponseJson{}
