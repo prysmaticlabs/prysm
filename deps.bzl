@@ -826,14 +826,10 @@ def prysm_deps():
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ferranbt_fastssz",
-        importpath = "github.com/ferranbt/fastssz",  # keep
-        commit = "c930e5e537a4733062d622f07e71529afd2fa6b2",  # keep
-        remote = "https://github.com/rauljordan/fastssz",  # keep
+        importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        replace = None,  # keep
-        sum = None,  # keep
-        vcs = "git",  # keep
-        version = None,  # keep
+        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
+        version = "v0.0.0-20210905181407-59cf6761a7d5",
     )
 
     go_repository(

@@ -98,7 +98,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //    return sync_committee_indices
 func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
 	epoch := core.NextEpoch(s)
-	indices, err := helpers.ActiveValidatorIndices(s, epoch)
+	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -212,10 +212,10 @@ func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDispar
 	// Verify sync message slot is within the time range.
 	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
 		return fmt.Errorf(
-			"sync message slot %d not within allowable range of %d to %d (current slot)",
+			"sync message slot %d not within allowable range of slots %d to %d",
 			slot,
-			lowerBound.Unix(),
-			upperBound.Unix(),
+			core.SlotsSince(lowerBound),
+			core.SlotsSince(upperBound),
 		)
 	}
 	return nil

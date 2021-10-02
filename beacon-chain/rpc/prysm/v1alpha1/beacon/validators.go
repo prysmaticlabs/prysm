@@ -421,7 +421,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(requestedState, core.CurrentEpoch(requestedState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, core.CurrentEpoch(requestedState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -603,7 +603,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, headState, core.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -762,6 +762,7 @@ func (bs *Server) GetValidatorPerformance(
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
+	inactivityScores := make([]uint64, 0, responseCap)
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {
@@ -786,24 +787,30 @@ func (bs *Server) GetValidatorPerformance(
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
-		inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
-		inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
 		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
+
+		if headState.Version() == version.Phase0 {
+			inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
+			inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
+		} else {
+			inactivityScores = append(inactivityScores, summary.InactivityScore)
+		}
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    pubKeys,
-		InclusionSlots:                inclusionSlots,
-		InclusionDistances:            inclusionDistances,
 		CorrectlyVotedSource:          correctlyVotedSource,
-		CorrectlyVotedTarget:          correctlyVotedTarget,
+		CorrectlyVotedTarget:          correctlyVotedTarget, // In altair, when this is true then the attestation was definitely included.
 		CorrectlyVotedHead:            correctlyVotedHead,
 		CurrentEffectiveBalances:      effectiveBalances,
 		BalancesBeforeEpochTransition: beforeTransitionBalances,
 		BalancesAfterEpochTransition:  afterTransitionBalances,
 		MissingValidators:             missingValidators,
+		InclusionSlots:                inclusionSlots,     // Only populated in phase0
+		InclusionDistances:            inclusionDistances, // Only populated in phase 0
+		InactivityScores:              inactivityScores,   // Only populated in Altair
 	}, nil
 }
 
@@ -889,6 +896,7 @@ func (bs *Server) GetIndividualVotes(
 			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
 			InclusionSlot:                    v[index].InclusionSlot,
 			InclusionDistance:                v[index].InclusionDistance,
+			InactivityScore:                  v[index].InactivityScore,
 		})
 	}
 

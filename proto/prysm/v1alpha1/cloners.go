@@ -438,6 +438,7 @@ func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
 		GasLimit:      payload.GasLimit,
 		GasUsed:       payload.GasUsed,
 		Timestamp:     payload.Timestamp,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  CopyTransactions(payload.Transactions),

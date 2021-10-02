@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/async/abool"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -64,22 +65,25 @@ var (
 )
 
 // Common type for functional p2p validation options.
-type validationFn func(ctx context.Context) pubsub.ValidationResult
+type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P               p2p.P2P
-	DB                db.NoHeadAccessDatabase
-	AttPool           attestations.Pool
-	ExitPool          voluntaryexits.PoolManager
-	SlashingPool      slashings.PoolManager
-	SyncCommsPool     synccommittee.Pool
-	Chain             blockchainService
-	InitialSync       Checker
-	StateNotifier     statefeed.Notifier
-	BlockNotifier     blockfeed.Notifier
-	OperationNotifier operation.Notifier
-	StateGen          *stategen.State
+	AttestationNotifier     operation.Notifier
+	P2P                     p2p.P2P
+	DB                      db.NoHeadAccessDatabase
+	AttPool                 attestations.Pool
+	ExitPool                voluntaryexits.PoolManager
+	SlashingPool            slashings.PoolManager
+	SyncCommsPool           synccommittee.Pool
+	Chain                   blockchainService
+	InitialSync             Checker
+	StateNotifier           statefeed.Notifier
+	BlockNotifier           blockfeed.Notifier
+	OperationNotifier       operation.Notifier
+	StateGen                *stategen.State
+	SlasherAttestationsFeed *event.Feed
+	SlasherBlockHeadersFeed *event.Feed
 }
 
 // This defines the interface for interacting with block chain service

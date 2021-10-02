@@ -12,7 +12,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -39,9 +39,9 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
+	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	require.NoError(t, err)
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
@@ -51,7 +51,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
-	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err)
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
@@ -103,7 +103,9 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 
 	assert.Equal(t, true, valid, "Failed Validation")
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
@@ -146,7 +148,9 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 
 	buf = new(bytes.Buffer)
@@ -165,7 +169,9 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored = r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored = res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 }
 
@@ -198,7 +204,9 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "slashing from the far distant future should have timed out and returned false")
 }
 
@@ -227,7 +235,9 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Passed validation")
 }
 

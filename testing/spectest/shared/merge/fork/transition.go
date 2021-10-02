@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -41,7 +41,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			config := &ForkConfig{}
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
-			preforkBlocks := make([]*ethpb.SignedBeaconBlockAltair, 0)
+			preforkBlocks := make([]*ethpb.SignedBeaconBlockMerge, 0)
 			postforkBlocks := make([]*ethpb.SignedBeaconBlockMerge, 0)
 			// Fork happens without any pre-fork blocks.
 			if config.ForkBlock == 0 {
@@ -63,7 +63,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlockAltair{}
+					block := &ethpb.SignedBeaconBlockMerge{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					preforkBlocks = append(preforkBlocks, block)
 				}
@@ -85,21 +85,21 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconStateAltair{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := stateAltair.InitializeFromProto(beaconStateBase)
+			beaconState, err := v2.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
 			bc := params.BeaconConfig()
-			bc.AltairForkEpoch = types.Epoch(config.ForkEpoch)
+			bc.MergeForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				wsb, err := wrapperv1.WrappedAltairSignedBeaconBlock(b)
+				wsb, err := wrapperv1.WrappedMergeSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = st.(*stateAltair.BeaconState)
+				beaconState, ok = st.(*v2.BeaconState)
 				require.Equal(t, true, ok)
 			}
 			postState := state.BeaconState(beaconState)

@@ -1,4 +1,4 @@
-package helpers
+package signing
 
 import (
 	fssz "github.com/ferranbt/fastssz"
@@ -64,7 +64,7 @@ func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
-func ComputeDomainVerifySigningRoot(st state.BeaconState, index types.ValidatorIndex, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
+func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index types.ValidatorIndex, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
 	v, err := st.ValidatorAtIndex(index)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func ComputeDomainVerifySigningRoot(st state.BeaconState, index types.ValidatorI
 	return VerifySigningRoot(obj, v.PublicKey, sig, d)
 }
 
-// VerifySigningRoot verifies the signing root of an object given it's public key, signature and domain.
+// VerifySigningRoot verifies the signing root of an object given its public key, signature and domain.
 func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -96,7 +96,27 @@ func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 	return nil
 }
 
-// VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
+// VerifyBlockHeaderSigningRoot verifies the signing root of a block header given its public key, signature and domain.
+func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signature, domain []byte) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	root, err := signingData(blkHdr.HashTreeRoot, domain)
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing root")
+	}
+	if !sig.Verify(publicKey, root[:]) {
+		return ErrSigFailedToVerify
+	}
+	return nil
+}
+
+// VerifyBlockSigningRoot verifies the signing root of a block given its public key, signature and domain.
 func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) error {
 	set, err := BlockSignatureSet(pub, signature, domain, rootFunc)
 	if err != nil {

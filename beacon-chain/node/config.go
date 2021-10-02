@@ -1,6 +1,7 @@
 package node
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -93,5 +94,28 @@ func configureInteropConfig(cliCtx *cli.Context) {
 		bCfg := params.BeaconConfig()
 		bCfg.ConfigName = "interop"
 		params.OverrideBeaconConfig(bCfg)
+	}
+}
+
+func configureExecutionMode(cliCtx *cli.Context) {
+	if cliCtx.IsSet(flags.EnableMerge.Name) {
+		c := params.BeaconConfig()
+		c.EnabledMerge = cliCtx.Bool(flags.EnableMerge.Name)
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalTotalDifficulty = []byte(cliCtx.String(flags.TerminalTotalDifficultyOverride.Name))
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.FeeRecipient.Name) {
+		c := params.BeaconConfig()
+		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		params.OverrideBeaconConfig(c)
 	}
 }

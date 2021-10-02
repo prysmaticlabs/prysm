@@ -30,7 +30,7 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBodyAltair{SyncAggregate: sc}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
-				return altair.ProcessSyncAggregate(s, body.SyncAggregate)
+				return altair.ProcessSyncAggregate(context.Background(), s, body.SyncAggregate)
 			})
 		})
 	}

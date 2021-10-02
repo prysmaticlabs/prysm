@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -250,6 +251,12 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
+			case version.Merge:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
 			default:
 				return nil, errors.New("beacon state should have a version")
 			}
@@ -261,6 +268,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 		if CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if CanUpgradeToMerge(state.Slot()) {
+			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
@@ -285,6 +300,16 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	epochStart := core.IsEpochStart(slot)
 	altairEpoch := core.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
+}
+
+// CanUpgradeToMerge returns true if the input `slot` can upgrade to Merge.
+//
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == MERGE_FORK_EPOCH
+func CanUpgradeToMerge(slot types.Slot) bool {
+	epochStart := core.IsEpochStart(slot)
+	mergeEpoch := core.SlotToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
+	return epochStart && mergeEpoch
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
@@ -380,7 +405,7 @@ func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	state, err = e.ProcessRegistryUpdates(state)
+	state, err = e.ProcessRegistryUpdates(ctx, state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process registry updates")
 	}

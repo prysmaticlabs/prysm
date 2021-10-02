@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -154,7 +154,7 @@ func executeStateTransitionStateGen(
 		if err != nil {
 			return nil, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return nil, err
 		}

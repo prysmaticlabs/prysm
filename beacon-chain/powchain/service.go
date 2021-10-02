@@ -98,6 +98,7 @@ type POWBlockFetcher interface {
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -113,6 +114,7 @@ type RPCDataFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
 	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
 // RPCClient defines the rpc methods required to interact with the eth1 node.
@@ -148,6 +150,7 @@ type Service struct {
 	runError                error
 	preGenesisState         state.BeaconState
 	bsUpdater               BeaconNodeStatsUpdater
+	catalystClient          CatalystClient
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -468,6 +471,7 @@ func (s *Service) initializeConnection(
 ) {
 	s.httpLogger = httpClient
 	s.eth1DataFetcher = httpClient
+	s.catalystClient = httpClient
 	s.depositContractCaller = contractCaller
 	s.rpcClient = rpcClient
 }
@@ -616,6 +620,16 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
+
+		// when a node pauses for some time and starts again, the deposits to finalize
+		// accumulates. we finalize them here before we are ready to receive a block.
+		// Otherwise, the first few blocks will be slower to compute as we will
+		// hold the lock and be busy finalizing the deposits.
+		s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
+		// Deposit proofs are only used during state transition and can be safely removed to save space.
+		if err = s.cfg.DepositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
+			return errors.Wrap(err, "could not prune deposit proofs")
+		}
 	}
 	validDepositsCount.Add(float64(currIndex))
 	// Only add pending deposits if the container slice length
@@ -823,13 +837,13 @@ func (s *Service) run(done <-chan struct{}) {
 				chainstartTicker.Stop()
 				continue
 			}
-			s.logTillChainStart()
+			s.logTillChainStart(context.Background())
 		}
 	}
 }
 
 // logs the current thresholds required to hit chainstart every minute.
-func (s *Service) logTillChainStart() {
+func (s *Service) logTillChainStart(ctx context.Context) {
 	if s.chainStartData.Chainstarted {
 		return
 	}
@@ -838,7 +852,7 @@ func (s *Service) logTillChainStart() {
 		log.Error(err)
 		return
 	}
-	valCount, genesisTime := s.currentCountAndTime(blockTime)
+	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	valNeeded := uint64(0)
 	if valCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
 		valNeeded = params.BeaconConfig().MinGenesisActiveValidatorCount - valCount

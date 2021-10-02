@@ -50,7 +50,6 @@ func TestGetSpec(t *testing.T) {
 	config.MergeForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
-	config.MinAnchorPowBlockDifficulty = 1000
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -95,6 +94,7 @@ func TestGetSpec(t *testing.T) {
 	config.MinSlashingPenaltyQuotientAltair = 68
 	config.ProportionalSlashingMultiplierAltair = 69
 	config.InactivityScoreRecoveryRate = 70
+	config.MinSyncCommitteeParticipants = 71
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -124,7 +124,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 90, len(resp.Data))
+	assert.Equal(t, 91, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -291,6 +291,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "69", v)
 		case "INACTIVITY_SCORE_RECOVERY_RATE":
 			assert.Equal(t, "70", v)
+		case "MIN_SYNC_COMMITTEE_PARTICIPANTS":
+			assert.Equal(t, "71", v)
 		case "PROPOSER_WEIGHT":
 			assert.Equal(t, "8", v)
 		case "DOMAIN_BEACON_PROPOSER":

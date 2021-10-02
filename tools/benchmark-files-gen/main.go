@@ -12,6 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -137,11 +138,11 @@ func generateMarshalledFullStateAndBlock() error {
 	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
 		return err
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	if err != nil {
 		return err
 	}
-	block.Signature, err = helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
+	block.Signature, err = signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), block.Block, params.BeaconConfig().DomainBeaconProposer, privs[proposerIdx])
 	if err != nil {
 		return err
 	}

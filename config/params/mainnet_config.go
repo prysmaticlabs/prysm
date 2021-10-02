@@ -22,8 +22,7 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	// Placeholder until fork epoch is decided.
-	mainnetAltairForkEpoch = math.MaxUint64
+	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
 	mainnetMergeForkEpoch = math.MaxUint64
 )
@@ -192,6 +191,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
+<<<<<<< HEAD
 	GenesisForkVersion:          []byte{0, 0, 0, 0},
 	AltairForkVersion:           []byte{1, 0, 0, 0},
 	AltairForkEpoch:             mainnetAltairForkEpoch,
@@ -200,6 +200,15 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ShardingForkVersion:         []byte{3, 0, 0, 0},
 	ShardingForkEpoch:           math.MaxUint64,
 	MinAnchorPowBlockDifficulty: 4294967296,
+=======
+	GenesisForkVersion:  []byte{0, 0, 0, 0},
+	AltairForkVersion:   []byte{1, 0, 0, 0},
+	AltairForkEpoch:     mainnetAltairForkEpoch,
+	MergeForkVersion:    []byte{2, 0, 0, 0},
+	MergeForkEpoch:      math.MaxUint64,
+	ShardingForkVersion: []byte{3, 0, 0, 0},
+	ShardingForkEpoch:   math.MaxUint64,
+>>>>>>> ab5f488cf43f0b6262dc47a769b9d5b6c4bdf1d5
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
@@ -239,4 +248,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Merge.
 	MaxExecutionTransactions:     16384,
 	MaxBytesPerOpaqueTransaction: 1048576,
+	TerminalBlockHash:            [32]byte{},
+	// Light client
+	MinSyncCommitteeParticipants: 1,
 }

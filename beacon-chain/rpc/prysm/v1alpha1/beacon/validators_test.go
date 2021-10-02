@@ -1347,7 +1347,7 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 		pubKey(2),
 		pubKey(3),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -1389,7 +1389,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	wanted := [][]byte{
 		bytesutil.PadTo([]byte("2"), 48),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -1449,7 +1449,7 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 		pubKey(2),
 		pubKey(3),
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, core.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, core.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
@@ -2032,14 +2032,15 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{0, 0},
-		InclusionDistances:            []types.Slot{0, 0},
+		InclusionSlots:                nil,
+		InclusionDistances:            nil,
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
 		BalancesBeforeEpochTransition: []uint64{101, 102},
 		BalancesAfterEpochTransition:  []uint64{0, 0},
 		MissingValidators:             [][]byte{publicKey1[:]},
+		InactivityScores:              []uint64{0, 0},
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{

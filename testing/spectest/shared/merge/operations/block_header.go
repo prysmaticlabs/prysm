@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -51,7 +52,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
 			bodyRoot, err := block.Body.HashTreeRoot()
 			require.NoError(t, err)
-			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block.Slot, block.ProposerIndex, block.ParentRoot, bodyRoot[:])
+			beaconState, err := blocks.ProcessBlockHeaderNoVerify(context.Background(), preBeaconState, block.Slot, block.ProposerIndex, block.ParentRoot, bodyRoot[:])
 			if postSSZExists {
 				require.NoError(t, err)
 

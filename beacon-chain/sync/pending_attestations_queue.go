@@ -70,7 +70,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					aggValid := s.validateAggregatedAtt(ctx, signedAtt) == pubsub.ValidationAccept
+					valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
+					if err != nil {
+						log.WithError(err).Debug("Pending aggregated attestation failed validation")
+					}
+					aggValid := pubsub.ValidationAccept == valRes
 					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
 						if err := s.cfg.AttPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							log.WithError(err).Debug("Could not save aggregate attestation")
@@ -95,13 +99,17 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						log.WithError(err).Debug("Could not verify FFG consistency")
 						continue
 					}
-					preState, err := s.cfg.Chain.AttestationPreState(ctx, att.Aggregate)
+					preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
 					if err != nil {
 						log.WithError(err).Debug("Could not retrieve attestation prestate")
 						continue
 					}
 
-					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+					if err != nil {
+						log.WithError(err).Debug("Pending unaggregated attestation failed validation")
+						continue
+					}
 					if valid == pubsub.ValidationAccept {
 						if err := s.cfg.AttPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
 							log.WithError(err).Debug("Could not save unaggregated attestation")
@@ -109,7 +117,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
-						valCount, err := helpers.ActiveValidatorCount(preState, core.SlotToEpoch(att.Aggregate.Data.Slot))
+						valCount, err := helpers.ActiveValidatorCount(ctx, preState, core.SlotToEpoch(att.Aggregate.Data.Slot))
 						if err != nil {
 							log.WithError(err).Debug("Could not retrieve active validator count")
 							continue

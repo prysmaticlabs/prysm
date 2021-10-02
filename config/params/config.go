@@ -4,6 +4,7 @@ package params
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -130,16 +131,14 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	MergeForkVersion            []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
-	MergeForkEpoch              types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
-	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
-	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
-	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of the merge.
-	TransitionTotalDifficulty   uint64                  `yaml:"TRANSITION_TOTAL_DIFFICULTY" spec:"true"`     // TransitionTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	MergeForkVersion    []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
+	MergeForkEpoch      types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
+	ShardingForkVersion []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch   types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -175,10 +174,19 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
 
 	// Gas.
-	GasLimitDenominator          uint64 `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"`            // GasLimitDenominator for merge.
-	MinGasLimit                  uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`                    // MinGasLimit for merge.
-	MaxExecutionTransactions     uint64 `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
-	MaxBytesPerOpaqueTransaction uint64 `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MAX_BYTES_PER_OPAQUE_TRANSACTION of beacon chain.
+	GasLimitDenominator uint64 `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"` // GasLimitDenominator for merge.
+	MinGasLimit         uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`         // MinGasLimit for merge.
+
+	// Merge.
+	EnabledMerge                 bool           // EnabledMerge is true if merge feature is enabled.
+	MaxExecutionTransactions     uint64         `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
+	MaxBytesPerOpaqueTransaction uint64         `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
+	TerminalBlockHash            common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
+	TerminalTotalDifficulty      []byte         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	FeeRecipient                 common.Address // FeeRecipient where the transaction fee goes to.
+
+	// Light client
+	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

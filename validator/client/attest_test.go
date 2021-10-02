@@ -13,7 +13,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -151,7 +151,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Signature:       make([]byte, 96),
 	}
 
-	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
+	root, err := signing.ComputeSigningRoot(expectedAttestation.Data, make([]byte, 32))
 	require.NoError(t, err)
 
 	sig, err := validator.keyManager.Sign(context.Background(), &validatorpb.SignRequest{
@@ -454,7 +454,7 @@ func TestSignAttestation(t *testing.T) {
 		Epoch:           0,
 	}
 	genesisValidatorRoot := [32]byte{0x01, 0x02}
-	attesterDomain, err := helpers.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
+	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).

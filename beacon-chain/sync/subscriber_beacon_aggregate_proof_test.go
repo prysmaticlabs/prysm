@@ -17,8 +17,8 @@ import (
 func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.T) {
 	r := &Service{
 		cfg: &Config{
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
@@ -39,8 +39,8 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testing.T) {
 	r := &Service{
 		cfg: &Config{
-			AttPool:           attestations.NewPool(),
-			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}

@@ -3,8 +3,7 @@ package params
 import "math"
 
 const (
-	AltairE2EForkEpoch = 6
-
+	altairE2EForkEpoch = 6
 	MergeE2EForkEpoch = math.MaxUint64
 )
 
@@ -41,7 +40,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
-	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 
 	// Merge Fork Parameters.
 	//e2eConfig.MergeForkVersion = MergeE2EForkEpoch  // TODO_MERGE: Add a proper merge fork version when e2e is ready for it.

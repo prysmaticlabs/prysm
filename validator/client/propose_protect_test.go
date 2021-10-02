@@ -66,7 +66,7 @@ func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) 
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &features.Flags{
-		SlasherProtection: false,
+		RemoteSlasherProtection: false,
 	}
 	reset := features.InitWithReset(config)
 	defer reset()
@@ -117,11 +117,6 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 }
 
 func TestPreBlockSignValidation(t *testing.T) {
-	config := &features.Flags{
-		SlasherProtection: true,
-	}
-	reset := features.InitWithReset(config)
-	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
@@ -131,16 +126,14 @@ func TestPreBlockSignValidation(t *testing.T) {
 	block.Block.Slot = 10
 	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
 	validator.protector = mockProtector
-	err := validator.preBlockSignValidations(context.Background(), pubKey, wrapper.WrappedPhase0BeaconBlock(block.Block), [32]byte{2})
-	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
 	mockProtector.AllowBlock = true
-	err = validator.preBlockSignValidations(context.Background(), pubKey, wrapper.WrappedPhase0BeaconBlock(block.Block), [32]byte{2})
+	err := validator.preBlockSignValidations(context.Background(), pubKey, wrapper.WrappedPhase0BeaconBlock(block.Block), [32]byte{2})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 
 func TestPostBlockSignUpdate(t *testing.T) {
 	config := &features.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := features.InitWithReset(config)
 	defer reset()

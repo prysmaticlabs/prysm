@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -157,7 +158,7 @@ func CalculateStateRoot(
 		if err != nil {
 			return [32]byte{}, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -203,7 +204,7 @@ func ProcessBlockNoVerifyAnySig(
 		if err != nil {
 			return nil, nil, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -214,7 +215,7 @@ func ProcessBlockNoVerifyAnySig(
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block().Body().RandaoReveal())
+	rSet, err := b.RandaoSignatureSet(ctx, state, signed.Block().Body().RandaoReveal())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
@@ -304,10 +305,26 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		return nil, err
 	}
-	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
+	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	enabled, err := execution.IsExecutionEnabled(state, blk.Body())
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not check if execution is enabled")
+	}
+	if enabled {
+		payload, err := blk.Body().ExecutionPayload()
+		if err != nil {
+			return nil, err
+		}
+		state, err = execution.ProcessPayload(state, payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process execution payload")
+		}
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())

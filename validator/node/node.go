@@ -251,10 +251,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if features.Get().SlasherProtection {
-		if err := c.registerSlasherService(); err != nil {
-			return err
-		}
+	if err := c.registerSlasherService(); err != nil {
+		return err
 	}
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
@@ -340,10 +338,8 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if features.Get().SlasherProtection {
-		if err := c.registerSlasherService(); err != nil {
-			return err
-		}
+	if err := c.registerSlasherService(); err != nil {
+		return err
 	}
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
@@ -437,6 +433,9 @@ func (c *ValidatorClient) registerValidatorService(
 	return c.services.RegisterService(v)
 }
 func (c *ValidatorClient) registerSlasherService() error {
+	if !features.Get().RemoteSlasherProtection {
+		return nil
+	}
 	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	if endpoint == "" {
 		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")

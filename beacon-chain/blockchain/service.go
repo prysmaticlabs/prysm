@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core"
@@ -82,7 +83,10 @@ type Config struct {
 	ForkChoiceStore         f.ForkChoicer
 	AttService              *attestations.Service
 	StateGen                *stategen.State
+	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	BlockFetcher            powchain.POWBlockFetcher
+	ExecutionEngineCaller   powchain.CatalystClient
 }
 
 // NewService instantiates a new block service instance that will
@@ -296,7 +300,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(genesisState); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
 		return nil, err
 	}
 
