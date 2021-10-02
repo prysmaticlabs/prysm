@@ -56,10 +56,14 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
 		return pubsub.ValidationReject, err
 	}
+	// Do not process slot 0 aggregates.
+	if m.Message.Aggregate.Data.Slot == 0 {
+		return pubsub.ValidationIgnore, nil
+	}
 
 	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
 	// of a received aggregated attestation.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.AggregatedAttReceived,
 		Data: &operation.AggregatedAttReceivedData{
 			Attestation: m.Message,

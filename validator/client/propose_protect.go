@@ -11,15 +11,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
-var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
-var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
+var failedBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
+var failedBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 
-func (v *validator) preBlockSignValidations(
-	ctx context.Context, pubKey [48]byte, blk block.BeaconBlock, signingRoot [32]byte,
+func (v *validator) slashableProposalCheck(
+	ctx context.Context, pubKey [48]byte, signedBlock block.SignedBeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
+	blk := signedBlock.Block()
 	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, blk.Slot())
 	if err != nil {
 		if v.emitAccountMetrics {
@@ -42,7 +42,7 @@ func (v *validator) preBlockSignValidations(
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return errors.New(failedPreBlockSignLocalErr)
+		return errors.New(failedBlockSignLocalErr)
 	}
 
 	// Based on EIP3076, validator should refuse to sign any proposal with slot less
@@ -57,46 +57,23 @@ func (v *validator) preBlockSignValidations(
 		)
 	}
 
-	if features.Get().SlasherProtection && v.protector != nil {
-		blockHdr, err := block.BeaconBlockHeaderFromBlockInterface(blk)
+	if features.Get().RemoteSlasherProtection {
+		blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
-		if !v.protector.CheckBlockSafety(ctx, blockHdr) {
+		slashing, err := v.slashingProtectionClient.IsSlashableBlock(ctx, blockHdr)
+		if err != nil {
+			return errors.Wrap(err, "could not check if block is slashable")
+		}
+		if slashing != nil && len(slashing.ProposerSlashings) > 0 {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return errors.New(failedPreBlockSignExternalErr)
+			return errors.New(failedBlockSignExternalErr)
 		}
 	}
-
-	return nil
-}
-
-func (v *validator) postBlockSignUpdate(
-	ctx context.Context,
-	pubKey [48]byte,
-	blk block.SignedBeaconBlock,
-	signingRoot [32]byte,
-) error {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if features.Get().SlasherProtection && v.protector != nil {
-		sbh, err := block.SignedBeaconBlockHeaderFromBlockInterface(blk)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		valid, err := v.protector.CommitBlock(ctx, sbh)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return fmt.Errorf(failedPostBlockSignErr)
-		}
-	}
-	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, blk.Block().Slot(), signingRoot[:]); err != nil {
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, blk.Slot(), signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}

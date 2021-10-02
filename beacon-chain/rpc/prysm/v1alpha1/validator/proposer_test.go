@@ -1876,7 +1876,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 			}
 			atts := tt.inputAtts()
-			received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
+			received, err := proposerServer.validateAndDeleteAttsInPool(context.Background(), state, atts)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				assert.Equal(t, nil, received)

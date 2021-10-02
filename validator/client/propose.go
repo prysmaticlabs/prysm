@@ -119,16 +119,9 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wrapper.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
+	if err := v.slashableProposalCheck(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -252,16 +245,6 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wb, signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wb, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
-	}
-
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
@@ -270,9 +253,10 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	if err := v.postBlockSignUpdate(ctx, pubKey, wsb, signingRoot); err != nil {
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wb, sig),
+			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -106,22 +107,36 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
+	// If slasher is configured, forward the attestations in the block via
+	// an event feed for processing.
+	if features.Get().EnableSlasher {
+		// Feed the indexed attestation to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
+			// Using a different context to prevent timeouts as this operation can be expensive
+			// and we want to avoid affecting the critical code path.
+			ctx := context.TODO()
+			for _, att := range signed.Block().Body().Attestations() {
+				committee, err := helpers.BeaconCommitteeFromState(ctx, preState, att.Data.Slot, att.Data.CommitteeIndex)
+				if err != nil {
+					log.WithError(err).Error("Could not get attestation committee")
+					tracing.AnnotateError(span, err)
+					return
+				}
+				indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
+				if err != nil {
+					log.WithError(err).Error("Could not convert to indexed attestation")
+					tracing.AnnotateError(span, err)
+					return
+				}
+				s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
 			}
 		}()
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+	currJustifiedEpoch := s.justifiedCheckpt.Epoch
+	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -154,6 +169,27 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			Verified:    true,
 		},
 	})
+
+	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+	if features.Get().EnableNextSlotStateCache {
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
+	}
+
+	// Save justified check point to db.
+	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+			return err
+		}
+	}
 
 	// Update finalized check point.
 	if newFinalized {
