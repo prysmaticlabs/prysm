@@ -395,6 +395,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 
 	var sig bls.Signature
 	switch b.Version() {
+
+	// TODO: Add merge block signing
+
 	case version.Altair:
 		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
 		if !ok {

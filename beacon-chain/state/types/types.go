@@ -54,12 +54,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -122,8 +122,7 @@ const (
 
 // Altair fields which replaced previous phase 0 fields.
 const (
-	// Epoch Attestations is switched with participation bits in
-	// Altair.
+	// Epoch Attestations is switched with participation bits in Altair.
 	PreviousEpochParticipationBits = PreviousEpochAttestations
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )
