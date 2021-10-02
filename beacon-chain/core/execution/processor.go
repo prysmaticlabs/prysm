@@ -177,15 +177,10 @@ func isValidGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPay
 
 // This converts `payload` to header format.
 func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
-	/*
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
 	}
-	 */
-	var txRoot [32]byte
-	empty32 := make([]byte, 32)
-	copy(txRoot[:], empty32)
 
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
