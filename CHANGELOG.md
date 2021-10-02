@@ -97,6 +97,7 @@ Please check that you are not using any of the removed flags in this section!
 - Removed tools/faucet. Use the faucet in [prysmaticlabs/periphery](https://github.com/prysmaticlabs/periphery/tree/c2ac600882c37fc0f2a81b0508039124fb6bcf47/eth-faucet) if operating a testnet faucet server.
 - Tooling for prior testnet contracts has been removed. Any of the old testnet contracts with `drain()` function have been removed as well. #9637
 - Toledo tesnet config is removed.
+- Removed --eth-api-port (beacon node). All APIs interaction has been moved to --grpc-gateway-port. See #9640.
 
 ### Fixed
 
