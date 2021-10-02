@@ -191,24 +191,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-<<<<<<< HEAD
-	GenesisForkVersion:          []byte{0, 0, 0, 0},
-	AltairForkVersion:           []byte{1, 0, 0, 0},
-	AltairForkEpoch:             mainnetAltairForkEpoch,
-	MergeForkVersion:            []byte{2, 0, 0, 0},
-	MergeForkEpoch:              mainnetMergeForkEpoch,
-	ShardingForkVersion:         []byte{3, 0, 0, 0},
-	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
-=======
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
 	AltairForkVersion:   []byte{1, 0, 0, 0},
 	AltairForkEpoch:     mainnetAltairForkEpoch,
 	MergeForkVersion:    []byte{2, 0, 0, 0},
-	MergeForkEpoch:      math.MaxUint64,
+	MergeForkEpoch:      mainnetMergeForkEpoch,
 	ShardingForkVersion: []byte{3, 0, 0, 0},
 	ShardingForkEpoch:   math.MaxUint64,
->>>>>>> ab5f488cf43f0b6262dc47a769b9d5b6c4bdf1d5
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
