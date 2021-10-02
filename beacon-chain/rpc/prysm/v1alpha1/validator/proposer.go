@@ -229,7 +229,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
-	deposits, atts, err := vs.depositAndPackAttestations(ctx, head, eth1Data)
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data)
 	if err != nil {
 		return nil, err
 	}
@@ -276,9 +276,9 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
-func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	if features.Get().EnableGetBlockOptimizations {
-		deposits, atts, err := vs.optimizedDepositAndPackAttestations(ctx, head, eth1Data)
+		deposits, atts, err := vs.optimizedPackDepositsAndAttestations(ctx, head, eth1Data)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -300,7 +300,7 @@ func (vs *Server) depositAndPackAttestations(ctx context.Context, head state.Bea
 	return deposits, atts, nil
 }
 
-func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
 	var atts []*ethpb.Attestation
@@ -311,7 +311,7 @@ func (vs *Server) optimizedDepositAndPackAttestations(ctx context.Context, head 
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 		}
-		// if the original context is cancelled, then cancel this routine toobazel run //:gazelle -- fix`
+		// if the original context is cancelled, then cancel this routine too
 		select {
 		case <-egctx.Done():
 			return egctx.Err()
@@ -610,7 +610,7 @@ func (vs *Server) deposits(
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
-	// Need to fetch if the deposits up to the state's latest ethpb 1 data matches
+	// Need to fetch if the deposits up to the state's latest ethEnableGetBlockOptimizations 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
