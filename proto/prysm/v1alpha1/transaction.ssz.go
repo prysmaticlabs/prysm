@@ -8,29 +8,6 @@ import (
 // IMPORTANT
 // The methods in this file are hand-written patches to the Transaction type.
 
-// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayload object
-// fastssz is not currently able to handle union types so it generates an incorrect
-// implementation for this method.
-/*
-func (e *ExecutionPayload) SizeSSZ() int {
-	size := 508
-
-	// Field (10) 'ExtraData'
-	size += len(e.ExtraData)
-
-	// Field (13) 'Transactions'
-	for _, t := range e.Transactions {
-		// offset
-		size += 4
-		// payload
-		size += t.SizeSSZ()
-	}
-
-	return size
-}
-
-*/
-
 // MarshalSSZ ssz marshals the Transaction object
 func (t *Transaction) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(t)
