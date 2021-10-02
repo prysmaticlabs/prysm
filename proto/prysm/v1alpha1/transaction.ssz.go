@@ -2,15 +2,11 @@ package eth
 
 import (
 	"fmt"
-
 	ssz "github.com/ferranbt/fastssz"
 )
 
 // IMPORTANT
-// The methods in this file are hand-written patches to the transaction type
-// and ExecutionPayload.SizeSSZ. When you regenerate ssz methods make sure
-// to delete the methods that conflict with what is in this file from
-// generated.ssz.go or you will have a broken build.
+// The methods in this file are hand-written patches to the Transaction type.
 
 // SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayload object
 // fastssz is not currently able to handle union types so it generates an incorrect
