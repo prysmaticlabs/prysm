@@ -5,6 +5,10 @@
 This release is the largest release of Prysm to date. v2.0.0 includes support for the upcoming Altair hard fork on the mainnet Ethereum Beacon Chain.
 This release consists of [380 changes](https://github.com/prysmaticlabs/prysm/compare/v1.4.4...4f31ba648977a00668cafa10bc3aa93f41fbe31e) to support Altair, improve performance of phase0 beacon nodes, and various bug fixes from v1.4.4.
 
+### Upgrading From v1
+
+Please update your beacon node to v2.0.0 prior to updating your validator. The beacon node can serve requests to a v1.4.4 validator, however a v2.0.0 validator will not start against a v1.4.4 beacon node. If you're operating a highly available beacon chain service, ensure that all of your beacon nodes are updated to v2.0.0 before starting the upgrade on your validators.
+
 ### Added
 
 - Full Altair support. [Learn more about Altair.](https://github.com/ethereum/annotated-spec/blob/8473024d745a3a2b8a84535d57773a8e86b66c9a/altair/beacon-chain.md)
