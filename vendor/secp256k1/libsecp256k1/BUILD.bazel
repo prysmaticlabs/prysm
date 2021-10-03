@@ -32,6 +32,5 @@ cc_library(
         "src/secp256k1.c",
         "src/util.h",
     ],
-    visibility = ["//visibility:public"],
-    deps = [],
+    visibility = ["//vendor/secp256k1:__pkg__"],
 )
