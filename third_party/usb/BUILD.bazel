@@ -10,7 +10,6 @@ go_library(
         "usb.go",
         "usb_disabled.go",
     ],
-    importmap = "github.com/prysmaticlabs/prysm/vendor/usb",
     importpath = "github.com/karalabe/usb",
     visibility = ["@com_github_ethereum_go_ethereum//:__subpackages__"],
 )

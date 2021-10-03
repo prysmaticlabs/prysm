@@ -809,8 +809,8 @@ def prysm_deps():
         sum = "h1:uMSWt0qDhaqqCk0PWqfDFOMUExmk4Tnbma6c6oXW+Pk=",
         version = "v1.10.9",
         build_directives = [
-            "gazelle:resolve go github.com/ethereum/go-ethereum/crypto/secp256k1 @prysm//vendor/secp256k1:go_default_library",
-            "gazelle:resolve go github.com/karalabe/usb @prysm//vendor/usb:go_default_library",
+            "gazelle:resolve go github.com/ethereum/go-ethereum/crypto/secp256k1 @prysm//third_party/secp256k1:go_default_library",
+            "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
         ],
     )
 

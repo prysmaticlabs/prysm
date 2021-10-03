@@ -13,14 +13,13 @@ go_library(
         "secp256.go",
     ],
     cdeps = [
-        "//vendor/secp256k1/libsecp256k1:hdrs",
+        "//third_party/secp256k1/libsecp256k1:hdrs",
     ],
     cgo = True,
     copts = [
-        "-Ivendor/secp256k1/libsecp256k1",
-        "-Ivendor/secp256k1/libsecp256k1/src",
+        "-Ithird_party/secp256k1/libsecp256k1",
+        "-Ithird_party/secp256k1/libsecp256k1/src",
     ],
-    importmap = "github.com/prysmaticlabs/prysm/vendor/secp256k1",
     importpath = "github.com/ethereum/go-ethereum/crypto/secp256k1",
     visibility = ["@com_github_ethereum_go_ethereum//crypto:__subpackages__"],
 )
