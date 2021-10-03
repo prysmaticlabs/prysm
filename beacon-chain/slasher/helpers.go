@@ -129,6 +129,18 @@ func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
 	}).Info("Attester slashing detected")
 }
 
+func logProposerSlashing(slashing *ethpb.ProposerSlashing) {
+	log.WithFields(logrus.Fields{
+		"validatorIndex": slashing.Header_1.Header.ProposerIndex,
+		"slot":           slashing.Header_1.Header.Slot,
+	}).Info("Proposer slashing detected")
+}
+
+// Turns a uint64 value to a string representation.
+func uintToString(val uint64) string {
+	return strconv.FormatUint(val, 10)
+}
+
 // If an existing signing root does not match an incoming proposal signing root,
 // we then have a double block proposer slashing event.
 func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
