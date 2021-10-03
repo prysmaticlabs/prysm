@@ -308,8 +308,8 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == MERGE_FORK_EPOCH
 func CanUpgradeToMerge(slot types.Slot) bool {
-	epochStart := core.IsEpochStart(slot)
-	mergeEpoch := core.SlotToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
+	epochStart := slots.IsEpochStart(slot)
+	mergeEpoch := slots.ToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
 	return epochStart && mergeEpoch
 }
 

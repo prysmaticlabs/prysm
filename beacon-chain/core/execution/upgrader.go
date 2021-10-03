@@ -3,7 +3,7 @@ package execution
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -12,7 +12,7 @@ import (
 
 // UpgradeToMerge updates input state to return the version Merge state.
 func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	epoch := core.CurrentEpoch(state)
+	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateMerge{

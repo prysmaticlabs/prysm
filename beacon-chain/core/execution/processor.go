@@ -4,14 +4,15 @@ import (
 	"bytes"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // IsMergeComplete returns true if merge has been completed.
@@ -101,14 +102,14 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 	if err := verifyPayload(st, payload); err != nil {
 		return nil, err
 	}
-	random, err := helpers.RandaoMix(st, core.CurrentEpoch(st))
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return nil, err
 	}
 	if !bytes.Equal(payload.Random, random) {
 		return nil, errors.New("incorrect random")
 	}
-	t, err := core.SlotToTime(st.GenesisTime(), st.Slot())
+	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return nil, err
 	}
