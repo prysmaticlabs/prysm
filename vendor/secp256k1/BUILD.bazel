@@ -1,5 +1,7 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
+# gazelle:prefix github.com/ethereum/go-ethereum/crypto/secp256k1
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -10,12 +12,13 @@ go_library(
         "scalar_mult_nocgo.go",
         "secp256.go",
     ],
+    cdeps = [
+        "//vendor/secp256k1/libsecp256k1:hdrs",
+    ],
     cgo = True,
     copts = [
         "-Ivendor/secp256k1/libsecp256k1",
-    ],
-    cdeps = [
-        "//vendor/secp256k1/libsecp256k1:hdrs",
+        "-Ivendor/secp256k1/libsecp256k1/src",
     ],
     importmap = "github.com/prysmaticlabs/prysm/vendor/secp256k1",
     importpath = "github.com/ethereum/go-ethereum/crypto/secp256k1",
