@@ -8,10 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
@@ -39,11 +38,6 @@ func run(ctx context.Context, v iface.Validator) {
 		// log.Fatalf will prevent defer from being called
 		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
-	}
-	if features.Get().RemoteSlasherProtection {
-		if err := v.SlasherReady(ctx); err != nil {
-			log.Fatalf("Slasher is not ready: %v", err)
-		}
 	}
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
@@ -176,7 +170,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			// Start fetching domain data for the next epoch.
-			if core.IsEpochEnd(slot) {
+			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 

@@ -20,7 +20,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -43,6 +42,7 @@ go_library(
         "//network/authorization:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//time:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -78,7 +78,6 @@ go_test(
     deps = [
         "//async/event:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -101,6 +100,7 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

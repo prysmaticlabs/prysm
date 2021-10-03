@@ -7,10 +7,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -218,7 +218,7 @@ var (
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
-	if !core.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
+	if !slots.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
 	}
@@ -324,7 +324,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 			}
 
 			// These fields are deprecated after Altair.
-			if core.SlotToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+			if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
 				if i < len(resp.InclusionSlots) {
 					previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
 				} else {
@@ -336,7 +336,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 					log.WithField("pubKey", truncatedKey).Warn("Missing inclusion distance")
 				}
 			}
-			if core.SlotToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
+			if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
 				if i < len(resp.InactivityScores) {
 					previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[i]
 				} else {
@@ -364,7 +364,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 				}
 
 				// Phase0 specific metrics
-				if core.SlotToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+				if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
 					if i < len(resp.InclusionDistances) {
 						ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
 					}
@@ -395,7 +395,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	for i := range resp.PublicKeys {
 		// In phase0, we consider attestations included if the inclusion slot is not max uint64.
 		// In altair, we consider attestations included if correctlyVotedTarget is true.
-		if core.SlotToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
+		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
 			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
 				included++
 				summary.includedAttestedCount++
@@ -420,7 +420,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		}
 
 		// Altair metrics
-		if core.SlotToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && i < len(resp.InactivityScores) {
+		if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && i < len(resp.InactivityScores) {
 			inactivityScore += int(resp.InactivityScores[i])
 		}
 	}
@@ -445,7 +445,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	// Altair summary fields.
-	if core.SlotToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && len(resp.CorrectlyVotedTarget) > 0 {
+	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && len(resp.CorrectlyVotedTarget) > 0 {
 		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.CorrectlyVotedTarget)))
 	}
 
@@ -476,7 +476,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	// Add phase0 specific fields
-	if core.SlotToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
 		launchSummaryFields["averageInclusionDistance"] = fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount))
 	}
 

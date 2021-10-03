@@ -147,6 +147,10 @@ type SlasherDatabase interface {
 	PruneProposalsAtEpoch(
 		ctx context.Context, maxEpoch types.Epoch,
 	) (numPruned uint, err error)
+	HighestAttestations(
+		ctx context.Context,
+		indices []types.ValidatorIndex,
+	) ([]*ethpb.HighestAttestation, error)
 	DatabasePath() string
 	ClearDB() error
 }

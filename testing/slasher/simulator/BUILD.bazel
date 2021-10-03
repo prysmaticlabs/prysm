@@ -10,12 +10,11 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/testing/slasher/simulator",
     visibility = [
-        "//endtoend:__subpackages__",
+        "//testing/endtoend:__subpackages__",
     ],
     deps = [
         "//async/event:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

@@ -82,6 +82,8 @@ func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
 	// Mark peer as bad, if the latest error is one of the terminal ones.
 	terminalErrs := []error{
 		p2ptypes.ErrWrongForkDigestVersion,
+		p2ptypes.ErrInvalidFinalizedRoot,
+		p2ptypes.ErrInvalidRequest,
 	}
 	for _, err := range terminalErrs {
 		if errors.Is(peerData.ChainStateValidationError, err) {

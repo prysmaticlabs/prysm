@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -151,7 +151,7 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, core.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	})
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
@@ -254,7 +254,7 @@ func GenerateAttesterSlashingForValidator(
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -354,7 +354,7 @@ func generateVoluntaryExits(
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -364,7 +364,7 @@ func generateVoluntaryExits(
 		}
 		exit := &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          core.PrevEpoch(bState),
+				Epoch:          time.PrevEpoch(bState),
 				ValidatorIndex: valIndex,
 			},
 		}
@@ -378,7 +378,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}

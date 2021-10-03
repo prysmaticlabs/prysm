@@ -3,11 +3,24 @@ package slasher
 import (
 	"context"
 
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// HighestAttestations committed for an input list of validator indices.
+func (s *Service) HighestAttestations(
+	ctx context.Context, validatorIndices []types.ValidatorIndex,
+) ([]*ethpb.HighestAttestation, error) {
+	atts, err := s.serviceCfg.Database.HighestAttestations(ctx, validatorIndices)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get highest attestations from database")
+	}
+	return atts, nil
+}
 
 // IsSlashableBlock checks if an input block header is slashable
 // with respect to historical block proposal data.
