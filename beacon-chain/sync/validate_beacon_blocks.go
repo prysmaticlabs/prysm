@@ -9,17 +9,18 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -70,6 +71,18 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		},
 	})
 
+	if features.Get().EnableSlasher {
+		// Feed the block header to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			blockHeader, err := block.SignedBeaconBlockHeaderFromBlockInterface(blk)
+			if err != nil {
+				log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Could not extract block header")
+			}
+			s.cfg.SlasherBlockHeadersFeed.Send(blockHeader)
+		}()
+	}
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if s.hasSeenBlockIndexSlot(blk.Block().Slot(), blk.Block().ProposerIndex()) {
 		return pubsub.ValidationIgnore, nil
@@ -101,7 +114,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
 	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
 	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
-	if err := core.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
+	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
 	}
@@ -112,7 +125,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	startSlot, err := core.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
+	startSlot, err := slots.EpochStart(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
@@ -149,12 +162,13 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
 	msg.ValidatorData = blk.Proto() // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
-	startTime, err := core.SlotToTime(genesisTime, blk.Block().Slot())
+	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -190,22 +204,14 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
-	// There is an epoch lookahead for validator proposals
-	// for the next epoch from the start of our current epoch. We
-	// use the randao mix at the end of the previous epoch as the seed
-	// to determine proposals.
-	// Seed for Next Epoch => Derived From Randao Mix at the end of the Previous Epoch.
-	// Which is why we simply set the slot over here.
-	nextEpoch := core.NextEpoch(parentState)
-	expectedEpoch := core.SlotToEpoch(blk.Block().Slot())
-	if expectedEpoch <= nextEpoch {
-		err = parentState.SetSlot(blk.Block().Slot())
+	// In the event the block is more than an epoch ahead from its
+	// parent state, we have to advance the state forward.
+	if features.Get().EnableNextSlotStateCache {
+		parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
 		if err != nil {
 			return err
 		}
 	} else {
-		// In the event the block is more than an epoch ahead from its
-		// parent state, we have to advance the state forward.
 		parentState, err = transition.ProcessSlots(ctx, parentState, blk.Block().Slot())
 		if err != nil {
 			return err
@@ -260,7 +266,7 @@ func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 
 // This captures metrics for block arrival time by subtracts slot start time.
 func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error {
-	startTime, err := core.SlotToTime(genesisTime, currentSlot)
+	startTime, err := slots.ToTime(genesisTime, currentSlot)
 	if err != nil {
 		return err
 	}
@@ -275,7 +281,7 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error 
 // returns true if the corresponding block should be queued and false if
 // the block should be processed immediately.
 func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Time) bool {
-	slotTime, err := core.SlotToTime(genesisTime, slot)
+	slotTime, err := slots.ToTime(genesisTime, slot)
 	if err != nil {
 		return false
 	}

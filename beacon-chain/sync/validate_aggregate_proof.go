@@ -8,7 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -56,10 +56,14 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
 		return pubsub.ValidationReject, err
 	}
+	// Do not process slot 0 aggregates.
+	if m.Message.Aggregate.Data.Slot == 0 {
+		return pubsub.ValidationIgnore, nil
+	}
 
 	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
 	// of a received aggregated attestation.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.AggregatedAttReceived,
 		Data: &operation.AggregatedAttReceivedData{
 			Attestation: m.Message,
@@ -141,8 +145,8 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
-	if core.SlotToEpoch(attSlot) > core.SlotToEpoch(bs.Slot()) {
-		startSlot, err := core.StartSlot(core.SlotToEpoch(attSlot))
+	if slots.ToEpoch(attSlot) > slots.ToEpoch(bs.Slot()) {
+		startSlot, err := slots.EpochStart(slots.ToEpoch(attSlot))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -278,7 +282,7 @@ func validateSelectionIndex(
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof
-	epoch := core.SlotToEpoch(data.Slot)
+	epoch := slots.ToEpoch(data.Slot)
 
 	v, err := bs.ValidatorAtIndex(validatorIndex)
 	if err != nil {
@@ -316,7 +320,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 
-	epoch := core.SlotToEpoch(a.Message.Aggregate.Data.Slot)
+	epoch := slots.ToEpoch(a.Message.Aggregate.Data.Slot)
 	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err

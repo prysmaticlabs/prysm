@@ -7,10 +7,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -68,7 +68,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := core.CurrentEpoch(beaconState)
+	epoch := time.CurrentEpoch(beaconState)
 	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
@@ -214,7 +214,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	currentEpoch := core.CurrentEpoch(beaconState)
+	currentEpoch := time.CurrentEpoch(beaconState)
 	header1 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
@@ -232,7 +232,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
@@ -295,7 +295,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot(),
-			Target: &ethpb.Checkpoint{Epoch: core.CurrentEpoch(beaconState)},
+			Target: &ethpb.Checkpoint{Epoch: time.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{Root: mockRoot[:]}},
 		AggregationBits: aggBits,
 	})

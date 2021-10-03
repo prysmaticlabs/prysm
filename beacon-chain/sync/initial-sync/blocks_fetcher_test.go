@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -124,7 +124,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: slots.ToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -136,7 +136,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: slots.ToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -148,17 +148,17 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: slots.ToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: slots.ToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 				{
 					blocks:         makeSequence(1, 3*slotsInBatch),
-					finalizedEpoch: core.SlotToEpoch(3 * slotsInBatch),
+					finalizedEpoch: slots.ToEpoch(3 * slotsInBatch),
 					headSlot:       3 * slotsInBatch,
 				},
 			},
@@ -506,7 +506,7 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:   p2p,
 		})
 
-	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, core.SlotToEpoch(mc.HeadSlot()))
+	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, slots.ToEpoch(mc.HeadSlot()))
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,

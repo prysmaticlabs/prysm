@@ -36,7 +36,6 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
 	WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error
-	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
 	SlotDeadline(slot types.Slot) time.Time

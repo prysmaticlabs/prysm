@@ -3,13 +3,14 @@ package epoch_test
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -242,7 +243,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(t, params.BeaconConfig().SlotsPerHistoricalRoot-1, uint64(params.BeaconConfig().SlotsPerEpoch))
-	ce := core.CurrentEpoch(s)
+	ce := time.CurrentEpoch(s)
 	ne := ce + 1
 	require.NoError(t, s.SetEth1DataVotes([]*ethpb.Eth1Data{}))
 	balances := s.Balances()
@@ -316,7 +317,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	}
 	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	currentEpoch := core.CurrentEpoch(beaconState)
+	currentEpoch := time.CurrentEpoch(beaconState)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
 	for i, validator := range newState.Validators() {
@@ -439,4 +440,17 @@ func buildState(t testing.TB, slot types.Slot, validatorCount uint64) state.Beac
 		t.Error(err)
 	}
 	return s
+}
+
+func TestProcessSlashings_BadValue(t *testing.T) {
+	base := &ethpb.BeaconState{
+		Slot:       0,
+		Validators: []*ethpb.Validator{{Slashed: true}},
+		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
+		Slashings:  []uint64{math.MaxUint64, 1e9},
+	}
+	s, err := v1.InitializeFromProto(base)
+	require.NoError(t, err)
+	_, err = epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
+	require.ErrorContains(t, "addition overflows", err)
 }

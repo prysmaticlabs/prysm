@@ -6,11 +6,11 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/pagination"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -44,7 +44,7 @@ func (bs *Server) ListValidatorAssignments(
 		requestedEpoch = q.Epoch
 	}
 
-	currentEpoch := core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -54,7 +54,7 @@ func (bs *Server) ListValidatorAssignments(
 		)
 	}
 
-	startSlot, err := core.StartSlot(requestedEpoch)
+	startSlot, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}

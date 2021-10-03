@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -47,7 +47,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, core.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
 	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
@@ -69,7 +69,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, core.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 
 	b.ResetTimer()
