@@ -15,7 +15,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -59,7 +58,6 @@ func TestService_StartStop_ChainStartEvent(t *testing.T) {
 		Data: &statefeed.ChainStartedData{StartTime: time.Now()},
 	})
 	time.Sleep(time.Millisecond * 100)
-	srv.slotTicker = &slots.SlotTicker{}
 	require.NoError(t, srv.Stop())
 	require.NoError(t, srv.Status())
 	require.LogsContain(t, hook, "received chain start event")
@@ -92,7 +90,6 @@ func TestService_StartStop_ChainAlreadyInitialized(t *testing.T) {
 		Data: &statefeed.InitializedData{StartTime: time.Now()},
 	})
 	time.Sleep(time.Millisecond * 100)
-	srv.slotTicker = &slots.SlotTicker{}
 	require.NoError(t, srv.Stop())
 	require.NoError(t, srv.Status())
 	require.LogsContain(t, hook, "chain already initialized")

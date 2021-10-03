@@ -57,8 +57,8 @@ type Service struct {
 	blksQueue              *blocksQueue
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	slotTicker             *slots.SlotTicker
 	genesisTime            time.Time
+	slotTickFeed           *event.Feed
 }
 
 // New instantiates a new slasher from configuration values.
@@ -67,12 +67,13 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	return &Service{
 		params:                 DefaultParams(),
 		serviceCfg:             srvCfg,
-		indexedAttsChan:        make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		indexedAttsChan:        make(chan *ethpb.IndexedAttestation, 100),
+		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader, 100),
 		attsQueue:              newAttestationsQueue(),
 		blksQueue:              newBlocksQueue(),
 		ctx:                    ctx,
 		cancel:                 cancel,
+		slotTickFeed:           new(event.Feed),
 	}, nil
 }
 
@@ -112,28 +113,26 @@ func (s *Service) run() {
 		return
 	}
 
-	stateSub.Unsubscribe()
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	s.slotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
+	go s.tickSlots()
 
+	stateSub.Unsubscribe()
 	s.waitForSync(s.genesisTime)
+	log.Info("Completed chain sync, starting slashing detection")
 
 	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
-	log.Info("Completed chain sync, starting slashing detection")
-	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
-	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
+
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
 	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
-	go s.pruneSlasherData(s.ctx, s.slotTicker.C())
+
+	go s.processQueuedAttestations(s.ctx)
+	go s.processQueuedBlocks(s.ctx)
+	go s.pruneSlasherData(s.ctx)
 }
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
-	if s.slotTicker != nil {
-		s.slotTicker.Done()
-	}
 	return nil
 }
 
@@ -142,13 +141,31 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// Tick slots and notify over event feed.
+func (s *Service) tickSlots() {
+	slotsTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	defer slotsTicker.Done()
+	for {
+		select {
+		case slot := <-slotsTicker.C():
+			s.slotTickFeed.Send(slot)
+		case <-s.ctx.Done():
+			return
+		}
+	}
+}
+
 func (s *Service) waitForSync(genesisTime time.Time) {
 	if slots.SinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
 		return
 	}
+	tick := make(chan time.Time, 1)
+	defer close(tick)
+	sub := s.slotTickFeed.Subscribe(tick)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-s.slotTicker.C():
+		case <-tick:
 			// If node is still syncing, do not operate slasher.
 			if s.serviceCfg.SyncChecker.Syncing() {
 				continue

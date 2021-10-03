@@ -76,10 +76,14 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedAttestations(ctx context.Context) {
+	tick := make(chan types.Slot, 1)
+	defer close(tick)
+	sub := s.slotTickFeed.Subscribe(tick)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case currentSlot := <-slotTicker:
+		case currentSlot := <-tick:
 			attestations := s.attsQueue.dequeue()
 			currentEpoch := slots.ToEpoch(currentSlot)
 			// We take all the attestations in the queue and filter out
@@ -134,10 +138,14 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedBlocks(ctx context.Context) {
+	tick := make(chan types.Slot, 1)
+	defer close(tick)
+	sub := s.slotTickFeed.Subscribe(tick)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case currentSlot := <-slotTicker:
+		case currentSlot := <-tick:
 			blocks := s.blksQueue.dequeue()
 			currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -174,10 +182,14 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 }
 
 // Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
-func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) pruneSlasherData(ctx context.Context) {
+	tick := make(chan types.Slot, 1)
+	defer close(tick)
+	sub := s.slotTickFeed.Subscribe(tick)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-slotTicker:
+		case <-tick:
 			headEpoch := slots.ToEpoch(s.serviceCfg.HeadStateFetcher.HeadSlot())
 			if err := s.pruneSlasherDataWithinSlidingWindow(ctx, headEpoch); err != nil {
 				log.WithError(err).Error("Could not prune slasher data")
