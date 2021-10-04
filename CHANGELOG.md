@@ -20,6 +20,7 @@ Please update your beacon node to v2.0.0 prior to updating your validator. The b
 - Batch verfication of pubsub objects. This should improve pubsub processing performance on multithreaded machines. #9344
 - Improved attestation pruning. This feature should improve block proposer performance and overall network attestation inclusion rates. Opt-out with `--disable-correctly-prune-canonical-atts` in the beacon node. #9444
 - Active balance cache to improve epoch processing. Opt-out with `--disable-active-balance-cache` #9567
+- Experimental database improvements to reduce history state entry space usage in the beaconchain.db. This functionality can be permanently enabled with the flag `--enable-historical-state-representation`. Note: once this feature is toggled on, it modifies the structure of the database with a migration and cannot be rolled back. This feature is experimental and should only be used in non-serving beacon nodes in case of database corruption or other critical issue. #8954 
 
 #### New Metrics
 
