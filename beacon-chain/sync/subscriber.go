@@ -13,7 +13,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -596,7 +595,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 					return
 				}
 
-				wantedSubs := s.retrieveActiveSyncSubnets(core.SlotToEpoch(currentSlot))
+				wantedSubs := s.retrieveActiveSyncSubnets(slots.ToEpoch(currentSlot))
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 

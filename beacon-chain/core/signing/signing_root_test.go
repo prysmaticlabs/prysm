@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -86,7 +86,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 			require.NoError(t, err)
 			block := tt.genBlock(t, beaconState, privKeys)
 			got, err := signing.ComputeDomainAndSign(
-				beaconState, core.CurrentEpoch(beaconState), block, tt.domainType, privKeys[idx])
+				beaconState, time.CurrentEpoch(beaconState), block, tt.domainType, privKeys[idx])
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got, "Incorrect signature")
 		})

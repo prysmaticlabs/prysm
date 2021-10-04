@@ -11,7 +11,6 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -31,6 +30,7 @@ import (
 	synccontribution "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -68,7 +68,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if core.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
@@ -514,7 +514,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return core.VotingPeriodStartTime(startTime, slot)
+	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
@@ -537,7 +537,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(core.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
+	enc = fastssz.MarshalUint64(enc, uint64(slots.ToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hash.Hash(enc)
 	blockHash := hash.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

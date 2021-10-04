@@ -140,7 +140,6 @@ func (r *testRunner) run() {
 		requiredComponents := []e2etypes.ComponentRunner{
 			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
-
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
@@ -148,7 +147,7 @@ func (r *testRunner) run() {
 		}
 
 		// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
-		defer helpers.LogOutput(t, config)
+		defer helpers.LogOutput(t)
 		if config.UsePprof {
 			defer func() {
 				log.Info("Writing output pprof files")
@@ -228,26 +227,23 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
 		wg := new(sync.WaitGroup)
-		for _, ev := range config.Evaluators {
+		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
 			// in a separate goroutine.
-			evaluator := ev
+			evaluator := eval
 			// Only run if the policy says so.
 			if !evaluator.Policy(types.Epoch(currentEpoch)) {
 				continue
 			}
-
-			// Add evaluator to our waitgroup.
 			wg.Add(1)
-
 			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				err := evaluator.Evaluation(conns...)
 				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
 				wg.Done()
 			})
 		}
-		// Wait for all evaluators to finish their evaluation for the epoch.
 		wg.Wait()
+
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
 			if t.Failed() {
@@ -319,7 +315,6 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
 		})
 	}
-
 	return nil
 }
 

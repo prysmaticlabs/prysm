@@ -9,12 +9,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -224,12 +225,12 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (types.ValidatorIndex, error) {
-	e := core.CurrentEpoch(state)
+	e := time.CurrentEpoch(state)
 	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch := core.PrevEpoch(state)
-		s, err := core.EndSlot(wantedEpoch)
+		wantedEpoch := time.PrevEpoch(state)
+		s, err := slots.EpochEnd(wantedEpoch)
 		if err != nil {
 			return 0, err
 		}

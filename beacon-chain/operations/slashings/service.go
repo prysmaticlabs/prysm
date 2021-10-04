@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -131,6 +131,7 @@ func (p *Pool) InsertAttesterSlashing(
 
 	slashedVal := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	cantSlash := make([]uint64, 0, len(slashedVal))
+	slashingReason := ""
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, types.ValidatorIndex(val))
@@ -140,6 +141,7 @@ func (p *Pool) InsertAttesterSlashing(
 		// If the validator has already exited, has already been slashed, or if its index
 		// has been recently included in the pool of slashings, skip including this indice.
 		if !ok {
+			slashingReason = "validator already exited/slashed or already recently included in slashings pool"
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -150,6 +152,7 @@ func (p *Pool) InsertAttesterSlashing(
 			return uint64(p.pendingAttesterSlashing[i].validatorToSlash) >= val
 		})
 		if found != len(p.pendingAttesterSlashing) && uint64(p.pendingAttesterSlashing[found].validatorToSlash) == val {
+			slashingReason = "validator already exist in list of pending slashings, no need to attempt to slash again"
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -166,7 +169,11 @@ func (p *Pool) InsertAttesterSlashing(
 		numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
 	}
 	if len(cantSlash) == len(slashedVal) {
-		return fmt.Errorf("could not slash any of %d validators in submitted slashing", len(slashedVal))
+		return fmt.Errorf(
+			"could not slash any of %d validators in submitted slashing: %s",
+			len(slashedVal),
+			slashingReason,
+		)
 	}
 	return nil
 }
@@ -275,7 +282,7 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 		return false, err
 	}
 	// Checking if the validator is slashable.
-	if !helpers.IsSlashableValidatorUsingTrie(validator, core.CurrentEpoch(state)) {
+	if !helpers.IsSlashableValidatorUsingTrie(validator, time.CurrentEpoch(state)) {
 		return false, nil
 	}
 	return true, nil

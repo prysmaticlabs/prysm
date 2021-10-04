@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessSyncAggregate verifies sync committee aggregate signature signing over the previous slot block root.
@@ -101,8 +101,8 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
 func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
-	ps := core.PrevSlot(s.Slot())
-	d, err := signing.Domain(s.Fork(), core.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	ps := slots.PrevSlot(s.Slot())
+	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

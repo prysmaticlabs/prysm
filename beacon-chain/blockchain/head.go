@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -141,7 +141,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot,
 				NewHeadState: newStateRoot,
-				Epoch:        core.SlotToEpoch(newHeadSlot),
+				Epoch:        slots.ToEpoch(newHeadSlot),
 			},
 		})
 
@@ -298,7 +298,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 		return errors.New("justified state can't be nil")
 	}
 
-	epoch := core.CurrentEpoch(justifiedState)
+	epoch := time.CurrentEpoch(justifiedState)
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
 	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
@@ -336,15 +336,15 @@ func (s *Service) notifyNewHeadEvent(
 	currentDutyDependentRoot := s.genesisRoot[:]
 
 	var previousDutyEpoch types.Epoch
-	currentDutyEpoch := core.SlotToEpoch(newHeadSlot)
+	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
-	currentDutySlot, err := core.StartSlot(currentDutyEpoch)
+	currentDutySlot, err := slots.EpochStart(currentDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
-	previousDutySlot, err := core.StartSlot(previousDutyEpoch)
+	previousDutySlot, err := slots.EpochStart(previousDutyEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty slot")
 	}
@@ -366,7 +366,7 @@ func (s *Service) notifyNewHeadEvent(
 			Slot:                      newHeadSlot,
 			Block:                     newHeadRoot,
 			State:                     newHeadStateRoot,
-			EpochTransition:           core.IsEpochStart(newHeadSlot),
+			EpochTransition:           slots.IsEpochStart(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},

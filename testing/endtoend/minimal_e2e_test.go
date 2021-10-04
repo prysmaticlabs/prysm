@@ -40,14 +40,15 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
-	const tracingEndpoint = "127.0.0.1:9411"
+	tracingPort := 9411 + e2eParams.TestParams.TestShardIndex
+	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
 		ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsAreActive,
-		ev.ValidatorsParticipating,
-		ev.FinalizationOccurs,
+		ev.ValidatorsParticipatingAtEpoch(2),
+		ev.FinalizationOccurs(3),
 		ev.ProcessesDepositsInBlocks,
 		ev.VerifyBlockGraffiti,
 		ev.ActivatesDepositedValidators,
@@ -59,6 +60,8 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
 	}
 	// TODO(#9166): remove this block once v2 changes are live.
 	if !usePrysmSh {
@@ -77,7 +80,6 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
 		TestDeposits:        true,
-		TestSlasher:         false,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		TracingSinkEndpoint: tracingEndpoint,

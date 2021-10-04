@@ -6,13 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ValidatorAlreadyExitedMsg defines a message saying that a validator has already exited.
@@ -135,7 +135,7 @@ func VerifyExitAndSignature(
 //    # Initiate exit
 //    initiate_validator_exit(state, voluntary_exit.validator_index)
 func verifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
