@@ -17,7 +17,7 @@ require (
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v1.10.8
+	github.com/ethereum/go-ethereum v1.10.9
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210905181407-59cf6761a7d5
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
