@@ -63,6 +63,7 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
+	ExecutionEngineCaller  powchain.ExecutionEngineCaller
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

@@ -74,12 +74,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
+	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+		blk, err := vs.getAltairBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 	}
-	blk, err := vs.getAltairBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
-	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+	// TODO: get merge beacon block
+
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Merge{Merge: &ethpb.BeaconBlockMerge{}}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign

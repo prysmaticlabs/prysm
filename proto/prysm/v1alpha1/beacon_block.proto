@@ -42,6 +42,9 @@ message GenericBeaconBlock {
 
         // Representing a post-Altair fork beacon block.
         BeaconBlockAltair altair = 2;
+
+        // Representing a post-Merge fork beacon block.
+        BeaconBlockMerge merge = 3;
     }
 }
 
