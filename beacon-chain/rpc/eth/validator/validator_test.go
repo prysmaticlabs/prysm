@@ -366,6 +366,23 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
 	})
 
+	t.Run("Epoch not at period start", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 1,
+			Index: []types.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(1), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
 	t.Run("Multiple validators", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,

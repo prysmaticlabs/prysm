@@ -187,20 +187,24 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	currentSlot := slots.CurrentSlot(uint64(vs.TimeFetcher.GenesisTime().Unix()))
-	currentEpoch := slots.ToEpoch(currentSlot)
+	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
 	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
 	if req.Epoch > lastValidEpoch {
 		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
 	}
 
 	var stateEpoch types.Epoch
-	// Integer division and multiplication do not cancel out.
-	currentSyncCommitteeFirstEpoch := (currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
+	}
 	if req.Epoch >= currentSyncCommitteeFirstEpoch {
 		stateEpoch = currentSyncCommitteeFirstEpoch
 	} else {
-		stateEpoch = req.Epoch
+		stateEpoch, err = slots.SyncCommitteePeriodStartEpoch(req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
+		}
 	}
 	slot, err := slots.EpochStart(stateEpoch)
 	if err != nil {
