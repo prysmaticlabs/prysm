@@ -805,13 +805,14 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        importpath = "github.com/ethereum/go-ethereum",
-        sum = "h1:uMSWt0qDhaqqCk0PWqfDFOMUExmk4Tnbma6c6oXW+Pk=",
-        version = "v1.10.9",
         build_directives = [
             "gazelle:resolve go github.com/ethereum/go-ethereum/crypto/secp256k1 @prysm//third_party/secp256k1:go_default_library",
             "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
         ],
+        importpath = "github.com/ethereum/go-ethereum",
+        replace = "github.com/MariusVanDerWijden/go-ethereum",
+        sum = "h1:H31UZ0EEVjuMBOEUMrnj8s1ZR1V64YYscgrxEkqHmTM=",
+        version = "v1.8.22-0.20211003152508-b798cbdad11b",
     )
 
     go_repository(
