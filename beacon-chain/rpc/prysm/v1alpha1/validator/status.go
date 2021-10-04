@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -106,7 +107,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
 	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
-	currEpoch := time.SlotToEpoch(headState.Slot())
+	currEpoch := slots.ToEpoch(headState.Slot())
 	previousEpoch, err := currEpoch.SafeSub(1)
 	if err != nil {
 		previousEpoch = currEpoch

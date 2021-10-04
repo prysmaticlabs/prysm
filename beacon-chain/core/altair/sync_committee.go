@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
@@ -185,15 +186,15 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
 func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
-	if err := coreTime.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
-	messageTime, err := coreTime.SlotToTime(uint64(genesisTime.Unix()), slot)
+	messageTime, err := slots.ToTime(uint64(genesisTime.Unix()), slot)
 	if err != nil {
 		return err
 	}
-	currentSlot := coreTime.SlotsSince(genesisTime)
-	slotStartTime, err := coreTime.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
+	currentSlot := slots.Since(genesisTime)
+	slotStartTime, err := slots.ToTime(uint64(genesisTime.Unix()), currentSlot)
 	if err != nil {
 		return err
 	}

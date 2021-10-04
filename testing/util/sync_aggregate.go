@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*ethpb.SyncAggregate, error) {
@@ -19,12 +19,12 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
 	}
-	nextSlotEpoch := time.SlotToEpoch(st.Slot() + 1)
-	currEpoch := time.SlotToEpoch(st.Slot())
+	nextSlotEpoch := slots.ToEpoch(st.Slot() + 1)
+	currEpoch := slots.ToEpoch(st.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
 	var err error
-	if time.SyncCommitteePeriod(currEpoch) == time.SyncCommitteePeriod(nextSlotEpoch) {
+	if slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -52,7 +52,7 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 		if !ok {
 			continue
 		}
-		d, err := signing.Domain(st.Fork(), time.SlotToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorRoot())
+		d, err := signing.Domain(st.Fork(), slots.ToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorRoot())
 		if err != nil {
 			return nil, err
 		}

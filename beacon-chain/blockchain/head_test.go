@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -187,9 +187,9 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			},
 			genesisRoot: genesisRoot,
 		}
-		epoch1Start, err := coreTime.StartSlot(1)
+		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
-		epoch2Start, err := coreTime.StartSlot(1)
+		epoch2Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
 		require.NoError(t, bState.SetSlot(epoch1Start))
 

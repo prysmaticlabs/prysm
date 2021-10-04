@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -16,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // retrieves the signature set from the raw data, public key,signature and domain provided.
@@ -67,7 +67,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
-	currentEpoch := time.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 
 // VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
 func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
-	currentEpoch := time.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.Sig
 // from the above method by not using fork data from the state and instead retrieving it
 // via the respective epoch.
 func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState, blk block.SignedBeaconBlock) error {
-	currentEpoch := time.SlotToEpoch(blk.Block().Slot())
+	currentEpoch := slots.ToEpoch(blk.Block().Slot())
 	fork, err := forks.Fork(currentEpoch)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
-	currentEpoch := time.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 	}
 	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
 
-	currentEpoch := time.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
@@ -238,7 +238,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 	var preForkAtts []*ethpb.Attestation
 	var postForkAtts []*ethpb.Attestation
 	for _, a := range atts {
-		if time.SlotToEpoch(a.Data.Slot) < fork.Epoch {
+		if slots.ToEpoch(a.Data.Slot) < fork.Epoch {
 			preForkAtts = append(preForkAtts, a)
 		} else {
 			postForkAtts = append(postForkAtts, a)

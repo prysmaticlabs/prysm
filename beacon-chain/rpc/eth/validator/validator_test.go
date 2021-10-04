@@ -39,6 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -106,7 +107,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 	t.Run("Next epoch", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: coreTime.SlotToEpoch(bs.Slot()) + 1,
+			Epoch: slots.ToEpoch(bs.Slot()) + 1,
 			Index: []types.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
@@ -172,7 +173,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := coreTime.SlotToEpoch(bs.Slot())
+		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: currentEpoch + 2,
 			Index: []types.ValidatorIndex{0},
@@ -304,7 +305,7 @@ func TestGetProposerDuties(t *testing.T) {
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
-		currentEpoch := coreTime.SlotToEpoch(bs.Slot())
+		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 1,
 		}

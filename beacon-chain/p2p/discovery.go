@@ -16,9 +16,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -53,7 +53,7 @@ func (s *Service) RefreshENR() {
 		return
 	}
 	// Compare current epoch with our fork epochs
-	currEpoch := coreTime.SlotToEpoch(coreTime.CurrentSlot(uint64(s.genesisTime.Unix())))
+	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	// Altair Behaviour

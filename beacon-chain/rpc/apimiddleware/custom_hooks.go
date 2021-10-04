@@ -12,10 +12,10 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
@@ -208,7 +208,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if time.SlotToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 	} else {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}

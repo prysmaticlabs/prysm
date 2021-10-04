@@ -5,11 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessRandao checks the block proposer's
@@ -63,7 +63,7 @@ func ProcessRandaoNoVerify(
 	beaconState state.BeaconState,
 	randaoReveal []byte,
 ) (state.BeaconState, error) {
-	currentEpoch := time.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector

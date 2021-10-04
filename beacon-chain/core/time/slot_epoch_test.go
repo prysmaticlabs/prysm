@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestSlotToEpoch_OK(t *testing.T) {
@@ -26,7 +27,7 @@ func TestSlotToEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.epoch, SlotToEpoch(tt.slot), "SlotToEpoch(%d)", tt.slot)
+		assert.Equal(t, tt.epoch, slots.ToEpoch(tt.slot), "ToEpoch(%d)", tt.slot)
 	}
 }
 
@@ -96,10 +97,10 @@ func TestEpochStartSlot_OK(t *testing.T) {
 		{epoch: 1 << 60, startSlot: 1 << 63, error: true},
 	}
 	for _, tt := range tests {
-		ss, err := StartSlot(tt.epoch)
+		ss, err := slots.EpochStart(tt.epoch)
 		if !tt.error {
 			require.NoError(t, err)
-			assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", tt.epoch)
+			assert.Equal(t, tt.startSlot, ss, "EpochStart(%d)", tt.epoch)
 		} else {
 			require.ErrorContains(t, "start slot calculation overflow", err)
 		}
@@ -120,10 +121,10 @@ func TestEpochEndSlot_OK(t *testing.T) {
 		{epoch: math.MaxUint64, startSlot: 0, error: true},
 	}
 	for _, tt := range tests {
-		ss, err := EndSlot(tt.epoch)
+		ss, err := slots.EpochEnd(tt.epoch)
 		if !tt.error {
 			require.NoError(t, err)
-			assert.Equal(t, tt.startSlot, ss, "StartSlot(%d)", tt.epoch)
+			assert.Equal(t, tt.startSlot, ss, "EpochStart(%d)", tt.epoch)
 		} else {
 			require.ErrorContains(t, "start slot calculation overflow", err)
 		}
@@ -156,7 +157,7 @@ func TestIsEpochStart(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.result, IsEpochStart(tt.slot), "IsEpochStart(%d)", tt.slot)
+		assert.Equal(t, tt.result, slots.IsEpochStart(tt.slot), "IsEpochStart(%d)", tt.slot)
 	}
 }
 
@@ -182,7 +183,7 @@ func TestIsEpochEnd(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.result, IsEpochEnd(tt.slot), "IsEpochEnd(%d)", tt.slot)
+		assert.Equal(t, tt.result, slots.IsEpochEnd(tt.slot), "IsEpochEnd(%d)", tt.slot)
 	}
 }
 
@@ -198,7 +199,7 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 		{slots: 10*params.BeaconConfig().SlotsPerEpoch + 2, wantedSlots: 2},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.wantedSlots, SlotsSinceEpochStarts(tt.slots))
+		assert.Equal(t, tt.wantedSlots, slots.SinceEpochStarts(tt.slots))
 	}
 }
 
@@ -212,7 +213,7 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 		{startSlot: 10*params.BeaconConfig().SlotsPerEpoch - (params.BeaconConfig().SlotsPerEpoch - 1), roundedUpSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.roundedUpSlot, RoundUpToNearestEpoch(tt.startSlot), "RoundUpToNearestEpoch(%d)", tt.startSlot)
+		assert.Equal(t, tt.roundedUpSlot, slots.RoundUpToNearestEpoch(tt.startSlot), "RoundUpToNearestEpoch(%d)", tt.startSlot)
 	}
 }
 
@@ -262,7 +263,7 @@ func TestSlotToTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot)
+			got, err := slots.ToTime(tt.args.genesisTimeSec, tt.args.slot)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -310,7 +311,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "max future slot",
 			args: args{
 				genesisTime: prysmTime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
-				slot:        types.Slot(MaxSlotBuffer + 6),
+				slot:        types.Slot(slots.MaxSlotBuffer + 6),
 			},
 			wantedErr: "exceeds max allowed value relative to the local clock",
 		},
@@ -327,7 +328,7 @@ func TestVerifySlotTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance)
+			err := slots.VerifyTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -338,12 +339,12 @@ func TestVerifySlotTime(t *testing.T) {
 }
 
 func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
-	genTime := prysmTime.Now().Add(-1 * time.Duration(MaxSlotBuffer) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix()
+	genTime := prysmTime.Now().Add(-1 * time.Duration(slots.MaxSlotBuffer) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix()
 
-	assert.NoError(t, ValidateSlotClock(types.Slot(MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
-	assert.NoError(t, ValidateSlotClock(types.Slot(2*MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
-	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(types.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
-	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
+	assert.NoError(t, slots.ValidateClock(types.Slot(slots.MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
+	assert.NoError(t, slots.ValidateClock(types.Slot(2*slots.MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", slots.ValidateClock(types.Slot(2*slots.MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", slots.ValidateClock(1<<63, uint64(genTime)), "no error from bad slot")
 }
 
 func TestPrevSlot(t *testing.T) {
@@ -375,7 +376,7 @@ func TestPrevSlot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := PrevSlot(tt.slot); got != tt.want {
+			if got := slots.PrevSlot(tt.slot); got != tt.want {
 				t.Errorf("PrevSlot() = %v, want %v", got, tt.want)
 			}
 		})
@@ -393,7 +394,7 @@ func TestSyncCommitteePeriod(t *testing.T) {
 		{epoch: 1000, wanted: 1000 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
 	}
 	for _, test := range tests {
-		require.Equal(t, test.wanted, SyncCommitteePeriod(test.epoch))
+		require.Equal(t, test.wanted, slots.SyncCommitteePeriod(test.epoch))
 	}
 }
 
@@ -408,7 +409,7 @@ func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
 		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod * params.BeaconConfig().EpochsPerSyncCommitteePeriod},
 	}
 	for _, test := range tests {
-		e, err := SyncCommitteePeriodStartEpoch(test.epoch)
+		e, err := slots.SyncCommitteePeriodStartEpoch(test.epoch)
 		require.NoError(t, err)
 		require.Equal(t, test.wanted, e)
 	}

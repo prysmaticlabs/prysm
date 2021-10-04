@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestBlockSignature(t *testing.T) {
@@ -25,7 +26,7 @@ func TestBlockSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-	epoch := time.SlotToEpoch(block.Block.Slot)
+	epoch := slots.ToEpoch(block.Block.Slot)
 	blockSig, err := signing.ComputeDomainAndSign(beaconState, epoch, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 

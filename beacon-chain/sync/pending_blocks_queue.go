@@ -11,7 +11,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -262,7 +261,7 @@ func (s *Service) validatePendingSlots() error {
 		slot := cacheKeyToSlot(k)
 		blks := s.pendingBlocksInCache(slot)
 		for _, b := range blks {
-			epoch := coreTime.SlotToEpoch(slot)
+			epoch := slots.ToEpoch(slot)
 			// remove all descendant blocks of old blocks
 			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
 				root, err := b.Block().HashTreeRoot()

@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -85,7 +84,7 @@ func (s *Service) resyncIfBehind() {
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
 	async.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
-			syncedEpoch := coreTime.SlotToEpoch(s.cfg.Chain.HeadSlot())
+			syncedEpoch := slots.ToEpoch(s.cfg.Chain.HeadSlot())
 			// Factor number of expected minimum sync peers, to make sure that enough peers are
 			// available to resync (some peers may go away between checking non-finalized peers and
 			// actual resyncing).
@@ -93,7 +92,7 @@ func (s *Service) resyncIfBehind() {
 			// Check if the current node is more than 1 epoch behind.
 			if highestEpoch > (syncedEpoch + 1) {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": coreTime.SlotToEpoch(s.cfg.Chain.CurrentSlot()),
+					"currentEpoch": slots.ToEpoch(s.cfg.Chain.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
@@ -109,8 +108,8 @@ func (s *Service) resyncIfBehind() {
 
 // shouldReSync returns true if the node is not syncing and falls behind two epochs.
 func (s *Service) shouldReSync() bool {
-	syncedEpoch := coreTime.SlotToEpoch(s.cfg.Chain.HeadSlot())
-	currentEpoch := coreTime.SlotToEpoch(s.cfg.Chain.CurrentSlot())
+	syncedEpoch := slots.ToEpoch(s.cfg.Chain.HeadSlot())
+	currentEpoch := slots.ToEpoch(s.cfg.Chain.CurrentSlot())
 	prevEpoch := types.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -139,7 +138,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.Chain.HeadSlot(),
 	}
-	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, coreTime.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, slots.ToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return err
 	}
@@ -317,11 +316,11 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if blk == nil || blk.IsNil() {
 		return p2ptypes.ErrGeneric
 	}
-	if coreTime.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
+	if slots.ToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
 		return nil
 	}
 
-	startSlot, err := coreTime.StartSlot(msg.FinalizedEpoch)
+	startSlot, err := slots.EpochStart(msg.FinalizedEpoch)
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}

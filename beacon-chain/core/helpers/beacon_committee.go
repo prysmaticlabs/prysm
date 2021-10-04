@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 var (
@@ -73,7 +74,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
 func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
-	epoch := time.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -169,7 +170,7 @@ func CommitteeAssignments(
 	// We determine the slots in which proposers are supposed to act.
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
-	startSlot, err := time.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -326,7 +327,7 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 
 	// Use state root from (current_epoch - 1))
 	wantedEpoch := time.PrevEpoch(state)
-	s, err := time.EndSlot(wantedEpoch)
+	s, err := slots.EpochEnd(wantedEpoch)
 	if err != nil {
 		return err
 	}
@@ -420,7 +421,7 @@ func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
-	slot, err := time.StartSlot(e)
+	slot, err := slots.EpochStart(e)
 	if err != nil {
 		return nil, err
 	}
