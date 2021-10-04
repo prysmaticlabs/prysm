@@ -175,7 +175,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 //
 // Algorithm:
 //  - Get the last valid epoch. This is the last epoch of the next sync committee period.
-//  - Get the state for the requested epoch. If it's an epoch from the next sync committee period, then get the current state.
+//  - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
+//  or an epoch from the next sync committee period, then get the current state.
 //  - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
 //  - Get duties.
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
