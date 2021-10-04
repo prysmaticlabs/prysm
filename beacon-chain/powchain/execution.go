@@ -1,7 +1,7 @@
 package powchain
 
 import (
-	"encoding/binary"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -46,8 +46,6 @@ func (s *Service) GetPayload(payloadID uint64) (*ethpb.ExecutionPayload, error) 
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas := make([]byte, 32)
-	binary.LittleEndian.PutUint64(baseFeePerGas, payload.BaseFeePerGas)
 	return &ethpb.ExecutionPayload{
 		ParentHash:    payload.ParentHash.Bytes(),
 		Coinbase:      payload.Coinbase.Bytes(),
@@ -60,7 +58,7 @@ func (s *Service) GetPayload(payloadID uint64) (*ethpb.ExecutionPayload, error) 
 		GasUsed:       payload.GasUsed,
 		Timestamp:     payload.Timestamp,
 		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: baseFeePerGas,
+		BaseFeePerGas: payload.BaseFeePerGas.Bytes(),
 		BlockHash:     payload.BlockHash.Bytes(),
 		Transactions:  payload.Transactions,
 	}, nil
@@ -86,7 +84,8 @@ func (s *Service) NotifyForkChoiceValidated(headBlockHash []byte, finalizedBlock
 }
 
 func (s *Service) ExecutePayload(payload *ethpb.ExecutionPayload) error {
-	baseFeePerGas, _ := binary.Uvarint(payload.BaseFeePerGas)
+	baseFeePerGas := new(big.Int)
+	baseFeePerGas.SetBytes(payload.BaseFeePerGas)
 	res, err := s.catalystClient.ExecutePayload(catalyst.ExecutableData{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
@@ -100,7 +99,7 @@ func (s *Service) ExecutePayload(payload *ethpb.ExecutionPayload) error {
 		GasUsed:       payload.GasUsed,
 		Timestamp:     payload.Timestamp,
 		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: baseFeePerGas, // TODO: this is suppose to be 256 bits: https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#executionpayload
+		BaseFeePerGas: baseFeePerGas,
 		Transactions:  payload.Transactions,
 	})
 	if err != nil {

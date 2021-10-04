@@ -102,22 +102,40 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
-	if err != nil {
-		return err
-	}
 	body := signed.Block().Body()
 	executionEnabled, err := execution.IsExecutionEnabled(preState, body)
 	if err != nil {
 		return err
 	}
+
+	// TODO: we should break ExecuteStateTransition into per slot and block.
+	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
+	if err != nil {
+		if executionEnabled {
+			payload, err := body.ExecutionPayload()
+			if err != nil {
+				return err
+			}
+			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(payload.BlockHash, false); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
 	if executionEnabled {
-		_, err = body.ExecutionPayload()
+		payload, err := body.ExecutionPayload()
 		if err != nil {
 			return err
 		}
-		// TODO: Call execute_payload(self: ExecutionEngine, execution_payload: ExecutionPayload)
+		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(payload); err != nil {
+			return err
+		}
+		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(payload.BlockHash, true); err != nil {
+			return err
+		}
 	}
+
 	mergeBlock, err := execution.IsMergeBlock(preState, body)
 	if err != nil {
 		return err
@@ -139,8 +157,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			return errors.New("incorrect transition block")
 		}
 	}
-
-	// TODO: Call notify_consensus_validated(self: ExecutionEngine, block_hash: Hash32, valid: bool)
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
@@ -194,7 +210,33 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).Warn("Could not update head")
 	}
 
-	// TODO: Call notify_forkchoice_updated(self: ExecutionEngine, head_block_hash: Hash32, finalized_block_hash: Hash32)
+	// Notify execution layer with fork choice head update if this is post merge block.
+	if executionEnabled {
+		// Spawn the update task, without waiting for it to complete.
+		go func() {
+			headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+			if err != nil {
+				log.WithError(err)
+				return
+			}
+			finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+			if err != nil {
+				log.WithError(err)
+				return
+			}
+			// TODO: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+			if err != nil {
+				log.WithError(err)
+				return
+			}
+			if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(headPayload.BlockHash, finalizedPayload.BlockHash); err != nil {
+				log.WithError(err)
+				return
+			}
+		}()
+	}
+
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
