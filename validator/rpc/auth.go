@@ -19,13 +19,12 @@ import (
 
 var (
 	tokenExpiryLength = time.Hour
-	hashCost          = 8
 )
 
 const (
 	// HashedRPCPassword for the validator RPC access.
 	HashedRPCPassword       = "rpc-password-hash"
-	authToken               = "auth-token"
+	authTokenFileName       = "auth-token"
 	checkUserSignupInterval = time.Second * 30
 )
 
@@ -35,7 +34,7 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
 	}
-	authTokenPath := filepath.Join(s.walletDir, authToken)
+	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
 	return &pb.InitializeAuthResponse{
 		HasSignedUp: file.FileExists(authTokenPath),
 		HasWallet:   walletExists,
@@ -58,7 +57,7 @@ func (s *Server) saveHashedAuthToken(token string) error {
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
 func (s *Server) initializeAuthToken() error {
-	authTokenFile := filepath.Join(s.walletDir, authToken)
+	authTokenFile := filepath.Join(s.walletDir, authTokenFileName)
 	if file.FileExists(authTokenFile) {
 		authToken, err := file.ReadFileAsBytes(authTokenFile)
 		if err != nil {
@@ -70,34 +69,8 @@ func (s *Server) initializeAuthToken() error {
 	if err != nil {
 		return err
 	}
-	if file.FileExists(filepath.Join(s.walletDir, authToken)) {
+	if file.FileExists(filepath.Join(s.walletDir, authTokenFileName)) {
 		return nil
-	}
-}
-
-// Interval in which we should check if a user has not yet used the RPC Signup endpoint
-// which means they are using the --web flag and someone could come in and signup for them
-// if they have their web host:port exposed to the Internet.
-func (s *Server) checkUserSignup(_ context.Context) {
-	ticker := time.NewTicker(checkUserSignupInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-			if file.FileExists(hashedPasswordPath) {
-				return
-			}
-			log.Warnf(
-				"You are using the --web option but have not yet signed via a browser. "+
-					"If your web host and port are exposed to the Internet, someone else can attempt to sign up "+
-					"for you! You can visit http://%s:%d to view the Prysm web interface",
-				s.validatorGatewayHost,
-				s.validatorGatewayPort,
-			)
-		case <-s.ctx.Done():
-			return
-		}
 	}
 }
 
