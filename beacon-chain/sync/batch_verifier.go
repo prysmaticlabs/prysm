@@ -79,7 +79,7 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 }
 
 func verifyBatch(verifierBatch []*signatureVerifier) {
-	if verifierBatch == nil || len(verifierBatch) == 0 {
+	if len(verifierBatch) == 0 {
 		return
 	}
 	aggSet := verifierBatch[0].set
