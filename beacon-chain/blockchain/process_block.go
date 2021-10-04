@@ -116,7 +116,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return err
 			}
-			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(payload.BlockHash, false); err != nil {
+			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, false); err != nil {
 				return err
 			}
 		}
@@ -128,10 +128,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err != nil {
 			return err
 		}
-		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(payload); err != nil {
+		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
 			return err
 		}
-		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(payload.BlockHash, true); err != nil {
+		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
 			return err
 		}
 	}
@@ -230,7 +230,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				log.WithError(err)
 				return
 			}
-			if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(headPayload.BlockHash, finalizedPayload.BlockHash); err != nil {
+			if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedPayload.BlockHash); err != nil {
 				log.WithError(err)
 				return
 			}

@@ -1,35 +1,37 @@
 package powchain
 
 import (
+	"context"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
+	"github.com/ethereum/go-ethereum/eth/catalyst/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ExecutionEngineCaller defines methods that call execution engine API to enable other prysm services to interact with.
 type ExecutionEngineCaller interface {
-	PreparePayload(parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error)
-	GetPayload(payloadID uint64) (*ethpb.ExecutionPayload, error)
-	NotifyConsensusValidated(blockHash []byte, valid bool) error
-	NotifyForkChoiceValidated(headBlockHash []byte, finalizedBlockHash []byte) error
-	ExecutePayload(payload *ethpb.ExecutionPayload) error
+	PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error)
+	GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error)
+	NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error
+	NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error
+	ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error
 }
 
 // CatalystClient calls with the execution engine end points to enable consensus <-> execution interaction.
 type CatalystClient interface {
-	PreparePayload(params catalyst.AssembleBlockParams) (*catalyst.PayloadResponse, error)
-	GetPayload(PayloadID hexutil.Uint64) (*catalyst.ExecutableData, error)
-	ConsensusValidated(params catalyst.ConsensusValidatedParams) error
-	ForkchoiceUpdated(params catalyst.ForkChoiceParams)
-	ExecutePayload(params catalyst.ExecutableData) (catalyst.GenericStringResponse, error)
+	PreparePayload(ctx context.Context, params types.AssembleBlockParams) (*types.PayloadResponse, error)
+	GetPayload(ctx context.Context, PayloadID hexutil.Uint64) (*types.ExecutableData, error)
+	ConsensusValidated(ctx context.Context, params types.ConsensusValidatedParams) error
+	ForkchoiceUpdated(ctx context.Context, params types.ForkChoiceParams) error
+	ExecutePayload(ctx context.Context, params types.ExecutableData) (types.GenericStringResponse, error)
 }
 
-func (s *Service) PreparePayload(parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
-	res, err := s.catalystClient.PreparePayload(catalyst.AssembleBlockParams{
+func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
+	res, err := s.catalystClient.PreparePayload(ctx, types.AssembleBlockParams{
 		ParentHash:   common.BytesToHash(parentHash),
 		Timestamp:    timeStamp,
 		Random:       common.BytesToHash(random),
@@ -41,8 +43,8 @@ func (s *Service) PreparePayload(parentHash []byte, timeStamp uint64, random []b
 	return res.PayloadID, nil
 }
 
-func (s *Service) GetPayload(payloadID uint64) (*ethpb.ExecutionPayload, error) {
-	payload, err := s.catalystClient.GetPayload(hexutil.Uint64(payloadID))
+func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error) {
+	payload, err := s.catalystClient.GetPayload(ctx, hexutil.Uint64(payloadID))
 	if err != nil {
 		return nil, err
 	}
@@ -64,29 +66,28 @@ func (s *Service) GetPayload(payloadID uint64) (*ethpb.ExecutionPayload, error) 
 	}, nil
 }
 
-func (s *Service) NotifyConsensusValidated(blockHash []byte, valid bool) error {
+func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error {
 	status := "INVALID"
 	if valid {
 		status = "VALID"
 	}
-	return s.catalystClient.ConsensusValidated(catalyst.ConsensusValidatedParams{
+	return s.catalystClient.ConsensusValidated(ctx, types.ConsensusValidatedParams{
 		BlockHash: common.BytesToHash(blockHash),
 		Status:    status,
 	})
 }
 
-func (s *Service) NotifyForkChoiceValidated(headBlockHash []byte, finalizedBlockHash []byte) error {
-	s.catalystClient.ForkchoiceUpdated(catalyst.ForkChoiceParams{
+func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error {
+	return s.catalystClient.ForkchoiceUpdated(ctx, types.ForkChoiceParams{
 		HeadBlockHash:      common.BytesToHash(headBlockHash),
 		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
 	})
-	return nil
 }
 
-func (s *Service) ExecutePayload(payload *ethpb.ExecutionPayload) error {
+func (s *Service) ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error {
 	baseFeePerGas := new(big.Int)
 	baseFeePerGas.SetBytes(payload.BaseFeePerGas)
-	res, err := s.catalystClient.ExecutePayload(catalyst.ExecutableData{
+	res, err := s.catalystClient.ExecutePayload(ctx, types.ExecutableData{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		Coinbase:      common.BytesToAddress(payload.Coinbase),

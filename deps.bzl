@@ -810,9 +810,9 @@ def prysm_deps():
             "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
         ],
         importpath = "github.com/ethereum/go-ethereum",
-        replace = "github.com/MariusVanDerWijden/go-ethereum",
-        sum = "h1:H31UZ0EEVjuMBOEUMrnj8s1ZR1V64YYscgrxEkqHmTM=",
-        version = "v1.8.22-0.20211003152508-b798cbdad11b",
+        replace = "github.com/terencechain/go-ethereum",
+        sum = "h1:KQxGqFpWBtJdQahThssKTcM5n6odzWZL7CD2MB0A8DU=",
+        version = "v1.8.22-0.20211004172435-52cb521d3b75",
     )
 
     go_repository(
