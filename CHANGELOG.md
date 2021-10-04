@@ -13,7 +13,7 @@ Please update your beacon node to v2.0.0 prior to updating your validator. The b
 
 - Full Altair support. [Learn more about Altair.](https://github.com/ethereum/annotated-spec/blob/8473024d745a3a2b8a84535d57773a8e86b66c9a/altair/beacon-chain.md)
 - Added bootnodes from Nimbus team. #9656
-- Revamped slasher implementation. The slasher functionality is no longer a standalone binary. Slasher functionality is available from the beacon node with the `--slasher` flag. Note: Running the slasher has considerably increased resource requirements. Be sure to review the latest documentation before enabling this feature. #8331
+- Revamped slasher implementation. The slasher functionality is no longer a standalone binary. Slasher functionality is available from the beacon node with the `--slasher` flag. Note: Running the slasher has considerably increased resource requirements. Be sure to review the latest documentation before enabling this feature. This feature is experimental. #8331
 - Support for standard JSON API in the beacon node. Prysm validators continue to use Prysm's API. #7510
 - Configurable subnet peer requirements. Increased minimum desired peers per subnet from 4 to 6. This can be modified with `--minimum-peers-per-subnet` in the beacon node. #9657.
 - Support for go build on darwin_arm64 devices (Mac M1 chips). Cross compile for darwin_arm64 is not yet supported. #9600.
