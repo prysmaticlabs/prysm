@@ -434,15 +434,15 @@ func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
-func TestSyncCommitteeDutiesMaxValidEpoch(t *testing.T) {
+func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
 	t.Run("first epoch of current period", func(t *testing.T) {
-		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesMaxValidEpoch(0))
+		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesLastValidEpoch(0))
 	})
 	t.Run("last epoch of current period", func(t *testing.T) {
 		assert.Equal(
 			t,
 			params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1,
-			syncCommitteeDutiesMaxValidEpoch(params.BeaconConfig().EpochsPerSyncCommitteePeriod-1),
+			syncCommitteeDutiesLastValidEpoch(params.BeaconConfig().EpochsPerSyncCommitteePeriod-1),
 		)
 	})
 }

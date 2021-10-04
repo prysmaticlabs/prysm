@@ -171,7 +171,13 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 // GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
 //
 // The logic for calculating epoch validity comes from https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getSyncCommitteeDuties
-// where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
+// where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
+//
+// Algorithm:
+//  - Get the last valid epoch. This is the last epoch of the next sync committee period.
+//  - Get the state for the requested epoch. If it's an epoch from the next sync committee period, then get the current state.
+//  - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
+//  - Get duties.
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
@@ -182,9 +188,9 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 
 	currentSlot := slots.CurrentSlot(uint64(vs.TimeFetcher.GenesisTime().Unix()))
 	currentEpoch := slots.ToEpoch(currentSlot)
-	maxValidEpoch := syncCommitteeDutiesMaxValidEpoch(currentEpoch)
-	if req.Epoch > maxValidEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", maxValidEpoch)
+	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
+	if req.Epoch > lastValidEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
 	}
 
 	var stateEpoch types.Epoch
@@ -685,7 +691,7 @@ func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRe
 	return migration.V1Alpha1ToV1Block(v1alpha1resp)
 }
 
-func syncCommitteeDutiesMaxValidEpoch(currentEpoch types.Epoch) types.Epoch {
+func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
 	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	// Return the last epoch of the next sync committee.
 	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
