@@ -25,7 +25,7 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return !ssz.DeepEqual(h, emptyPayload()), nil
+	return !ssz.DeepEqual(h, EmptyPayload()), nil
 }
 
 // IsMergeBlock returns true if input block is the merge block.
@@ -200,7 +200,7 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 	}, nil
 }
 
-func emptyPayload() *ethpb.ExecutionPayload {
+func EmptyPayload() *ethpb.ExecutionPayload {
 	return &ethpb.ExecutionPayload{
 		ParentHash:    make([]byte, 32),
 		Coinbase:      make([]byte, 20),

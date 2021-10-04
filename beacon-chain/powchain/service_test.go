@@ -82,6 +82,10 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
+func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, nil
+}
+
 func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)

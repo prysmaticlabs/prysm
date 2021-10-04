@@ -108,10 +108,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	// TODO: we should break ExecuteStateTransition into per slot and block.
+	// TODO: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		if executionEnabled {
+			// Inform execution engine that consensus block which contained `payload.blockhash` is INVALID.
 			payload, err := body.ExecutionPayload()
 			if err != nil {
 				return err
@@ -128,9 +129,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err != nil {
 			return err
 		}
+		// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
 		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
 			return err
 		}
+		// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
 		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
 			return err
 		}
