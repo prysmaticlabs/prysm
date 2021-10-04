@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
+    strip_prefix = "rules_docker-0.19.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
 )
 
 http_archive(
@@ -137,6 +137,34 @@ container_repositories()
 load(
     "@io_bazel_rules_docker//container:container.bzl",
     "container_pull",
+)
+
+container_pull(
+    name = "cc_image_base",
+    digest = "sha256:2c4bb6b7236db0a55ec54ba8845e4031f5db2be957ac61867872bf42e56c4deb",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "cc_debug_image_base",
+    digest = "sha256:3680c61e81f68fc00bfb5e1ec65e8e678aaafa7c5f056bc2681c29527ebbb30c",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "go_image_base",
+    digest = "sha256:ba7a315f86771332e76fa9c3d423ecfdbb8265879c6f1c264d6fff7d4fa460a4",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
+    name = "go_debug_image_base",
+    digest = "sha256:efd8711717d9e9b5d0dbb20ea10876dab0609c923bc05321b912f9239090ca80",
+    registry = "gcr.io",
+    repository = "distroless/base",
 )
 
 container_pull(
