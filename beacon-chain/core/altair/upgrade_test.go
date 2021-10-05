@@ -6,9 +6,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -19,13 +19,14 @@ import (
 )
 
 func TestTranslateParticipation(t *testing.T) {
+	ctx := context.Background()
 	s, _ := util.DeterministicGenesisStateAltair(t, 64)
 	st, ok := s.(*stateAltair.BeaconState)
 	require.Equal(t, true, ok)
 	require.NoError(t, st.SetSlot(st.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	var err error
-	newState, err := altair.TranslateParticipation(st, nil)
+	newState, err := altair.TranslateParticipation(ctx, st, nil)
 	require.NoError(t, err)
 	participation, err := newState.PreviousEpochParticipation()
 	require.NoError(t, err)
@@ -50,13 +51,13 @@ func TestTranslateParticipation(t *testing.T) {
 		})
 	}
 
-	newState, err = altair.TranslateParticipation(newState, pendingAtts)
+	newState, err = altair.TranslateParticipation(ctx, newState, pendingAtts)
 	require.NoError(t, err)
 	participation, err = newState.PreviousEpochParticipation()
 	require.NoError(t, err)
 	require.DeepNotSSZEqual(t, make([]byte, 64), participation)
 
-	committee, err := helpers.BeaconCommitteeFromState(st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
@@ -108,7 +109,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.DeepSSZEqual(t, &ethpb.Fork{
 		PreviousVersion: st.Fork().CurrentVersion,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           core.CurrentEpoch(st),
+		Epoch:           time.CurrentEpoch(st),
 	}, f)
 	csc, err := aState.CurrentSyncCommittee()
 	require.NoError(t, err)

@@ -3,7 +3,6 @@ package sync
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -20,7 +19,7 @@ func (s *Service) forkWatcher() {
 		// topics during/after the fork epoch. This routine is to ensure correct
 		// subscriptions for nodes running before a fork epoch.
 		case currSlot := <-slotTicker.C():
-			currEpoch := core.SlotToEpoch(currSlot)
+			currEpoch := slots.ToEpoch(currSlot)
 			if err := s.registerForUpcomingFork(currEpoch); err != nil {
 				log.WithError(err).Error("Unable to check for fork in the next epoch")
 				continue

@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestGetValidator(t *testing.T) {
@@ -438,7 +438,13 @@ func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
 	var st state.BeaconState
-	st, _ = util.DeterministicGenesisState(t, 8192)
+	count := uint64(8192)
+	st, _ = util.DeterministicGenesisState(t, count)
+	balances := make([]uint64, count)
+	for i := uint64(0); i < count; i++ {
+		balances[i] = i
+	}
+	require.NoError(t, st.SetBalances(balances))
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		s := Server{
@@ -456,7 +462,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
@@ -479,7 +485,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
@@ -501,7 +507,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 }
@@ -511,7 +517,7 @@ func TestListCommittees(t *testing.T) {
 
 	var st state.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
-	epoch := core.SlotToEpoch(st.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {
 		s := Server{
@@ -527,7 +533,7 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
 			assert.Equal(t, true, datum.Index == types.CommitteeIndex(0) || datum.Index == types.CommitteeIndex(1))
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 		}
 	})
 
@@ -564,7 +570,7 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, 2, len(resp.Data))
 		index := types.CommitteeIndex(0)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 			index++
@@ -587,7 +593,7 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
 		slot := types.Slot(0)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 			slot++
@@ -611,7 +617,7 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(resp.Data))
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 		}

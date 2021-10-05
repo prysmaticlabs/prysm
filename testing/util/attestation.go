@@ -8,8 +8,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -20,6 +20,7 @@ import (
 	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -58,7 +59,7 @@ func GenerateAttestations(
 		slot--
 		generateHeadState = true
 	}
-	currentEpoch := core.SlotToEpoch(slot)
+	currentEpoch := slots.ToEpoch(slot)
 
 	targetRoot := make([]byte, 32)
 	var headRoot []byte
@@ -119,7 +120,7 @@ func GenerateAttestations(
 		headRoot = b
 	}
 
-	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), bState, currentEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +150,12 @@ func GenerateAttestations(
 		)
 	}
 
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
-		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, slot, c)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +171,7 @@ func GenerateAttestations(
 			},
 		}
 
-		dataRoot, err := helpers.ComputeSigningRoot(attData, domain)
+		dataRoot, err := signing.ComputeSigningRoot(attData, domain)
 		if err != nil {
 			return nil, err
 		}

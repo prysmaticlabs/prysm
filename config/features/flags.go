@@ -33,12 +33,8 @@ var (
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to external slasher to prevent it from " +
-			"transmitting a slashable offence over the network.",
-	}
-	disableLookbackFlag = &cli.BoolFlag{
-		Name:  "disable-lookback",
-		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
+		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
+			"for remote slashing protection",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
@@ -47,7 +43,7 @@ var (
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
-		Value: "max_cover",
+		Value: "opt_max_cover",
 	}
 	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-opt-maxcover",
@@ -93,6 +89,10 @@ var (
 		Name:  "disable-next-slot-state-cache",
 		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
+	enableSlasherFlag = &cli.BoolFlag{
+		Name:  "slasher",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
+	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
 		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
@@ -131,6 +131,10 @@ var (
 		Name:  "disable-active-balance-cache",
 		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
+	enableGetBlockOptimizations = &cli.BoolFlag{
+		Name:  "enable-get-block-optimizations",
+		Usage: "This enables some optimizations on the GetBlock() function.",
+	}
 	enableBatchGossipVerification = &cli.BoolFlag{
 		Name:  "enable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
@@ -141,6 +145,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	forceOptMaxCoverAggregationStategy,
+	enableGetBlockOptimizations,
 	enableBatchGossipVerification,
 }
 
@@ -178,10 +183,12 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
+	enableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
 	enableBatchGossipVerification,

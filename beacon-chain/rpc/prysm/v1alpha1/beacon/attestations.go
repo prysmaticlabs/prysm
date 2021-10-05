@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/api/pagination"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -172,7 +171,7 @@ func (bs *Server) ListIndexedAttestations(
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
-			committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
+			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.Data.Slot, att.Data.CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -302,7 +301,7 @@ func (bs *Server) StreamIndexedAttestations(
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot, err := core.StartSlot(targetEpoch)
+			startSlot, err := slots.EpochStart(targetEpoch)
 			if err != nil {
 				log.Error(err)
 				continue

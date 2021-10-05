@@ -33,6 +33,7 @@ const (
 	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
 	fileBufferSize      = 64 * 1024
 	maxFileBufferSize   = 1024 * 1024
+	AltairE2EForkEpoch  = 6
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -108,7 +109,7 @@ random:
 }
 
 // LogOutput logs the output of all log files made.
-func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
+func LogOutput(t *testing.T) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
@@ -122,15 +123,8 @@ func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
 			t.Fatal(err)
 		}
 		LogErrorOutput(t, validatorLogFile, "validator client", i)
-
-		if config.TestSlasher {
-			slasherLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			LogErrorOutput(t, slasherLogFile, "slasher client", i)
-		}
 	}
+
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 

@@ -271,7 +271,11 @@ func (s *Store) SaveSlasherChunks(
 	encodedChunks := make([][]byte, len(chunkKeys))
 	for i := 0; i < len(chunkKeys); i++ {
 		encodedKeys[i] = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
-		encodedChunks[i] = encodeSlasherChunk(chunks[i])
+		encodedChunk, err := encodeSlasherChunk(chunks[i])
+		if err != nil {
+			return err
+		}
+		encodedChunks[i] = encodedChunk
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
@@ -453,18 +457,27 @@ func keyForValidatorProposal(slot types.Slot, proposerIndex types.ValidatorIndex
 	return append(encSlot, encValidatorIdx...), nil
 }
 
-func encodeSlasherChunk(chunk []uint16) []byte {
+func encodeSlasherChunk(chunk []uint16) ([]byte, error) {
 	val := make([]byte, 0)
 	for i := 0; i < len(chunk); i++ {
 		val = append(val, ssz.MarshalUint16(make([]byte, 0), chunk[i])...)
 	}
-	return snappy.Encode(nil, val)
+	if len(val) == 0 {
+		return nil, errors.New("cannot encode empty chunk")
+	}
+	return snappy.Encode(nil, val), nil
 }
 
 func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 	chunkBytes, err := snappy.Decode(nil, enc)
 	if err != nil {
 		return nil, err
+	}
+	if len(chunkBytes)%2 != 0 {
+		return nil, fmt.Errorf(
+			"cannot decode slasher chunk with length %d, must be a multiple of 2",
+			len(chunkBytes),
+		)
 	}
 	chunk := make([]uint16, 0)
 	for i := 0; i < len(chunkBytes); i += 2 {

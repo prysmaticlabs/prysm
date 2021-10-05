@@ -7,9 +7,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -17,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
@@ -32,13 +34,13 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := core.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -50,7 +52,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	beaconState, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
+	beaconState, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 
 	// Use a non-sync committee index to compare profitability.
@@ -71,7 +73,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	require.Equal(t, true, balances[indices[0]] > balances[nonSyncIndex])
 
 	// Proposer should be more profitable than rest of the sync committee
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.Equal(t, true, balances[proposerIndex] > balances[indices[0]])
 
@@ -106,13 +108,13 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := core.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -124,7 +126,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
+	_, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.ErrorContains(t, "invalid sync committee signature", err)
 }
 
@@ -141,14 +143,14 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := core.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, 0, len(indices))
 	for i, indice := range indices {
 		if syncBits.BitAt(uint64(i)) {
 			b := p2pType.SSZBytes(pbr)
-			sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+			sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 			require.NoError(t, err)
 			sig, err := bls.SignatureFromBytes(sb)
 			require.NoError(t, err)
@@ -161,7 +163,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	_, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
+	_, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 }
 
@@ -214,14 +216,14 @@ func Test_VerifySyncCommitteeSig(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
-	ps := core.PrevSlot(beaconState.Slot())
+	ps := slots.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
 	pks := make([]bls.PublicKey, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr)
-		sb, err := helpers.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -239,7 +241,7 @@ func Test_VerifySyncCommitteeSig(t *testing.T) {
 
 func Test_ApplySyncRewardsPenalties(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	beaconState, err := altair.ApplySyncRewardsPenalties(beaconState,
+	beaconState, err := altair.ApplySyncRewardsPenalties(context.Background(), beaconState,
 		[]types.ValidatorIndex{0, 1}, // voted
 		[]types.ValidatorIndex{2, 3}) // didn't vote
 	require.NoError(t, err)
@@ -248,7 +250,7 @@ func Test_ApplySyncRewardsPenalties(t *testing.T) {
 	require.Equal(t, balances[0], balances[1])
 	require.Equal(t, uint64(31999999012), balances[2])
 	require.Equal(t, balances[2], balances[3])
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.Equal(t, uint64(32000000282), balances[proposerIndex])
 }

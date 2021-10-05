@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -16,12 +15,13 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() types.Slot {
-	return core.CurrentSlot(uint64(s.genesisTime.Unix()))
+	return slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -45,7 +45,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (st
 	}
 
 	// Verify block slot time is not from the future.
-	if err := core.VerifySlotTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b block.BeaconBlock) error {
-	finalizedSlot, err := core.StartSlot(s.finalizedCheckpt.Epoch)
+	finalizedSlot, err := slots.EpochStart(s.finalizedCheckpt.Epoch)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	ctx, span := trace.StartSpan(ctx, "blockChain.shouldUpdateCurrentJustified")
 	defer span.End()
 
-	if core.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+	if slots.SinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
 	var newJustifiedBlockSigned block.SignedBeaconBlock
@@ -159,7 +159,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 
 	newJustifiedBlock := newJustifiedBlockSigned.Block()
-	jSlot, err := core.StartSlot(s.justifiedCheckpt.Epoch)
+	jSlot, err := slots.EpochStart(s.justifiedCheckpt.Epoch)
 	if err != nil {
 		return false, err
 	}
@@ -212,7 +212,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 		}
 	}
 
-	return s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+	return nil
 }
 
 // This caches input checkpoint as justified for the service struct. It rotates current justified to previous justified,
@@ -348,7 +348,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
-		finalizedSlot, err := core.StartSlot(s.finalizedCheckpt.Epoch)
+		finalizedSlot, err := slots.EpochStart(s.finalizedCheckpt.Epoch)
 		if err != nil {
 			return err
 		}
@@ -377,7 +377,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
 	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
-	fSlot, err := core.StartSlot(s.finalizedCheckpt.Epoch)
+	fSlot, err := slots.EpochStart(s.finalizedCheckpt.Epoch)
 	if err != nil {
 		return err
 	}

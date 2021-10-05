@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -219,7 +219,7 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -258,7 +258,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	}
 
 	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
-	startTime := slots.SlotStartTime(v.genesisTime, slot)
+	startTime := slots.StartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	wait := prysmTime.Until(finalTime)
 	if wait <= 0 {

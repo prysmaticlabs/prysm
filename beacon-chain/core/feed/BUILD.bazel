@@ -6,6 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//shared:__subpackages__",
+        "//testing/slasher/simulator:__subpackages__",
     ],
 )

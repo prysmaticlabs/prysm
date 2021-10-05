@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
@@ -29,7 +29,7 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		historyLength := types.Epoch(10)
 
 		pruningLimitEpoch := currentEpoch - historyLength
-		lowestStoredSlot, err := core.EndSlot(pruningLimitEpoch)
+		lowestStoredSlot, err := slots.EpochEnd(pruningLimitEpoch)
 		require.NoError(t, err)
 
 		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
@@ -68,9 +68,9 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 		proposals := make([]*slashertypes.SignedBlockHeaderWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
 		for i := types.Epoch(0); i < currentEpoch; i++ {
-			startSlot, err := core.StartSlot(i)
+			startSlot, err := slots.EpochStart(i)
 			require.NoError(t, err)
-			endSlot, err := core.StartSlot(i + 1)
+			endSlot, err := slots.EpochStart(i + 1)
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
 				prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
@@ -89,9 +89,9 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
 			err = beaconDB.db.View(func(tx *bolt.Tx) error {
 				bkt := tx.Bucket(proposalRecordsBucket)
-				startSlot, err := core.StartSlot(i)
+				startSlot, err := slots.EpochStart(i)
 				require.NoError(t, err)
-				endSlot, err := core.StartSlot(i + 1)
+				endSlot, err := slots.EpochStart(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
 					prop1Key, err := keyForValidatorProposal(j, 0)
@@ -168,9 +168,9 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 		attestations := make([]*slashertypes.IndexedAttestationWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
 		for i := types.Epoch(0); i < currentEpoch; i++ {
-			startSlot, err := core.StartSlot(i)
+			startSlot, err := slots.EpochStart(i)
 			require.NoError(t, err)
-			endSlot, err := core.StartSlot(i + 1)
+			endSlot, err := slots.EpochStart(i + 1)
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
 				attester1 := uint64(j + 10)
@@ -196,9 +196,9 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
 			err = beaconDB.db.View(func(tx *bolt.Tx) error {
 				bkt := tx.Bucket(attestationDataRootsBucket)
-				startSlot, err := core.StartSlot(i)
+				startSlot, err := slots.EpochStart(i)
 				require.NoError(t, err)
-				endSlot, err := core.StartSlot(i + 1)
+				endSlot, err := slots.EpochStart(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
 					attester1 := types.ValidatorIndex(j + 10)
