@@ -123,7 +123,7 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 	return st, nil
 }
 
-// This verifies if payload is valid according to beacon state.
+// This validates if payload is valid according to beacon state.
 // These validation steps ONLY apply to post merge.
 func validatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
 	complete, err := IsMergeComplete(st)
@@ -150,7 +150,7 @@ func validatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.Exec
 	return nil
 }
 
-// This verifies if payload is valid according to beacon state.
+// This validates if payload is valid according to beacon state.
 // These validation steps apply to both pre merge and post merge.
 func validatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
@@ -170,7 +170,7 @@ func validatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) erro
 	return nil
 }
 
-// This validates if gas limit and used in `payload` is valid to `parent.
+// This validates if gas limit and used in `payload` is valid to `parent`.
 //
 // Spec code:
 // def is_valid_gas_limit(payload: ExecutionPayload, parent: ExecutionPayloadHeader) -> bool:

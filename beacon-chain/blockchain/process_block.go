@@ -157,7 +157,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err != nil {
 			return err
 		}
-		if !isValidTerminalPoWBlock(transitionBlk, parentTransitionBlk) {
+		if !validateTerminalBlock(transitionBlk, parentTransitionBlk) {
 			return errors.New("incorrect terminal pow block")
 		}
 	}
@@ -562,7 +562,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 	return nil
 }
 
-// isValidTerminalPoWBlock validates terminal pow block.
+// validateTerminalBlock validates terminal pow block by comparing own total difficulty with parent's total difficulty.
 //
 // def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
 //    if block.block_hash == TERMINAL_BLOCK_HASH:
@@ -571,7 +571,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 //    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
 //    return is_total_difficulty_reached and is_parent_total_difficulty_valid
-func isValidTerminalPoWBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
+func validateTerminalBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
 	if transitionBlock.Hash() == params.BeaconConfig().TerminalBlockHash {
 		return true
 	}
