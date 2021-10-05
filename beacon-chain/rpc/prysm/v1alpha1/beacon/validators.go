@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -45,7 +46,7 @@ func (bs *Server) ListValidatorBalances(
 	if bs.GenesisTimeFetcher == nil {
 		return nil, status.Errorf(codes.Internal, "Nil genesis time fetcher")
 	}
-	currentEpoch := coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorBalancesRequest_Epoch:
@@ -65,7 +66,7 @@ func (bs *Server) ListValidatorBalances(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[types.ValidatorIndex]bool{} // Track filtered validators to prevent duplication in the response.
 
-	startSlot, err := coreTime.StartSlot(requestedEpoch)
+	startSlot, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +198,7 @@ func (bs *Server) ListValidators(
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
-	currentEpoch := coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
@@ -220,7 +221,7 @@ func (bs *Server) ListValidators(
 	var err error
 	if requestedEpoch != currentEpoch {
 		var s types.Slot
-		s, err = coreTime.StartSlot(requestedEpoch)
+		s, err = slots.EpochStart(requestedEpoch)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +236,7 @@ func (bs *Server) ListValidators(
 		return nil, status.Error(codes.Internal, "Requested state is nil")
 	}
 
-	s, err := coreTime.StartSlot(requestedEpoch)
+	s, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +393,7 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	currentEpoch := coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -412,7 +413,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		)
 	}
 
-	s, err := coreTime.StartSlot(requestedEpoch)
+	s, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +479,7 @@ func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	currentEpoch := coreTime.SlotToEpoch(currentSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
 
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -500,7 +501,7 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	// Get current slot state for current epoch attestations.
-	startSlot, err := coreTime.StartSlot(requestedEpoch)
+	startSlot, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -819,7 +820,7 @@ func (bs *Server) GetIndividualVotes(
 	ctx context.Context,
 	req *ethpb.IndividualVotesRequest,
 ) (*ethpb.IndividualVotesRespond, error) {
-	currentEpoch := coreTime.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -829,7 +830,7 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	s, err := coreTime.StartSlot(req.Epoch)
+	s, err := slots.EpochStart(req.Epoch)
 	if err != nil {
 		return nil, err
 	}

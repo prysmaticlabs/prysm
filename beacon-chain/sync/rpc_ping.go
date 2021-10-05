@@ -9,10 +9,10 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -78,7 +78,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	defer cancel()
 
 	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, coreTime.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return err
 	}

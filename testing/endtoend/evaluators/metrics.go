@@ -120,7 +120,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		timeSlot := slots.SlotsSinceGenesis(genesisResp.GenesisTime.AsTime())
+		timeSlot := slots.SinceGenesis(genesisResp.GenesisTime.AsTime())
 		if uint64(chainHead.HeadSlot) != uint64(timeSlot) {
 			return fmt.Errorf("expected metrics slot to equal chain head slot, expected %d, received %d", timeSlot, chainHead.HeadSlot)
 		}

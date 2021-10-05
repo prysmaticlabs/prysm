@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -26,14 +25,15 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	synccontribution "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -42,11 +42,6 @@ import (
 var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
-
-type eth1DataSingleVote struct {
-	eth1Data    *ethpb.Eth1Data
-	blockHeight *big.Int
-}
 
 // blockData required to create a beacon block.
 type blockData struct {
@@ -68,7 +63,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if coreTime.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
@@ -224,16 +219,9 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, fmt.Errorf("could not get attestations to pack into block: %v", err)
+		return nil, err
 	}
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
@@ -276,6 +264,70 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Error(codes.Internal, "block version not supported")
 	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
+}
+
+func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+	if features.Get().EnableGetBlockOptimizations {
+		deposits, atts, err := vs.optimizedPackDepositsAndAttestations(ctx, head, eth1Data)
+		if err != nil {
+			return nil, nil, err
+		}
+		return deposits, atts, nil
+	}
+
+	// Pack ETH1 deposits which have not been included in the beacon chain.
+	deposits, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	}
+
+	// Pack aggregated attestations which have not been included in the beacon chain.
+	atts, err := vs.packAttestations(ctx, head)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+	}
+
+	return deposits, atts, nil
+}
+
+func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+	eg, egctx := errgroup.WithContext(ctx)
+	var deposits []*ethpb.Deposit
+	var atts []*ethpb.Attestation
+
+	eg.Go(func() error {
+		// Pack ETH1 deposits which have not been included in the beacon chain.
+		localDeposits, err := vs.deposits(egctx, head, eth1Data)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine too
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		deposits = localDeposits
+		return nil
+	})
+
+	eg.Go(func() error {
+		// Pack aggregated attestations which have not been included in the beacon chain.
+		localAtts, err := vs.packAttestations(egctx, head)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine too
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		atts = localAtts
+		return nil
+	})
+
+	return deposits, atts, eg.Wait()
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -418,15 +470,12 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
-	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get last block by earliest valid time")
-		return vs.randomETH1DataVote(ctx)
-	}
-	// Increment the earliest block if the original block's time is before valid time.
-	// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
-	if lastBlockByEarliestValidTime.Time < earliestValidTime {
-		lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
+	if !features.Get().EnableGetBlockOptimizations {
+		_, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
+		if err != nil {
+			log.WithError(err).Error("Could not get last block by earliest valid time")
+			return vs.randomETH1DataVote(ctx)
+		}
 	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
@@ -460,7 +509,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return coreTime.VotingPeriodStartTime(startTime, slot)
+	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
@@ -483,7 +532,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(coreTime.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
+	enc = fastssz.MarshalUint64(enc, uint64(slots.ToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hash.Hash(enc)
 	blockHash := hash.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
@@ -551,7 +600,7 @@ func (vs *Server) deposits(
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
-	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// Need to fetch if the deposits up to the state's latest eth1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
@@ -576,7 +625,7 @@ func (vs *Server) deposits(
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*dbpb.DepositContainer
+	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)

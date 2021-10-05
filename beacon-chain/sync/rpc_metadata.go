@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -89,7 +89,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, time.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.Chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		return nil, errors.New(errMsg)
 	}
 	valRoot := s.cfg.Chain.GenesisValidatorRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(time.SlotToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
+	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -114,7 +114,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
 	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
 	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
-	if err := coreTime.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
+	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
 	}
@@ -125,7 +125,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	startSlot, err := coreTime.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
+	startSlot, err := slots.EpochStart(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
@@ -168,7 +168,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	msg.ValidatorData = blk.Proto() // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
-	startTime, err := coreTime.SlotToTime(genesisTime, blk.Block().Slot())
+	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -266,7 +266,7 @@ func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 
 // This captures metrics for block arrival time by subtracts slot start time.
 func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error {
-	startTime, err := coreTime.SlotToTime(genesisTime, currentSlot)
+	startTime, err := slots.ToTime(genesisTime, currentSlot)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error 
 // returns true if the corresponding block should be queued and false if
 // the block should be processed immediately.
 func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Time) bool {
-	slotTime, err := coreTime.SlotToTime(genesisTime, slot)
+	slotTime, err := slots.ToTime(genesisTime, slot)
 	if err != nil {
 		return false
 	}

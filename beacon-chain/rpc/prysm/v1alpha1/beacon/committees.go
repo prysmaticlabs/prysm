@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +27,7 @@ func (bs *Server) ListBeaconCommittees(
 	var requestedSlot types.Slot
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
-		startSlot, err := time.StartSlot(q.Epoch)
+		startSlot, err := slots.EpochStart(q.Epoch)
 		if err != nil {
 			return nil, err
 		}
@@ -37,8 +38,8 @@ func (bs *Server) ListBeaconCommittees(
 		requestedSlot = currentSlot
 	}
 
-	requestedEpoch := time.SlotToEpoch(requestedSlot)
-	currentEpoch := time.SlotToEpoch(currentSlot)
+	requestedEpoch := slots.ToEpoch(requestedSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -69,7 +70,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,
 ) (SlotToCommiteesMap, []types.ValidatorIndex, error) {
-	startSlot, err := time.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,7 +92,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
 			"Could not compute committees for epoch %d: %v",
-			time.SlotToEpoch(startSlot),
+			slots.ToEpoch(startSlot),
 			err,
 		)
 	}
@@ -119,7 +120,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
 	}
 
-	startSlot, err := time.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}

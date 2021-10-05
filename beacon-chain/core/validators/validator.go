@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // InitiateValidatorExit takes in validator index and updates
@@ -134,7 +135,7 @@ func SlashValidator(
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
-	currentEpoch := time.SlotToEpoch(s.Slot())
+	currentEpoch := slots.ToEpoch(s.Slot())
 	validator, err := s.ValidatorAtIndex(slashedIdx)
 	if err != nil {
 		return nil, err
