@@ -235,6 +235,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxExecutionTransactions:     16384,
 	MaxBytesPerOpaqueTransaction: 1048576,
 	TerminalBlockHash:            [32]byte{},
+	GasLimitDenominator:          1024,
+	MinGasLimit:                  5000,
+
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 }

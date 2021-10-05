@@ -104,7 +104,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	body := signed.Block().Body()
-	executionEnabled, err := execution.IsExecutionEnabled(preState, body)
+	executionEnabled, err := execution.Enabled(preState, body)
 	if err != nil {
 		return err
 	}

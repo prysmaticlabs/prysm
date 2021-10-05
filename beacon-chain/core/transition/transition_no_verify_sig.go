@@ -311,7 +311,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	enabled, err := execution.IsExecutionEnabled(state, blk.Body())
+	enabled, err := execution.Enabled(state, blk.Body())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not check if execution is enabled")
