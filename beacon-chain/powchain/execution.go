@@ -14,26 +14,37 @@ import (
 
 // ExecutionEngineCaller defines methods that wraps around execution engine API calls to enable other prysm services to interact with.
 type ExecutionEngineCaller interface {
+	// PreparePayload is a wrapper on top of `CatalystClient` to abstract out `types.AssembleBlockParams`.
 	PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error)
+	// GetPayload is a wrapper on top of `CatalystClient`.
 	GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error)
 	// NotifyConsensusValidated is the wrapper on top of `CatalystClient` to abstract out `types.ConsensusValidatedParams`.
 	NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error
+	// NotifyForkChoiceValidated is the wrapper on top of `CatalystClient` to abstract out `types.ConsensusValidatedParams`.
 	NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error
-	// ExecutePayload is the wrapper on top of `CatalystClient` to abstract out `types.GenericStringResponse`.
+	// ExecutePayload is the wrapper on top of `CatalystClient` to abstract out `types.ForkChoiceParams`.
 	ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error
 }
 
 // CatalystClient calls with the execution engine end points to enable consensus <-> execution interaction.
 type CatalystClient interface {
+	// PreparePayload initiates a process of building an execution payload on top of the execution chain tip.
 	PreparePayload(ctx context.Context, params types.AssembleBlockParams) (*types.PayloadResponse, error)
+	// GetPayload returns the most recent version of the execution payload that has been built since the corresponding
+	// call to prepare_payload method.
 	GetPayload(ctx context.Context, PayloadID hexutil.Uint64) (*types.ExecutableData, error)
-	// ConsensusValidated notifies execution engine on the result of beacon state transition.
+	// ConsensusValidated signals execution engine on the result of beacon state transition.
 	ConsensusValidated(ctx context.Context, params types.ConsensusValidatedParams) error
+	// ForkchoiceUpdated signals execution engine on the fork choice updates.
 	ForkchoiceUpdated(ctx context.Context, params types.ForkChoiceParams) error
 	// ExecutePayload returns true if and only if input executable data is valid with respect to engine state.
 	ExecutePayload(ctx context.Context, params types.ExecutableData) (types.GenericStringResponse, error)
 }
 
+// PreparePayload initiates a process of building an execution payload on top of the execution chain tip by parent hash.
+// it returns an uint64 payload id that is used to obtain the execution payload in a subsequent `GetPayload` call.
+// Engine API definition:
+//  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_preparepayload
 func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
 	res, err := s.catalystClient.PreparePayload(ctx, types.AssembleBlockParams{
 		ParentHash:   common.BytesToHash(parentHash),
@@ -47,6 +58,10 @@ func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeSta
 	return res.PayloadID, nil
 }
 
+// GetPayload returns the most recent version of the execution payload that has been built since the corresponding
+// call to `PreparePayload` method. It returns the `ExecutionPayload` object.
+// Engine API definition:
+//  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_getpayload
 func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error) {
 	payload, err := s.catalystClient.GetPayload(ctx, hexutil.Uint64(payloadID))
 	if err != nil {
@@ -88,6 +103,9 @@ func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte
 	})
 }
 
+// NotifyForkChoiceValidated notifies execution engine on fork choice updates.
+// Engine API definition:
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_forkchoiceupdated
 func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error {
 	return s.catalystClient.ForkchoiceUpdated(ctx, types.ForkChoiceParams{
 		HeadBlockHash:      common.BytesToHash(headBlockHash),
