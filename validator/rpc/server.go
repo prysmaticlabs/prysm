@@ -212,7 +212,8 @@ func (s *Server) Start() {
 		url.QueryEscape(token),
 		expr,
 	)
-	log.Infof("Navigate to %s to authenticate web", webAuthURL)
+	log.Infof("Navigate to the link below to authenticate with the Prysm web interface")
+	log.Info(webAuthURL)
 }
 
 // Stop the gRPC server.
