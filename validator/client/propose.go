@@ -380,8 +380,25 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	var sig bls.Signature
 	switch b.Version() {
 
-	// TODO: Add merge block signing
-
+	case version.Merge:
+		block, ok := b.Proto().(*ethpb.BeaconBlockMerge)
+		if !ok {
+			return nil, nil, errors.New("could not convert obj to beacon block merge")
+		}
+		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, signingRootErr)
+		}
+		sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_BlockV3{BlockV3: block},
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), domain, nil
 	case version.Altair:
 		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
 		if !ok {

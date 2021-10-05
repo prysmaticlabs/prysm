@@ -2,7 +2,9 @@ package validator
 
 import (
 	"context"
+	"math/big"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -73,9 +75,34 @@ func (vs *Server) getPreMergeParentHash(ctx context.Context, slot types.Slot) ([
 		}
 		return terminalBlockHash.Bytes(), true, nil
 	}
-	return []byte{}, true, nil
+
+	return vs.getPowBlockHashAtTerminalTotalDifficulty(ctx)
 }
 
-func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, error) {
-	return []byte{}, nil
+func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
+	b, err := vs.BlockFetcher.BlockByNumber(ctx, nil /* latest block */)
+	if err != nil {
+		return nil, false, err
+	}
+	terminalTotalDifficulty := new(big.Int)
+	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
+	var terminalBlockHash []byte
+
+	// TODO: Add pow block cache.
+	for {
+		if b.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0 {
+			terminalBlockHash = b.Hash().Bytes()
+			if b.ParentHash() == b.Hash() {
+				return nil, false, errors.New("invalid block")
+			}
+			b, err = vs.BlockFetcher.BlockByHash(ctx, b.ParentHash())
+			if err != nil {
+				return nil, false, err
+			}
+		} else {
+			return terminalBlockHash, true, err
+		}
+	}
+
+	return []byte{}, false, nil
 }

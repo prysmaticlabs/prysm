@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -157,7 +158,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			return err
 		}
 		if !isValidTerminalPoWBlock(transitionBlk, parentTransitionBlk) {
-			return errors.New("incorrect transition block")
+			return errors.New("incorrect terminal pow block")
 		}
 	}
 
@@ -574,6 +575,10 @@ func isValidTerminalPoWBlock(transitionBlock *gethTypes.Block, transitionParentB
 	if transitionBlock.Hash() == params.BeaconConfig().TerminalBlockHash {
 		return true
 	}
-	// TODO: how to get total difficulty?
-	return false
+	terminalTotalDifficulty := new(big.Int)
+	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
+
+	totalDifficultyReached := transitionBlock.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0
+	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlock.TotalDifficulty()) >= 0
+	return totalDifficultyReached && parentTotalDifficultyValid
 }

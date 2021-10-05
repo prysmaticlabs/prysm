@@ -81,9 +81,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 	}
-	// TODO: get merge beacon block
 
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Merge{Merge: &ethpb.BeaconBlockMerge{}}}, nil
+	blk, err := vs.getMergeBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not fetch Merge beacon block: %v", err)
+	}
+
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Merge{Merge: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -98,14 +102,57 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	return vs.getPhase0BeaconBlock(ctx, req)
 }
 
-func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getAltairBeaconBlock")
+func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockMerge, error) {
+	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := vs.getExecutionPayload(ctx, req.Slot)
+	if err != nil {
+		return nil, err
+	}
+	blk := &ethpb.BeaconBlockMerge{
+		Slot:          altairBlk.Slot,
+		ProposerIndex: altairBlk.ProposerIndex,
+		ParentRoot:    altairBlk.ParentRoot,
+		StateRoot:     params.BeaconConfig().ZeroHash[:],
+		Body: &ethpb.BeaconBlockBodyMerge{
+			RandaoReveal:      altairBlk.Body.RandaoReveal,
+			Eth1Data:          altairBlk.Body.Eth1Data,
+			Graffiti:          altairBlk.Body.Graffiti,
+			ProposerSlashings: altairBlk.Body.ProposerSlashings,
+			AttesterSlashings: altairBlk.Body.AttesterSlashings,
+			Attestations:      altairBlk.Body.Attestations,
+			Deposits:          altairBlk.Body.Deposits,
+			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
+			SyncAggregate:     altairBlk.Body.SyncAggregate,
+			ExecutionPayload:  payload,
+		},
+	}
+
+	// Compute state root with the newly constructed block.
+	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(
+		&ethpb.SignedBeaconBlockMerge{Block: blk, Signature: make([]byte, 96)},
+	)
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err := vs.ComputeStateRoot(ctx, wsb)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
+		return nil, fmt.Errorf("could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+	return blk, nil
+}
+
+func (vs *Server) buildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildAltairBeaconBlock")
 	defer span.End()
 	blkData, err := vs.buildPhase0BlockData(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
-
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
@@ -116,7 +163,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 		return nil, err
 	}
 
-	blk := &ethpb.BeaconBlockAltair{
+	return &ethpb.BeaconBlockAltair{
 		Slot:          req.Slot,
 		ParentRoot:    blkData.ParentRoot,
 		StateRoot:     stateRoot,
@@ -132,7 +179,18 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 			Graffiti:          blkData.Graffiti[:],
 			SyncAggregate:     syncAggregate,
 		},
+	}, nil
+}
+
+func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getAltairBeaconBlock")
+	defer span.End()
+
+	blk, err := vs.buildAltairBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, err
 	}
+
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
@@ -140,7 +198,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	if err != nil {
 		return nil, err
 	}
-	stateRoot, err = vs.ComputeStateRoot(ctx, wsb)
+	stateRoot, err := vs.ComputeStateRoot(ctx, wsb)
 	if err != nil {
 		interop.WriteBlockToDisk(wsb, true /*failed*/)
 		return nil, fmt.Errorf("could not compute state root: %v", err)
