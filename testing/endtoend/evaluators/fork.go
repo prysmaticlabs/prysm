@@ -4,19 +4,19 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 )
 
 // ForkTransition ensures that the hard fork has occurred successfully.
 var ForkTransition = types.Evaluator{
 	Name:       "fork_transition_%d",
-	Policy:     policies.OnEpoch(params.AltairE2EForkEpoch),
+	Policy:     policies.OnEpoch(helpers.AltairE2EForkEpoch),
 	Evaluation: forkOccurs,
 }
 
@@ -29,7 +29,7 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
+	fSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 	if err != nil {
 		return err
 	}

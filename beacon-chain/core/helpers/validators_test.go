@@ -1,12 +1,13 @@
 package helpers
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -270,7 +271,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	for _, tt := range tests {
 		ClearCache()
 		require.NoError(t, state.SetSlot(tt.slot))
-		result, err := BeaconProposerIndex(state)
+		result, err := BeaconProposerIndex(context.Background(), state)
 		require.NoError(t, err, "Failed to get shard and committees at slot")
 		assert.Equal(t, tt.index, result, "Result index was an unexpected value")
 	}
@@ -304,7 +305,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	// Set a very high slot, so that retrieved block root will be
 	// non existent for the proposer cache.
 	require.NoError(t, state.SetSlot(100))
-	_, err = BeaconProposerIndex(state)
+	_, err = BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
 }
@@ -323,7 +324,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	indices, err := ActiveValidatorIndices(state, 0)
+	indices, err := ActiveValidatorIndices(context.Background(), state, 0)
 	require.NoError(t, err)
 
 	var proposerIndices []types.ValidatorIndex
@@ -375,7 +376,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 	require.NoError(t, committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []types.ValidatorIndex{1, 2, 3}}))
-	validatorCount, err := ActiveValidatorCount(beaconState, core.CurrentEpoch(beaconState))
+	validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 	require.NoError(t, err)
 	assert.Equal(t, uint64(c), validatorCount, "Did not get the correct validator count")
 }
@@ -406,37 +407,11 @@ func TestChurnLimit_OK(t *testing.T) {
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		validatorCount, err := ActiveValidatorCount(beaconState, core.CurrentEpoch(beaconState))
+		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 		require.NoError(t, err)
 		resultChurn, err := ValidatorChurnLimit(validatorCount)
 		require.NoError(t, err)
 		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorChurnLimit(%d)", test.validatorCount)
-	}
-}
-
-func TestDomain_OK(t *testing.T) {
-	state := &ethpb.BeaconState{
-		Fork: &ethpb.Fork{
-			Epoch:           3,
-			PreviousVersion: []byte{0, 0, 0, 2},
-			CurrentVersion:  []byte{0, 0, 0, 3},
-		},
-	}
-	tests := []struct {
-		epoch      types.Epoch
-		domainType [4]byte
-		result     []byte
-	}{
-		{epoch: 1, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
-		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
-		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(947067381421703173, 32)},
-		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(9369798235163459588, 32)},
-		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(9369798235163459589, 32)},
-	}
-	for _, tt := range tests {
-		domain, err := Domain(state.Fork, tt.epoch, tt.domainType, nil)
-		require.NoError(t, err)
-		assert.DeepEqual(t, tt.result[:8], domain[:8], "Unexpected domain version")
 	}
 }
 
@@ -591,7 +566,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := v1.InitializeFromProto(tt.args.state)
 			require.NoError(t, err)
-			got, err := ActiveValidatorIndices(s, tt.args.epoch)
+			got, err := ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return

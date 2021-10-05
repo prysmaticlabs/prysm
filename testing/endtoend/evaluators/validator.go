@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	ethtypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -26,17 +28,19 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipating ensures the expected amount of validators are active.
-var ValidatorsParticipating = types.Evaluator{
-	Name:       "validators_participating_epoch_%d",
-	Policy:     policies.AfterNthEpoch(2),
-	Evaluation: validatorsParticipating,
+var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+	return types.Evaluator{
+		Name:       "validators_participating_epoch_%d",
+		Policy:     policies.AfterNthEpoch(epoch),
+		Evaluation: validatorsParticipating,
+	}
 }
 
 // ValidatorSyncParticipation ensures the expected amount of sync committee participants
 // are active.
 var ValidatorSyncParticipation = types.Evaluator{
 	Name:       "validator_sync_participation_%d",
-	Policy:     policies.AfterNthEpoch(params.AltairE2EForkEpoch - 1),
+	Policy:     policies.AfterNthEpoch(helpers.AltairE2EForkEpoch - 1),
 	Evaluation: validatorsSyncParticipation,
 }
 
@@ -125,12 +129,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
 	}
-	currSlot := core.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
-	currEpoch := core.SlotToEpoch(currSlot)
+	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
+	currEpoch := slots.ToEpoch(currSlot)
 	lowestBound := currEpoch - 1
 
-	if lowestBound < params.AltairE2EForkEpoch {
-		lowestBound = params.AltairE2EForkEpoch
+	if lowestBound < helpers.AltairE2EForkEpoch {
+		lowestBound = helpers.AltairE2EForkEpoch
 	}
 	blockCtrs, err := altairClient.ListBeaconBlocks(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: lowestBound}})
 	if err != nil {
@@ -144,7 +148,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
+		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
@@ -173,7 +177,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := core.StartSlot(params.AltairE2EForkEpoch)
+		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}

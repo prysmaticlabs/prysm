@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
@@ -23,12 +22,15 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+var errInvalidValIndex = errors.New("invalid validator index")
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
@@ -41,7 +43,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 
 	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := core.SlotToEpoch(cs)
+	currentEpoch := slots.ToEpoch(cs)
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
@@ -56,11 +58,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(s, req.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -115,7 +117,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := core.SlotToEpoch(cs)
+	currentEpoch := slots.ToEpoch(cs)
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
 	}
@@ -130,7 +132,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(s, req.Epoch)
+	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -167,6 +169,16 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 }
 
 // GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
+//
+// The logic for calculating epoch validity comes from https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getSyncCommitteeDuties
+// where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
+//
+// Algorithm:
+//  - Get the last valid epoch. This is the last epoch of the next sync committee period.
+//  - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
+//  or an epoch from the next sync committee period, then get the current state.
+//  - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
+//  - Get duties.
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
@@ -175,7 +187,17 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	slot, err := core.StartSlot(req.Epoch)
+	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
+	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
+	if req.Epoch > lastValidEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
+	}
+
+	requestedEpoch := req.Epoch
+	if requestedEpoch > currentEpoch {
+		requestedEpoch = currentEpoch
+	}
+	slot, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
@@ -183,37 +205,36 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
 	}
-	committee, err := st.CurrentSyncCommittee()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
-	}
 
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
+	}
+	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	var committee *ethpbalpha.SyncCommittee
+	if req.Epoch >= nextSyncCommitteeFirstEpoch {
+		committee, err = st.NextSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
+		}
+	} else {
+		committee, err = st.CurrentSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
+		}
+	}
 	committeePubkeys := make(map[[48]byte][]uint64)
 	for j, pubkey := range committee.Pubkeys {
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
 	}
-	duties := make([]*ethpbv2.SyncCommitteeDuty, len(req.Index))
-	for i, index := range req.Index {
-		duty := &ethpbv2.SyncCommitteeDuty{
-			ValidatorIndex: index,
-		}
-		valPubkey48 := st.PubkeyAtIndex(index)
-		zeroPubkey := [48]byte{}
-		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
-		}
-		valPubkey := valPubkey48[:]
-		duty.Pubkey = valPubkey
-		indices, ok := committeePubkeys[valPubkey48]
-		if ok {
-			duty.ValidatorSyncCommitteeIndices = indices
-		} else {
-			duty.ValidatorSyncCommitteeIndices = make([]uint64, 0)
-		}
-		duties[i] = duty
-	}
 
+	duties, err := syncCommitteeDuties(req.Index, st, committeePubkeys)
+	if errors.Is(err, errInvalidValIndex) {
+		return nil, status.Error(codes.InvalidArgument, "Invalid validator index")
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
+	}
 	return &ethpbv2.SyncCommitteeDutiesResponse{
 		Data: duties,
 	}, nil
@@ -235,7 +256,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	epoch := core.SlotToEpoch(req.Slot)
+	epoch := slots.ToEpoch(req.Slot)
 	if epoch < params.BeaconConfig().AltairForkEpoch {
 		block, err := vs.v1BeaconBlock(ctx, req)
 		if err != nil {
@@ -403,7 +424,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	}
 
 	fetchValsLen := func(slot types.Slot) (uint64, error) {
-		wantedEpoch := core.SlotToEpoch(slot)
+		wantedEpoch := slots.ToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
@@ -416,16 +437,16 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 	}
-	currEpoch := core.SlotToEpoch(req.Data[0].Slot)
+	currEpoch := slots.ToEpoch(req.Data[0].Slot)
 
 	for _, sub := range req.Data {
 		// If epoch has changed, re-request active validators length
-		if currEpoch != core.SlotToEpoch(sub.Slot) {
+		if currEpoch != slots.ToEpoch(sub.Slot) {
 			currValsLen, err = fetchValsLen(sub.Slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 			}
-			currEpoch = core.SlotToEpoch(sub.Slot)
+			currEpoch = slots.ToEpoch(sub.Slot)
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
 		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
@@ -465,7 +486,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	currEpoch := core.SlotToEpoch(s.Slot())
+	currEpoch := slots.ToEpoch(s.Slot())
 	validators := make([]state.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
@@ -482,7 +503,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		validators[i] = val
 	}
 
-	currPeriod := core.SyncCommitteePeriod(currEpoch)
+	currPeriod := slots.SyncCommitteePeriod(currEpoch)
 	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 
 	for i, sub := range req.Data {
@@ -583,7 +604,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 	if epoch <= 1 {
 		dependentRootSlot = 0
 	} else {
-		prevEpochStartSlot, err := core.StartSlot(epoch.Sub(1))
+		prevEpochStartSlot, err := slots.EpochStart(epoch.Sub(1))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
@@ -603,7 +624,7 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 	if epoch == 0 {
 		dependentRootSlot = 0
 	} else {
-		epochStartSlot, err := core.StartSlot(epoch)
+		epochStartSlot, err := slots.EpochStart(epoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
@@ -623,12 +644,12 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
-		epochStartSlot, err = core.StartSlot(requestedEpoch.Sub(1))
+		epochStartSlot, err = slots.EpochStart(requestedEpoch.Sub(1))
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}
 	} else {
-		epochStartSlot, err = core.StartSlot(requestedEpoch)
+		epochStartSlot, err = slots.EpochStart(requestedEpoch)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}
@@ -668,4 +689,39 @@ func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRe
 		return nil, err
 	}
 	return migration.V1Alpha1ToV1Block(v1alpha1resp)
+}
+
+func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
+	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	// Return the last epoch of the next sync committee.
+	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
+	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
+}
+
+func syncCommitteeDuties(
+	valIndices []types.ValidatorIndex,
+	st state.BeaconState,
+	committeePubkeys map[[48]byte][]uint64,
+) ([]*ethpbv2.SyncCommitteeDuty, error) {
+	duties := make([]*ethpbv2.SyncCommitteeDuty, len(valIndices))
+	for i, index := range valIndices {
+		duty := &ethpbv2.SyncCommitteeDuty{
+			ValidatorIndex: index,
+		}
+		valPubkey48 := st.PubkeyAtIndex(index)
+		zeroPubkey := [48]byte{}
+		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
+			return nil, errInvalidValIndex
+		}
+		valPubkey := valPubkey48[:]
+		duty.Pubkey = valPubkey
+		indices, ok := committeePubkeys[valPubkey48]
+		if ok {
+			duty.ValidatorSyncCommitteeIndices = indices
+		} else {
+			duty.ValidatorSyncCommitteeIndices = make([]uint64, 0)
+		}
+		duties[i] = duty
+	}
+	return duties, nil
 }

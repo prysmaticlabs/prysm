@@ -183,6 +183,21 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	}
 }
 
+func TestStore_SlasherChunk_PreventsSavingWrongLength(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := setupDB(t)
+	totalChunks := 64
+	chunkKeys := make([][]byte, totalChunks)
+	chunks := make([][]uint16, totalChunks)
+	for i := 0; i < totalChunks; i++ {
+		chunks[i] = []uint16{}
+		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
+	}
+	// We should get an error if saving empty chunks.
+	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, chunkKeys, chunks)
+	require.ErrorContains(t, "cannot encode empty chunk", err)
+}
+
 func TestStore_ExistingBlockProposals(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)

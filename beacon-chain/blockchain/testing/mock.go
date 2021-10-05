@@ -294,17 +294,17 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 	return nil
 }
 
-// AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (state.BeaconState, error) {
+// AttestationTargetState mocks AttestationTargetState method in chain service.
+func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.BeaconState, error) {
 	return s.State, nil
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	if s.State == nil {
 		return []types.ValidatorIndex{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.State, epoch)
+	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
 }
 
 // HeadSeed mocks the same method in the chain service.

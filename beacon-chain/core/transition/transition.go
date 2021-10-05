@@ -11,17 +11,18 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -282,8 +283,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
 func CanUpgradeToAltair(slot types.Slot) bool {
-	epochStart := core.IsEpochStart(slot)
-	altairEpoch := core.SlotToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
+	epochStart := slots.IsEpochStart(slot)
+	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
 
@@ -356,7 +357,7 @@ func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
 func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(core.CurrentEpoch(state))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(time.CurrentEpoch(state))))
 
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
@@ -380,7 +381,7 @@ func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	state, err = e.ProcessRegistryUpdates(state)
+	state, err = e.ProcessRegistryUpdates(ctx, state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process registry updates")
 	}

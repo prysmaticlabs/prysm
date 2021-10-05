@@ -7,7 +7,6 @@ import (
 	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -47,11 +47,11 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(0, activeIndices, attesterSeed)
+	committees, err := computeCommittees(context.Background(), 0, activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	wanted := &ethpb.BeaconCommittees{
@@ -103,13 +103,13 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 1)
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	startSlot, err := core.StartSlot(1)
+	startSlot, err := slots.EpochStart(1)
 	require.NoError(t, err)
-	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
+	wanted, err := computeCommittees(context.Background(), startSlot, activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -173,10 +173,10 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 
-	wanted, err := computeCommittees(0, activeIndices, seed)
+	wanted, err := computeCommittees(context.Background(), 0, activeIndices, seed)
 	require.NoError(t, err)
 	committees, activeIndices, err := bs.retrieveCommitteesForRoot(context.Background(), gRoot[:])
 	require.NoError(t, err)

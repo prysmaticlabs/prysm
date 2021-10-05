@@ -6,7 +6,6 @@ package endtoend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -79,38 +79,53 @@ func (r *testRunner) run() {
 	// ETH1 node.
 	eth1Node := components.NewEth1Node()
 	g.Go(func() error {
-		return eth1Node.Start(ctx)
+		if err := eth1Node.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start eth1node")
+		}
+		return nil
 	})
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
-			return fmt.Errorf("sending and mining deposits require ETH1 node to run: %w", err)
+			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
 		}
-		return components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */)
+		if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
+			return errors.Wrap(err, "failed to send and mine deposits")
+		}
+		return nil
 	})
 
 	// Boot node.
 	bootNode := components.NewBootNode()
 	g.Go(func() error {
-		return bootNode.Start(ctx)
+		if err := bootNode.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start bootnode")
+		}
+		return nil
 	})
 
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
-			return fmt.Errorf("beacon nodes require ETH1 and boot node to run: %w", err)
+			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
-		return beaconNodes.Start(ctx)
+		if err := beaconNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start beacon nodes")
+		}
+		return nil
 	})
 
 	// Validator nodes.
 	validatorNodes := components.NewValidatorNodeSet(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-			return fmt.Errorf("validator nodes require beacon nodes to run: %w", err)
+			return errors.Wrap(err, "validator nodes require beacon nodes to run")
 		}
-		return validatorNodes.Start(ctx)
+		if err := validatorNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start validator nodes")
+		}
+		return nil
 	})
 
 	// Run E2E evaluators and tests.
@@ -125,15 +140,14 @@ func (r *testRunner) run() {
 		requiredComponents := []e2etypes.ComponentRunner{
 			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
-
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
-			return fmt.Errorf("components take too long to start: %w", err)
+			return errors.Wrap(err, "components take too long to start")
 		}
 
 		// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
-		defer helpers.LogOutput(t, config)
+		defer helpers.LogOutput(t)
 		if config.UsePprof {
 			defer func() {
 				log.Info("Writing output pprof files")
@@ -169,7 +183,7 @@ func (r *testRunner) run() {
 
 		// Run assigned evaluators.
 		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
-			return err
+			return errors.Wrap(err, "one or more evaluators failed")
 		}
 
 		// If requested, run sync test.
@@ -177,9 +191,12 @@ func (r *testRunner) run() {
 			return nil
 		}
 		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
-			return err
+			return errors.Wrap(err, "beacon chain sync test failed")
 		}
-		return r.testDoppelGangerProtection(ctx)
+		if err := r.testDoppelGangerProtection(ctx); err != nil {
+			return errors.Wrap(err, "doppel ganger protection check failed")
+		}
+		return nil
 	})
 
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
@@ -210,26 +227,23 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
 		wg := new(sync.WaitGroup)
-		for _, ev := range config.Evaluators {
+		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
 			// in a separate goroutine.
-			evaluator := ev
+			evaluator := eval
 			// Only run if the policy says so.
 			if !evaluator.Policy(types.Epoch(currentEpoch)) {
 				continue
 			}
-
-			// Add evaluator to our waitgroup.
 			wg.Add(1)
-
 			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				err := evaluator.Evaluation(conns...)
 				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
 				wg.Done()
 			})
 		}
-		// Wait for all evaluators to finish their evaluation for the epoch.
 		wg.Wait()
+
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
 			if t.Failed() {
@@ -301,7 +315,6 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
 		})
 	}
-
 	return nil
 }
 

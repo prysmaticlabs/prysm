@@ -10,12 +10,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/grpc"
 )
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
-	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
+	decoder := json.NewDecoder(body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestContainer); err != nil {
+		if strings.Contains(err.Error(), "json: unknown field") {
+			e := errors.Wrap(err, "could not decode request body")
+			return &DefaultErrorJson{
+				Message: e.Error(),
+				Code:    http.StatusBadRequest,
+			}
+		}
 		return InternalServerErrorWithMessage(err, "could not decode request body")
 	}
 	return nil

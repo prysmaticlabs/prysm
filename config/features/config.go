@@ -1,5 +1,5 @@
 /*
-Package featureconfig defines which features are enabled for runtime
+Package features defines which features are enabled for runtime
 in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:
@@ -39,9 +39,9 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
+	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
-	SlasherProtection                   bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLargerGossipHistory           bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
@@ -50,6 +50,7 @@ type Flags struct {
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
+	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
 	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -66,6 +67,7 @@ type Flags struct {
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
+	EnableSlasher bool // Enable slasher in the beacon node runtime.
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
@@ -180,6 +182,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableNextSlotStateCache)
 		cfg.EnableNextSlotStateCache = false
 	}
+	if ctx.Bool(enableSlasherFlag.Name) {
+		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableSlasher = true
+	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
 		logDisabled(disableProposerAttsSelectionUsingMaxCover)
@@ -209,6 +215,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
 	}
+	if ctx.Bool(enableGetBlockOptimizations.Name) {
+		logEnabled(enableGetBlockOptimizations)
+		cfg.EnableGetBlockOptimizations = true
+	}
 	if ctx.Bool(enableBatchGossipVerification.Name) {
 		logEnabled(enableBatchGossipVerification)
 		cfg.EnableBatchVerification = true
@@ -223,8 +233,8 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		logEnabled(enableExternalSlasherProtectionFlag)
-		cfg.SlasherProtection = true
+		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
+		cfg.RemoteSlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

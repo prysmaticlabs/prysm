@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -23,24 +24,28 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/messagehandler"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
 
 const pubsubMessageTimeout = 30 * time.Second
 
+// wrappedVal represents a gossip validator which also returns an error along with the result.
+type wrappedVal func(context.Context, peer.ID, *pubsub.Message) (pubsub.ValidationResult, error)
+
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
-func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, nil
 	}
 	msg.ValidatorData = m
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Register PubSub subscribers
@@ -118,7 +123,7 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) *pubsub.Subscription {
+func (s *Service) subscribe(topic string, validator wrappedVal, handle subHandler, digest [4]byte) *pubsub.Subscription {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
@@ -133,7 +138,7 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 	return s.subscribeWithBase(s.addDigestToTopic(topic, digest), validator, handle)
 }
 
-func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
+func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle subHandler) *pubsub.Subscription {
 	topic += s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
@@ -221,7 +226,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
-func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
+func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, pubsub.ValidatorEx) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
 		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
@@ -251,11 +256,27 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 			log.WithField("topic", topic).Debugf("Received message from outdated fork digest %#x", retDigest)
 			return pubsub.ValidationIgnore
 		}
-		b := v(ctx, pid, msg)
+		b, err := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
+			log.WithError(err).WithFields(logrus.Fields{
+				"topic":        topic,
+				"multiaddress": multiAddr(pid, s.cfg.P2P.Peers()),
+				"peer id":      pid.String(),
+				"agent":        agentString(pid, s.cfg.P2P.Host()),
+				"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
+			}).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {
+			if err != nil {
+				log.WithError(err).WithFields(logrus.Fields{
+					"topic":        topic,
+					"multiaddress": multiAddr(pid, s.cfg.P2P.Peers()),
+					"peer id":      pid.String(),
+					"agent":        agentString(pid, s.cfg.P2P.Host()),
+					"gossip score": s.cfg.P2P.Peers().Scorers().GossipScorer().Score(pid),
+				}).Debugf("Gossip message was ignored")
+			}
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
 		}
 		return b
@@ -264,7 +285,7 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
+func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
@@ -334,7 +355,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 // maintained.
 func (s *Service) subscribeDynamicWithSubnets(
 	topicFormat string,
-	validate pubsub.ValidatorEx,
+	validate wrappedVal,
 	handle subHandler,
 	digest [4]byte,
 ) {
@@ -417,7 +438,7 @@ func (s *Service) subscribeAggregatorSubnet(
 	subscriptions map[uint64]*pubsub.Subscription,
 	idx uint64,
 	digest [4]byte,
-	validate pubsub.ValidatorEx,
+	validate wrappedVal,
 	handle subHandler,
 ) {
 	// do not subscribe if we have no peers in the same
@@ -443,7 +464,7 @@ func (s *Service) subscribeSyncSubnet(
 	subscriptions map[uint64]*pubsub.Subscription,
 	idx uint64,
 	digest [4]byte,
-	validate pubsub.ValidatorEx,
+	validate wrappedVal,
 	handle subHandler,
 ) {
 	// do not subscribe if we have no peers in the same
@@ -466,7 +487,7 @@ func (s *Service) subscribeSyncSubnet(
 
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
+func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
@@ -534,7 +555,7 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.
 // maintained.
 func (s *Service) subscribeDynamicWithSyncSubnets(
 	topicFormat string,
-	validate pubsub.ValidatorEx,
+	validate wrappedVal,
 	handle subHandler,
 	digest [4]byte,
 ) {
@@ -574,7 +595,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 					return
 				}
 
-				wantedSubs := s.retrieveActiveSyncSubnets(core.SlotToEpoch(currentSlot))
+				wantedSubs := s.retrieveActiveSyncSubnets(slots.ToEpoch(currentSlot))
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
@@ -725,4 +746,23 @@ func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool
 		return true, nil
 	}
 	return retDigest == digest, nil
+}
+
+func agentString(pid peer.ID, hst host.Host) string {
+	agString := ""
+	ok := false
+	rawVersion, storeErr := hst.Peerstore().Get(pid, "AgentVersion")
+	agString, ok = rawVersion.(string)
+	if storeErr != nil || !ok {
+		agString = ""
+	}
+	return agString
+}
+
+func multiAddr(pid peer.ID, stat *peers.Status) string {
+	addrs, err := stat.Address(pid)
+	if err != nil || addrs == nil {
+		return ""
+	}
+	return addrs.String()
 }

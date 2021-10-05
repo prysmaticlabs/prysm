@@ -6,13 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"reflect"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -27,14 +25,15 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	synccontribution "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,16 +42,6 @@ import (
 var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
-
-type eth1DataSingleVote struct {
-	eth1Data    *ethpb.Eth1Data
-	blockHeight *big.Int
-}
-
-type eth1DataAggregatedVote struct {
-	data  eth1DataSingleVote
-	votes int
-}
 
 // blockData required to create a beacon block.
 type blockData struct {
@@ -74,7 +63,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if core.SlotToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
@@ -230,22 +219,15 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
 	}
 
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, fmt.Errorf("could not get attestations to pack into block: %v", err)
+		return nil, err
 	}
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
 	// Calculate new proposer index.
-	idx, err := helpers.BeaconProposerIndex(head)
+	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
@@ -282,6 +264,70 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Error(codes.Internal, "block version not supported")
 	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
+}
+
+func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+	if features.Get().EnableGetBlockOptimizations {
+		deposits, atts, err := vs.optimizedPackDepositsAndAttestations(ctx, head, eth1Data)
+		if err != nil {
+			return nil, nil, err
+		}
+		return deposits, atts, nil
+	}
+
+	// Pack ETH1 deposits which have not been included in the beacon chain.
+	deposits, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	}
+
+	// Pack aggregated attestations which have not been included in the beacon chain.
+	atts, err := vs.packAttestations(ctx, head)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+	}
+
+	return deposits, atts, nil
+}
+
+func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+	eg, egctx := errgroup.WithContext(ctx)
+	var deposits []*ethpb.Deposit
+	var atts []*ethpb.Attestation
+
+	eg.Go(func() error {
+		// Pack ETH1 deposits which have not been included in the beacon chain.
+		localDeposits, err := vs.deposits(egctx, head, eth1Data)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine too
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		deposits = localDeposits
+		return nil
+	})
+
+	eg.Go(func() error {
+		// Pack aggregated attestations which have not been included in the beacon chain.
+		localAtts, err := vs.packAttestations(egctx, head)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+		}
+		// if the original context is cancelled, then cancel this routine too
+		select {
+		case <-egctx.Done():
+			return egctx.Err()
+		default:
+		}
+		atts = localAtts
+		return nil
+	})
+
+	return deposits, atts, eg.Wait()
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -424,15 +470,12 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
-	lastBlockByEarliestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get last block by earliest valid time")
-		return vs.randomETH1DataVote(ctx)
-	}
-	// Increment the earliest block if the original block's time is before valid time.
-	// This is very likely to happen because BlockTimeByHeight returns the last block AT OR BEFORE the specified time.
-	if lastBlockByEarliestValidTime.Time < earliestValidTime {
-		lastBlockByEarliestValidTime.Number = big.NewInt(0).Add(lastBlockByEarliestValidTime.Number, big.NewInt(1))
+	if !features.Get().EnableGetBlockOptimizations {
+		_, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
+		if err != nil {
+			log.WithError(err).Error("Could not get last block by earliest valid time")
+			return vs.randomETH1DataVote(ctx)
+		}
 	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
@@ -466,67 +509,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return core.VotingPeriodStartTime(startTime, slot)
-}
-
-func (vs *Server) inRangeVotes(ctx context.Context,
-	beaconState state.ReadOnlyBeaconState,
-	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
-
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-
-	var inRangeVotes []eth1DataSingleVote
-	for _, eth1Data := range beaconState.Eth1DataVotes() {
-		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
-		if err != nil {
-			log.Warningf("Could not fetch eth1data height for received eth1data vote: %v", err)
-		}
-		// Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-		if eth1Data.DepositCount < currentETH1Data.DepositCount {
-			continue
-		}
-		// firstValidBlockNumber.Cmp(height) < 1 filters out all blocks before firstValidBlockNumber
-		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
-		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
-		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
-		}
-	}
-
-	return inRangeVotes, nil
-}
-
-func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
-	var voteCount []eth1DataAggregatedVote
-	for _, singleVote := range votes {
-		newVote := true
-		for i, aggregatedVote := range voteCount {
-			aggregatedData := aggregatedVote.data
-			if reflect.DeepEqual(singleVote.eth1Data, aggregatedData.eth1Data) {
-				voteCount[i].votes++
-				newVote = false
-				break
-			}
-		}
-
-		if newVote {
-			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
-		}
-	}
-	if len(voteCount) == 0 {
-		return eth1DataAggregatedVote{}
-	}
-	currentVote := voteCount[0]
-	for _, aggregatedVote := range voteCount[1:] {
-		// Choose new eth1data if it has more votes or the same number of votes with a bigger block height.
-		if aggregatedVote.votes > currentVote.votes ||
-			(aggregatedVote.votes == currentVote.votes &&
-				aggregatedVote.data.blockHeight.Cmp(currentVote.data.blockHeight) == 1) {
-			currentVote = aggregatedVote
-		}
-	}
-
-	return currentVote
+	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
@@ -549,7 +532,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(core.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
+	enc = fastssz.MarshalUint64(enc, uint64(slots.ToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hash.Hash(enc)
 	blockHash := hash.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
@@ -617,7 +600,7 @@ func (vs *Server) deposits(
 	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return []*ethpb.Deposit{}, nil
 	}
-	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// Need to fetch if the deposits up to the state's latest eth1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
@@ -642,7 +625,7 @@ func (vs *Server) deposits(
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*dbpb.DepositContainer
+	var pendingDeps []*ethpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
@@ -767,55 +750,16 @@ func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1
 	return true, nil
 }
 
-// in case no vote for new eth1data vote considered best vote we
-// default into returning the latest deposit root and the block
-// hash of eth1 block hash that is FOLLOW_DISTANCE back from its
-// latest block.
-func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
-	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch ETH1_FOLLOW_DISTANCE ancestor")
-	}
-	// Fetch all historical deposits up to an ancestor height.
-	depositsTillHeight, depositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, ancestorHeight)
-	if depositsTillHeight == 0 {
-		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
-	}
-	// // Make sure we don't "undo deposit progress". See https://github.com/ethereum/consensus-specs/pull/1836
-	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
-	if depositsTillHeight < currentETH1Data.DepositCount {
-		return currentETH1Data, nil
-	}
-	return &ethpb.Eth1Data{
-		DepositRoot:  depositRoot[:],
-		BlockHash:    blockHash[:],
-		DepositCount: depositsTillHeight,
-	}, nil
-}
-
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
 	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	deduped, err := validAtts.dedup()
-	if err != nil {
-		return nil, err
-	}
-	sorted, err := deduped.sortByProfitability()
-	if err != nil {
-		return nil, err
-	}
-	return sorted.limitToMaxAttestations(), nil
+	return validAtts, nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -858,50 +802,53 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 	defer span.End()
 
 	atts := vs.AttPool.AggregatedAttestations()
-	atts, err := vs.filterAttestationsForBlockInclusion(ctx, latestState, atts)
+	atts, err := vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
 
-	// If there is any room left in the block, consider unaggregated attestations as well.
-	numAtts := uint64(len(atts))
-	if numAtts < params.BeaconConfig().MaxAttestations {
-		uAtts, err := vs.AttPool.UnaggregatedAttestations()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get unaggregated attestations")
-		}
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not filter attestations")
-		}
-		atts = append(atts, uAtts...)
-
-		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
-		for _, att := range atts {
-			attDataRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
-		}
-
-		attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
-		for _, as := range attsByDataRoot {
-			as, err := attaggregation.Aggregate(as)
-			if err != nil {
-				return nil, err
-			}
-			attsForInclusion = append(attsForInclusion, as...)
-		}
-		deduped, err := attsForInclusion.dedup()
-		if err != nil {
-			return nil, err
-		}
-		sorted, err := deduped.sortByProfitability()
-		if err != nil {
-			return nil, err
-		}
-		atts = sorted.limitToMaxAttestations()
+	uAtts, err := vs.AttPool.UnaggregatedAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get unaggregated attestations")
 	}
+	uAtts, err = vs.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+	atts = append(atts, uAtts...)
+
+	// Remove duplicates from both aggregated/unaggregated attestations. This
+	// prevents inefficient aggregates being created.
+	atts, err = proposerAtts(atts).dedup()
+	if err != nil {
+		return nil, err
+	}
+
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	for _, att := range atts {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	for _, as := range attsByDataRoot {
+		as, err := attaggregation.Aggregate(as)
+		if err != nil {
+			return nil, err
+		}
+		attsForInclusion = append(attsForInclusion, as...)
+	}
+	deduped, err := attsForInclusion.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	atts = sorted.limitToMaxAttestations()
 	return atts, nil
 }

@@ -9,7 +9,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -37,7 +37,7 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 		ctx,
 		&ethpb.ListValidatorAssignmentsRequest{
 			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Epoch{
-				Epoch: core.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -208,9 +208,9 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		val, err := s.ValidatorAtIndex(index)
@@ -277,9 +277,9 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	// Construct the wanted assignments.
 	var wanted []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[1:4] {
 		val, err := s.ValidatorAtIndex(index)
@@ -342,9 +342,9 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	// Construct the wanted assignments.
 	var assignments []*ethpb.ValidatorAssignments_CommitteeAssignment
 
-	activeIndices, err := helpers.ActiveValidatorIndices(s, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, s, 0)
 	require.NoError(t, err)
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[3:5] {
 		val, err := s.ValidatorAtIndex(index)
@@ -372,7 +372,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	req = &ethpb.ListValidatorAssignmentsRequest{Indices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}, PageSize: 5, PageToken: "1"}
 	res, err = bs.ListValidatorAssignments(context.Background(), req)
 	require.NoError(t, err)
-	cAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, 0)
+	cAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(context.Background(), s, 0)
 	require.NoError(t, err)
 	for _, index := range activeIndices[6:7] {
 		val, err := s.ValidatorAtIndex(index)

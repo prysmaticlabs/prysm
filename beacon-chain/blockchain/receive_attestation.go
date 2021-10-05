@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -19,10 +18,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
+// root of an attestation's target checkpoint.
+type AttestationStateFetcher interface {
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+}
+
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
+	AttestationStateFetcher
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -43,21 +48,21 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	return nil
 }
 
-// AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
-	ss, err := core.StartSlot(att.Data.Target.Epoch)
+// AttestationTargetState returns the pre state of attestation.
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
-	return s.getAttPreState(ctx, att.Data.Target)
+	return s.getAttPreState(ctx, target)
 }
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	targetSlot, err := core.StartSlot(a.Data.Target.Epoch)
+	targetSlot, err := slots.EpochStart(a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -82,7 +87,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
-	ss, err := core.StartSlot(f.Epoch)
+	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -141,7 +146,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := core.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

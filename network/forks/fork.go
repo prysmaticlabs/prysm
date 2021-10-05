@@ -8,11 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // IsForkNextEpoch checks if an alloted fork is in the following epoch.
@@ -23,8 +23,8 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 	if len(genesisValidatorsRoot) == 0 {
 		return false, errors.New("genesis validators root is not set")
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	currentSlot := slots.Since(genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	scheduledForks := SortedForkVersions(fSchedule)
 	isForkEpoch := false
@@ -48,7 +48,7 @@ func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte)
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	return signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 }
 
 // CreateForkDigest creates a fork digest from a genesis time and genesis
@@ -64,15 +64,15 @@ func CreateForkDigest(
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	currentSlot := slots.Since(genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
 
 	forkData, err := Fork(currentEpoch)
 	if err != nil {
 		return [4]byte{}, err
 	}
 
-	digest, err := helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	digest, err := signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err
 	}
@@ -112,7 +112,7 @@ func Fork(
 func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
-		rDigest, err := helpers.ComputeForkDigest(v[:], genesisValidatorsRoot)
+		rDigest, err := signing.ComputeForkDigest(v[:], genesisValidatorsRoot)
 		if err != nil {
 			return [4]byte{}, 0, err
 		}

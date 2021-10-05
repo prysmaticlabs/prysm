@@ -15,8 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/abool"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -32,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -276,13 +276,15 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	defaultTopic := "/eth2/testing/%#x/committee%d"
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
-	require.NoError(t, r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
+	_, topVal := r.wrapAndReportValidation(fullTopic, r.noopValidator)
+	require.NoError(t, r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, topVal))
 	subscriptions[1], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
 	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.cfg.P2P.Encoding().ProtocolSuffix()
-	err = r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	_, topVal = r.wrapAndReportValidation(fullTopic, r.noopValidator)
+	err = r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, topVal)
 	require.NoError(t, err)
 	subscriptions[2], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
@@ -330,7 +332,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
 		topic        string
-		v            pubsub.ValidatorEx
+		v            wrappedVal
 		chainstarted bool
 		pid          peer.ID
 		msg          *pubsub.Message
@@ -344,8 +346,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator Before chainstart",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{
@@ -363,7 +365,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator panicked",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
 					panic("oh no!")
 				},
 				chainstarted: true,
@@ -382,8 +384,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "validator OK",
 			args: args{
 				topic: mockTopic,
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				chainstarted: true,
 				msg: &pubsub.Message{
@@ -401,8 +403,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			name: "nil topic",
 			args: args{
 				topic: "foo",
-				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) pubsub.ValidationResult {
-					return pubsub.ValidationAccept
+				v: func(ctx context.Context, id peer.ID, message *pubsub.Message) (pubsub.ValidationResult, error) {
+					return pubsub.ValidationAccept, nil
 				},
 				msg: &pubsub.Message{
 					Message: &pubsubpb.Message{
@@ -550,7 +552,7 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	slot := r.cfg.Chain.CurrentSlot()
-	currEpoch := core.SlotToEpoch(slot)
+	currEpoch := slots.ToEpoch(slot)
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), currEpoch, []uint64{0, 1}, 10*time.Second)
 	digest, err := r.currentForkDigest()
 	assert.NoError(t, err)
@@ -595,7 +597,7 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	genRoot := r.cfg.Chain.GenesisValidatorRoot()
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
 	assert.Equal(t, int(params.BeaconConfig().SyncCommitteeSubnetCount), len(r.cfg.P2P.PubSub().GetTopics()))
@@ -635,7 +637,7 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
 	genRoot := r.cfg.Chain.GenesisValidatorRoot()
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 
 	r.subscribeDynamicWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
@@ -660,14 +662,14 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 
 func TestIsDigestValid(t *testing.T) {
 	genRoot := [32]byte{'A'}
-	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
+	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	valid, err := isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid)
 
 	// Compute future fork digest that will be invalid currently.
-	digest, err = helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
+	digest, err = signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	valid, err = isDigestValid(digest, time.Now().Add(-100*time.Second), genRoot)
 	assert.NoError(t, err)

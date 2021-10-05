@@ -157,7 +157,7 @@ func CalculateStateRoot(
 		if err != nil {
 			return [32]byte{}, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -203,7 +203,7 @@ func ProcessBlockNoVerifyAnySig(
 		if err != nil {
 			return nil, nil, err
 		}
-		state, err = altair.ProcessSyncAggregate(state, sa)
+		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -214,7 +214,7 @@ func ProcessBlockNoVerifyAnySig(
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block().Body().RandaoReveal())
+	rSet, err := b.RandaoSignatureSet(ctx, state, signed.Block().Body().RandaoReveal())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
@@ -304,7 +304,7 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		return nil, err
 	}
-	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
+	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")

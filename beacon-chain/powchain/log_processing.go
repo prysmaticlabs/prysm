@@ -183,7 +183,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		if !s.chainStartData.Chainstarted {
 			deposits := len(s.chainStartData.ChainstartDeposits)
 			if deposits%512 == 0 {
-				valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+				valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 				if err != nil {
 					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 				}
@@ -336,7 +336,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 		for _, filterLog := range logs {
 			if filterLog.BlockNumber > currentBlockNum {
-				if err := s.checkHeaderRange(currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
+				if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
@@ -347,7 +347,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 				return err
 			}
 		}
-		if err := s.checkHeaderRange(currentBlockNum, end, headersMap, requestHeaders); err != nil {
+		if err := s.checkHeaderRange(ctx, currentBlockNum, end, headersMap, requestHeaders); err != nil {
 			return err
 		}
 		currentBlockNum = end
@@ -434,15 +434,15 @@ func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big
 	if err != nil {
 		return err
 	}
-	s.checkForChainstart(hash, blkNum, timeStamp)
+	s.checkForChainstart(ctx, hash, blkNum, timeStamp)
 	return nil
 }
 
-func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
-	s.checkForChainstart(header.Hash(), header.Number, header.Time)
+func (s *Service) checkHeaderForChainstart(ctx context.Context, header *gethTypes.Header) {
+	s.checkForChainstart(ctx, header.Hash(), header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*gethTypes.Header,
+func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*gethTypes.Header,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {
@@ -455,7 +455,7 @@ func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*get
 				i--
 				continue
 			}
-			s.checkHeaderForChainstart(h)
+			s.checkHeaderForChainstart(ctx, h)
 		}
 	}
 	return nil
@@ -463,11 +463,11 @@ func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*get
 
 // retrieves the current active validator count and genesis time from
 // the provided block time.
-func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
+func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (uint64, uint64) {
 	if s.preGenesisState.NumValidators() == 0 {
 		return 0, 0
 	}
-	valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 	if err != nil {
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 		return 0, 0
@@ -475,8 +475,8 @@ func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
 	return valCount, s.createGenesisTime(blockTime)
 }
 
-func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
-	valCount, genesisTime := s.currentCountAndTime(blockTime)
+func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	if valCount == 0 {
 		return
 	}

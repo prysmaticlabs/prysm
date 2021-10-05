@@ -7,15 +7,15 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -41,13 +41,13 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
-	d, err := v.domainData(ctx, core.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommittee[:])
+	d, err := v.domainData(ctx, slots.ToEpoch(slot), params.BeaconConfig().DomainSyncCommittee[:])
 	if err != nil {
 		log.WithError(err).Error("Could not get sync committee domain data")
 		return
 	}
 	sszRoot := types.SSZBytes(res.Root)
-	r, err := helpers.ComputeSigningRoot(&sszRoot, d.SignatureDomain)
+	r, err := signing.ComputeSigningRoot(&sszRoot, d.SignatureDomain)
 	if err != nil {
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
@@ -191,7 +191,7 @@ func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey
 
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
 func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) (signature []byte, err error) {
-	domain, err := v.domainData(ctx, core.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
+	domain, err := v.domainData(ctx, slots.ToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
 func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
-	d, err := v.domainData(ctx, core.SlotToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
+	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 
 // This computes the signing root of hash tree root capable object `obj` and signs it using public key `pubKey` along with the signature domain `sigDomain`.
 func (v *validator) computeAndSign(ctx context.Context, obj fssz.HashRoot, pubKey [48]byte, sigDomain []byte) (bls.Signature, error) {
-	root, err := helpers.ComputeSigningRoot(obj, sigDomain)
+	root, err := signing.ComputeSigningRoot(obj, sigDomain)
 	if err != nil {
 		return nil, err
 	}

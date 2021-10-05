@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -187,9 +187,9 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			},
 			genesisRoot: genesisRoot,
 		}
-		epoch1Start, err := core.StartSlot(1)
+		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
-		epoch2Start, err := core.StartSlot(1)
+		epoch2Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
 		require.NoError(t, bState.SetSlot(epoch1Start))
 
@@ -206,7 +206,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Slot:                      epoch2Start,
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
-			EpochTransition:           false,
+			EpochTransition:           true,
 			PreviousDutyDependentRoot: genesisRoot[:],
 			CurrentDutyDependentRoot:  make([]byte, 32),
 		}
