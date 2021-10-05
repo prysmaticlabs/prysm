@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -203,7 +204,7 @@ func (s *Server) Start() {
 		log.Errorf("Could not initialize web auth token: %v", err)
 		return
 	}
-	log.WithField("expiration", expr).Infof("Authentication token for web is %s", token)
+	log.WithField("expiration", expr).Infof("Authentication token for web is %s", url.QueryEscape(token))
 }
 
 // Stop the gRPC server.
