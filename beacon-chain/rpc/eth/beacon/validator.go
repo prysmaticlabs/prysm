@@ -191,9 +191,9 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
 	epoch := slots.ToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
+	allBalances := state.Balances()
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()
-		allBalances := state.Balances()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
 			readOnlyVal, err := v1.NewValidator(validator)
@@ -249,7 +249,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			}
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
-				Balance:   v1Validator.EffectiveBalance,
+				Balance:   allBalances[valIndex],
 				Status:    subStatus,
 				Validator: v1Validator,
 			})
