@@ -130,7 +130,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
+		err := s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
+		if err != nil {
+			return pubsub.ValidationReject, err
+		}
 		return pubsub.ValidationIgnore, nil
 	}
 
