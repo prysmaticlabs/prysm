@@ -204,7 +204,15 @@ func (s *Server) Start() {
 		log.Errorf("Could not initialize web auth token: %v", err)
 		return
 	}
-	log.WithField("expiration", expr).Infof("Authentication token for web is %s", url.QueryEscape(token))
+	webAuthURLTemplate := "http://%s:%d/initialize?token=%s&expiration=%d"
+	webAuthURL := fmt.Sprintf(
+		webAuthURLTemplate,
+		s.validatorGatewayHost,
+		s.validatorGatewayPort,
+		url.QueryEscape(token),
+		expr,
+	)
+	log.Infof("Navigate to %s to authenticate web", webAuthURL)
 }
 
 // Stop the gRPC server.
