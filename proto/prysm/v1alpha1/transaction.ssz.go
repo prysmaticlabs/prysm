@@ -68,6 +68,7 @@ func (t *Transaction) HashTreeRoot() ([32]byte, error) {
 func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 	idx := hh.Index()
 
+	var selector byte
 	switch t.TransactionOneof.(type) {
 	case *Transaction_OpaqueTransaction:
 		hh.PutBytes(t.GetOpaqueTransaction())
@@ -75,6 +76,6 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 		return fmt.Errorf("can't HashTreeRootWith, Transaction oneof is using an unrecognized type option")
 	}
 
-	hh.Merkleize(idx)
+	hh.MerkleizeMixInSelector(idx, selector)
 	return nil
 }
