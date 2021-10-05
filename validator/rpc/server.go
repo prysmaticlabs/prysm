@@ -197,8 +197,13 @@ func (s *Server) Start() {
 			}
 		}
 	}()
-	go s.checkUserSignup(s.ctx)
 	log.WithField("address", address).Info("gRPC server listening on address")
+	token, expr, err := s.initializeAuthToken()
+	if err != nil {
+		log.Errorf("Could not initialize web auth token: %v", err)
+		return
+	}
+	log.WithField("expiration", expr).Infof("Authentication token for web is %s", token)
 }
 
 // Stop the gRPC server.

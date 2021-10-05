@@ -1,17 +1,20 @@
 package rpc
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -22,13 +25,10 @@ var (
 )
 
 const (
-	// HashedRPCPassword for the validator RPC access.
-	HashedRPCPassword       = "rpc-password-hash"
-	authTokenFileName       = "auth-token"
-	checkUserSignupInterval = time.Second * 30
+	authTokenFileName = "auth-token"
 )
 
-// HasUsedWeb checks if the user has authenticated via the web interface.
+// Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
 func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
@@ -42,13 +42,13 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 }
 
 // SaveHashedPassword to disk for the validator RPC.
-func (s *Server) saveHashedAuthToken(token string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(token), hashCost)
-	if err != nil {
-		return errors.Wrap(err, "could not generate hashed password")
-	}
-	hashFilePath := filepath.Join(s.walletDir, HashedRPCPassword)
-	return file.WriteFile(hashFilePath, hashedPassword)
+func (s *Server) saveAuthToken(token string, expiration uint64) error {
+	hashFilePath := filepath.Join(s.walletDir, authTokenFileName)
+	bytesBuf := new(bytes.Buffer)
+	bytesBuf.Write([]byte(token))
+	bytesBuf.Write([]byte("\n"))
+	bytesBuf.Write([]byte(fmt.Sprintf("%d", expiration)))
+	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
 }
 
 // Upon launch of the validator client, we initialize an auth token by either creating
@@ -56,22 +56,33 @@ func (s *Server) saveHashedAuthToken(token string) error {
 // user via stdout and the validator client should then attempt to open the default
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
-func (s *Server) initializeAuthToken() error {
+func (s *Server) initializeAuthToken() (string, uint64, error) {
 	authTokenFile := filepath.Join(s.walletDir, authTokenFileName)
 	if file.FileExists(authTokenFile) {
-		authToken, err := file.ReadFileAsBytes(authTokenFile)
+		f, err := os.Open(authTokenFile)
 		if err != nil {
-			return err
+			return "", 0, err
 		}
-		return nil
+		r := bufio.NewReader(f)
+		token, err := r.ReadString('\n')
+		if err != nil {
+			return "", 0, err
+		}
+		exprBytes, _, err := r.ReadLine()
+		if err != nil {
+			return "", 0, err
+		}
+		expiration, err := strconv.ParseUint(string(exprBytes), 10, 8)
+		if err != nil {
+			return "", 0, err
+		}
+		return token, expiration, nil
 	}
-	token, expr, err := s.createTokenString()
+	token, expiration, err := s.createTokenString()
 	if err != nil {
-		return err
+		return "", 0, err
 	}
-	if file.FileExists(filepath.Join(s.walletDir, authTokenFileName)) {
-		return nil
-	}
+	return token, expiration, nil
 }
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
