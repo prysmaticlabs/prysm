@@ -193,20 +193,11 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
 	}
 
-	var stateEpoch types.Epoch
-	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
+	requestedEpoch := req.Epoch
+	if requestedEpoch > currentEpoch {
+		requestedEpoch = currentEpoch
 	}
-	if req.Epoch >= currentSyncCommitteeFirstEpoch {
-		stateEpoch = currentSyncCommitteeFirstEpoch
-	} else {
-		stateEpoch, err = slots.SyncCommitteePeriodStartEpoch(req.Epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
-		}
-	}
-	slot, err := slots.EpochStart(stateEpoch)
+	slot, err := slots.EpochStart(requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
@@ -215,6 +206,10 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
 	}
 
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
+	}
 	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	var committee *ethpbalpha.SyncCommittee
 	if req.Epoch >= nextSyncCommitteeFirstEpoch {
