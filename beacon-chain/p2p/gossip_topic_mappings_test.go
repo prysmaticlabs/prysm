@@ -38,14 +38,14 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	_, ok := pMessage.(*ethpb.SignedBeaconBlock)
 	assert.Equal(t, true, ok)
 
-	// After Fork
+	// Altair Fork
 	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, altairForkEpoch)
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockAltair)
 	assert.Equal(t, true, ok)
 
-	//Merge Fork
+	// Merge Fork
 	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, mergeForkEpoch)
-	_, ok = pMessage.(*ethpb.SignedBeaconBlockAltair)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlockMerge)
 	assert.Equal(t, true, ok)
 
 }
