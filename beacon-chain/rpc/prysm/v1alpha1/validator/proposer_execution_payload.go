@@ -38,7 +38,7 @@ import (
 //    random = get_randao_mix(state, get_current_epoch(state))
 //    return execution_engine.prepare_payload(parent_hash, timestamp, random, fee_recipient)
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*ethpb.ExecutionPayload, error) {
-	// TODO: Reuse the same head state as in building phase0 block attestation.
+	// TODO_MERGE: Reuse the same head state as in building phase0 block attestation.
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
 	var terminalBlockHash []byte
 
-	// TODO: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
+	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
 	for {
 		if b.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0 {
 			terminalBlockHash = b.Hash().Bytes()
@@ -147,7 +147,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			if b.ParentHash() == b.Hash() {
 				return nil, false, errors.New("invalid block")
 			}
-			// TODO: Add pow block cache to avoid requesting previous block.
+			// TODO_MERGE: Add pow block cache to avoid requesting previous block.
 			b, err = vs.BlockFetcher.BlockByHash(ctx, b.ParentHash())
 			if err != nil {
 				return nil, false, err

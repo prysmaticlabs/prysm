@@ -25,7 +25,7 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// TODO: Benchmark this for faster compare.
+	// TODO_MERGE: Benchmark this for faster compare.
 	return !ssz.DeepEqual(h, EmptyPayload()), nil
 }
 
@@ -47,7 +47,7 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	// TODO: Benchmark this for faster compare.
+	// TODO_MERGE: Benchmark this for faster compare.
 	return !ssz.DeepEqual(payload, emptyPayloadHeader()), nil
 }
 

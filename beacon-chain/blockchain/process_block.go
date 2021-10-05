@@ -109,7 +109,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	// TODO: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
+	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		if executionEnabled {
@@ -228,7 +228,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				log.WithError(err)
 				return
 			}
-			// TODO: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+			// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
 			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 			if err != nil {
 				log.WithError(err)
