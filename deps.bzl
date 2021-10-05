@@ -433,7 +433,7 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_c_bata_go_prompt",
-        importpath = "github.com/c-bata/go-userprompt",
+        importpath = "github.com/c-bata/go-prompt",
         sum = "h1:uyKRz6Z6DUyj49QVijyM339UJV9yhbr70gESwbNU3e0=",
         version = "v0.2.2",
     )
@@ -2111,8 +2111,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_testing",
         importpath = "github.com/libp2p/go-libp2p-testing",
-        sum = "h1:PrwHRi0IGqOwVQWR3xzgigSlhlLfxgfXgkHxr77EghQ=",
-        version = "v0.4.0",
+        sum = "h1:IOiA5mMigi+eEjf4J+B7fepDhsjtsoWA9QbsCqbNp5U=",
+        version = "v0.4.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
@@ -2128,8 +2128,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_transport_upgrader",
         importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
-        sum = "h1:4JsnbfJzgZeRS9AWN7B9dPqn/LY/HoQTlO9gtdJTIYM=",
-        version = "v0.4.2",
+        sum = "h1:SHt3g0FslnqIkEWF25YOB8UCOCTpGAVvHRWQYJ+veiI=",
+        version = "v0.4.6",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_yamux",
@@ -2183,8 +2183,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_reuseport_transport",
         importpath = "github.com/libp2p/go-reuseport-transport",
-        sum = "h1:OZGz0RB620QDGpv300n1zaOcKGGAoGVf8h9txtt/1uM=",
-        version = "v0.0.4",
+        sum = "h1:lJzi+vSYbyJj2faPKLxNGWEIBcaV/uJmyvsUxXy2mLw=",
+        version = "v0.0.5",
     )
     go_repository(
         name = "com_github_libp2p_go_sockaddr",
@@ -2208,8 +2208,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_tcp_transport",
         importpath = "github.com/libp2p/go-tcp-transport",
-        sum = "h1:IL5ZAQrkLftufe24mWrmGtTV6drGi6BiXWMTLEM9PBE=",
-        version = "v0.2.4",
+        sum = "h1:aLjX+Nkz+kIz3uA56WtlGKRSAnKDvnqKmv1qF4EyyE4=",
+        version = "v0.2.8",
     )
 
     go_repository(
@@ -2851,12 +2851,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_prestonvanloon_go_recaptcha",
-        importpath = "github.com/prestonvanloon/go-recaptcha",
-        sum = "h1:/JK1WfWJGBNDKY70uiB53iKKbFqxBx2CuYgj9hK2O70=",
-        version = "v0.0.0-20190217191114-0834cef6e8bd",
-    )
-    go_repository(
         name = "com_github_prometheus_client_golang",
         importpath = "github.com/prometheus/client_golang",
         sum = "h1:HNkLOAEQMIDv/K+04rukrLx6ch7msSRwf3/SASFAGtQ=",
@@ -3015,6 +3009,12 @@ def prysm_deps():
         importpath = "github.com/sean-/seed",
         sum = "h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=",
         version = "v0.0.0-20170313163322-e2103e2c3529",
+    )
+    go_repository(
+        name = "com_github_segmentio_kafka_go",
+        importpath = "github.com/segmentio/kafka-go",
+        sum = "h1:HtCSf6B4gN/87yc5qTl7WsxPKQIIGXLPPM1bMCPOsoY=",
+        version = "v0.2.0",
     )
 
     go_repository(

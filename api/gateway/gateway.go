@@ -133,7 +133,7 @@ func (g *Gateway) Start() {
 	corsMux := g.corsMiddleware(g.router)
 
 	if g.muxHandler != nil {
-		g.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		g.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			g.muxHandler(corsMux, w, r)
 		})
 	}
