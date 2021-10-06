@@ -13,7 +13,7 @@ import (
 )
 
 func TestSSZTagSize(t *testing.T) {
-	sigSize := 96
+	sigSize := params.BeaconConfig().BLSSignatureLength
 	pubKeySize := 48
 	rootSize := 32
 

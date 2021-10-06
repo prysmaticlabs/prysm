@@ -1282,7 +1282,7 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 			},
 			BeaconBlockRoot: make([]byte, 32),
 		},
-		Signature: make([]byte, 96),
+		Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
 	}
 }
 
