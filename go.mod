@@ -63,7 +63,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.5.0
 	github.com/libp2p/go-libp2p-swarm v0.5.0
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
-	github.com/libp2p/go-tcp-transport v0.2.4
+	github.com/libp2p/go-tcp-transport v0.2.8
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/miekg/dns v1.1.43 // indirect
@@ -133,4 +133,4 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
-replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211001172543-d0fc941e79bf
+replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211005211208-2aa7c532586f
