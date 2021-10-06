@@ -2166,8 +2166,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_testing",
         importpath = "github.com/libp2p/go-libp2p-testing",
-        sum = "h1:PrwHRi0IGqOwVQWR3xzgigSlhlLfxgfXgkHxr77EghQ=",
-        version = "v0.4.0",
+        sum = "h1:IOiA5mMigi+eEjf4J+B7fepDhsjtsoWA9QbsCqbNp5U=",
+        version = "v0.4.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
@@ -2183,8 +2183,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_transport_upgrader",
         importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
-        sum = "h1:4JsnbfJzgZeRS9AWN7B9dPqn/LY/HoQTlO9gtdJTIYM=",
-        version = "v0.4.2",
+        sum = "h1:SHt3g0FslnqIkEWF25YOB8UCOCTpGAVvHRWQYJ+veiI=",
+        version = "v0.4.6",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_yamux",
@@ -2238,8 +2238,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_reuseport_transport",
         importpath = "github.com/libp2p/go-reuseport-transport",
-        sum = "h1:OZGz0RB620QDGpv300n1zaOcKGGAoGVf8h9txtt/1uM=",
-        version = "v0.0.4",
+        sum = "h1:lJzi+vSYbyJj2faPKLxNGWEIBcaV/uJmyvsUxXy2mLw=",
+        version = "v0.0.5",
     )
     go_repository(
         name = "com_github_libp2p_go_sockaddr",
@@ -2263,8 +2263,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_tcp_transport",
         importpath = "github.com/libp2p/go-tcp-transport",
-        sum = "h1:IL5ZAQrkLftufe24mWrmGtTV6drGi6BiXWMTLEM9PBE=",
-        version = "v0.2.4",
+        sum = "h1:aLjX+Nkz+kIz3uA56WtlGKRSAnKDvnqKmv1qF4EyyE4=",
+        version = "v0.2.8",
     )
 
     go_repository(
