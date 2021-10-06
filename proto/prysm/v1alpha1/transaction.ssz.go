@@ -26,6 +26,7 @@ func (t *Transaction) MarshalSSZTo(buf []byte) ([]byte, error) {
 		// selector will be zero'd out by slice initialization
 		buf = append(buf, selector)
 		buf = append(buf, ot...)
+		return buf, nil
 	}
 
 	return nil, fmt.Errorf("can't MarshalSSZTo, Transaction oneof is using an unrecognized type option")
@@ -71,7 +72,13 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 	var selector byte
 	switch t.TransactionOneof.(type) {
 	case *Transaction_OpaqueTransaction:
-		hh.PutBytes(t.GetOpaqueTransaction())
+		opaque := t.GetOpaqueTransaction()
+		byteLen := uint64(len(opaque))
+		if byteLen > 1048576 {
+			return ssz.ErrIncorrectListSize
+		}
+		hh.PutBytes(opaque)
+		hh.MerkleizeWithMixin(idx, byteLen, 1048576/32)
 	default:
 		return fmt.Errorf("can't HashTreeRootWith, Transaction oneof is using an unrecognized type option")
 	}
