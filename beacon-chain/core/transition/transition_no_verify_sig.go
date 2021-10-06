@@ -311,19 +311,21 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	enabled, err := execution.Enabled(state, blk.Body())
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not check if execution is enabled")
-	}
-	if enabled {
-		payload, err := blk.Body().ExecutionPayload()
+	if state.Version() == version.Merge {
+		enabled, err := execution.Enabled(state, blk.Body())
 		if err != nil {
-			return nil, err
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not check if execution is enabled")
 		}
-		state, err = execution.ProcessPayload(state, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process execution payload")
+		if enabled {
+			payload, err := blk.Body().ExecutionPayload()
+			if err != nil {
+				return nil, err
+			}
+			state, err = execution.ProcessPayload(state, payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload")
+			}
 		}
 	}
 

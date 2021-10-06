@@ -156,6 +156,4 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			return terminalBlockHash, true, err
 		}
 	}
-
-	return []byte{}, false, nil
 }

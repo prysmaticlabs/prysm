@@ -179,6 +179,9 @@ func (s *Service) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByHash")
 	defer span.End()
 
+	if s.eth1DataFetcher == nil {
+		return nil, errors.New("nil eth1DataFetcher")
+	}
 	return s.eth1DataFetcher.BlockByHash(ctx, hash)
 }
 
@@ -187,6 +190,9 @@ func (s *Service) BlockByNumber(ctx context.Context, number *big.Int) (*gethType
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByNumber")
 	defer span.End()
 
+	if s.eth1DataFetcher == nil {
+		return nil, errors.New("nil eth1DataFetcher")
+	}
 	return s.eth1DataFetcher.BlockByNumber(ctx, number)
 }
 

@@ -126,7 +126,7 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/terencechain/go-ethereum v1.8.22-0.20211004233121-7c566e70ca92
+replace github.com/ethereum/go-ethereum => github.com/terencechain/go-ethereum v1.8.22-0.20211006180342-a528517d0b8f
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 

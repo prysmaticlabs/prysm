@@ -811,8 +811,8 @@ def prysm_deps():
         ],
         importpath = "github.com/ethereum/go-ethereum",
         replace = "github.com/terencechain/go-ethereum",
-        sum = "h1:Hx0rF1qlSRviTMTyCSbuhNpg8PXzUh0I51tOuv+Fp0c=",
-        version = "v1.8.22-0.20211004233121-7c566e70ca92",
+        sum = "h1:SRjYPWkBTxd2+3EmJLKIXyeQMTaGx4xA712uvuDGwPM=",
+        version = "v1.8.22-0.20211006180342-a528517d0b8f",
     )
 
     go_repository(
