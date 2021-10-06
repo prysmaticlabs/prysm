@@ -4,7 +4,7 @@ import "math"
 
 const (
 	altairE2EForkEpoch = 6
-	MergeE2EForkEpoch = math.MaxUint64
+	MergeE2EForkEpoch  = math.MaxUint64
 )
 
 // UseE2EConfig for beacon chain services.
