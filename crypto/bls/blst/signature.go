@@ -139,6 +139,10 @@ func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
 		return true
 	}
+	// Return early if we encounter an empty pubkey list.
+	if len(pubKeys) == 0 {
+		return false
+	}
 	return s.innerFastAggregateVerify(pubKeys, msg)
 }
 
