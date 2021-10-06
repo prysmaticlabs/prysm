@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -37,6 +38,18 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcHeadersFlag            string
+}
+
+// NewService creates a new validator service for the service
+// registry.
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Service{
+		cfg:         cfg,
+		ctx:         ctx,
+		cancel:      cancel,
+		grpcHeaders: strings.Split(cfg.GrpcHeadersFlag, ","),
+	}, nil
 }
 
 // Start the slasher protection service and grpc client.
