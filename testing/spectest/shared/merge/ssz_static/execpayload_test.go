@@ -21,14 +21,14 @@ type SSZValue struct {
 
 func TestExecPayload(t *testing.T) {
 	tc := &TestCase{
-		path: "testdata/ssz_random/case_1",
+		path: "testdata/ExecutionPayload/ssz_random/case_1",
 	}
 	ssb, err := tc.MarshaledBytes()
 	if err != nil {
 		t.Error(err)
 	}
 
-	block := &ethpb.BeaconBlockMerge{}
+	block := &ethpb.ExecutionPayload{}
 	err = block.UnmarshalSSZ(ssb)
 	if err != nil {
 		t.Error(err)
