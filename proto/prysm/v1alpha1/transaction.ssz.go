@@ -2,6 +2,7 @@ package eth
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	ssz "github.com/ferranbt/fastssz"
@@ -86,8 +87,8 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 		}
 
 		// zero pad if not aligned to chunk size
-		if byteLen % 32 != 0 {
-			zeroes := make([]byte, 32-(byteLen % 32))
+		if byteLen%32 != 0 {
+			zeroes := make([]byte, 32-(byteLen%32))
 			opaque = append(opaque, zeroes...)
 		}
 		hh.Append(opaque)

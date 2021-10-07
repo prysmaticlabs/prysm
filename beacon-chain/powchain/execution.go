@@ -70,7 +70,7 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash [
 }
 
 func (s *Service) ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error {
-	res, err := s.catalystClient.ExecutePayload(ctx,ExecutionPayloadToExecutableData(payload))
+	res, err := s.catalystClient.ExecutePayload(ctx, ExecutionPayloadToExecutableData(payload))
 	if err != nil {
 		return err
 	}

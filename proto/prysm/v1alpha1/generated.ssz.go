@@ -3987,12 +3987,12 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (10) 'ExtraData'
 	/*
-	if len(e.ExtraData) > 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.ExtraData)
-	 */
+		if len(e.ExtraData) > 32 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		hh.PutBytes(e.ExtraData)
+	*/
 	{
 		subIndx := hh.Index()
 		num := uint64(len(e.ExtraData))
@@ -7528,12 +7528,12 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (10) 'ExtraData'
 	/*
-	if len(e.ExtraData) > 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.ExtraData)
-	 */
+		if len(e.ExtraData) > 32 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		hh.PutBytes(e.ExtraData)
+	*/
 
 	{
 		subIndx := hh.Index()
