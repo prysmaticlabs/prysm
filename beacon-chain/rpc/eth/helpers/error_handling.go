@@ -36,6 +36,7 @@ type SyncDetails struct {
 	IsSyncing    bool   `json:"is_syncing"`
 }
 
+// SyncDetailsContainer is a wrapper for SyncDetails.
 type SyncDetailsContainer struct {
 	SyncDetails *SyncDetails `json:"sync_details"`
 }
