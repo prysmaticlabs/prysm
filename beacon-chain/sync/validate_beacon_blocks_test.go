@@ -1075,12 +1075,12 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
 	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
 	}
 	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
 	}
@@ -1150,12 +1150,12 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
 	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
 	}
 	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
 	}
@@ -1225,12 +1225,12 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
 	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
 	}
 	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
 	}
@@ -1300,12 +1300,12 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("InvalidHash"), 32)
 	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
 	}
 	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction {
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
 	}
