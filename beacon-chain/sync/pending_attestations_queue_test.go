@@ -328,7 +328,7 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	s := &Service{
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		cfg: &Config{
-			Chain: &mock.ChainService{Genesis: time.Now(),},
+			Chain: &mock.ChainService{Genesis: time.Now()},
 		},
 	}
 
@@ -336,7 +336,6 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
 	r3 := [32]byte{'C'}
-
 
 	for i := types.Slot(0); i < 100; i++ {
 		att := &ethpb.SignedAggregateAttestationAndProof{
@@ -394,7 +393,6 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		chainStarted:         abool.New(),
 	}
-
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
