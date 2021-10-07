@@ -557,4 +557,3 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }
-
