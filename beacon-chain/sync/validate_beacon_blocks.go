@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -265,7 +266,10 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		// [REJECT] The execution payload transaction list data is within expected size limits,
 		// the data MUST NOT be larger than the SSZ list-limit, and a client MAY be more strict.
 		payloadSize := uint64(0)
-		transactions := payload.GetTransactions()
+		transactions, err := eth.OpaqueTransactions(payload)
+		if err != nil {
+			return err
+		}
 		for i := 0; i < len(transactions); i++ {
 			payloadSize += uint64(len(transactions[i]))
 		}

@@ -147,7 +147,7 @@ func executableDataToExecutionPayload(ed *types.ExecutableData) *ethpb.Execution
 	txs := make([]*ethpb.Transaction, len(ed.Transactions))
 	for i, t := range ed.Transactions {
 		txs[i] = &ethpb.Transaction{
-			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{t[:]},
+			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{OpaqueTransaction: t},
 		}
 	}
 

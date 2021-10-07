@@ -100,7 +100,7 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 	return nil
 }
 
-func OpaqueTransactions(ep ExecutionPayload) ([][]byte, error) {
+func OpaqueTransactions(ep *ExecutionPayload) ([][]byte, error) {
 	ots := make([][]byte, len(ep.Transactions))
 	for _, t := range ep.Transactions {
 		switch t.TransactionOneof.(type) {
