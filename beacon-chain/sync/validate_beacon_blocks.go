@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -159,7 +161,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, errors.Errorf("unknown parent for block with slot %d and parent root %#x", blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 
-	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
+	if err := s.validateBeaconBlock(ctx, blk, blockRoot, genesisTime); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -179,7 +181,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte, genesisTime uint64) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
@@ -226,6 +228,52 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		return errors.New("incorrect proposer index")
 	}
 
+	// check if the block has execution payload.
+	// If yes, then do few more checks per spec
+	executionEnabled, err := execution.Enabled(parentState, blk.Block().Body())
+	if err != nil {
+		return err
+	}
+	if executionEnabled {
+		payload, err := blk.Block().Body().ExecutionPayload()
+		if err != nil || payload == nil {
+			return err
+		}
+
+		// [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+		// i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+		t, err := slots.ToTime(genesisTime, blk.Block().Slot())
+		if err != nil {
+			return err
+		}
+		if payload.Timestamp != uint64(t.Unix()) {
+			return errors.New("incorrect timestamp")
+		}
+
+		// [REJECT] Gas used is less than the gas limit --
+		// i.e. execution_payload.gas_used <= execution_payload.gas_limit.
+		if payload.GasUsed > payload.GasLimit {
+			return errors.New("gas used is above gas limit")
+		}
+
+		// [REJECT] The execution payload block hash is not equal to the parent hash --
+		// i.e. execution_payload.block_hash != execution_payload.parent_hash.
+		if bytes.Equal(payload.BlockHash, payload.ParentHash) {
+			return errors.New("incorrect block hash")
+		}
+
+		// [REJECT] The execution payload transaction list data is within expected size limits,
+		// the data MUST NOT be larger than the SSZ list-limit, and a client MAY be more strict.
+		payloadSize := uint64(0)
+		transactions := payload.GetTransactions()
+		for i := 0; i < len(transactions); i++ {
+			payloadSize += uint64(len(transactions[i]))
+		}
+		totalAllowedSize := params.BeaconConfig().MaxExecutionTransactions * params.BeaconConfig().MaxBytesPerOpaqueTransaction
+		if payloadSize > totalAllowedSize {
+			return errors.New("invalid size")
+		}
+	}
 	return nil
 }
 

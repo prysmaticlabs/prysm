@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -103,15 +104,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	body := signed.Block().Body()
-	executionEnabled, err := execution.IsExecutionEnabled(preState, body)
+	executionEnabled, err := execution.Enabled(preState, body)
 	if err != nil {
 		return err
 	}
 
-	// TODO: we should break ExecuteStateTransition into per slot and block.
+	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		if executionEnabled {
+			// Inform execution engine that consensus block which contained `payload.blockhash` is INVALID.
 			payload, err := body.ExecutionPayload()
 			if err != nil {
 				return err
@@ -128,9 +130,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err != nil {
 			return err
 		}
+		// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
 		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
 			return err
 		}
+		// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
 		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
 			return err
 		}
@@ -153,8 +157,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err != nil {
 			return err
 		}
-		if !isValidTerminalPoWBlock(transitionBlk, parentTransitionBlk) {
-			return errors.New("incorrect transition block")
+		if !validateTerminalBlock(transitionBlk, parentTransitionBlk) {
+			return errors.New("incorrect terminal pow block")
 		}
 	}
 
@@ -224,7 +228,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				log.WithError(err)
 				return
 			}
-			// TODO: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+			// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
 			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 			if err != nil {
 				log.WithError(err)
@@ -558,7 +562,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 	return nil
 }
 
-// isValidTerminalPoWBlock validates terminal pow block.
+// validateTerminalBlock validates terminal pow block by comparing own total difficulty with parent's total difficulty.
 //
 // def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
 //    if block.block_hash == TERMINAL_BLOCK_HASH:
@@ -567,10 +571,14 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 //    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
 //    return is_total_difficulty_reached and is_parent_total_difficulty_valid
-func isValidTerminalPoWBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
+func validateTerminalBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
 	if transitionBlock.Hash() == params.BeaconConfig().TerminalBlockHash {
 		return true
 	}
-	// TODO: how to get total difficulty?
-	return false
+	terminalTotalDifficulty := new(big.Int)
+	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
+
+	totalDifficultyReached := transitionBlock.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0
+	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlock.TotalDifficulty()) >= 0
+	return totalDifficultyReached && parentTotalDifficultyValid
 }

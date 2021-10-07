@@ -109,6 +109,7 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
+	ExecutionEngineCaller   powchain.ExecutionEngineCaller
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -195,6 +196,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,

@@ -82,10 +82,14 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
-// presumably unused method, adding this to satisfy the POWBlockFetcher which
-// is expected by some code under test where the POWChain type is injected
+// BlockByHash is a stub for `goodFetcher`.
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	panic("not implemented")
+	return nil, nil
+}
+
+// BlockByNumber is a stub for `goodFetcher`.
+func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return nil, nil
 }
 
 func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {

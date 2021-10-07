@@ -138,7 +138,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+			genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
+			if err := s.validateBeaconBlock(ctx, b, blkRoot, genesisTime); err != nil {
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)

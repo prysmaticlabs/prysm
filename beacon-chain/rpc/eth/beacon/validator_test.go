@@ -438,7 +438,13 @@ func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
 	var st state.BeaconState
-	st, _ = util.DeterministicGenesisState(t, 8192)
+	count := uint64(8192)
+	st, _ = util.DeterministicGenesisState(t, count)
+	balances := make([]uint64, count)
+	for i := uint64(0); i < count; i++ {
+		balances[i] = i
+	}
+	require.NoError(t, st.SetBalances(balances))
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		s := Server{
@@ -456,7 +462,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
@@ -479,7 +485,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
@@ -501,7 +507,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 }

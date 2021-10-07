@@ -42,6 +42,9 @@ message GenericBeaconBlock {
 
         // Representing a post-Altair fork beacon block.
         BeaconBlockAltair altair = 2;
+
+        // Representing a post-Merge fork beacon block.
+        BeaconBlockMerge merge = 3;
     }
 }
 
@@ -351,21 +354,22 @@ message BeaconBlockBodyMerge {
     ExecutionPayload execution_payload = 10;
 }
 
-// The execution payload included in a BeaconBlockBody.
+// The execution payload in a `BeaconBlockBody`.
 message ExecutionPayload {
+    // Execution block header fields
     bytes parent_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes coinbase = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+    bytes coinbase = 2 [(ethereum.eth.ext.ssz_size) = "20"]; //'beneficiary' in the yellow paper
     bytes state_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"]; //'receipts root' in the yellow paper
     bytes logs_bloom = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-    bytes random = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-    uint64 block_number = 7;
+    bytes random = 6 [(ethereum.eth.ext.ssz_size) = "32"]; //'difficulty' in the yellow paper
+    uint64 block_number = 7; //'number' in the yellow paper
     uint64 gas_limit = 8;
     uint64 gas_used = 9;
     uint64 timestamp = 10;
     bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-    bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"]; //base fee introduced in EIP-1559, little-endian serialized
+    bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"]; // Hash of execution block
     //repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "16384,1048576"];
     repeated Transaction transactions = 14 [(ethereum.eth.ext.ssz_max) = "16384"];
 }

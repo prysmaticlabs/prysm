@@ -441,5 +441,44 @@ func GenerateFullBlockAltair(
 
 // NewBeaconBlockMerge creates a beacon block with minimum marshalable fields.
 func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
-	return &ethpb.SignedBeaconBlockMerge{}
+	return &ethpb.SignedBeaconBlockMerge{
+		Block: &ethpb.BeaconBlockMerge{
+			ParentRoot: make([]byte, 32),
+			StateRoot:  make([]byte, 32),
+			Body: &ethpb.BeaconBlockBodyMerge{
+				RandaoReveal: make([]byte, 96),
+				Eth1Data: &ethpb.Eth1Data{
+					DepositRoot: make([]byte, 32),
+					BlockHash:   make([]byte, 32),
+				},
+				Graffiti:          make([]byte, 32),
+				Attestations:      []*ethpb.Attestation{},
+				AttesterSlashings: []*ethpb.AttesterSlashing{},
+				Deposits:          []*ethpb.Deposit{},
+				ProposerSlashings: []*ethpb.ProposerSlashing{},
+				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
+				SyncAggregate: &ethpb.SyncAggregate{
+					SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
+					SyncCommitteeSignature: make([]byte, 96),
+				},
+				ExecutionPayload: &ethpb.ExecutionPayload{
+					ParentHash:    make([]byte, 32),
+					Coinbase:      make([]byte, 20),
+					StateRoot:     make([]byte, 32),
+					ReceiptRoot:   make([]byte, 32),
+					LogsBloom:     make([]byte, 256),
+					Random:        make([]byte, 32),
+					BlockNumber:   0,
+					GasLimit:      0,
+					GasUsed:       0,
+					Timestamp:     0,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
+					Transactions:  make([][]byte, 2), // just having two transactions for testing
+				},
+			},
+		},
+		Signature: make([]byte, 96),
+	}
 }

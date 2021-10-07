@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// IsMergeComplete returns true if merge has been completed.
+// IsMergeComplete returns true if the transition merge has happened.
 //
 // Spec code:
 // def is_merge_complete(state: BeaconState) -> bool:
@@ -25,10 +25,11 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return !ssz.DeepEqual(h, emptyPayload()), nil
+	// TODO_MERGE: Benchmark this for faster compare.
+	return !ssz.DeepEqual(h, EmptyPayload()), nil
 }
 
-// IsMergeBlock returns true if input block is the merge block.
+// IsMergeBlock returns true if input block can become the merge block.
 //
 // Spec code:
 // def is_merge_block(state: BeaconState, body: BeaconBlockBody) -> bool:
@@ -46,15 +47,16 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	return !ssz.DeepEqual(payload, emptyPayloadHeader()), nil
+	// TODO_MERGE: Benchmark this for faster compare.
+	return !ssz.DeepEqual(payload, EmptypayloadHeader()), nil
 }
 
-// IsExecutionEnabled returns true if the execution is enabled.
+// Enabled returns true if the beacon chain can begin executing.
 //
 // Spec code:
 // def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
 //    return is_merge_block(state, body) or is_merge_complete(state)
-func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
+func Enabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
 	mergeBlock, err := IsMergeBlock(st, blk)
 	if err != nil {
 		return false, err
@@ -65,7 +67,7 @@ func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, 
 	return IsMergeComplete(st)
 }
 
-// ProcessPayload processes execution payload.
+// ProcessPayload processes input execution payload using beacon state.
 //
 // Spec code:
 // def process_execution_payload(state: BeaconState, payload: ExecutionPayload, execution_engine: ExecutionEngine) -> None:
@@ -80,7 +82,7 @@ func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, 
 //    # Verify timestamp
 //    assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
 //    # Verify the execution payload is valid
-//    assert execution_engine.on_payload(payload)
+//    assert execution_engine.execute_payload(payload)
 //    # Cache execution payload header
 //    state.latest_execution_payload_header = ExecutionPayloadHeader(
 //        parent_hash=payload.parent_hash,
@@ -99,25 +101,17 @@ func IsExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, 
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
 func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (state.BeaconState, error) {
-	if err := verifyPayload(st, payload); err != nil {
+	if err := validatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
-	}
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(payload.Random, random) {
-		return nil, errors.New("incorrect random")
-	}
-	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
-	if err != nil {
-		return nil, err
-	}
-	if payload.Timestamp != uint64(t.Unix()) {
-		return nil, errors.New("incorrect timestamp")
 	}
 
-	// TODO@: Verify the execution payload is valid
+	if err := validatePayload(st, payload); err != nil {
+		return nil, err
+	}
+
+	// This deviate with spec definition. It supposed to perform `execution_engine.on_payload(payload)` here.
+	// Core pkg contains all pure functions. They don't have access to execution engine i.e. rpc service.
+	// The soonest we can do this is after state transition.
 
 	header, err := payloadToHeader(payload)
 	if err != nil {
@@ -129,8 +123,9 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 	return st, nil
 }
 
-// This verifies if `payload` is valid according to `state`. It exits early if merge is not yet ready.
-func verifyPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
+// This validates if payload is valid according to beacon state.
+// These validation steps ONLY apply to post merge.
+func validatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
 	complete, err := IsMergeComplete(st)
 	if err != nil {
 		return err
@@ -149,14 +144,54 @@ func verifyPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error 
 	if payload.BlockNumber != header.BlockNumber+1 {
 		return errors.New("incorrect block number")
 	}
-	if !isValidGasLimit(payload, header) {
+	if !validateGasLimit(payload, header) {
 		return errors.New("incorrect gas limit")
 	}
 	return nil
 }
 
-// This checks if gas limit and used in `payload` is valid to `parent.
-func isValidGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPayloadHeader) bool {
+// This validates if payload is valid according to beacon state.
+// These validation steps apply to both pre merge and post merge.
+func validatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(payload.Random, random) {
+		return errors.New("incorrect random")
+	}
+	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	if err != nil {
+		return err
+	}
+	if payload.Timestamp != uint64(t.Unix()) {
+		return errors.New("incorrect timestamp")
+	}
+	return nil
+}
+
+// This validates if gas limit and used in `payload` is valid to `parent`.
+//
+// Spec code:
+// def is_valid_gas_limit(payload: ExecutionPayload, parent: ExecutionPayloadHeader) -> bool:
+//    parent_gas_limit = parent.gas_limit
+//
+//    # Check if the payload used too much gas
+//    if payload.gas_used > payload.gas_limit:
+//        return False
+//
+//    # Check if the payload changed the gas limit too much
+//    if payload.gas_limit >= parent_gas_limit + parent_gas_limit // GAS_LIMIT_DENOMINATOR:
+//        return False
+//    if payload.gas_limit <= parent_gas_limit - parent_gas_limit // GAS_LIMIT_DENOMINATOR:
+//        return False
+//
+//    # Check if the gas limit is at least the minimum gas limit
+//    if payload.gas_limit < MIN_GAS_LIMIT:
+//        return False
+//
+//    return True
+func validateGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPayloadHeader) bool {
 	if payload.GasUsed > payload.GasLimit {
 		return false
 	}
@@ -175,7 +210,7 @@ func isValidGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPay
 	return true
 }
 
-// This converts `payload` to header format.
+// This converts `payload` into execution payload header format.
 func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
@@ -200,7 +235,8 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 	}, nil
 }
 
-func emptyPayload() *ethpb.ExecutionPayload {
+// EmptyPayload represents `ExecutionPayload()` in spec.
+func EmptyPayload() *ethpb.ExecutionPayload {
 	return &ethpb.ExecutionPayload{
 		ParentHash:    make([]byte, 32),
 		Coinbase:      make([]byte, 20),
@@ -219,7 +255,8 @@ func emptyPayload() *ethpb.ExecutionPayload {
 	}
 }
 
-func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
+// This represents `ExecutionPayloadHeader()` in spec.
+func EmptypayloadHeader() *ethpb.ExecutionPayloadHeader {
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		Coinbase:         make([]byte, 20),

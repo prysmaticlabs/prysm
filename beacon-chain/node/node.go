@@ -721,6 +721,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+		ExecutionEngineCaller:   web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)

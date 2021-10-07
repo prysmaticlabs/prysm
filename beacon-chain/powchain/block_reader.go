@@ -176,10 +176,24 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 
 // BlockByHash returns the pow block by hash.
 func (s *Service) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByHash")
 	defer span.End()
 
+	if s.eth1DataFetcher == nil {
+		return nil, errors.New("nil eth1DataFetcher")
+	}
 	return s.eth1DataFetcher.BlockByHash(ctx, hash)
+}
+
+// BlockByNumber returns the pow block by number.
+func (s *Service) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByNumber")
+	defer span.End()
+
+	if s.eth1DataFetcher == nil {
+		return nil, errors.New("nil eth1DataFetcher")
+	}
+	return s.eth1DataFetcher.BlockByNumber(ctx, number)
 }
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
