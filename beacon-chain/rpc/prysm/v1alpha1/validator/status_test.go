@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d4l3k/messagediff"
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -1232,7 +1233,8 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, resp) {
-				t.Errorf("CheckDoppelGanger() got = %v, want %v", got.String(), resp.String())
+				diff, _ := messagediff.PrettyDiff(resp, got)
+				t.Errorf("CheckDoppelGanger() difference = %v", diff)
 			}
 		})
 	}
@@ -1251,14 +1253,16 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 	// Previous Epoch State
 	prevEpoch := headEpoch - 1
 	ps := gs.Copy()
-	prevSlot := types.Slot(prevEpoch) * params.BeaconConfig().SlotsPerEpoch
+	prevSlot, err := slots.EpochEnd(prevEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, ps.SetSlot(prevSlot))
 	mockgen.StatesBySlot[prevSlot] = ps
 
 	// Older Epoch State
 	olderEpoch := prevEpoch - 1
 	os := gs.Copy()
-	olderSlot := types.Slot(olderEpoch) * params.BeaconConfig().SlotsPerEpoch
+	olderSlot, err := slots.EpochEnd(olderEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, os.SetSlot(olderSlot))
 	mockgen.StatesBySlot[olderSlot] = os
 	return hs, ps, os, keys
