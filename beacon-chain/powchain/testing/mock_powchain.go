@@ -38,6 +38,11 @@ func (m *POWChain) BlockByHash(ctx context.Context, hash common.Hash) (*gethType
 	panic("not implemented")
 }
 
+// BlockByNumber is a stub for `POWChain`.
+func (m *POWChain) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	panic("not implemented")
+}
+
 // GenesisTime represents a static past date - JAN 01 2000.
 var GenesisTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 
