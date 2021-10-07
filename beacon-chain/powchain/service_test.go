@@ -82,10 +82,12 @@ type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
 
+// BlockByHash is a stub for `goodFetcher`.
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	return nil, nil
 }
 
+// BlockByNumber is a stub for `goodFetcher`.
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	return nil, nil
 }

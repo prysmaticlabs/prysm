@@ -369,7 +369,13 @@ message ExecutionPayload {
     uint64 timestamp = 10;
     bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
     bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"]; //base fee introduced in EIP-1559, little-endian serialized
-    // Extra payload fields
     bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"]; // Hash of execution block
-    repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "33,32"]; // TODO_MERGE: wrongly stubbed to unblock interop
+    //repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "16384,1048576"];
+    repeated Transaction transactions = 14 [(ethereum.eth.ext.ssz_max) = "16384"];
+}
+
+message Transaction {
+    oneof transaction_oneof {
+        bytes opaque_transaction = 1 [(ethereum.eth.ext.ssz_max) = "1048576"];
+    }
 }

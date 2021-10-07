@@ -33,6 +33,11 @@ type POWChain struct {
 	GenesisState      state.BeaconState
 }
 
+// BlockByHash is a stub for `POWChain`.
+func (m *POWChain) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	panic("not implemented")
+}
+
 // GenesisTime represents a static past date - JAN 01 2000.
 var GenesisTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 

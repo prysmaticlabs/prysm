@@ -63,26 +63,11 @@ func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeSta
 // Engine API definition:
 //  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_getpayload
 func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error) {
-	payload, err := s.catalystClient.GetPayload(ctx, hexutil.Uint64(payloadID))
+	ed, err := s.catalystClient.GetPayload(ctx, hexutil.Uint64(payloadID))
 	if err != nil {
 		return nil, err
 	}
-	return &ethpb.ExecutionPayload{
-		ParentHash:    payload.ParentHash.Bytes(),
-		Coinbase:      payload.Coinbase.Bytes(),
-		StateRoot:     payload.StateRoot.Bytes(),
-		ReceiptRoot:   payload.ReceiptRoot.Bytes(),
-		LogsBloom:     payload.LogsBloom,
-		Random:        payload.Random.Bytes(),
-		BlockNumber:   payload.Number,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: payload.BaseFeePerGas.Bytes(),
-		BlockHash:     payload.BlockHash.Bytes(),
-		Transactions:  payload.Transactions,
-	}, nil
+	return executableDataToExecutionPayload(ed), nil
 }
 
 // NotifyConsensusValidated notifies execution engine on the result of beacon state transition.
@@ -117,9 +102,30 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash [
 // Engine API definition:
 // 	https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_executepayload
 func (s *Service) ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error {
+	res, err := s.catalystClient.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+	if err != nil {
+		return err
+	}
+	switch res {
+	case catalyst.VALID:
+		return nil
+	case catalyst.INVALID:
+		return errors.New("invalid payload")
+	case catalyst.SYNCING:
+		return errors.New("sync process is in progress")
+	default:
+		return errors.New("unknown execute payload response type")
+	}
+}
+
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) types.ExecutableData {
+	txs := make([][]byte, len(payload.Transactions))
+	for i, t := range payload.Transactions {
+		txs[i] = t.GetOpaqueTransaction()
+	}
 	baseFeePerGas := new(big.Int)
 	baseFeePerGas.SetBytes(payload.BaseFeePerGas)
-	res, err := s.catalystClient.ExecutePayload(ctx, types.ExecutableData{
+	return types.ExecutableData{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		Coinbase:      common.BytesToAddress(payload.Coinbase),
@@ -133,22 +139,32 @@ func (s *Service) ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPa
 		Timestamp:     payload.Timestamp,
 		ExtraData:     payload.ExtraData,
 		BaseFeePerGas: baseFeePerGas,
-		Transactions:  payload.Transactions,
-	})
-	if err != nil {
-		return err
+		Transactions:  txs,
+	}
+}
+
+func executableDataToExecutionPayload(ed *types.ExecutableData) *ethpb.ExecutionPayload {
+	txs := make([]*ethpb.Transaction, len(ed.Transactions))
+	for i, t := range ed.Transactions {
+		txs[i] = &ethpb.Transaction{
+			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{OpaqueTransaction: t},
+		}
 	}
 
-	// The `respond` definition:
-	// https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#returns-2
-	switch res {
-	case catalyst.VALID:
-		return nil
-	case catalyst.INVALID:
-		return errors.New("invalid payload")
-	case catalyst.SYNCING:
-		return errors.New("sync process is in progress")
-	default:
-		return errors.New("unknown execute payload response type")
+	return &ethpb.ExecutionPayload{
+		ParentHash:    ed.ParentHash.Bytes(),
+		Coinbase:      ed.Coinbase.Bytes(),
+		StateRoot:     ed.StateRoot.Bytes(),
+		ReceiptRoot:   ed.ReceiptRoot.Bytes(),
+		LogsBloom:     ed.LogsBloom,
+		Random:        ed.Random.Bytes(),
+		BlockNumber:   ed.Number,
+		GasLimit:      ed.GasLimit,
+		GasUsed:       ed.GasUsed,
+		Timestamp:     ed.Timestamp,
+		ExtraData:     ed.ExtraData,
+		BaseFeePerGas: ed.BaseFeePerGas.Bytes(),
+		BlockHash:     ed.BlockHash.Bytes(),
+		Transactions:  txs,
 	}
 }

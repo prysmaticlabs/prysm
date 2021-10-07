@@ -446,10 +446,14 @@ func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
 }
 
 // CopyTransactions copies the transactions.
-func CopyTransactions(txs [][]byte) [][]byte {
-	newTxs := make([][]byte, len(txs))
-	for i := range newTxs {
-		newTxs[i] = bytesutil.SafeCopyBytes(txs[i])
+func CopyTransactions(txs []*Transaction) []*Transaction {
+	newTxs := make([]*Transaction, len(txs))
+	for i := range txs {
+		newTxs[i] = &Transaction{
+			TransactionOneof: &Transaction_OpaqueTransaction{
+				bytesutil.SafeCopyBytes(txs[i].GetOpaqueTransaction()),
+			},
+		}
 	}
 	return newTxs
 }
