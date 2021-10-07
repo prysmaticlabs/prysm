@@ -33,8 +33,7 @@ type POWChain struct {
 	GenesisState      state.BeaconState
 }
 
-// presumably unused method, adding this to satisfy the POWBlockFetcher which
-// is expected by some code under test where the POWChain type is injected
+// BlockByHash is a stub for `POWChain`.
 func (m *POWChain) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	panic("not implemented")
 }
