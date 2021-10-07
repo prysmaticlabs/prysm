@@ -382,38 +382,6 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	assert.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
 }
 
-func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
-	tests := []struct {
-		slot            types.Slot
-		canProcessEpoch bool
-	}{
-		{
-			slot:            1,
-			canProcessEpoch: false,
-		}, {
-			slot:            63,
-			canProcessEpoch: true,
-		},
-		{
-			slot:            64,
-			canProcessEpoch: false,
-		}, {
-			slot:            127,
-			canProcessEpoch: true,
-		}, {
-			slot:            1000000000,
-			canProcessEpoch: false,
-		},
-	}
-
-	for _, tt := range tests {
-		b := &ethpb.BeaconState{Slot: tt.slot}
-		s, err := v1.InitializeFromProto(b)
-		require.NoError(t, err)
-		assert.Equal(t, tt.canProcessEpoch, transition.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
-	}
-}
-
 func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	maxSlashings := params.BeaconConfig().MaxProposerSlashings
 	b := &ethpb.SignedBeaconBlock{
@@ -590,36 +558,3 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	require.Equal(t, types.Slot(5), s.Slot())
 }
 
-func TestCanUpgradeToAltair(t *testing.T) {
-	bc := params.BeaconConfig()
-	bc.AltairForkEpoch = 5
-	params.OverrideBeaconConfig(bc)
-	tests := []struct {
-		name string
-		slot types.Slot
-		want bool
-	}{
-		{
-			name: "not epoch start",
-			slot: 1,
-			want: false,
-		},
-		{
-			name: "not altair epoch",
-			slot: params.BeaconConfig().SlotsPerEpoch,
-			want: false,
-		},
-		{
-			name: "altair epoch",
-			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := transition.CanUpgradeToAltair(tt.slot); got != tt.want {
-				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
