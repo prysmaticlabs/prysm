@@ -327,6 +327,9 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	s := &Service{
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		cfg: &Config{
+			Chain: &mock.ChainService{Genesis: time.Now(),},
+		},
 	}
 
 	// 100 Attestations per block root.
@@ -334,25 +337,26 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r2 := [32]byte{'B'}
 	r3 := [32]byte{'C'}
 
+
 	for i := types.Slot(0); i < 100; i++ {
-		err := s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+		att := &ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: types.ValidatorIndex(i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r1[:]}}}})
-		require.NoError(t, err)
-		err = s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r1[:]}}}}
+		s.blkRootToPendingAtts[r1] = append(s.blkRootToPendingAtts[r1], att)
+		att = &ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: types.ValidatorIndex(i*2 + i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r2[:]}}}})
-		require.NoError(t, err)
-		err = s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r2[:]}}}}
+		s.blkRootToPendingAtts[r2] = append(s.blkRootToPendingAtts[r2], att)
+		att = &ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: types.ValidatorIndex(i*3 + i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r3[:]}}}})
-		require.NoError(t, err)
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r3[:]}}}}
+		s.blkRootToPendingAtts[r3] = append(s.blkRootToPendingAtts[r3], att)
 	}
 
 	assert.Equal(t, 100, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
@@ -376,9 +380,21 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 }
 
 func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
+	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
+	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
+
 	s := &Service{
+		cfg:                  &Config{P2P: p1, DB: db, Chain: &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		chainStarted:         abool.New(),
 	}
+
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
