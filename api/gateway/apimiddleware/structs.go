@@ -56,7 +56,7 @@ func (e *DefaultErrorJson) SetCode(code int) {
 	e.Code = code
 }
 
-// SetMsg sets the error's underlying error message.
+// SetMsg sets the error's underlying message.
 func (e *DefaultErrorJson) SetMsg(msg string) {
 	e.Message = msg
 }
