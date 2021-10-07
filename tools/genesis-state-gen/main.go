@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
@@ -36,6 +37,7 @@ var (
 	)
 	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically generate in the generated genesis state")
 	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
+	useMergeConfig = flag.Bool("merge", false, "Select whether genesis state should be generated with Merge param")
 	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state (defaults to now)")
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
@@ -54,7 +56,7 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	var genesisState *ethpb.BeaconState
+	var genesisState ssz.Marshaler
 	var err error
 	if *depositJSONFile != "" {
 		inputFile := *depositJSONFile
@@ -84,11 +86,20 @@ func main() {
 			log.Println("Expected --num-validators to have been provided, received 0")
 			return
 		}
-		// If no JSON input is specified, we create the state deterministically from interop keys.
-		genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
-		if err != nil {
-			log.Printf("Could not generate genesis beacon state: %v", err)
-			return
+		if *useMainnetConfig {
+			// If no JSON input is specified, we create the state deterministically from interop keys.
+			genesisState, _, err = interop.GenerateGenesisStateMerge(context.Background(), *genesisTime, uint64(*numValidators))
+			if err != nil {
+				log.Printf("Could not generate genesis beacon state: %v", err)
+				return
+			}
+		} else {
+			// If no JSON input is specified, we create the state deterministically from interop keys.
+			genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
+			if err != nil {
+				log.Printf("Could not generate genesis beacon state: %v", err)
+				return
+			}
 		}
 	}
 

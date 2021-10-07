@@ -48,7 +48,7 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 		return false, err
 	}
 	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(payload, emptyPayloadHeader()), nil
+	return !ssz.DeepEqual(payload, EmptypayloadHeader()), nil
 }
 
 // Enabled returns true if the beacon chain can begin executing.
@@ -256,7 +256,7 @@ func EmptyPayload() *ethpb.ExecutionPayload {
 }
 
 // This represents `ExecutionPayloadHeader()` in spec.
-func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
+func EmptypayloadHeader() *ethpb.ExecutionPayloadHeader {
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		Coinbase:         make([]byte, 20),

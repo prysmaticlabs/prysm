@@ -4,10 +4,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -70,6 +73,41 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	}
 
 	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
+}
+
+func GenesisBeaconStateMerge(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+	state, err := EmptyGenesisState()
+	if err != nil {
+		return nil, err
+	}
+
+	// Process initial deposits.
+	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = b.ProcessPreGenesisDeposits(ctx, state, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process validator deposits")
+	}
+
+	state, err = OptimizedGenesisBeaconStateMerge(genesisTime, state, state.Eth1Data())
+	if err != nil {
+		return nil, err
+	}
+	syncCommittee, err := altair.NextSyncCommittee(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	if err := state.SetCurrentSyncCommittee(syncCommittee); err != nil {
+		return nil, err
+	}
+	if err := state.SetNextSyncCommittee(syncCommittee); err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
@@ -176,6 +214,108 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	}
 
 	return v1.InitializeFromProto(state)
+}
+
+// OptimizedGenesisBeaconStateMerge is used to create a state that has already processed deposits. This is to efficiently
+// create a mainnet state at chainstart.
+func OptimizedGenesisBeaconStateMerge(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		h := make([]byte, 32)
+		copy(h, eth1Data.BlockHash)
+		randaoMixes[i] = h
+	}
+	zeroHash := params.BeaconConfig().ZeroHash[:]
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		activeIndexRoots[i] = zeroHash
+	}
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = zeroHash
+	}
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(stateRoots); i++ {
+		stateRoots[i] = zeroHash
+	}
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+
+	genesisValidatorsRoot, err := v1.ValidatorRegistryRoot(preState.Validators())
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
+	}
+
+	state := &ethpb.BeaconStateMerge{
+		// Misc fields.
+		Slot:                  0,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+
+		// Validator registry fields.
+		Validators: preState.Validators(),
+		Balances:   preState.Balances(),
+
+		// Randomness and committees.
+		RandaoMixes: randaoMixes,
+
+		// Finality.
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: []byte{0},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+
+		HistoricalRoots:           [][]byte{},
+		BlockRoots:                blockRoots,
+		StateRoots:                stateRoots,
+		Slashings:                 slashings,
+		CurrentEpochParticipation:  make([]byte, len(preState.Validators())),
+		PreviousEpochParticipation: make([]byte, len(preState.Validators())),
+
+		// Eth1 data.
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: preState.Eth1DepositIndex(),
+	}
+
+	bodyRoot, err := (&ethpb.BeaconBlockBody{
+		RandaoReveal: make([]byte, 96),
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		},
+		Graffiti: make([]byte, 32),
+	}).HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root empty block body")
+	}
+
+	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+	}
+
+	state.LatestExecutionPayloadHeader = execution.EmptypayloadHeader()	// New in Merge.
+
+	return v3.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
