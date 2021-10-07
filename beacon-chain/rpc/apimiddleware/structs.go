@@ -751,7 +751,18 @@ type singleIndexedVerificationFailureJson struct {
 	Message string `json:"message"`
 }
 
+type nodeSyncDetailsErrorJson struct {
+	apimiddleware.DefaultErrorJson
+	SyncDetails syncDetails `json:"sync_details"`
+}
+
 type eventErrorJson struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
+}
+
+type syncDetails struct {
+	HeadSlot     string `json:"head_slot"`
+	SyncDistance string `json:"sync_distance"`
+	IsSyncing    bool   `json:"is_syncing"`
 }

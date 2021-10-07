@@ -63,7 +63,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.5.0
 	github.com/libp2p/go-libp2p-swarm v0.5.0
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
-	github.com/libp2p/go-tcp-transport v0.2.4
+	github.com/libp2p/go-tcp-transport v0.2.8
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/miekg/dns v1.1.43 // indirect

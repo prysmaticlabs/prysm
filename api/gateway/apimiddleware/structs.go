@@ -15,6 +15,7 @@ type ErrorJson interface {
 	StatusCode() int
 	SetCode(code int)
 	Msg() string
+	SetMsg(msg string)
 }
 
 // DefaultErrorJson is a JSON representation of a simple error value, containing only a message and an error code.
@@ -53,4 +54,9 @@ func (e *DefaultErrorJson) Msg() string {
 // SetCode sets the error's underlying error code.
 func (e *DefaultErrorJson) SetCode(code int) {
 	e.Code = code
+}
+
+// SetMsg sets the error's underlying message.
+func (e *DefaultErrorJson) SetMsg(msg string) {
+	e.Message = msg
 }

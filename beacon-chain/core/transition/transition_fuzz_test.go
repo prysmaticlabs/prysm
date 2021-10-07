@@ -6,6 +6,7 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -122,7 +123,7 @@ func TestFuzzCanProcessEpoch_10000(_ *testing.T) {
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
-		CanProcessEpoch(state)
+		time.CanProcessEpoch(state)
 	}
 }
 
