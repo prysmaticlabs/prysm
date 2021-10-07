@@ -30,7 +30,6 @@ type SingleIndexedVerificationFailure struct {
 
 // SyncDetails contain details about sync status.
 type SyncDetails struct {
-	//SyncDetails *ethpbv1.SyncInfo `json:"sync_details"`
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
