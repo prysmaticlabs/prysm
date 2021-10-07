@@ -4,24 +4,25 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 
 	"github.com/golang/snappy"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 type SSZValue struct {
-	Message json.RawMessage `json:"message"`
-	Signature string `json:"signature"`// hex encoded '0x...'
+	Message   json.RawMessage `json:"message"`
+	Signature string          `json:"signature"` // hex encoded '0x...'
 }
 
 func TestExecPayload(t *testing.T) {
 	tc := &TestCase{
-		path: "testdata/ExecutionPayload/ssz_random/case_1",
+		path: "testdata/ExecutionPayload/ssz_random/case_3",
 	}
 	ssb, err := tc.MarshaledBytes()
 	if err != nil {
@@ -49,27 +50,27 @@ func TestExecPayload(t *testing.T) {
 		t.Error(err)
 	}
 	if !bytes.Equal(htr[:], rb[:]) {
-		t.Error("HTR was not equal to expected value")
+		t.Errorf("HTR was not equal to expected value. Wanted %#x but got %#x", rb, htr)
 	}
 }
 
 func getSSZSnappy(path string) ([]byte, error) {
-		fh, err := os.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		defer fh.Close()
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(fh)
-		return snappy.Decode(nil, buf.Bytes())
+	fh, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fh.Close()
+	buf := bytes.NewBuffer(nil)
+	_, err = buf.ReadFrom(fh)
+	return snappy.Decode(nil, buf.Bytes())
 }
 
 type TestCase struct {
-	path string
-	config string
-	phase string
+	path     string
+	config   string
+	phase    string
 	typeName string
-	caseId string
+	caseId   string
 }
 
 func (tc *TestCase) MarshaledBytes() ([]byte, error) {
