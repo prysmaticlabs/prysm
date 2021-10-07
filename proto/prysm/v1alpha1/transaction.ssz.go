@@ -78,7 +78,7 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 			return ssz.ErrIncorrectListSize
 		}
 		hh.PutBytes(opaque)
-		hh.MerkleizeWithMixin(idx, byteLen, uint64((len(opaque) + 31)/32))
+		hh.MerkleizeWithMixin(idx, byteLen, (byteLen + 31)/32)
 	default:
 		return fmt.Errorf("can't HashTreeRootWith, Transaction oneof is using an unrecognized type option")
 	}
