@@ -63,13 +63,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
 	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
-	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().MergeForkEpoch {
 		blk, err := vs.getAltairBeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
@@ -104,8 +105,22 @@ func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockReque
 	}
 	payload, err := vs.getExecutionPayload(ctx, req.Slot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get execution payload")
 	}
+
+	log.WithFields(logrus.Fields{
+		"blockNumber":   payload.BlockNumber,
+		"blockHash":     fmt.Sprintf("%#x", payload.BlockHash),
+		"parentHash":    fmt.Sprintf("%#x", payload.ParentHash),
+		"coinBase":      fmt.Sprintf("%#x", payload.Coinbase),
+		"gasLimit":      payload.GasLimit,
+		"gasUsed":       payload.GasUsed,
+		"baseFeePerGas": payload.BaseFeePerGas,
+		"random":        fmt.Sprintf("%#x", payload.Random),
+		"extraData":     fmt.Sprintf("%#x", payload.ExtraData),
+		"txs":           payload.Transactions,
+	}).Info("Retrieved payload")
+
 	blk := &ethpb.BeaconBlockMerge{
 		Slot:          altairBlk.Slot,
 		ProposerIndex: altairBlk.ProposerIndex,
@@ -124,7 +139,6 @@ func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockReque
 			ExecutionPayload:  payload,
 		},
 	}
-
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockMerge{Block: blk, Signature: make([]byte, 96)},
@@ -321,6 +335,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		blk, err = wrapper.WrappedAltairSignedBeaconBlock(b.Altair)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
+		}
+	case *ethpb.GenericSignedBeaconBlock_Merge:
+		blk, err = wrapper.WrappedMergeSignedBeaconBlock(b.Merge)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "could not wrap merge beacon block")
 		}
 	default:
 		return nil, status.Error(codes.Internal, "block version not supported")

@@ -25,6 +25,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -104,61 +105,54 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	body := signed.Block().Body()
-	executionEnabled, err := execution.Enabled(preState, body)
-	if err != nil {
-		return err
-	}
-
 	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
+		// TODO_MERGE: Notify execution client in the event of invalid conensus block
+		return err
+	}
+
+	if postState.Version() == version.Merge {
+		executionEnabled, err := execution.Enabled(postState, body)
+		if err != nil {
+			return errors.Wrap(err, "could not check if execution is enabled")
+		}
 		if executionEnabled {
-			// Inform execution engine that consensus block which contained `payload.blockhash` is INVALID.
 			payload, err := body.ExecutionPayload()
 			if err != nil {
-				return err
+				return errors.Wrap(err, "could not get body execution payload")
 			}
-			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, false); err != nil {
-				return err
+
+			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
+			if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
+				return errors.Wrap(err, "could not execute payload")
 			}
-		}
-		return err
-	}
+			// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
+			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
+				return errors.Wrap(err, "could not notify consensus validated")
+			}
 
-	if executionEnabled {
-		payload, err := body.ExecutionPayload()
-		if err != nil {
-			return err
-		}
-		// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-		if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
-			return err
-		}
-		// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
-		if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
-			return err
-		}
-	}
-
-	mergeBlock, err := execution.IsMergeBlock(preState, body)
-	if err != nil {
-		return err
-	}
-	if mergeBlock {
-		payload, err := body.ExecutionPayload()
-		if err != nil {
-			return err
-		}
-		transitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, common.BytesToHash(payload.ParentHash))
-		if err != nil {
-			return err
-		}
-		parentTransitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, transitionBlk.ParentHash())
-		if err != nil {
-			return err
-		}
-		if !validateTerminalBlock(transitionBlk, parentTransitionBlk) {
-			return errors.New("incorrect terminal pow block")
+			mergeBlock, err := execution.IsMergeBlock(postState, body)
+			if err != nil {
+				return errors.Wrap(err, "could not check if merge block is terminal")
+			}
+			if mergeBlock {
+				payload, err := body.ExecutionPayload()
+				if err != nil {
+					return errors.Wrap(err, "could not get body execution payload")
+				}
+				transitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, common.BytesToHash(payload.ParentHash))
+				if err != nil {
+					return errors.Wrap(err, "could not get transition block")
+				}
+				parentTransitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, transitionBlk.ParentHash())
+				if err != nil {
+					return errors.Wrap(err, "could not get transition parent block")
+				}
+				if !validateTerminalBlock(transitionBlk, parentTransitionBlk) {
+					return errors.New("incorrect terminal pow block")
+				}
+			}
 		}
 	}
 
@@ -215,30 +209,41 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Notify execution layer with fork choice head update if this is post merge block.
-	if executionEnabled {
-		// Spawn the update task, without waiting for it to complete.
-		go func() {
-			headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
-			if err != nil {
-				log.WithError(err)
-				return
-			}
-			finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-			if err != nil {
-				log.WithError(err)
-				return
-			}
-			// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-			if err != nil {
-				log.WithError(err)
-				return
-			}
-			if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedPayload.BlockHash); err != nil {
-				log.WithError(err)
-				return
-			}
-		}()
+	if postState.Version() == version.Merge {
+		executionEnabled, err := execution.Enabled(postState, body)
+		if err != nil {
+			return errors.Wrap(err, "could not check if execution is enabled")
+		}
+		if executionEnabled {
+			// Spawn the update task, without waiting for it to complete.
+			go func() {
+				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+				if err != nil {
+					log.WithError(err)
+					return
+				}
+				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+				if err != nil {
+					log.WithError(err)
+					return
+				}
+				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+					if err != nil {
+						log.WithError(err)
+						return
+					}
+					finalizedBlockHash = finalizedPayload.BlockHash
+				}
+
+				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedBlockHash); err != nil {
+					log.WithError(err)
+					return
+				}
+			}()
+		}
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {

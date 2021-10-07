@@ -46,6 +46,7 @@ var (
 	// Altair key used to identify object is altair compatible.
 	// Objects that are only compatible with altair should be prefixed with such key.
 	altairKey = []byte("altair")
+	mergeKey  = []byte("merge")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	lastArchivedIndexKey = []byte("last-archived")

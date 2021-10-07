@@ -279,6 +279,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
+	case version.Merge:
+		state, err = altairOperations(ctx, state, signedBeaconBlock)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("block does not have correct version")
 	}
@@ -303,7 +308,7 @@ func ProcessBlockForStateRoot(
 	body := blk.Body()
 	bodyRoot, err := body.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
 	}
 	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {

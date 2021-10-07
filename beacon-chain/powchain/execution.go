@@ -9,8 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/eth/catalyst/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
+
+var errNoExecutionEngineConnection = errors.New("can't connect to execution engine")
 
 // ExecutionEngineCaller defines methods that wraps around execution engine API calls to enable other prysm services to interact with.
 type ExecutionEngineCaller interface {
@@ -46,6 +49,9 @@ type CatalystClient interface {
 // Engine API definition:
 //  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_preparepayload
 func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
+	if s.catalystClient == nil {
+		return 0, errNoExecutionEngineConnection
+	}
 	res, err := s.catalystClient.PreparePayload(ctx, types.AssembleBlockParams{
 		ParentHash:   common.BytesToHash(parentHash),
 		Timestamp:    timeStamp,
@@ -63,6 +69,9 @@ func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeSta
 // Engine API definition:
 //  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_getpayload
 func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*ethpb.ExecutionPayload, error) {
+	if s.catalystClient == nil {
+		return nil, errNoExecutionEngineConnection
+	}
 	ed, err := s.catalystClient.GetPayload(ctx, hexutil.Uint64(payloadID))
 	if err != nil {
 		return nil, err
@@ -78,6 +87,9 @@ func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*ethpb.Exec
 // Engine API definition:
 // 	https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#notify_consensus_validated
 func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error {
+	if s.catalystClient == nil {
+		return errNoExecutionEngineConnection
+	}
 	status := "INVALID"
 	if valid {
 		status = "VALID"
@@ -92,6 +104,9 @@ func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte
 // Engine API definition:
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_forkchoiceupdated
 func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error {
+	if s.catalystClient == nil {
+		return errNoExecutionEngineConnection
+	}
 	return s.catalystClient.ForkchoiceUpdated(ctx, types.ForkChoiceParams{
 		HeadBlockHash:      common.BytesToHash(headBlockHash),
 		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
@@ -102,6 +117,9 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash [
 // Engine API definition:
 // 	https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_executepayload
 func (s *Service) ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error {
+	if s.catalystClient == nil {
+		return errNoExecutionEngineConnection
+	}
 	res, err := s.catalystClient.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
 	if err != nil {
 		return err
@@ -124,7 +142,9 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) types.Exe
 		txs[i] = t.GetOpaqueTransaction()
 	}
 	baseFeePerGas := new(big.Int)
-	baseFeePerGas.SetBytes(payload.BaseFeePerGas)
+	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
+	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
+
 	return types.ExecutableData{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
@@ -152,19 +172,19 @@ func executableDataToExecutionPayload(ed *types.ExecutableData) *ethpb.Execution
 	}
 
 	return &ethpb.ExecutionPayload{
-		ParentHash:    ed.ParentHash.Bytes(),
-		Coinbase:      ed.Coinbase.Bytes(),
-		StateRoot:     ed.StateRoot.Bytes(),
-		ReceiptRoot:   ed.ReceiptRoot.Bytes(),
-		LogsBloom:     ed.LogsBloom,
-		Random:        ed.Random.Bytes(),
+		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
+		Coinbase:      bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
+		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
+		ReceiptRoot:   bytesutil.PadTo(ed.ReceiptRoot.Bytes(), 32),
+		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),
+		Random:        bytesutil.PadTo(ed.Random.Bytes(), 32),
 		BlockNumber:   ed.Number,
 		GasLimit:      ed.GasLimit,
 		GasUsed:       ed.GasUsed,
 		Timestamp:     ed.Timestamp,
 		ExtraData:     ed.ExtraData,
-		BaseFeePerGas: ed.BaseFeePerGas.Bytes(),
-		BlockHash:     ed.BlockHash.Bytes(),
+		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
+		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
 		Transactions:  txs,
 	}
 }

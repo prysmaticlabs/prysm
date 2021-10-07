@@ -26,7 +26,7 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 		return false, err
 	}
 	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(h, EmptyPayload()), nil
+	return !ssz.DeepEqual(h, EmptypayloadHeader()), nil
 }
 
 // IsMergeBlock returns true if input block can become the merge block.
@@ -48,7 +48,7 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 		return false, err
 	}
 	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(payload, EmptypayloadHeader()), nil
+	return !ssz.DeepEqual(payload, EmptyPayload()), nil
 }
 
 // Enabled returns true if the beacon chain can begin executing.
@@ -195,7 +195,7 @@ func validateGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPa
 	if payload.GasUsed > payload.GasLimit {
 		return false
 	}
-	if payload.GasUsed < params.BeaconConfig().MinGasLimit {
+	if payload.GasLimit < params.BeaconConfig().MinGasLimit {
 		return false
 	}
 
@@ -203,7 +203,7 @@ func validateGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPa
 	if payload.GasLimit >= parentGasLimit+parentGasLimit/params.BeaconConfig().GasLimitDenominator {
 		return false
 	}
-	if payload.GasLimit < parentGasLimit-parentGasLimit/params.BeaconConfig().GasLimitDenominator {
+	if payload.GasLimit <= parentGasLimit-parentGasLimit/params.BeaconConfig().GasLimitDenominator {
 		return false
 	}
 

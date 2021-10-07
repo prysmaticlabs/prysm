@@ -21,7 +21,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			CurrentVersion:  params.BeaconConfig().MergeForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),

@@ -54,8 +54,9 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	if err != nil {
 		return nil, err
 	}
+
 	if !complete {
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHash(ctx, slot)
+		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHash(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +71,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		if err != nil {
 			return nil, err
 		}
-		parentHash = header.ParentHash
+		parentHash = header.BlockHash
 	}
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
@@ -100,7 +101,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 //        return pow_block_overrides[0]
 //
 //    return get_pow_block_at_terminal_total_difficulty(pow_chain)
-func (vs *Server) getTerminalBlockHash(ctx context.Context, slot types.Slot) ([]byte, bool, error) {
+func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
 	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
 	// Terminal block hash override takes precedence over terminal total difficult.
 	if params.BeaconConfig().TerminalBlockHash != params.BeaconConfig().ZeroHash {
@@ -111,6 +112,7 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context, slot types.Slot) ([]
 		if !e {
 			return nil, false, nil
 		}
+
 		return terminalBlockHash.Bytes(), true, nil
 	}
 
@@ -147,7 +149,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			if b.ParentHash() == b.Hash() {
 				return nil, false, errors.New("invalid block")
 			}
-			// TODO_MERGE: Add pow block cache to avoid requesting previous block.
+			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
 			b, err = vs.BlockFetcher.BlockByHash(ctx, b.ParentHash())
 			if err != nil {
 				return nil, false, err
