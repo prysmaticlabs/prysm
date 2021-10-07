@@ -188,7 +188,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if transition.CanProcessEpoch(state) {
+		if time.CanProcessEpoch(state) {
 			switch state.Version() {
 			case version.Phase0:
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
