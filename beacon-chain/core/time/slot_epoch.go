@@ -61,7 +61,7 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed at the end of the last slot of every epoch
+// The epoch can be processed at the end of the last slot of every epoch.
 //
 // Spec pseudocode definition:
 //    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
