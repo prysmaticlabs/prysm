@@ -114,7 +114,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 	}
 }
 
-func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
+func TestCanProcessEpoch_TrueOnEpochsLastSlot(t *testing.T) {
 	tests := []struct {
 		slot            types.Slot
 		canProcessEpoch bool
