@@ -26,7 +26,7 @@ func TestExecPayload(t *testing.T) {
 	}
 	ssb, err := tc.MarshaledBytes()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	block := &ethpb.ExecutionPayload{}
