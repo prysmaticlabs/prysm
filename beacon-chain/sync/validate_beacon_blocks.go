@@ -267,7 +267,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		payloadSize := uint64(0)
 		transactions := payload.GetTransactions()
 		for i := 0; i < len(transactions); i++ {
-			payloadSize += uint64(len(transactions[0]))
+			payloadSize += uint64(len(transactions[i]))
 		}
 		totalAllowedSize := params.BeaconConfig().MaxExecutionTransactions * params.BeaconConfig().MaxBytesPerOpaqueTransaction
 		if payloadSize > totalAllowedSize {
