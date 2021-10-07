@@ -37,7 +37,7 @@ var (
 	)
 	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically generate in the generated genesis state")
 	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")
-	useMergeConfig = flag.Bool("merge", false, "Select whether genesis state should be generated with Merge param")
+	useMergeConfig   = flag.Bool("merge", false, "Select whether genesis state should be generated with Merge param")
 	genesisTime      = flag.Uint64("genesis-time", 0, "Unix timestamp used as the genesis time in the generated genesis state (defaults to now)")
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")

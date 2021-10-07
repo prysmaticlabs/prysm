@@ -282,10 +282,10 @@ func OptimizedGenesisBeaconStateMerge(genesisTime uint64, preState state.BeaconS
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           [][]byte{},
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
-		Slashings:                 slashings,
+		HistoricalRoots:            [][]byte{},
+		BlockRoots:                 blockRoots,
+		StateRoots:                 stateRoots,
+		Slashings:                  slashings,
 		CurrentEpochParticipation:  make([]byte, len(preState.Validators())),
 		PreviousEpochParticipation: make([]byte, len(preState.Validators())),
 
@@ -313,7 +313,7 @@ func OptimizedGenesisBeaconStateMerge(genesisTime uint64, preState state.BeaconS
 		BodyRoot:   bodyRoot[:],
 	}
 
-	state.LatestExecutionPayloadHeader = execution.EmptypayloadHeader()	// New in Merge.
+	state.LatestExecutionPayloadHeader = execution.EmptypayloadHeader() // New in Merge.
 
 	return v3.InitializeFromProto(state)
 }

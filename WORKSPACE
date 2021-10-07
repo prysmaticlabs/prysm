@@ -185,10 +185,9 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-# FIXME: commenting out nogo because it is complaining about issues upstream
 go_register_toolchains(
     go_version = "1.16.4",
-    #nogo = "@//:nogo",
+    nogo = "@//:nogo",
 )
 
 http_archive(
