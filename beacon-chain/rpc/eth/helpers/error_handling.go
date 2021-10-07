@@ -27,3 +27,15 @@ type SingleIndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }
+
+// SyncDetails contain details about sync status.
+type SyncDetails struct {
+	HeadSlot     string `json:"head_slot"`
+	SyncDistance string `json:"sync_distance"`
+	IsSyncing    bool   `json:"is_syncing"`
+}
+
+// SyncDetailsContainer is a wrapper for SyncDetails.
+type SyncDetailsContainer struct {
+	SyncDetails *SyncDetails `json:"sync_details"`
+}
