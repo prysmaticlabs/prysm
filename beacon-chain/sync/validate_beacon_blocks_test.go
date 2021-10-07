@@ -1074,8 +1074,16 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = bytesutil.PadTo([]byte("transaction 1"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[1] = bytesutil.PadTo([]byte("transaction 2"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 1"),
+		},
+	}
+	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 2"),
+		},
+	}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1141,8 +1149,16 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = bytesutil.PadTo([]byte("transaction 1"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[1] = bytesutil.PadTo([]byte("transaction 2"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 1"),
+		},
+	}
+	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 2"),
+		},
+	}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1208,8 +1224,16 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = bytesutil.PadTo([]byte("transaction 1"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[1] = bytesutil.PadTo([]byte("transaction 2"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 1"),
+		},
+	}
+	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 2"),
+		},
+	}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1275,8 +1299,16 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("InvalidHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = bytesutil.PadTo([]byte("transaction 1"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[1] = bytesutil.PadTo([]byte("transaction 2"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 1"),
+		},
+	}
+	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
+			OpaqueTransaction: []byte("transaction 2"),
+		},
+	}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
