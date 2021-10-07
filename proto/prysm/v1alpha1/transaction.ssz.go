@@ -2,9 +2,12 @@ package eth
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 
 	ssz "github.com/ferranbt/fastssz"
 )
+
+var ErrUnexpectedTransactionType = errors.New("Unexpected oneof type for ExecutionPayload.Transactions")
 
 // IMPORTANT
 // The methods in this file are hand-written patches to the Transaction type.
@@ -94,4 +97,17 @@ func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
 		return fmt.Errorf("can't HashTreeRootWith, Transaction oneof is using an unrecognized type option")
 	}
 	return nil
+}
+
+func OpaqueTransactions(ep ExecutionPayload) ([][]byte, error) {
+	ots := make([][]byte, len(ep.Transactions))
+	for _, t := range ep.Transactions {
+		switch t.TransactionOneof.(type) {
+		case *Transaction_OpaqueTransaction:
+			ots = append(ots, t.GetOpaqueTransaction())
+		default:
+			return nil, ErrUnexpectedTransactionType
+		}
+	}
+	return ots, nil
 }
