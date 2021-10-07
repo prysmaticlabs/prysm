@@ -2,6 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 )
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
@@ -749,6 +750,11 @@ type indexedVerificationFailureErrorJson struct {
 type singleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+type nodeSyncDetailsErrorJson struct {
+	apimiddleware.DefaultErrorJson
+	SyncDetails rpchelpers.SyncDetails `json:"sync_details"`
 }
 
 type eventErrorJson struct {

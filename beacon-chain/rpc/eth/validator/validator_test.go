@@ -195,8 +195,11 @@ func TestGetAttesterDuties(t *testing.T) {
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -316,8 +319,11 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -444,8 +450,11 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -1152,8 +1161,11 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -1291,8 +1303,11 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
