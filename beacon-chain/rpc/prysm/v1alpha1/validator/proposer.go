@@ -697,7 +697,9 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
 		}
-		depositTrie.Insert(depHash[:], int(insertIndex))
+		if err = depositTrie.Insert(depHash[:], int(insertIndex)); err != nil {
+			return nil, err
+		}
 		insertIndex++
 	}
 	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
