@@ -63,6 +63,11 @@ func (e *testErrorJson) SetCode(code int) {
 	e.Code = code
 }
 
+// SetMsg sets the error's underlying message.
+func (e *testErrorJson) SetMsg(msg string) {
+	e.Message = msg
+}
+
 func TestDeserializeRequestBodyIntoContainer(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var bodyJson bytes.Buffer
@@ -156,29 +161,6 @@ func TestReadGrpcResponseBody(t *testing.T) {
 	assert.Equal(t, "foo", string(body))
 }
 
-func TestDeserializeGrpcResponseBodyIntoErrorJson(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		e := &testErrorJson{
-			Message: "foo",
-			Code:    500,
-		}
-		body, err := json.Marshal(e)
-		require.NoError(t, err)
-
-		eToDeserialize := &testErrorJson{}
-		errJson := DeserializeGrpcResponseBodyIntoErrorJson(eToDeserialize, body)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "foo", eToDeserialize.Msg())
-		assert.Equal(t, 500, eToDeserialize.StatusCode())
-	})
-
-	t.Run("error", func(t *testing.T) {
-		errJson := DeserializeGrpcResponseBodyIntoErrorJson(nil, nil)
-		require.NotNil(t, errJson)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not unmarshal error"))
-	})
-}
-
 func TestHandleGrpcResponseError(t *testing.T) {
 	response := &http.Response{
 		StatusCode: 400,
@@ -190,10 +172,14 @@ func TestHandleGrpcResponseError(t *testing.T) {
 	writer := httptest.NewRecorder()
 	errJson := &testErrorJson{
 		Message: "foo",
-		Code:    500,
+		Code:    400,
 	}
+	b, err := json.Marshal(errJson)
+	require.NoError(t, err)
 
-	HandleGrpcResponseError(errJson, response, writer)
+	hasError, e := HandleGrpcResponseError(errJson, response, b, writer)
+	require.Equal(t, true, e == nil)
+	assert.Equal(t, true, hasError)
 	v, ok := writer.Header()["Foo"]
 	require.Equal(t, true, ok, "header not found")
 	require.Equal(t, 1, len(v), "wrong number of header values")
