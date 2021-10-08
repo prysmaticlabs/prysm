@@ -105,7 +105,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: bytesutil.PadTo([]byte("A"), params.BeaconConfig().BLSSignatureLength),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +113,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: bytesutil.PadTo([]byte("B"), params.BeaconConfig().BLSSignatureLength),
 			},
 		},
 	}
