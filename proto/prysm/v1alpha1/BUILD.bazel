@@ -50,6 +50,11 @@ proto_library(
 ##############################################################################
 ssz_gen_marshal(
     name = "ssz_generated_files",
+    exclude_objs = [
+        "ExecutionPayloadHeader",
+        "ExecutionPayload",
+        "Transaction",
+    ],
     go_proto = ":go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -152,9 +157,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloners.go",
-	"transaction.ssz.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
+        "transaction.ssz.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [

@@ -34,7 +34,9 @@ def _ssz_go_proto_library_impl(ctx):
     if len(ctx.attr.objs) > 0:
         args += ["--objs=%s" % ",".join(ctx.attr.objs)]
 
-    args += ["--exclude-objs=Transaction"]
+    if len(ctx.attr.exclude_objs) > 0:
+        args += ["--exclude-objs=%s" % ",".join(ctx.attr.exclude_objs)]
+
     ctx.actions.run(
         executable = ctx.executable.sszgen,
         progress_message = "Generating ssz marshal and unmarshal functions",
@@ -79,6 +81,7 @@ ssz_gen_marshal = rule(
             cfg = "host",
         ),
         "objs": attr.string_list(),
+        "exclude_objs": attr.string_list(),
         "includes": attr.label_list(providers = [GoLibrary]),
     },
     outputs = {"out": "generated.ssz.go"},
