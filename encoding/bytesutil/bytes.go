@@ -263,10 +263,7 @@ func SetBit(b []byte, i int) []byte {
 // Returns the original bitlist if the index `i`
 // is out of range.
 func ClearBit(b []byte, i int) []byte {
-	if i >= len(b)*8 {
-		return b
-	}
-	if i < 0 {
+	if i >= len(b)*8 || i < 0 {
 		return b
 	}
 
