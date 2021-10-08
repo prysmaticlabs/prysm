@@ -65,7 +65,7 @@ func (s *Server) saveAuthToken(token string, expiration uint64) error {
 func (s *Server) initializeAuthToken() (string, uint64, error) {
 	authTokenFile := filepath.Join(s.walletDir, authTokenFileName)
 	if file.FileExists(authTokenFile) {
-		// #nosec G305
+		// #nosec G304
 		f, err := os.Open(authTokenFile)
 		if err != nil {
 			return "", 0, err
