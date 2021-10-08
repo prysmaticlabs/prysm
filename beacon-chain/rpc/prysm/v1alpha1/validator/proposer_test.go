@@ -486,7 +486,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -621,7 +621,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -720,7 +720,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -816,7 +816,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -910,7 +910,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -1019,7 +1019,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -1129,7 +1129,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
@@ -1191,17 +1191,17 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 			eth1dataCreator: func() *ethpb.Eth1Data {
 				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				trie.Insert([]byte{'a'}, 0)
-				trie.Insert([]byte{'b'}, 1)
-				trie.Insert([]byte{'c'}, 2)
+				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
 				return &ethpb.Eth1Data{DepositRoot: []byte{'B'}, DepositCount: 3, BlockHash: []byte{}}
 			},
 			trieCreator: func() *trie.SparseMerkleTrie {
 				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				trie.Insert([]byte{'a'}, 0)
-				trie.Insert([]byte{'b'}, 1)
-				trie.Insert([]byte{'c'}, 2)
+				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
 				return trie
 			},
 			success: false,
@@ -1211,18 +1211,18 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 			eth1dataCreator: func() *ethpb.Eth1Data {
 				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				trie.Insert([]byte{'a'}, 0)
-				trie.Insert([]byte{'b'}, 1)
-				trie.Insert([]byte{'c'}, 2)
+				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
 				rt := trie.HashTreeRoot()
 				return &ethpb.Eth1Data{DepositRoot: rt[:], DepositCount: 3, BlockHash: []byte{}}
 			},
 			trieCreator: func() *trie.SparseMerkleTrie {
 				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				trie.Insert([]byte{'a'}, 0)
-				trie.Insert([]byte{'b'}, 1)
-				trie.Insert([]byte{'c'}, 2)
+				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
 				return trie
 			},
 			success: true,
@@ -1960,7 +1960,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		depositHash, err := dp.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Unable to determine hashed value of deposit")
 
-		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositTrie.Insert(depositHash[:], int(dp.Index)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.HashTreeRoot()))
 	}
 	for _, dp := range recentDeposits {
