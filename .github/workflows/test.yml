@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [ 1.16 ]
+        platform: [ ubuntu-18.04 ]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Test beacon-chain client
+        run: bazel test //cmd/beacon-chain:go_default_test
+
+      - name: Test validator client
+        run: bazel test //cmd/validator:go_default_test

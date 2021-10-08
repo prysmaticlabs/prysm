@@ -1,22 +1,94 @@
-name: Deploy
+name: Build and deploy
 
 on:
-  create:
-    tags:
-      - v*
+  push:
+    branches:
+      - 'develop'
 
 jobs:
-  goreleaser:
-    runs-on: ubuntu-latest
+  deploy:
+    strategy:
+      matrix:
+        go-version: [ 1.16 ]
+        platform: [ ubuntu-18.04 ]
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Deploy
-        uses: deliverybot/helm@master
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          chart: app
-          namespace: test
-          release: eth20
-          dry-run: true
+      - name: Cache bazelisk download
+        uses: actions/cache@v2
         env:
-          KUBECONFIG_FILE: ${{ secrets.KUBECONFIG }}
+          cache-name: bazel-cache
+        with:
+          path: ~/.cache/bazelisk
+          key: ${{ matrix.os }}-${{ env.cache-name }}-${{ github.ref }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ env.cache-name }}-development
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build beacon-chain client
+        run: |
+          bazel build //beacon-chain
+          mv ./bazel-bin/cmd/beacon-chain/beacon-chain_/beacon-chain ./bazel-bin/cmd/beacon-chain/beacon-chain_/vanguard-Linux-x86_64
+
+      - name: Build validator
+        run: |
+          bazel build //validator
+          mv ./bazel-bin/cmd/validator/validator_/validator ./bazel-bin/cmd/validator/validator_/lukso-validator-Linux-x86_64
+
+      - name: Run beacon-chain for Darwin
+        if: matrix.platform == 'macos-11'
+        run: |
+          bazel build //beacon-chain:beacon-chain
+          mv ./bazel-bin/cmd/beacon-chain/beacon-chain_/beacon-chain ./bazel-bin/cmd/beacon-chain/beacon-chain_/vanguard-Darwin-x86_64
+
+      - name: Run validator for Darwin
+        if: matrix.platform == 'macos-11'
+        run: |
+          bazel build //validator:validator
+          mv ./bazel-bin/cmd/validator/validator_/validator ./bazel-bin/cmd/validator/validator_/lukso-validator-Darwin-x86_64
+
+      - name: Run beacon-chain for Windows
+        if: matrix.platform == 'ubuntu-18.04'
+        run: |
+          bazel build //beacon-chain:beacon-chain --config=windows_amd64_docker
+          mv ./bazel-bin/cmd/beacon-chain/beacon-chain_/beacon-chain.exe ./bazel-bin/cmd/beacon-chain/beacon-chain_/vanguard-Windows-x86_64.exe
+
+      - name: Run validator for Windows
+        if: matrix.platform == 'ubuntu-18.04'
+        run: |
+          bazel build //validator:validator --config=windows_amd64_docker
+          mv ./bazel-bin/cmd/validator/validator_/validator.exe ./bazel-bin/cmd/validator/validator_/lukso-validator-Windows-x86_64.exe
+
+      - name: Delete old tag and release
+        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        with:
+          delete_release: true
+          tag_name: v0.1.0-develop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v0.1.0-develop
+          tag_name: v0.1.0-develop
+          target_commitish: ${{ github.sha }}
+          draft: false
+          files: |
+            ./bazel-bin/cmd/beacon-chain/beacon-chain_/vanguard-*
+            ./bazel-bin/cmd/validator/validator_/lukso-validator-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Request network upgrade
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"event_type":"upgrade_dev", "client_payload": {"repository": "VANGUARD", "tag": "v0.1.0-develop"}}' \
+          -u "$GITHUB_TOKEN" \
+          https://api.github.com/repos/lukso-network/network-helm-charts/dispatches
