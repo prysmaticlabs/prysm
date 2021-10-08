@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -15,12 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Precomputed values for generalized indices.
@@ -45,18 +47,12 @@ type LightClientUpdate struct {
 	FinalityBranch          [FinalizedRootIndexFloorLog2][32]byte
 	SyncCommitteeBits       bitfield.Bitvector512
 	SyncCommitteeSignature  [96]byte
-	ForkVersion             *v1.Version
-}
-
-type updateSet []*LightClientUpdate
-
-func (u *updateSet) add(update *LightClientUpdate) {
-	// TODO: Implement.
+	ForkVersion             *v1alpha1.Version
 }
 
 type Store struct {
 	Snapshot     *LightClientSnapshot
-	ValidUpdates *updateSet
+	ValidUpdates []*LightClientUpdate
 }
 
 func applyLightClientUpdate(snapshot *LightClientSnapshot, update *LightClientUpdate) {
@@ -78,22 +74,30 @@ func processLightClientUpdate(
 	if err := validateLightClientUpdate(store.Snapshot, update, genesisValidatorsRoot); err != nil {
 		return err
 	}
-	store.ValidUpdates.add(update)
+	store.ValidUpdates = append(store.ValidUpdates, update)
 	updateTimeout := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-	// TODO: Add bits instead:
-	sumParticipantBits := uint64(sumBits(update.SyncCommitteeBits))
+	sumParticipantBits := sumBits(update.SyncCommitteeBits)
 	hasQuorum := sumParticipantBits*3 >= uint64(len(update.SyncCommitteeBits))*2
 	if hasQuorum && !isEmptyBlockHeader(update.FinalityHeader) {
 		// Apply update if (1) 2/3 quorum is reached and (2) we have a finality proof.
 		// Note that (2) means that the current light client design needs finality.
 		// It may be changed to re-organizable light client design. See the on-going issue consensus-specs#2182.
 		applyLightClientUpdate(store.Snapshot, update)
-		store.ValidUpdates = &updateSet{}
+		store.ValidUpdates = make([]*LightClientUpdate, 0)
 	} else if currentSlot > store.Snapshot.Header.Slot.Add(updateTimeout) {
 		// Forced best update when the update timeout has elapsed
-		//apply_light_client_update(store.snapshot,
-		//	max(store.valid_updates, key=lambda update: sum(update.sync_committee_bits)))
-		store.ValidUpdates = &updateSet{}
+		// Use the update that has the highest sum of sync committee bits.
+		updateWithHighestSumBits := store.ValidUpdates[0]
+		highestSumBitsUpdate := sumBits(updateWithHighestSumBits.SyncCommitteeBits)
+		for _, validUpdate := range store.ValidUpdates {
+			sumUpdateBits := sumBits(validUpdate.SyncCommitteeBits)
+			if sumUpdateBits > highestSumBitsUpdate {
+				highestSumBitsUpdate = sumUpdateBits
+				updateWithHighestSumBits = validUpdate
+			}
+		}
+		applyLightClientUpdate(store.Snapshot, updateWithHighestSumBits)
+		store.ValidUpdates = make([]*LightClientUpdate, 0)
 	}
 	return nil
 }
@@ -111,6 +115,8 @@ func validateLightClientUpdate(
 	if updatePeriod != snapshotPeriod || updatePeriod != snapshotPeriod+1 {
 		return errors.New("unwanted")
 	}
+
+	// Verify finality headers.
 	var signedHeader *v1.BeaconBlockHeader
 	if isEmptyBlockHeader(update.FinalityHeader) {
 		signedHeader = update.Header
@@ -121,29 +127,23 @@ func validateLightClientUpdate(
 			}
 		}
 	} else {
-
-	}
-	leaf, err := update.Header.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	depth := uint64(2)
-	index := getSubtreeIndex(2)
-	root := update.FinalityHeader.StateRoot
-	branch := update.FinalityBranch
-	_ = branch
-	//	signed_header = update.finality_header
-	//	assert is_valid_merkle_branch(
-	//		leaf=hash_tree_root(update.header),
-	//		branch=update.finality_branch,
-	//		depth=floorlog2(FINALIZED_ROOT_INDEX),
-	//		index=get_subtree_index(FINALIZED_ROOT_INDEX),
-	//		root=update.finality_header.state_root,
-	//)
-	if !trie.VerifyMerkleBranch(root, leaf[:], int(index), [][]byte{}, depth) {
-		return errors.New("does not verify")
+		leaf, err := update.Header.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		depth := FinalizedRootIndexFloorLog2
+		index := getSubtreeIndex(FinalizedRootIndex)
+		root := update.FinalityHeader.StateRoot
+		merkleBranch := make([][]byte, len(update.FinalityBranch))
+		for i, item := range update.FinalityBranch {
+			merkleBranch[i] = item[:]
+		}
+		if !trie.VerifyMerkleBranch(root, leaf[:], int(index), merkleBranch, uint64(depth)) {
+			return errors.New("does not verify")
+		}
 	}
 
+	// Verify update next sync committee if the update period incremented.
 	var syncCommittee *v2.SyncCommittee
 	if updatePeriod == snapshotPeriod {
 		syncCommittee = snapshot.CurrentSyncCommittee
@@ -154,29 +154,39 @@ func validateLightClientUpdate(
 		}
 	} else {
 		syncCommittee = snapshot.NextSyncCommittee
+		v1Sync := &v1alpha1.SyncCommittee{
+			Pubkeys:         syncCommittee.Pubkeys,
+			AggregatePubkey: syncCommittee.AggregatePubkey,
+		}
+		leaf, err := v1Sync.HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		depth := NextSyncCommitteeIndexFloorLog2
+		index := getSubtreeIndex(NextSyncCommitteeIndex)
+		root := update.Header.StateRoot
+		merkleBranch := make([][]byte, len(update.NextSyncCommitteeBranch))
+		for i, item := range update.NextSyncCommitteeBranch {
+			merkleBranch[i] = item[:]
+		}
+		if !trie.VerifyMerkleBranch(root, leaf[:], int(index), merkleBranch, uint64(depth)) {
+			return errors.New("does not verify")
+		}
 	}
-	//# Verify update next sync committee if the update period incremented
-	//if update_period == snapshot_period:
-	//sync_committee = snapshot.current_sync_committee
-	//assert update.next_sync_committee_branch == [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
-	//else:
-	//sync_committee = snapshot.next_sync_committee
-	//assert is_valid_merkle_branch(
-	//leaf=hash_tree_root(update.next_sync_committee),
-	//branch=update.next_sync_committee_branch,
-	//depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-	//index=get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
-	//root=update.header.state_root,
-	//)
-	//
 
 	// Verify sync committee has sufficient participants
-	if uint64(sumBits(update.SyncCommitteeBits)) < params.BeaconConfig().MinSyncCommitteeParticipants {
+	if sumBits(update.SyncCommitteeBits) < params.BeaconConfig().MinSyncCommitteeParticipants {
 		return errors.New("insufficient participants")
 	}
-	//
-	//# Verify sync committee aggregate signature
-	//participant_pubkeys = [pubkey for (bit, pubkey) in zip(update.sync_committee_bits, sync_committee.pubkeys) if bit]
+
+	// Verify sync committee aggregate signature
+	participantPubkeys := make([][]byte, 0)
+	for i, pubKey := range syncCommittee.Pubkeys {
+		bit := update.SyncCommitteeBits.BitAt(uint64(i))
+		if bit {
+			participantPubkeys = append(participantPubkeys, pubKey)
+		}
+	}
 	domain, err := signing.ComputeDomain(
 		params.BeaconConfig().DomainSyncCommittee,
 		[]byte(update.ForkVersion.Version),
@@ -194,7 +204,7 @@ func validateLightClientUpdate(
 		return err
 	}
 	pubKeys := make([]common.PublicKey, 0)
-	for _, pubkey := range snapshot.CurrentSyncCommittee.Pubkeys {
+	for _, pubkey := range participantPubkeys {
 		pk, err := blst.PublicKeyFromBytes(pubkey)
 		if err != nil {
 			return err
@@ -223,9 +233,34 @@ func main() {
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}
-	evs := eth.NewEventsClient(conn)
+	beaconClient := eth.NewBeaconChainClient(conn)
+	eventsClient := eth.NewEventsClient(conn)
+	debugClient := eth.NewBeaconDebugClient(conn)
 	ctx := context.Background()
-	events, err := evs.StreamEvents(ctx, &v1.StreamEventsRequest{Topics: []string{"head"}})
+
+	// Get basic information such as the genesis validators root.
+	genesis, err := beaconClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		panic(err)
+	}
+	genesisValidatorsRoot := genesis.Data.GenesisValidatorsRoot
+	genesisTime := uint64(genesis.Data.GenesisTime.AsTime().Unix())
+	fmt.Printf("%#v\n", genesisValidatorsRoot)
+	currentState, err := debugClient.GetBeaconStateV2(ctx, &v2.StateRequestV2{StateId: []byte("head")})
+	if err != nil {
+		panic(err)
+	}
+	altairState := currentState.Data.GetAltairState()
+	store := &Store{
+		Snapshot: &LightClientSnapshot{
+			Header:               nil,
+			CurrentSyncCommittee: altairState.CurrentSyncCommittee,
+			NextSyncCommittee:    altairState.NextSyncCommittee,
+		},
+		ValidUpdates: make([]*LightClientUpdate, 0),
+	}
+
+	events, err := eventsClient.StreamEvents(ctx, &v1.StreamEventsRequest{Topics: []string{"head"}})
 	if err != nil {
 		panic(err)
 	}
@@ -234,16 +269,30 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(item)
+		evHeader := &v1.EventHead{}
+		if err := item.Data.UnmarshalTo(evHeader); err != nil {
+			panic(err)
+		}
+		blockHeader, err := beaconClient.GetBlockHeader(ctx, &v1.BlockRequest{BlockId: evHeader.Block})
+		if err != nil {
+			panic(err)
+		}
+		store.Snapshot.Header = blockHeader.Data.Header.Message
+		fmt.Println(store)
+		currentSlot := slots.CurrentSlot(genesisTime)
+		if err := processLightClientUpdate(
+			store,
+			&LightClientUpdate{},
+			currentSlot,
+			bytesutil.ToBytes32(genesisValidatorsRoot),
+		); err != nil {
+			panic(err)
+		}
 	}
 }
 
-func sumBits(bfield bitfield.Bitvector512) uint8 {
-	s := uint8(0)
-	for _, item := range bfield.Bytes() {
-		s += item
-	}
-	return s
+func sumBits(bfield bitfield.Bitvector512) uint64 {
+	return bfield.Count()
 }
 
 func getSubtreeIndex(index uint64) uint64 {
