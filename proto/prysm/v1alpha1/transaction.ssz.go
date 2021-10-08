@@ -74,6 +74,9 @@ func (t *Transaction) HashTreeRoot() ([32]byte, error) {
 
 // HashTreeRootWith ssz hashes the Transaction object with a hasher
 func (t *Transaction) HashTreeRootWith(hh *ssz.Hasher) error {
+	if t == nil || t.TransactionOneof == nil {
+		return fmt.Errorf("can't HashTreeRootWith, Transaction value is nil")
+	}
 	idx := hh.Index()
 
 	var selector byte
