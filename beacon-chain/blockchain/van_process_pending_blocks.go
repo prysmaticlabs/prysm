@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -91,19 +90,24 @@ func (s *Service) OrcVerification() bool {
 }
 
 // triggerEpochInfoPublisher publishes slot and state for publishing epoch info
-func (s *Service) triggerEpochInfoPublisher(headSlot types.Slot, curState iface.BeaconState) {
+func (s *Service) publishEpochInfo(
+	slot types.Slot,
+	proposerIndices []types.ValidatorIndex,
+	pubKeys map[types.ValidatorIndex][48]byte,
+) {
 	// Send notification of the processed block to the state feed.
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockVerified,
-		Data: &statefeed.BlockPreVerifiedData{
-			Slot:         headSlot,
-			CurrentState: curState.Copy(),
+		Type: statefeed.EpochInfo,
+		Data: &statefeed.EpochInfoData{
+			Slot:            slot,
+			ProposerIndices: proposerIndices,
+			PublicKeys:      pubKeys,
 		},
 	})
 }
 
 // publishBlock publishes downloaded blocks to orchestrator
-func (s *Service) publishBlock(signedBlk interfaces.SignedBeaconBlock, curState iface.BeaconState) {
+func (s *Service) publishBlock(signedBlk interfaces.SignedBeaconBlock) {
 	s.blockNotifier.BlockFeed().Send(&feed.Event{
 		Type: blockfeed.UnConfirmedBlock,
 		Data: &blockfeed.UnConfirmedBlockData{Block: signedBlk.Block()},

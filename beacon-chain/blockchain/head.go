@@ -363,11 +363,6 @@ func (s *Service) notifyNewHeadEvent(
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},
 	})
-
-	// If vanguard node is enabled then trigger epoch info publisher rpc srevice
-	if s.enableVanguardNode {
-		s.triggerEpochInfoPublisher(newHeadSlot, newHeadState)
-	}
 	return nil
 }
 

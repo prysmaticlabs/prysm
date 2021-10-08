@@ -9,10 +9,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	bitfield "github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -34,9 +34,9 @@ var proposerIndicesCache = cache.NewProposerIndicesCache()
 //    """
 //    Return the number of committees in each slot for the given ``epoch``.
 //    """
-//    return max(1, min(
+//    return max(uint64(1), min(
 //        MAX_COMMITTEES_PER_SLOT,
-//        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//        uint64(len(get_active_validator_indices(state, epoch))) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //    ))
 func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	var committeePerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
@@ -94,7 +94,12 @@ func BeaconCommitteeFromState(state iface.ReadOnlyBeaconState, slot types.Slot, 
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
 // validator indices and seed are provided as an argument rather than a imported implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
-func BeaconCommittee(validatorIndices []types.ValidatorIndex, seed [32]byte, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+func BeaconCommittee(
+	validatorIndices []types.ValidatorIndex,
+	seed [32]byte,
+	slot types.Slot,
+	committeeIndex types.CommitteeIndex,
+) ([]types.ValidatorIndex, error) {
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
@@ -116,15 +121,15 @@ func BeaconCommittee(validatorIndices []types.ValidatorIndex, seed [32]byte, slo
 //
 // Spec pseudocode definition:
 //  def compute_committee(indices: Sequence[ValidatorIndex],
-//                      seed: Hash,
+//                      seed: Bytes32,
 //                      index: uint64,
 //                      count: uint64) -> Sequence[ValidatorIndex]:
 //    """
 //    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
 //    """
 //    start = (len(indices) * index) // count
-//    end = (len(indices) * (index + 1)) // count
-//    return [indices[compute_shuffled_index(ValidatorIndex(i), len(indices), seed)] for i in range(start, end)
+//    end = (len(indices) * uint64(index + 1)) // count
+//    return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
 func ComputeCommittee(
 	indices []types.ValidatorIndex,
 	seed [32]byte,
@@ -412,53 +417,41 @@ func precomputeProposerIndices(state iface.ReadOnlyBeaconState, activeIndices []
 	return proposerIndices, nil
 }
 
-// ProposerAssignments returns a map of proposer validator indices to corresponding slots for the next epoch.
+// ProposerIndicesInCache returns a map of proposer validator indices to corresponding slots for the next epoch.
 // This method is especially implemented for Orchestrator.
-func ProposerAssignments(
-	state iface.BeaconState,
-	epoch types.Epoch,
-) ([]*ethpb.ValidatorAssignments_CommitteeAssignment, error) {
-
+func ProposerIndicesInCache(state iface.BeaconState, epoch types.Epoch) ([]types.ValidatorIndex, map[types.ValidatorIndex][48]byte, error) {
 	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch,
 			nextEpoch,
 		)
 	}
-
-	// We determine the slots in which proposers are supposed to act.
-	// Some validators may need to propose multiple times per epoch, so
-	// we use a map of proposer idx -> []slot to keep track of this possibility.
 	startSlot, err := StartSlot(epoch)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
-	proposerAssignmentInfo := make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0)
-
-	// Proposal epochs do not have a look ahead, so we skip them over here.
-	//validProposalEpoch := epoch < nextEpoch
+	proposerIndices := make([]types.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
+	pubKeyList := make(map[types.ValidatorIndex][48]byte, params.BeaconConfig().SlotsPerEpoch)
+	i := 0
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
+			i++
 			continue
 		}
 		if err := state.SetSlot(slot); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		i, err := BeaconProposerIndex(state)
+		pi, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
+			return nil, nil, errors.Wrapf(err, "could not get proposer index at slot %d", state.Slot())
 		}
-		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
-		pubKey := state.PubkeyAtIndex(i)
-		proposerAssignmentInfo = append(proposerAssignmentInfo, &ethpb.ValidatorAssignments_CommitteeAssignment{
-			ProposerSlots:  proposerIndexToSlots[i],
-			PublicKey:      pubKey[:],
-			ValidatorIndex: i,
-		})
+		pubKey := state.PubkeyAtIndex(pi)
+		proposerIndices[i] = pi
+		pubKeyList[pi] = pubKey
+		i++
 	}
-	return proposerAssignmentInfo, nil
+	return proposerIndices, pubKeyList, nil
 }
