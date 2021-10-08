@@ -332,7 +332,7 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 func TestGetSyncCommitteeDuties(t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
-	numVals := uint64(10)
+	numVals := uint64(11)
 	st, _ := util.DeterministicGenesisStateAltair(t, numVals)
 	require.NoError(t, st.SetGenesisTime(uint64(genesisTime.Unix())))
 	vals := st.Validators()
@@ -397,6 +397,17 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(resp.Data))
+	})
+
+	t.Run("Validator without duty not returned", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{1, 10},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Data))
+		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].ValidatorIndex)
 	})
 
 	t.Run("Multiple indices for validator", func(t *testing.T) {
