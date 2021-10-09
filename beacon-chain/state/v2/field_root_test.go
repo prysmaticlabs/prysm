@@ -16,3 +16,8 @@ func TestArraysTreeRoot_OnlyPowerOf2(t *testing.T) {
 	_, err = nocachedHasher.arraysRoot([][]byte{}, 10, "testing")
 	assert.ErrorContains(t, "hash layer is a non power of 2", err)
 }
+
+func TestArraysTreeRoot_ZeroLength(t *testing.T) {
+	_, err := nocachedHasher.arraysRoot([][]byte{}, 0, "testing")
+	assert.ErrorContains(t, "hash layer is of zero length", err)
+}
