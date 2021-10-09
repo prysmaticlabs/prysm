@@ -709,8 +709,8 @@ func syncCommitteeDuties(
 	st state.BeaconState,
 	committeePubkeys map[[48]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {
-	duties := make([]*ethpbv2.SyncCommitteeDuty, len(valIndices))
-	for i, index := range valIndices {
+	duties := make([]*ethpbv2.SyncCommitteeDuty, 0)
+	for _, index := range valIndices {
 		duty := &ethpbv2.SyncCommitteeDuty{
 			ValidatorIndex: index,
 		}
@@ -724,10 +724,8 @@ func syncCommitteeDuties(
 		indices, ok := committeePubkeys[valPubkey48]
 		if ok {
 			duty.ValidatorSyncCommitteeIndices = indices
-		} else {
-			duty.ValidatorSyncCommitteeIndices = make([]uint64, 0)
+			duties = append(duties, duty)
 		}
-		duties[i] = duty
 	}
 	return duties, nil
 }

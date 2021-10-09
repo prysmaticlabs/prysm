@@ -16,6 +16,9 @@ var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
 func ToBytes(x uint64, length int) []byte {
+	if length < 0 {
+		length = 0
+	}
 	makeLength := length
 	if length < 8 {
 		makeLength = 8
@@ -70,6 +73,9 @@ func Bytes32(x uint64) []byte {
 // FromBytes4 returns an integer which is stored in the little-endian format(4, 'little')
 // from a byte array.
 func FromBytes4(x []byte) uint64 {
+	if len(x) < 4 {
+		return 0
+	}
 	empty4bytes := make([]byte, 4)
 	return binary.LittleEndian.Uint64(append(x[:4], empty4bytes...))
 }
@@ -77,6 +83,9 @@ func FromBytes4(x []byte) uint64 {
 // FromBytes8 returns an integer which is stored in the little-endian format(8, 'little')
 // from a byte array.
 func FromBytes8(x []byte) uint64 {
+	if len(x) < 8 {
+		return 0
+	}
 	return binary.LittleEndian.Uint64(x)
 }
 
@@ -134,6 +143,9 @@ func ToBool(x byte) bool {
 // FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
 // from a byte array.
 func FromBytes2(x []byte) uint16 {
+	if len(x) < 2 {
+		return 0
+	}
 	return binary.LittleEndian.Uint16(x[:2])
 }
 
@@ -172,9 +184,11 @@ func Trunc(x []byte) []byte {
 
 // ToLowInt64 returns the lowest 8 bytes interpreted as little endian.
 func ToLowInt64(x []byte) int64 {
-	if len(x) > 8 {
-		x = x[:8]
+	if len(x) < 8 {
+		return 0
 	}
+	// Use the first 8 bytes.
+	x = x[:8]
 	return int64(binary.LittleEndian.Uint64(x))
 }
 
@@ -249,7 +263,7 @@ func SetBit(b []byte, i int) []byte {
 // Returns the original bitlist if the index `i`
 // is out of range.
 func ClearBit(b []byte, i int) []byte {
-	if i >= len(b)*8 {
+	if i >= len(b)*8 || i < 0 {
 		return b
 	}
 
@@ -287,6 +301,9 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 	bLength := len(b)
 	if b == nil || bLength == 0 {
 		return 0, errors.New("input list can't be empty or nil")
+	}
+	if index < 0 {
+		return 0, errors.Errorf("index is negative: %d", index)
 	}
 
 	start := index / 8
