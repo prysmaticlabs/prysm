@@ -23,6 +23,7 @@ def _ssz_go_proto_library_impl(ctx):
     args = [
         "--output=%s" % output.path,
         "--path=%s" % package_path,
+        "--experimental",
     ]
     if hasattr(ctx.attr, "includes") and len(ctx.attr.includes) > 0:
         incs = []
