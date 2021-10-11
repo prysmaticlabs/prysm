@@ -1231,7 +1231,7 @@ func (b *BeaconStateAltair) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 		numItems := len(b.HistoricalRoots)
 		tmp, err := ssz.TreeFromNodesWithMixin(subLeaves, numItems, int(ssz.CalculateLimit(16777216, uint64(numItems), 8)))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		w.AddNode(tmp)
 
@@ -1287,7 +1287,7 @@ func (b *BeaconStateAltair) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 		numItems := len(b.Balances)
 		tmp, err := ssz.TreeFromNodesWithMixin(subLeaves, numItems, int(ssz.CalculateLimit(1099511627776, uint64(numItems), 8)))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		w.AddNode(tmp)
 
@@ -1357,7 +1357,7 @@ func (b *BeaconStateAltair) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 		numItems := len(b.InactivityScores)
 		tmp, err := ssz.TreeFromNodesWithMixin(subLeaves, numItems, int(ssz.CalculateLimit(1099511627776, uint64(numItems), 8)))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		w.AddNode(tmp)
 
@@ -1810,7 +1810,8 @@ func (v *Validator) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 	w.AddUint64(v.EffectiveBalance)
 
 	// Field (3) 'Slashed'
-	tmp = ssz.LeafFromBool(v.Slashed)
+	tmp := ssz.LeafFromBool(v.Slashed)
+	w.AddNode(tmp)
 
 	// Field (4) 'ActivationEligibilityEpoch'
 	w.AddUint64(uint64(v.ActivationEligibilityEpoch))
