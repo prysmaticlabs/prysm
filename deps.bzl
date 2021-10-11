@@ -433,7 +433,7 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_c_bata_go_prompt",
-        importpath = "github.com/c-bata/go-userprompt",
+        importpath = "github.com/c-bata/go-prompt",
         sum = "h1:uyKRz6Z6DUyj49QVijyM339UJV9yhbr70gESwbNU3e0=",
         version = "v0.2.2",
     )
@@ -825,8 +825,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:6dVcS0LktRSyEEgldFY4N9J17WjUoiJStttH+RZj0Wo=",
-        version = "v0.0.0-20210905181407-59cf6761a7d5",
+        sum = "h1:g2euxxO1nhkAen3U3O/0nj1VyoxfkebVXJG4VAKWlMc=",
+        version = "v0.0.0-20211011041253-475a853ff68d",
     )
 
     go_repository(
