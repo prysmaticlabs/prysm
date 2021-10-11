@@ -174,4 +174,7 @@ cc_toolchain(
     toolchain_identifier = "stub_armeabi-v7a",
 )
 
-armeabi_cc_toolchain_config(name = "stub_armeabi-v7a")
+armeabi_cc_toolchain_config(
+    name = "stub_armeabi-v7a",
+    tags = ["manual"],
+)
