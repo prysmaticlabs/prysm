@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -112,6 +113,24 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	require.Equal(t, false, trie.VerifyMerkleBranch(root[:], []byte("buzz"), 3, proof, params.BeaconConfig().DepositContractTreeDepth))
 }
 
+func TestMerkleTrie_NegativeIndexes(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("B"),
+		[]byte("C"),
+		[]byte("D"),
+		[]byte("E"),
+		[]byte("F"),
+		[]byte("G"),
+		[]byte("H"),
+	}
+	m, err := trie.GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err)
+	_, err = m.MerkleProof(-1)
+	require.ErrorContains(t, "merkle index is negative", err)
+	require.ErrorContains(t, "negative index provided", m.Insert([]byte{'J'}, -1))
+}
+
 func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	items := [][]byte{
 		{1},
@@ -128,7 +147,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	require.Equal(t, true, trie.VerifyMerkleBranch(root[:], items[0], 0, proof, depth))
 
 	// Now we update the trie.
-	m.Insert([]byte{5}, 3)
+	assert.NoError(t, m.Insert([]byte{5}, 3))
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
 	root = m.HashTreeRoot()
@@ -140,7 +159,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	}
 
 	// Now we update the trie at an index larger than the number of items.
-	m.Insert([]byte{6}, 15)
+	assert.NoError(t, m.Insert([]byte{6}, 15))
 }
 
 func TestRoundtripProto_OK(t *testing.T) {
@@ -209,7 +228,7 @@ func BenchmarkInsertTrie_Optimized(b *testing.B) {
 	someItem := bytesutil.ToBytes32([]byte("hello-world"))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		tr.Insert(someItem[:], i%numDeposits)
+		require.NoError(b, tr.Insert(someItem[:], i%numDeposits))
 	}
 }
 

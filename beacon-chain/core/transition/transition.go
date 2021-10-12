@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -238,7 +237,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if CanProcessEpoch(state) {
+		if time.CanProcessEpoch(state) {
 			switch state.Version() {
 			case version.Phase0:
 				state, err = ProcessEpochPrecompute(ctx, state)
@@ -267,7 +266,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if CanUpgradeToAltair(state.Slot()) {
+		if time.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
@@ -275,7 +274,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			}
 		}
 
-		if CanUpgradeToMerge(state.Slot()) {
+		if time.CanUpgradeToMerge(state.Slot()) {
 			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
@@ -292,25 +291,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	return state, nil
-}
-
-// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
-func CanUpgradeToAltair(slot types.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
-	return epochStart && altairEpoch
-}
-
-// CanUpgradeToMerge returns true if the input `slot` can upgrade to Merge fork.
-//
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == MERGE_FORK_EPOCH
-func CanUpgradeToMerge(slot types.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	mergeEpoch := slots.ToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
-	return epochStart && mergeEpoch
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
@@ -366,15 +346,6 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.
 	}
 
 	return state, nil
-}
-
-// CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed at the end of the last slot of every epoch
-//
-// Spec pseudocode definition:
-//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
-	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.

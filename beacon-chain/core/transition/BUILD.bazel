@@ -48,7 +48,6 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//runtime/version:go_default_library",
-        "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
