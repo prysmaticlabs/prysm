@@ -248,7 +248,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 				PublicKeys: []bls.PublicKey{pKey},
 				Signatures: [][]byte{m.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync committee message", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync committee message", set)
 		}
 
 		// We reject a malformed signature from bytes according to the p2p specification.
