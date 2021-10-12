@@ -69,7 +69,9 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
 
-			t.Insert(hashedDeposit[:], int(numExisting+i))
+			if err = t.Insert(hashedDeposit[:], int(numExisting+i)); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -138,7 +140,9 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 			return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 		}
 
-		sparseTrie.Insert(hashedDeposit[:], int(i))
+		if err = sparseTrie.Insert(hashedDeposit[:], int(i)); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits))
@@ -364,7 +368,9 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
 
-			t.Insert(hashedDeposit[:], int(numExisting+i))
+			if err = t.Insert(hashedDeposit[:], int(numExisting+i)); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 

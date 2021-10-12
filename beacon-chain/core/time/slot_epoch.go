@@ -59,3 +59,12 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
+
+// CanProcessEpoch checks the eligibility to process epoch.
+// The epoch can be processed at the end of the last slot of every epoch.
+//
+// Spec pseudocode definition:
+//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
+	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
+}

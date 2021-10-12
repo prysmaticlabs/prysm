@@ -27,7 +27,7 @@ var ValidatorsAreActive = types.Evaluator{
 	Evaluation: validatorsAreActive,
 }
 
-// ValidatorsParticipating ensures the expected amount of validators are active.
+// ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
 var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "validators_participating_epoch_%d",

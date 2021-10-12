@@ -30,7 +30,7 @@ var (
 	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1DataSavingInterval = 100
+const eth1DataSavingInterval = 1000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
@@ -138,7 +138,9 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	if s.depositTrie.NumOfItems() != int(index) {
 		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
 	}
-	s.depositTrie.Insert(depositHash[:], int(index))
+	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
+		return err
+	}
 
 	deposit := &ethpb.Deposit{
 		Data: depositData,

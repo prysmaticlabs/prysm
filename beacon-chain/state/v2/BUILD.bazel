@@ -67,6 +67,7 @@ go_test(
     srcs = [
         "deprecated_getters_test.go",
         "deprecated_setters_test.go",
+        "field_root_test.go",
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",
