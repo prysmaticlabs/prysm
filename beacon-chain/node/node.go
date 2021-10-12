@@ -778,8 +778,8 @@ func (b *BeaconNode) registerGRPCGateway() error {
 
 	gatewayConfig := gateway.DefaultConfig(enableDebugRPCEndpoints, httpModules)
 	muxs := make([]*apigateway.PbMux, 0)
-	if gatewayConfig.V1Alpha1PbMux != nil {
-		muxs = append(muxs, gatewayConfig.V1Alpha1PbMux)
+	if gatewayConfig.V1AlphaPbMux != nil {
+		muxs = append(muxs, gatewayConfig.V1AlphaPbMux)
 	}
 	if gatewayConfig.EthPbMux != nil {
 		muxs = append(muxs, gatewayConfig.EthPbMux)
