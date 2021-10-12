@@ -32,5 +32,5 @@ func TestArraysTreeRoot_OnlyPowerOf2(t *testing.T) {
 
 func TestArraysTreeRoot_ZeroLength(t *testing.T) {
 	_, err := v1.RootsArrayHashTreeRoot([][]byte{}, 0, "testing")
-	assert.ErrorContains(t, "hash layer is of zero length", err)
+	assert.ErrorContains(t, "zero leaves provided", err)
 }
