@@ -183,14 +183,14 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 
 		if msg.ValidatorData == nil {
-			log.Debug("Received nil message on pubsub")
+			log.Error("Received nil message on pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			tracing.AnnotateError(span, err)
-			log.WithError(err).Debug("Could not handle p2p pubsub")
+			log.WithError(err).Error("Could not handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
