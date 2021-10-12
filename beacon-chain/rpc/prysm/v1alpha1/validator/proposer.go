@@ -308,6 +308,8 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
 
+
+
 	return &blockData{
 		ParentRoot:        parentRoot,
 		Graffiti:          graffiti,

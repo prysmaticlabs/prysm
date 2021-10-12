@@ -27,6 +27,7 @@ type ExecutionEngineCaller interface {
 	NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error
 	// ExecutePayload is the wrapper on top of `CatalystClient` to abstract out `types.ForkChoiceParams`.
 	ExecutePayload(ctx context.Context, payload *ethpb.ExecutionPayload) error
+	RawLatestBlockDifficulty() error
 }
 
 // CatalystClient calls with the execution engine end points to enable consensus <-> execution interaction.
