@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,13 +16,13 @@ type BlockNumberRequest struct {
 	Id      int           `json:"id"`
 }
 
-type BlockNumberRespond struct {
+type ExecutionBlockRespond struct {
 	JsonRPC string       `json:"jsonrpc"`
-	Result  *BlockResult `json:"result"`
+	Result  *ExecutionBlock `json:"result"`
 	Id      int          `json:"id"`
 }
 
-type BlockResult struct {
+type ExecutionBlock struct {
 	ParentHash       string   `json:"parentHash"`
 	Sha3Uncles       string   `json:"sha3Uncles"`
 	Miner            string   `json:"miner"`
@@ -42,11 +41,12 @@ type BlockResult struct {
 	TotalDifficulty  string   `json:"totalDifficulty"`
 	BaseFeePerGas    string   `json:"baseFeePerGas"`
 	Size             string   `json:"size"`
+	Hash             string   `json:"hash"`
 	Transactions     []string `json:"transactions"`
 	Uncles           []string `json:"uncles"`
 }
 
-func (s *Service) LatestTotalBlockDifficulty() (*big.Int, error) {
+func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
 	reqBody := &BlockNumberRequest{
 		JsonRPC: "2.0",
 		Method:  "eth_getBlockByNumber",
@@ -54,17 +54,17 @@ func (s *Service) LatestTotalBlockDifficulty() (*big.Int, error) {
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -73,16 +73,16 @@ func (s *Service) LatestTotalBlockDifficulty() (*big.Int, error) {
 	}()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
-	var data BlockNumberRespond
+	var data ExecutionBlockRespond
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, err
+		return nil , err
 	}
-	return common.HexToHash(data.Result.TotalDifficulty).Big(), nil
+	return data.Result, nil
 }
 
-func (s *Service) LatestTotalBlockDifficultyByHash(blockHash common.Hash) (*big.Int, error) {
+func (s *Service) ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, error) {
 	reqBody := &BlockNumberRequest{
 		JsonRPC: "2.0",
 		Method:  "eth_getBlockByHash",
@@ -90,17 +90,17 @@ func (s *Service) LatestTotalBlockDifficultyByHash(blockHash common.Hash) (*big.
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -109,11 +109,11 @@ func (s *Service) LatestTotalBlockDifficultyByHash(blockHash common.Hash) (*big.
 	}()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil , err
 	}
-	var data BlockNumberRespond
+	var data ExecutionBlockRespond
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, err
+		return nil , err
 	}
-	return common.HexToHash(data.Result.TotalDifficulty).Big(), nil
+	return data.Result, nil
 }
