@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
@@ -288,7 +289,7 @@ func Merkleize(leaves [][]byte) [][][]byte {
 
 // MerkleizeTrieLeaves merkleize the trie leaves.
 func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte, error) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -299,6 +300,9 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
 		layer := make([][32]byte, len(hashLayer)/2)
+		if !math.IsPowerOf2(uint64(len(hashLayer))) {
+			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
+		}
 		for j := 0; j < len(hashLayer); j += 2 {
 			chunkBuffer.Write(hashLayer[j][:])
 			chunkBuffer.Write(hashLayer[j+1][:])
@@ -310,5 +314,5 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		layers[i] = hashLayer
 		i++
 	}
-	return layers, hashLayer
+	return layers, hashLayer, nil
 }

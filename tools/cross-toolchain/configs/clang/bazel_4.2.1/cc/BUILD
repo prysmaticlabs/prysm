@@ -130,6 +130,7 @@ cc_toolchain_config(
     tool_paths = {
         "ar": "/usr/bin/ar",
         "ld": "/usr/bin/ld",
+        "llvm-cov": "/usr/bin/llvm-cov",
         "cpp": "/usr/bin/cpp",
         "gcc": "/usr/bin/clang",
         "dwp": "/usr/bin/dwp",
