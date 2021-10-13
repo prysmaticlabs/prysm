@@ -190,7 +190,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 
 	if features.Get().EnableBatchVerification {
-		return s.validateWithBatchVerifier(ctx, "aggregate", set), nil
+		return s.validateWithBatchVerifier(ctx, "aggregate", set)
 	}
 	valid, err := set.Verify()
 	if err != nil {
