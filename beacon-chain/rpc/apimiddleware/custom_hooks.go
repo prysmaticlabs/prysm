@@ -8,12 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -219,7 +217,8 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 
 // In preparePublishedBlock we transform the PostRequest.
 // gRPC expects either a phase0_block or an altair_block field in the JSON object, but we have a message field at this point.
-// We do a simple conversion depending on the type of endpoint.PostRequest (which was filled out previously in setInitialPublishBlockPostRequest)
+// We do a simple conversion depending on the type of endpoint.PostRequest
+// (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
@@ -228,7 +227,6 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
-		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
 	}
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
@@ -237,15 +235,8 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
-		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
 	}
 	return nil
-}
-
-// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(graffiti string) string {
-	b := bytesutil.ToBytes32([]byte(graffiti))
-	return hexutil.Encode(b[:])
 }
 
 type tempSyncCommitteesResponseJson struct {
