@@ -86,25 +86,6 @@ func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
 	}
-	alphaBlock.Block.Body.Attestations = []*ethpbalpha.Attestation{
-		{
-			AggregationBits: bitfield.NewBitlist(2048),
-			Data: &ethpbalpha.AttestationData{
-				Slot:            slot,
-				CommitteeIndex:  99,
-				BeaconBlockRoot: bodyRoot,
-				Source: &ethpbalpha.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-				Target: &ethpbalpha.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-			},
-			Signature: signature,
-		},
-	}
 	alphaBlock.Signature = signature
 
 	v1Block, err := V1Alpha1ToV1SignedBlock(alphaBlock)
@@ -128,25 +109,6 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
 	}
-	v1Block.Block.Body.Attestations = []*ethpbv1.Attestation{
-		{
-			AggregationBits: bitfield.NewBitlist(2048),
-			Data: &ethpbv1.AttestationData{
-				Slot:            slot,
-				Index:           99,
-				BeaconBlockRoot: bodyRoot,
-				Source: &ethpbv1.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-				Target: &ethpbv1.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-			},
-			Signature: signature,
-		},
-	}
 	v1Block.Signature = signature
 
 	alphaBlock, err := V1ToV1Alpha1SignedBlock(v1Block)
@@ -169,25 +131,6 @@ func Test_AltairToV1Alpha1SignedBlock(t *testing.T) {
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
-	}
-	v2Block.Message.Body.Attestations = []*ethpbv1.Attestation{
-		{
-			AggregationBits: bitfield.NewBitlist(2048),
-			Data: &ethpbv1.AttestationData{
-				Slot:            slot,
-				Index:           99,
-				BeaconBlockRoot: bodyRoot,
-				Source: &ethpbv1.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-				Target: &ethpbv1.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-			},
-			Signature: signature,
-		},
 	}
 	syncCommitteeBits := bitfield.NewBitvector512()
 	syncCommitteeBits.SetBitAt(100, true)
@@ -217,25 +160,6 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 		DepositRoot:  depositRoot,
 		DepositCount: depositCount,
 		BlockHash:    blockHash,
-	}
-	alphaBlock.Body.Attestations = []*ethpbalpha.Attestation{
-		{
-			AggregationBits: bitfield.NewBitlist(2048),
-			Data: &ethpbalpha.AttestationData{
-				Slot:            slot,
-				CommitteeIndex:  99,
-				BeaconBlockRoot: bodyRoot,
-				Source: &ethpbalpha.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-				Target: &ethpbalpha.Checkpoint{
-					Epoch: epoch,
-					Root:  bodyRoot,
-				},
-			},
-			Signature: signature,
-		},
 	}
 
 	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
