@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
@@ -133,29 +134,31 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 //
 //    return None
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
-	b, err := vs.BlockFetcher.BlockByNumber(ctx, nil /* latest block */)
+	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock()
 	if err != nil {
 		return nil, false, err
 	}
 	terminalTotalDifficulty := new(big.Int)
 	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
-	var terminalBlockHash []byte
 
+	terminalBlockHash := common.HexToHash(blk.Hash)
+	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
 	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
 	for {
-		if b.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0 {
-			terminalBlockHash = b.Hash().Bytes()
-			// Prevent infinite loops.
-			if b.ParentHash() == b.Hash() {
-				return nil, false, errors.New("invalid block")
-			}
+		if currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0 {
+			terminalBlockHash = common.HexToHash(blk.Hash)
 			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
-			b, err = vs.BlockFetcher.BlockByHash(ctx, b.ParentHash())
+
+			blk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
 			if err != nil {
 				return nil, false, err
 			}
+			if blk == nil {
+				return nil, false, errors.New("nil execution block")
+			}
+			currentTotalDifficulty = common.HexToHash(blk.TotalDifficulty).Big()
 		} else {
-			return terminalBlockHash, true, err
+			return terminalBlockHash.Bytes(), true, err
 		}
 	}
 }
