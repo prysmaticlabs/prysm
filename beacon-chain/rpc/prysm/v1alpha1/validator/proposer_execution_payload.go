@@ -2,10 +2,10 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
@@ -138,27 +139,56 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	if err != nil {
 		return nil, false, err
 	}
+	parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
+	if err != nil {
+		return nil, false, err
+	}
+	if parentBlk == nil {
+		return nil, false, nil
+	}
+
 	terminalTotalDifficulty := new(big.Int)
 	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
 
-	terminalBlockHash := common.HexToHash(blk.Hash)
 	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
+	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()
+	blkNumber := blk.Number
 	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
 	for {
-		if currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0 {
-			terminalBlockHash = common.HexToHash(blk.Hash)
+		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+		parentReachedTTD := terminalTotalDifficulty.Cmp(parentTotalDifficulty) >= 0
+
+		if blockReachedTTD && parentReachedTTD {
+			log.WithFields(logrus.Fields{
+				"currentTotalDifficulty":  currentTotalDifficulty,
+				"parentTotalDifficulty":   parentTotalDifficulty,
+				"terminalTotalDifficulty": terminalTotalDifficulty,
+				"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
+				"terminalBlockNumber":     blkNumber,
+			}).Info("'Terminal difficulty reached")
+			return common.HexToHash(blk.Hash).Bytes(), true, err
+		} else {
+			blk := parentBlk
+			blkNumber = blk.Number
 			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
 
-			blk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
+			parentBlk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
 			if err != nil {
 				return nil, false, err
 			}
-			if blk == nil {
-				return nil, false, errors.New("nil execution block")
+			if parentBlk == nil {
+				return nil, false, nil
 			}
 			currentTotalDifficulty = common.HexToHash(blk.TotalDifficulty).Big()
-		} else {
-			return terminalBlockHash.Bytes(), true, err
+			parentTotalDifficulty = common.HexToHash(parentBlk.TotalDifficulty).Big()
+
+			log.WithFields(logrus.Fields{
+				"currentTotalDifficulty":  currentTotalDifficulty,
+				"parentTotalDifficulty":   parentTotalDifficulty,
+				"terminalTotalDifficulty": terminalTotalDifficulty,
+				"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
+				"terminalBlockNumber":     blkNumber,
+			}).Info("Terminal difficulty not reached")
 		}
 	}
 }

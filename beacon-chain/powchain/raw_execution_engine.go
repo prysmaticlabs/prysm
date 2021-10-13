@@ -17,9 +17,9 @@ type BlockNumberRequest struct {
 }
 
 type ExecutionBlockRespond struct {
-	JsonRPC string       `json:"jsonrpc"`
+	JsonRPC string          `json:"jsonrpc"`
 	Result  *ExecutionBlock `json:"result"`
-	Id      int          `json:"id"`
+	Id      int             `json:"id"`
 }
 
 type ExecutionBlock struct {
@@ -54,17 +54,17 @@ func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -73,11 +73,11 @@ func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
 	}()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	var data ExecutionBlockRespond
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil , err
+		return nil, err
 	}
 	return data.Result, nil
 }
@@ -90,17 +90,17 @@ func (s *Service) ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, 
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -109,11 +109,11 @@ func (s *Service) ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, 
 	}()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil , err
+		return nil, err
 	}
 	var data ExecutionBlockRespond
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil , err
+		return nil, err
 	}
 	return data.Result, nil
 }
