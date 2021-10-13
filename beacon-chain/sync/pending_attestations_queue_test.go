@@ -51,7 +51,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}}
 	att := &ethpb.SignedAggregateAttestationAndProof{Message: a}
-	require.NoError(t, r.savePendingAtt(att))
+	r.savePendingAtt(att)
 	require.LogsContain(t, hook, "Requesting block for pending attestation")
 }
 
@@ -396,24 +396,21 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
-	err := s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 1,
 			Aggregate: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r1[:]}}}})
-	require.NoError(t, err)
-	err = s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 2,
 			Aggregate: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r2[:]}}}})
-	require.NoError(t, err)
-	err = s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 2,
 			Aggregate: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: r2[:]}}}})
-	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")

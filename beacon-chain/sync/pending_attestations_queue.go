@@ -123,17 +123,17 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root. If the key is not in blkRootToPendingAtts
 // then a request for the block is sent.
-func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) error {
+func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) {
 	root := bytesutil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
 
 	s.pendingAttsLock.Lock()
+	defer s.pendingAttsLock.Unlock()
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		randGen := rand.NewGenerator()
 		// Is the first time we save an attestation for this block,
 		// we request it.
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
-		s.pendingAttsLock.Unlock()
 
 		log.WithFields(logrus.Fields{
 			"currentSlot": s.cfg.Chain.CurrentSlot(),
@@ -141,20 +141,23 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 			"blockRoot":   hex.EncodeToString(bytesutil.Trunc(root[:])),
 		}).Debug("Requesting block for pending attestation")
 
-		return s.sendBatchRootRequest(context.Background(), [][32]byte{root}, randGen)
+		go func() {
+			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{root}, randGen); err != nil {
+				log.WithError(err).Debug("Could not request pending block")
+			}
+		}()
+		return
 	}
-
-	defer s.pendingAttsLock.Unlock()
 
 	// Skip if the attestation from the same aggregator already exists in the pending queue.
 	for _, a := range s.blkRootToPendingAtts[root] {
 		if a.Message.AggregatorIndex == att.Message.AggregatorIndex {
-			return nil
+			return
 		}
 	}
 
 	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
-	return nil
+	return
 }
 
 // This validates the pending attestations in the queue are still valid.

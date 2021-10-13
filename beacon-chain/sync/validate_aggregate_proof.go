@@ -202,9 +202,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		if err := s.savePendingAtt(satt); err != nil {
-			return false
-		}
+		s.savePendingAtt(satt)
 		return false
 	}
 	return true
