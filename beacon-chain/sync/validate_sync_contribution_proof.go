@@ -218,7 +218,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				PublicKeys: []bls.PublicKey{publicKey},
 				Signatures: [][]byte{m.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 		}
 
 		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
@@ -282,7 +282,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				PublicKeys: []bls.PublicKey{aggKey},
 				Signatures: [][]byte{m.Message.Contribution.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 		}
 		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
 		if err != nil {
@@ -343,7 +343,10 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 			PublicKeys: []bls.PublicKey{publicKey},
 			Signatures: [][]byte{m.SelectionProof},
 		}
-		valid := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		if err != nil {
+			return err
+		}
 		if valid != pubsub.ValidationAccept {
 			return errors.New("invalid sync selection proof provided")
 		}
