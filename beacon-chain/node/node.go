@@ -46,7 +46,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -61,6 +60,8 @@ const testSkipPowFlag = "test-skip-pow"
 
 // 128MB max message size when enabling debug endpoints.
 const debugGrpcMaxMsgSize = 1 << 27
+
+type Option func(*BeaconNode) error
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -87,11 +88,12 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
+	p2pOpts                 []p2p.Option
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(cliCtx *cli.Context) (*BeaconNode, error) {
+func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
@@ -127,6 +129,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		syncCommitteePool:       synccommittee.NewPool(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
+	}
+
+	for _, opt := range opts {
+		if err := opt(beacon); err != nil {
+			return nil, err
+		}
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -419,32 +427,12 @@ func (b *BeaconNode) startStateGen() {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
-	if err != nil {
-		return err
-	}
-
-	svc, err := p2p.NewService(b.ctx, &p2p.Config{
-		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
-		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootstrapNodeAddrs,
-		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
-		DataDir:           dataDir,
-		LocalIP:           cliCtx.String(cmd.P2PIP.Name),
-		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
-		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
-		PrivateKey:        cliCtx.String(cmd.P2PPrivKey.Name),
-		MetaDataDir:       cliCtx.String(cmd.P2PMetadata.Name),
-		TCPPort:           cliCtx.Uint(cmd.P2PTCPPort.Name),
-		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
-		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
-		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
-		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
-		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
-		StateNotifier:     b,
-		DB:                b.db,
-	})
+	opts := append(
+		b.p2pOpts,
+		p2p.WithDatabase(b.db),
+		p2p.WithStateNotifier(b),
+	)
+	svc, err := p2p.NewService(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

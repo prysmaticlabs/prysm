@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -68,20 +69,21 @@ var appFlags = []cli.Flag{
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,
-	cmd.BootstrapNode,
-	cmd.NoDiscovery,
-	cmd.StaticPeers,
-	cmd.RelayNode,
-	cmd.P2PUDPPort,
-	cmd.P2PTCPPort,
-	cmd.P2PIP,
-	cmd.P2PHost,
-	cmd.P2PHostDNS,
-	cmd.P2PMaxPeers,
-	cmd.P2PPrivKey,
-	cmd.P2PMetadata,
-	cmd.P2PAllowList,
-	cmd.P2PDenyList,
+	p2pcmd.BootstrapNode,
+	p2pcmd.NoDiscovery,
+	p2pcmd.StaticPeers,
+	p2pcmd.RelayNode,
+	p2pcmd.P2PUDPPort,
+	p2pcmd.P2PTCPPort,
+	p2pcmd.P2PIP,
+	p2pcmd.P2PHost,
+	p2pcmd.P2PHostDNS,
+	p2pcmd.P2PMaxPeers,
+	p2pcmd.P2PPrivKey,
+	p2pcmd.P2PMetadata,
+	p2pcmd.P2PAllowList,
+	p2pcmd.P2PDenyList,
+	p2pcmd.EnableUPnPFlag,
 	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
 	cmd.EnableTracingFlag,
@@ -104,7 +106,6 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.LogFileName,
-	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
@@ -224,7 +225,14 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	beacon, err := node.New(ctx)
+	p2pOpts, err := p2pcmd.Options(ctx)
+	if err != nil {
+		return err
+	}
+	beacon, err := node.New(
+		ctx,
+		node.WithP2POptions(p2pOpts),
+	)
 	if err != nil {
 		return err
 	}

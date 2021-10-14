@@ -1,4 +1,4 @@
-package p2p
+package p2pcmd
 
 import (
 	"github.com/prysmaticlabs/prysm/config/params"

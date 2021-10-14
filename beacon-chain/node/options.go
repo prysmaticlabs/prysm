@@ -1,4 +1,4 @@
-package v2
+package node
 
 import "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 
