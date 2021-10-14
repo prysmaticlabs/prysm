@@ -16,8 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
+// Option for p2p configurations.
 type Option func(s *Service) error
 
+// WithDatabase --
 func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 	return func(s *Service) error {
 		s.db = beaconDB
@@ -25,6 +27,7 @@ func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 	}
 }
 
+// WithStateNotifier --
 func WithStateNotifier(notifier statefeed.Notifier) Option {
 	return func(s *Service) error {
 		s.stateNotifier = notifier
@@ -32,6 +35,7 @@ func WithStateNotifier(notifier statefeed.Notifier) Option {
 	}
 }
 
+// WithEnableUPnP --
 func WithEnableUPnP() Option {
 	return func(s *Service) error {
 		s.cfg.EnableUPnP = true
@@ -39,6 +43,7 @@ func WithEnableUPnP() Option {
 	}
 }
 
+// WithNoDiscovery --
 func WithNoDiscovery() Option {
 	return func(s *Service) error {
 		s.cfg.NoDiscovery = true
@@ -46,6 +51,7 @@ func WithNoDiscovery() Option {
 	}
 }
 
+// WithStaticPeers --
 func WithStaticPeers(peers []string) Option {
 	return func(s *Service) error {
 		s.cfg.StaticPeers = peers
@@ -53,6 +59,7 @@ func WithStaticPeers(peers []string) Option {
 	}
 }
 
+// WithBootstrapNodeAddr --
 func WithBootstrapNodeAddr(addresses []string) Option {
 	return func(s *Service) error {
 		s.cfg.BootstrapNodeAddr = addresses
@@ -60,6 +67,7 @@ func WithBootstrapNodeAddr(addresses []string) Option {
 	}
 }
 
+// WithRelayNodeAddr --
 func WithRelayNodeAddr(addr string) Option {
 	return func(s *Service) error {
 		s.cfg.RelayNodeAddr = addr
@@ -67,6 +75,7 @@ func WithRelayNodeAddr(addr string) Option {
 	}
 }
 
+// WithDataDir --
 func WithDataDir(dir string) Option {
 	return func(s *Service) error {
 		s.cfg.DataDir = dir
@@ -74,6 +83,7 @@ func WithDataDir(dir string) Option {
 	}
 }
 
+// WithLocalIP --
 func WithLocalIP(ip string) Option {
 	return func(s *Service) error {
 		s.cfg.LocalIP = ip
@@ -81,6 +91,7 @@ func WithLocalIP(ip string) Option {
 	}
 }
 
+// WithHostAddr --
 func WithHostAddr(addr string) Option {
 	return func(s *Service) error {
 		s.cfg.HostAddress = addr
@@ -88,6 +99,7 @@ func WithHostAddr(addr string) Option {
 	}
 }
 
+// WithHostDNS --
 func WithHostDNS(host string) Option {
 	return func(s *Service) error {
 		s.cfg.HostDNS = host
@@ -95,6 +107,7 @@ func WithHostDNS(host string) Option {
 	}
 }
 
+// WithPrivateKey --
 func WithPrivateKey(privKey string) Option {
 	return func(s *Service) error {
 		s.cfg.PrivateKey = privKey
@@ -102,6 +115,7 @@ func WithPrivateKey(privKey string) Option {
 	}
 }
 
+// WithMetadataDir --
 func WithMetadataDir(dir string) Option {
 	return func(s *Service) error {
 		s.cfg.MetaDataDir = dir
@@ -109,6 +123,7 @@ func WithMetadataDir(dir string) Option {
 	}
 }
 
+// WithTCPPort --
 func WithTCPPort(port uint) Option {
 	return func(s *Service) error {
 		s.cfg.TCPPort = port
@@ -116,6 +131,7 @@ func WithTCPPort(port uint) Option {
 	}
 }
 
+// WithUDPPort --
 func WithUDPPort(port uint) Option {
 	return func(s *Service) error {
 		s.cfg.UDPPort = port
@@ -123,6 +139,7 @@ func WithUDPPort(port uint) Option {
 	}
 }
 
+// WithMaxPeers --
 func WithMaxPeers(maxPeers uint) Option {
 	return func(s *Service) error {
 		s.cfg.MaxPeers = maxPeers
@@ -130,6 +147,7 @@ func WithMaxPeers(maxPeers uint) Option {
 	}
 }
 
+// WithAllowListCIDR --
 func WithAllowListCIDR(allowList string) Option {
 	return func(s *Service) error {
 		s.cfg.AllowListCIDR = allowList
@@ -137,6 +155,7 @@ func WithAllowListCIDR(allowList string) Option {
 	}
 }
 
+// WithDenyListCIDR --
 func WithDenyListCIDR(denyList []string) Option {
 	return func(s *Service) error {
 		s.cfg.DenyListCIDR = denyList
@@ -144,6 +163,7 @@ func WithDenyListCIDR(denyList []string) Option {
 	}
 }
 
+// WithDisableDiscv5 --
 func WithDisableDiscv5() Option {
 	return func(s *Service) error {
 		s.cfg.DisableDiscv5 = true
