@@ -39,6 +39,15 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 			}
 			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
 		}
+	case version.Merge:
+		// Use a wrapper here, as go needs strong typing for the function signature.
+		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
+			totalBalance, err := helpers.TotalActiveBalance(st)
+			if err != nil {
+				return nil, err
+			}
+			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
+		}
 	default:
 		// Exit early if there is an unknown state type.
 		return validAtts, invalidAtts
