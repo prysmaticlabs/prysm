@@ -125,9 +125,9 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	if s.activeValidatorCount != 0 {
 		return s.activeValidatorCount, nil
 	}
-	rt := s.cfg.DB.LastArchivedRoot(s.ctx)
+	rt := s.db.LastArchivedRoot(s.ctx)
 	if rt == params.BeaconConfig().ZeroHash {
-		genState, err := s.cfg.DB.GenesisState(s.ctx)
+		genState, err := s.db.GenesisState(s.ctx)
 		if err != nil {
 			return 0, err
 		}
@@ -142,7 +142,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 		s.activeValidatorCount = activeVals
 		return activeVals, nil
 	}
-	bState, err := s.cfg.DB.State(s.ctx, rt)
+	bState, err := s.db.State(s.ctx, rt)
 	if err != nil {
 		return 0, err
 	}

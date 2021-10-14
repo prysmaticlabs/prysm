@@ -72,12 +72,6 @@ var (
 		Usage: "The file containing the metadata to communicate with other peers.",
 		Value: "",
 	}
-	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
-	P2PMaxPeers = &cli.IntFlag{
-		Name:  "p2p-max-peers",
-		Usage: "The max number of p2p peers to maintain.",
-		Value: 45,
-	}
 	// P2PAllowList defines a CIDR subnet to exclusively allow connections.
 	P2PAllowList = &cli.StringFlag{
 		Name: "p2p-allowlist",

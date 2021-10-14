@@ -331,10 +331,9 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
-	s, err := NewService(ctx, &flagConfig{
-		StateNotifier: notifier,
-	})
+	s, err := NewService(ctx)
 	require.NoError(t, err)
+	s.stateNotifier = &mock.MockStateNotifier{}
 
 	require.False(t, s.isInitialized())
 

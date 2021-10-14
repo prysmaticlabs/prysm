@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	flagconfig "github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags/config"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -26,11 +26,11 @@ import (
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// This test needs to be entirely rewritten and should be done in a follow up PR from #7885.
 	t.Skip("This test is now failing after PR 7885 due to false positive")
-	gFlags := new(flags.GlobalFlags)
+	gFlags := new(flagconfig.GlobalFlags)
 	gFlags.MinimumPeersPerSubnet = 4
-	flags.Init(gFlags)
+	flagconfig.Init(gFlags)
 	// Reset config.
-	defer flags.Init(new(flags.GlobalFlags))
+	defer flagconfig.Init(new(flagconfig.GlobalFlags))
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
@@ -91,8 +91,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		MaxPeers:            30,
 		UDPPort:             uint(port),
 	}
-	cfg.StateNotifier = &mock.MockStateNotifier{}
-	s, err = NewService(context.Background(), cfg)
+	s, err = NewService(context.Background())
+	s.cfg = cfg
+	s.stateNotifier = &mock.MockStateNotifier{}
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -116,11 +117,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// look up 3 different subnets
 	ctx := context.Background()
-	exists, err := s.FindPeersWithSubnet(ctx, "", 1, flags.Get().MinimumPeersPerSubnet)
+	exists, err := s.FindPeersWithSubnet(ctx, "", 1, flagconfig.Get().MinimumPeersPerSubnet)
 	require.NoError(t, err)
-	exists2, err := s.FindPeersWithSubnet(ctx, "", 2, flags.Get().MinimumPeersPerSubnet)
+	exists2, err := s.FindPeersWithSubnet(ctx, "", 2, flagconfig.Get().MinimumPeersPerSubnet)
 	require.NoError(t, err)
-	exists3, err := s.FindPeersWithSubnet(ctx, "", 3, flags.Get().MinimumPeersPerSubnet)
+	exists3, err := s.FindPeersWithSubnet(ctx, "", 3, flagconfig.Get().MinimumPeersPerSubnet)
 	require.NoError(t, err)
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
@@ -137,7 +138,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 
-	exists, err = s.FindPeersWithSubnet(ctx, "", 2, flags.Get().MinimumPeersPerSubnet)
+	exists, err = s.FindPeersWithSubnet(ctx, "", 2, flagconfig.Get().MinimumPeersPerSubnet)
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exists, "Peer with subnet doesn't exist")

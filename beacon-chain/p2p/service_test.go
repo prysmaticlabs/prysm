@@ -81,8 +81,9 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(context.Background(), &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(context.Background())
 	require.NoError(t, err)
+	s.stateNotifier = &mock.MockStateNotifier{}
 	s.started = true
 	s.dv5Listener = &mockListener{}
 	assert.NoError(t, s.Stop())
@@ -90,8 +91,9 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(context.Background(), &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(context.Background())
 	require.NoError(t, err)
+	s.stateNotifier = &mock.MockStateNotifier{}
 	assert.NoError(t, s.Stop())
 }
 
@@ -99,12 +101,12 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &flagConfig{
-		TCPPort:       2000,
-		UDPPort:       2000,
-		StateNotifier: &mock.MockStateNotifier{},
+		TCPPort: 2000,
+		UDPPort: 2000,
 	}
-	s, err := NewService(context.Background(), cfg)
+	s, err := NewService(context.Background())
 	require.NoError(t, err)
+	s.cfg = cfg
 	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
@@ -149,7 +151,7 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
-	cfg := &flagConfig{StateNotifier: notifier}
+	cfg := &flagConfig{}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -160,6 +162,7 @@ func TestListenForNewNodes(t *testing.T) {
 		cfg:                   cfg,
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
+		stateNotifier:         notifier,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -181,7 +184,6 @@ func TestListenForNewNodes(t *testing.T) {
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
-		StateNotifier:       notifier,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)
@@ -191,6 +193,7 @@ func TestListenForNewNodes(t *testing.T) {
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
+			stateNotifier:         notifier,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -216,8 +219,10 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 
-	s, err = NewService(context.Background(), cfg)
+	s, err = NewService(context.Background())
 	require.NoError(t, err)
+	s.cfg = cfg
+	s.stateNotifier = &mock.MockStateNotifier{}
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()
@@ -273,7 +278,7 @@ func TestPeer_Disconnect(t *testing.T) {
 func TestService_JoinLeaveTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(ctx, WithStateNotifier(&mock.MockStateNotifier{}))
 	require.NoError(t, err)
 
 	go s.awaitStateInitialized()

@@ -189,4 +189,10 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
+	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
+	P2PMaxPeers = &cli.IntFlag{
+		Name:  "p2p-max-peers",
+		Usage: "The max number of p2p peers to maintain.",
+		Value: 45,
+	}
 )

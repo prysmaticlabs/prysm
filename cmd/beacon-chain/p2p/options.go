@@ -3,6 +3,7 @@ package p2pcmd
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/urfave/cli/v2"
 )
@@ -27,7 +28,7 @@ func Options(c *cli.Context) ([]p2p.Option, error) {
 		p2p.WithMetadataDir(c.String(P2PMetadata.Name)),
 		p2p.WithTCPPort(c.Uint(P2PTCPPort.Name)),
 		p2p.WithUDPPort(c.Uint(P2PUDPPort.Name)),
-		p2p.WithMaxPeers(c.Uint(P2PMaxPeers.Name)),
+		p2p.WithMaxPeers(c.Uint(flags.P2PMaxPeers.Name)),
 		p2p.WithAllowListCIDR(c.String(P2PAllowList.Name)),
 		p2p.WithDenyListCIDR(
 			slice.SplitCommaSeparated(c.StringSlice(P2PDenyList.Name)),

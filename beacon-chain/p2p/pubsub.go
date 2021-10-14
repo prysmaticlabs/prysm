@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	flagconfig "github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags/config"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -81,7 +81,7 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 
 	// Wait for at least 1 peer to be available to receive the published message.
 	for {
-		if len(topicHandle.ListPeers()) > 0 || flags.Get().MinimumSyncPeers == 0 {
+		if len(topicHandle.ListPeers()) > 0 || flagconfig.Get().MinimumSyncPeers == 0 {
 			return topicHandle.Publish(ctx, data, opts...)
 		}
 		select {

@@ -63,7 +63,7 @@ func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
 
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
-func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
+func privKey(cfg *flagConfig) (*ecdsa.PrivateKey, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, keyPath)
 	privateKeyPath := cfg.PrivateKey
 
@@ -109,7 +109,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 // TODO: Figure out how to do a v1/v2 check.
-func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
+func metaDataFromConfig(cfg *flagConfig) (metadata.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
