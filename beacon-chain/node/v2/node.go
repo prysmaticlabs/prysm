@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -19,13 +20,18 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 
-type Opt func(*BeaconNode)
+type Option func(*BeaconNode) error
 
 type BeaconNode struct {
 	services    []runtime.Service
 	cfg         *config
-	p2pCfg      *p2p.Config
 	powchainCfg *powchain.Web3ServiceConfig
+	stateFeed   *event.Feed
+}
+
+// StateFeed implements statefeed.Notifier.
+func (b *BeaconNode) StateFeed() *event.Feed {
+	return b.stateFeed
 }
 
 type config struct {
@@ -36,13 +42,15 @@ type config struct {
 	wsCheckpointStr    string
 }
 
-func New(ctx context.Context, opts ...Opt) (*BeaconNode, error) {
+func New(ctx context.Context, opts ...Option) (*BeaconNode, error) {
 	bn := &BeaconNode{}
 
 	params.BeaconConfig().InitializeForkSchedule()
 
 	for _, opt := range opts {
-		opt(bn)
+		if err := opt(bn); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
@@ -100,86 +108,16 @@ func (b *BeaconNode) startDB(ctx context.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startP2P(ctx context.Context, beaconDB db.Database) error {
-	svc, err := p2p.NewService(ctx, &p2p.Config{
-		NoDiscovery: b.p2pCfg.NoDiscovery,
-		StaticPeers: b.p2pCfg.StaticPeers,
-		//BootstrapNodeAddr: bootstrapNodeAddrs,
-		RelayNodeAddr: b.p2pCfg.RelayNodeAddr,
-		DataDir:       b.cfg.dataDir,
-		//LocalIP:       cliCtx.String(cmd.P2PIP.Name),
-		//HostAddress:   cliCtx.String(cmd.P2PHost.Name),
-		//HostDNS:       cliCtx.String(cmd.P2PHostDNS.Name),
-		//PrivateKey:    cliCtx.String(cmd.P2PPrivKey.Name),
-		//MetaDataDir:   cliCtx.String(cmd.P2PMetadata.Name),
-		//TCPPort:       cliCtx.Uint(cmd.P2PTCPPort.Name),
-		//UDPPort:       cliCtx.Uint(cmd.P2PUDPPort.Name),
-		//MaxPeers:      cliCtx.Uint(cmd.P2PMaxPeers.Name),
-		//AllowListCIDR: cliCtx.String(cmd.P2PAllowList.Name),
-		//DenyListCIDR:  slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
-		//EnableUPnP:    cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		//DisableDiscv5: cliCtx.Bool(flags.DisableDiscv5.Name),
-		//StateNotifier: b,
-		DB: beaconDB,
-	})
+func (b *BeaconNode) startP2P(ctx context.Context, beaconDB db.ReadOnlyDatabase, opts []p2p.Option) error {
+	opts = append(
+		opts,
+		p2p.WithDatabase(beaconDB),
+		p2p.WithStateNotifier(b),
+	)
+	svc, err := p2p.NewService(ctx, opts...)
 	if err != nil {
 		return nil
 	}
 	_ = svc
 	return nil
 }
-
-//
-//	if err := d.RunMigrations(b.ctx); err != nil {
-//		return err
-//	}
-//
-//	b.db = d
-//
-//	depositCache, err := depositcache.New()
-//	if err != nil {
-//		return errors.Wrap(err, "could not create deposit cache")
-//	}
-//
-//	b.depositCache = depositCache
-//
-//	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
-//		r, err := os.Open(cliCtx.String(flags.GenesisStatePath.Name))
-//		if err != nil {
-//			return err
-//		}
-//		defer func() {
-//			if err := r.Close(); err != nil {
-//				log.WithError(err).Error("Failed to close genesis file")
-//			}
-//		}()
-//		if err := b.db.LoadGenesis(b.ctx, r); err != nil {
-//			if err == db.ErrExistingGenesisState {
-//				return errors.New("Genesis state flag specified but a genesis state " +
-//					"exists already. Run again with --clear-db and/or ensure you are using the " +
-//					"appropriate testnet flag to load the given genesis state.")
-//			}
-//			return errors.Wrap(err, "could not load genesis from file")
-//		}
-//	}
-//	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
-//		return err
-//	}
-//	knownContract, err := b.db.DepositContractAddress(b.ctx)
-//	if err != nil {
-//		return err
-//	}
-//	addr := common.HexToAddress(depositAddress)
-//	if len(knownContract) == 0 {
-//		if err := b.db.SaveDepositContractAddress(b.ctx, addr); err != nil {
-//			return errors.Wrap(err, "could not save deposit contract")
-//		}
-//	}
-//	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
-//		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-//			"you are trying to run on a different network than what the database contains. You can run once with "+
-//			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-//			knownContract, addr.Bytes())
-//	}
-//	log.Infof("Deposit contract: %#x", addr.Bytes())
-//	return nil

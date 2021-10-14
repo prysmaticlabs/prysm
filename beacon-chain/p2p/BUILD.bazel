@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "addr_factory.go",
         "broadcaster.go",
-        "config.go",
         "connection_gater.go",
         "dial_relay_node.go",
         "discovery.go",

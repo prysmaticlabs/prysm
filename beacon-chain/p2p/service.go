@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
@@ -58,13 +59,34 @@ const pubsubQueueSize = 600
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
+type flagConfig struct {
+	NoDiscovery         bool
+	EnableUPnP          bool
+	DisableDiscv5       bool
+	StaticPeers         []string
+	BootstrapNodeAddr   []string
+	Discv5BootStrapAddr []string
+	RelayNodeAddr       string
+	LocalIP             string
+	HostAddress         string
+	HostDNS             string
+	PrivateKey          string
+	DataDir             string
+	MetaDataDir         string
+	TCPPort             uint
+	UDPPort             uint
+	MaxPeers            uint
+	AllowListCIDR       string
+	DenyListCIDR        []string
+}
+
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
 	started               bool
 	isPreGenesis          bool
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
-	cfg                   *Config
+	cfg                   *flagConfig
 	peers                 *peers.Status
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
@@ -84,28 +106,34 @@ type Service struct {
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
 	activeValidatorCount  uint64
+	db                    db.ReadOnlyDatabase
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
 // connections are made until the Start function is called during the service registry startup.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 
 	s := &Service{
-		ctx:           ctx,
-		stateNotifier: cfg.StateNotifier,
-		cancel:        cancel,
-		cfg:           cfg,
-		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
-		subnetsLock:   make(map[uint64]*sync.RWMutex),
+		ctx:          ctx,
+		cancel:       cancel,
+		cfg:          &flagConfig{},
+		isPreGenesis: true,
+		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
+		subnetsLock:  make(map[uint64]*sync.RWMutex),
+	}
+
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 
-	cfg.Discv5BootStrapAddr = dv5Nodes
+	s.cfg.Discv5BootStrapAddr = dv5Nodes
 
 	ipAddr := ipAddr()
 	s.privKey, err = privKey(s.cfg)
@@ -125,8 +153,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
 
-	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.ctx, opts...)
+	libp2pOpts := s.buildOptions(ipAddr, s.privKey)
+	h, err := libp2p.New(s.ctx, libp2pOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
 		return nil, err

@@ -11,8 +11,145 @@ import (
 	"github.com/libp2p/go-tcp-transport"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
+
+type Option func(s *Service) error
+
+func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
+	return func(s *Service) error {
+		s.db = beaconDB
+		return nil
+	}
+}
+
+func WithStateNotifier(notifier statefeed.Notifier) Option {
+	return func(s *Service) error {
+		s.stateNotifier = notifier
+		return nil
+	}
+}
+
+func WithEnableUPnP() Option {
+	return func(s *Service) error {
+		s.cfg.EnableUPnP = true
+		return nil
+	}
+}
+
+func WithNoDiscovery() Option {
+	return func(s *Service) error {
+		s.cfg.NoDiscovery = true
+		return nil
+	}
+}
+
+func WithStaticPeers(peers []string) Option {
+	return func(s *Service) error {
+		s.cfg.StaticPeers = peers
+		return nil
+	}
+}
+
+func WithBootstrapNodeAddr(addresses []string) Option {
+	return func(s *Service) error {
+		s.cfg.BootstrapNodeAddr = addresses
+		return nil
+	}
+}
+
+func WithRelayNodeAddr(addr string) Option {
+	return func(s *Service) error {
+		s.cfg.RelayNodeAddr = addr
+		return nil
+	}
+}
+
+func WithDataDir(dir string) Option {
+	return func(s *Service) error {
+		s.cfg.DataDir = dir
+		return nil
+	}
+}
+
+func WithLocalIP(ip string) Option {
+	return func(s *Service) error {
+		s.cfg.LocalIP = ip
+		return nil
+	}
+}
+
+func WithHostAddr(addr string) Option {
+	return func(s *Service) error {
+		s.cfg.HostAddress = addr
+		return nil
+	}
+}
+
+func WithHostDNS(host string) Option {
+	return func(s *Service) error {
+		s.cfg.HostDNS = host
+		return nil
+	}
+}
+
+func WithPrivateKey(privKey string) Option {
+	return func(s *Service) error {
+		s.cfg.PrivateKey = privKey
+		return nil
+	}
+}
+
+func WithMetadataDir(dir string) Option {
+	return func(s *Service) error {
+		s.cfg.MetaDataDir = dir
+		return nil
+	}
+}
+
+func WithTCPPort(port uint) Option {
+	return func(s *Service) error {
+		s.cfg.TCPPort = port
+		return nil
+	}
+}
+
+func WithUDPPort(port uint) Option {
+	return func(s *Service) error {
+		s.cfg.UDPPort = port
+		return nil
+	}
+}
+
+func WithMaxPeers(maxPeers uint) Option {
+	return func(s *Service) error {
+		s.cfg.MaxPeers = maxPeers
+		return nil
+	}
+}
+
+func WithAllowListCIDR(allowList string) Option {
+	return func(s *Service) error {
+		s.cfg.AllowListCIDR = allowList
+		return nil
+	}
+}
+
+func WithDenyListCIDR(denyList []string) Option {
+	return func(s *Service) error {
+		s.cfg.DenyListCIDR = denyList
+		return nil
+	}
+}
+
+func WithDisableDiscv5() Option {
+	return func(s *Service) error {
+		s.cfg.DisableDiscv5 = true
+		return nil
+	}
+}
 
 // buildOptions for the libp2p host.
 func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
