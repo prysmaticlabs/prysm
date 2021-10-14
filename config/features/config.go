@@ -233,8 +233,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.RemoteSlasherProtection = true
+		log.Warn(
+			"Remote slashing protection has currently been disabled in Prysm due to safety concerns." +
+				"We appreciate your understanding in our desire to keep Prysm validators safe",
+		)
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)
