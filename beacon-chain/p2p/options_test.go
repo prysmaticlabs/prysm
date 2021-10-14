@@ -30,7 +30,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	err = ioutil.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().ReadWritePermissions)
 	require.NoError(t, err, "Could not write key to file")
 	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
-	cfg := &Config{
+	cfg := &flagConfig{
 		PrivateKey: file.Name(),
 	}
 	pKey, err := privKey(cfg)

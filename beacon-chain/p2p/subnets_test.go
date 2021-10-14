@@ -36,7 +36,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &flagConfig{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -55,7 +55,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 3; i++ {
 		port = 3000 + i
-		cfg := &Config{
+		cfg := &flagConfig{
 			BootstrapNodeAddr:   []string{bootNode.String()},
 			Discv5BootStrapAddr: []string{bootNode.String()},
 			MaxPeers:            30,
@@ -85,7 +85,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// Make one service on port 4001.
 	port = 4001
-	cfg := &Config{
+	cfg := &flagConfig{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,

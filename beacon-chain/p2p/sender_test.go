@@ -23,7 +23,7 @@ func TestService_Send(t *testing.T) {
 
 	svc := &Service{
 		host: p1.BHost,
-		cfg:  &Config{},
+		cfg:  &flagConfig{},
 	}
 
 	msg := &ethpb.Fork{

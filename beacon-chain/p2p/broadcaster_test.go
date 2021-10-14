@@ -41,7 +41,7 @@ func TestService_Broadcast(t *testing.T) {
 		host:                  p1.BHost,
 		pubsub:                p1.PubSub(),
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		cfg:                   &flagConfig{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
@@ -154,7 +154,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		host:                  p1.BHost,
 		pubsub:                p1.PubSub(),
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		cfg:                   &flagConfig{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -207,7 +207,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 
 func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	// Setup bootnode.
-	cfg := &Config{}
+	cfg := &flagConfig{}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -236,7 +236,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
 	// setup other nodes.
-	cfg = &Config{
+	cfg = &flagConfig{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
@@ -297,7 +297,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		pubsub:                ps1,
 		dv5Listener:           listeners[0],
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		cfg:                   &flagConfig{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -313,7 +313,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		pubsub:                ps2,
 		dv5Listener:           listeners[1],
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		cfg:                   &flagConfig{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -378,7 +378,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		host:                  p1.BHost,
 		pubsub:                p1.PubSub(),
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
+		cfg:                   &flagConfig{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),

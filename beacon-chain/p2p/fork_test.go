@@ -32,7 +32,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg: &Config{
+		cfg: &flagConfig{
 			UDPPort:       uint(port),
 			StateNotifier: &mock.MockStateNotifier{},
 		},
@@ -44,7 +44,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	cfg := &Config{
+	cfg := &flagConfig{
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		UDPPort:             uint(port),
 		StateNotifier:       &mock.MockStateNotifier{},
@@ -120,7 +120,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &flagConfig{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 		stateNotifier:         &mock.MockStateNotifier{},
@@ -130,7 +130,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	cfg := &Config{
+	cfg := &flagConfig{
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		UDPPort:             uint(port),
 	}
@@ -235,7 +235,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	require.NoError(t, os.Mkdir(tempPath, 0700))
-	pkey, err := privKey(&Config{DataDir: tempPath})
+	pkey, err := privKey(&flagConfig{DataDir: tempPath})
 	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
@@ -258,7 +258,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
 	require.NoError(t, os.Mkdir(tempPath, 0700))
-	pkey, err := privKey(&Config{DataDir: tempPath})
+	pkey, err := privKey(&flagConfig{DataDir: tempPath})
 	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)

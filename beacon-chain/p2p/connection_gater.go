@@ -97,7 +97,7 @@ var privateCIDRList = []string{
 
 // configureFilter looks at the provided allow lists and
 // deny lists to appropriately create a filter.
-func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
+func configureFilter(cfg *flagConfig) (*multiaddr.Filters, error) {
 	addrFilter := multiaddr.NewFilters()
 	var privErr error
 	switch {

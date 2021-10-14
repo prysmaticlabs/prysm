@@ -36,8 +36,8 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 			},
 		},
 	})
-	s.cfg = &Config{MaxPeers: 0}
-	s.addrFilter, err = configureFilter(&Config{})
+	s.cfg = &flagConfig{MaxPeers: 0}
+	s.addrFilter, err = configureFilter(&flagConfig{})
 	require.NoError(t, err)
 	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 		}),
 	}
 	var err error
-	s.addrFilter, err = configureFilter(&Config{})
+	s.addrFilter, err = configureFilter(&flagConfig{})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -104,10 +104,10 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 			ScorerParams: &scorers.Config{},
 		}),
 		host: mockp2p.NewTestP2P(t).BHost,
-		cfg:  &Config{MaxPeers: uint(limit)},
+		cfg:  &flagConfig{MaxPeers: uint(limit)},
 	}
 	var err error
-	s.addrFilter, err = configureFilter(&Config{})
+	s.addrFilter, err = configureFilter(&flagConfig{})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -150,8 +150,8 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 			},
 		},
 	})
-	s.cfg = &Config{MaxPeers: 1}
-	s.addrFilter, err = configureFilter(&Config{})
+	s.cfg = &flagConfig{MaxPeers: 1}
+	s.addrFilter, err = configureFilter(&flagConfig{})
 	require.NoError(t, err)
 	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestPeerAllowList(t *testing.T) {
 			ScorerParams: &scorers.Config{},
 		}),
 	}
-	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
+	s.addrFilter, err = configureFilter(&flagConfig{AllowListCIDR: cidr})
 	require.NoError(t, err)
 	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
@@ -242,7 +242,7 @@ func TestPeerDenyList(t *testing.T) {
 			ScorerParams: &scorers.Config{},
 		}),
 	}
-	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
+	s.addrFilter, err = configureFilter(&flagConfig{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
 	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
@@ -279,7 +279,7 @@ func TestService_InterceptAddrDial_Allow(t *testing.T) {
 	}
 	var err error
 	cidr := "212.67.89.112/16"
-	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
+	s.addrFilter, err = configureFilter(&flagConfig{AllowListCIDR: cidr})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -301,7 +301,7 @@ func TestService_InterceptAddrDial_Public(t *testing.T) {
 	//test with public filter
 	cidr := "public"
 	ip := "212.67.10.122"
-	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
+	s.addrFilter, err = configureFilter(&flagConfig{AllowListCIDR: cidr})
 	require.NoError(t, err)
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
@@ -321,7 +321,7 @@ func TestService_InterceptAddrDial_Public(t *testing.T) {
 	//test with public allow filter, with a public address added to the deny list
 	invalidPublicIp := "212.67.10.122"
 	validPublicIp := "91.65.69.69"
-	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: "public", DenyListCIDR: []string{"212.67.89.112/16"}})
+	s.addrFilter, err = configureFilter(&flagConfig{AllowListCIDR: "public", DenyListCIDR: []string{"212.67.89.112/16"}})
 	require.NoError(t, err)
 	multiAddress, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", validPublicIp, 3000))
 	require.NoError(t, err)
@@ -348,7 +348,7 @@ func TestService_InterceptAddrDial_Private(t *testing.T) {
 	var err error
 	//test with private filter
 	cidr := "private"
-	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
+	s.addrFilter, err = configureFilter(&flagConfig{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -377,7 +377,7 @@ func TestService_InterceptAddrDial_AllowPrivate(t *testing.T) {
 	var err error
 	//test with private filter
 	cidr := "private"
-	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
+	s.addrFilter, err = configureFilter(&flagConfig{AllowListCIDR: cidr})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -406,7 +406,7 @@ func TestService_InterceptAddrDial_DenyPublic(t *testing.T) {
 	var err error
 	//test with private filter
 	cidr := "public"
-	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
+	s.addrFilter, err = configureFilter(&flagConfig{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
@@ -435,7 +435,7 @@ func TestService_InterceptAddrDial_AllowConflict(t *testing.T) {
 	var err error
 	//test with private filter
 	cidr := "public"
-	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr, "192.168.0.0/16"}})
+	s.addrFilter, err = configureFilter(&flagConfig{DenyListCIDR: []string{cidr, "192.168.0.0/16"}})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))

@@ -81,7 +81,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(context.Background(), &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
 	s.dv5Listener = &mockListener{}
@@ -90,7 +90,7 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(context.Background(), &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
@@ -98,7 +98,7 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	cfg := &Config{
+	cfg := &flagConfig{
 		TCPPort:       2000,
 		UDPPort:       2000,
 		StateNotifier: &mock.MockStateNotifier{},
@@ -149,7 +149,7 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
-	cfg := &Config{StateNotifier: notifier}
+	cfg := &flagConfig{StateNotifier: notifier}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -177,7 +177,7 @@ func TestListenForNewNodes(t *testing.T) {
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
 	// setup other nodes.
-	cfg = &Config{
+	cfg = &flagConfig{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
@@ -273,7 +273,7 @@ func TestPeer_Disconnect(t *testing.T) {
 func TestService_JoinLeaveTopic(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
+	s, err := NewService(ctx, &flagConfig{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 
 	go s.awaitStateInitialized()
