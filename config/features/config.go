@@ -233,7 +233,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Warn(
+		log.Fatal(
 			"Remote slashing protection has currently been disabled in Prysm due to safety concerns." +
 				"We appreciate your understanding in our desire to keep Prysm validators safe",
 		)
