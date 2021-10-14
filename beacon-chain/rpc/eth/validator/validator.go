@@ -209,7 +209,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
 	}
 
-	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
 	}
