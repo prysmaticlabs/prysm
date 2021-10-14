@@ -26,11 +26,10 @@ type SSZRoots struct {
 func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, _ := utils.TestFolders(t, config, "altair", "ssz_static")
+	testFolders, _ := utils.TestFolders(t, config, "merge", "ssz_static")
 	for _, folder := range testFolders {
 		innerPath := path.Join("ssz_static", folder.Name(), "ssz_random")
-		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "altair", innerPath)
-
+		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "merge", innerPath)
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
 				serializedBytes, err := util.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
@@ -93,6 +92,10 @@ func RunSSZStaticTests(t *testing.T, config string) {
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
+	case "ExecutionPayload":
+		obj = &ethpb.ExecutionPayload{}
+	case "ExecutionPayloadHeader":
+		obj = &ethpb.ExecutionPayloadHeader{}
 	case "Attestation":
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
@@ -167,6 +170,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		return nil, nil
 	case "LightClientUpdate":
 		t.Skip("not a beacon node type, this is a light node type")
+		return nil, nil
+	case "PowBlock":
+		t.Skip("not a beacon node type")
 		return nil, nil
 	default:
 		return nil, errors.New("type not found")
