@@ -12,7 +12,7 @@ for ((i = 0; i < ${#mocks[@]}; i++)); do
     file=${mocks[i]% *};
     interfaces=${mocks[i]#* };
     echo "generating $file for interfaces: $interfaces";
-    GO11MODULE=on mockgen -package=van_mock -destination=$file github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 $interfaces
+    GO11MODULE=on mockgen -package=van_mock -destination=$file github.com/prysmaticlabs/prysm/proto/eth/v1alpha1 $interfaces
 done
 
 goimports -w "$mock_path/."

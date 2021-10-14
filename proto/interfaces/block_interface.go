@@ -47,4 +47,5 @@ type BeaconBlockBody interface {
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
+	PandoraShards() []*ethpb.PandoraShard
 }

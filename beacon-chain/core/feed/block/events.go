@@ -4,7 +4,7 @@ package block
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	vanTypes "github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,12 +19,12 @@ const (
 
 // ReceivedBlockData is the data sent with ReceivedBlock events.
 type ReceivedBlockData struct {
-	SignedBlock *ethpb.SignedBeaconBlock
+	SignedBlock interfaces.SignedBeaconBlock
 }
 
 // UnConfirmedBlockData is the data sent to orchestrator
 type UnConfirmedBlockData struct {
-	Block *ethpb.BeaconBlock
+	Block interfaces.BeaconBlock
 }
 
 // ConfirmedData is the data which is sent after getting confirmation from orchestrator

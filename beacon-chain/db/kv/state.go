@@ -322,54 +322,6 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 	return []iface.ReadOnlyBeaconState{st}, nil
 }
 
-// VanHighestSlotStatesBelow returns the states with the highest slot below the input slot
-// from the db. Ideally there should just be one state per slot, but given validator
-// can double propose, a single slot could have multiple block roots and
-// results states. This returns a list of states.
-func (s *Store) VanHighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]iface.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.VanHighestSlotStatesBelow")
-	defer span.End()
-
-	var best []byte
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(stateSlotIndicesBucket)
-		c := bkt.Cursor()
-		for s, root := c.First(); s != nil; s, root = c.Next() {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			key := bytesutil.BytesToSlotBigEndian(s)
-			if root == nil {
-				continue
-			}
-			if key >= slot {
-				break
-			}
-			best = root
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	var st iface.BeaconState
-	var err error
-	if best != nil {
-		st, err = s.State(ctx, bytesutil.ToBytes32(best))
-		if err != nil {
-			return nil, err
-		}
-	}
-	if st == nil {
-		st, err = s.GenesisState(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return []iface.BeaconState{st}, nil
-}
-
 // createStateIndicesFromStateSlot takes in a state slot and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).

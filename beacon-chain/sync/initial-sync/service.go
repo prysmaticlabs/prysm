@@ -29,8 +29,7 @@ var _ shared.Service = (*Service)(nil)
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadFetcher
-	blockchain.FinalizationFetcher
+	blockchain.ChainInfoFetcher
 	blockchain.PendingQueueFetcher
 }
 
@@ -145,11 +144,16 @@ func (s *Service) Initialized() bool {
 	return s.chainStarted.IsSet()
 }
 
+// Synced returns true if initial sync has been completed.
+func (s *Service) Synced() bool {
+	return s.synced.IsSet()
+}
+
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {
 	headState, err := s.cfg.Chain.HeadState(s.ctx)
-	if err != nil || headState == nil {
+	if err != nil || headState == nil || headState.IsNil() {
 		return errors.Errorf("could not retrieve head state: %v", err)
 	}
 

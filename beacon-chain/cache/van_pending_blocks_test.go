@@ -2,21 +2,23 @@ package cache
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"testing"
 )
 
 // generateBeaconBlocksMap generates certain amount of beacon block with slot
-func generateBeaconBlocks(amount int) map[types.Slot]*ethpb.BeaconBlock {
-	generatedBlocks := make(map[types.Slot]*ethpb.BeaconBlock, amount)
+func generateBeaconBlocks(amount int) map[types.Slot]interfaces.BeaconBlock {
+	generatedBlocks := make(map[types.Slot]interfaces.BeaconBlock, amount)
 
 	for i := 0; i < amount; i++ {
 		signedBlk := newBeaconBlock()
 		blk := signedBlk.Block
 		blk.Slot = types.Slot(i)
-		generatedBlocks[types.Slot(i)] = blk
+		generatedBlocks[types.Slot(i)] = wrapper.WrappedPhase0BeaconBlock(blk)
 	}
 	return generatedBlocks
 }
@@ -26,7 +28,8 @@ func TestPendingBlocksCache_KeyFunc(t *testing.T) {
 	signedBlk := newBeaconBlock()
 	blk := signedBlk.Block
 	blk.Slot = types.Slot(100000)
-	actualStr, err := pendingBlocksKeyFn(blk)
+	wrappedBlk := wrapper.WrappedPhase0BeaconBlock(blk)
+	actualStr, err := pendingBlocksKeyFn(wrappedBlk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, "100000", actualStr)
 }
@@ -62,9 +65,9 @@ func TestPendingBlocksCache_PendingBlocks(t *testing.T) {
 
 	actualBlks, err := cache.PendingBlocks()
 	require.NoError(t, err)
-	actualBlocksMap := make(map[types.Slot]*ethpb.BeaconBlock, 50)
+	actualBlocksMap := make(map[types.Slot]interfaces.BeaconBlock, 50)
 	for _, actualBlk := range actualBlks {
-		actualBlocksMap[actualBlk.Slot] = actualBlk
+		actualBlocksMap[actualBlk.Slot()] = actualBlk
 	}
 	assert.DeepEqual(t, blks, actualBlocksMap)
 }
@@ -81,7 +84,7 @@ func TestPendingBlocksCache_DeleteConfirmedBlock(t *testing.T) {
 	require.NoError(t, cache.Delete(types.Slot(20)))
 	blk, err := cache.PendingBlock(types.Slot(20))
 	require.NoError(t, err)
-	var expected *ethpb.BeaconBlock
+	var expected interfaces.BeaconBlock
 	assert.Equal(t, expected, blk)
 }
 
@@ -103,10 +106,6 @@ func TestNewPendingBlocksCache_UpdateBlock(t *testing.T) {
 	blk1, err := cache.PendingBlock(types.Slot(0))
 	require.NoError(t, err)
 	assert.DeepEqual(t, blks[types.Slot(0)], blk1)
-
-	// update the block at slot 0
-	blks[0].ParentRoot = []byte("test")
-	require.NoError(t, cache.AddPendingBlock(blks[0]))
 
 	blk2, err := cache.PendingBlock(types.Slot(0))
 	require.NoError(t, err)

@@ -3,7 +3,7 @@ package cache
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"k8s.io/client-go/tools/cache"
 	"strconv"
 	"sync"
@@ -28,11 +28,11 @@ type PendingBlocksCache struct {
 
 // pendingBlocksKeyFn takes the slot number as the key to retrieve pending blocks from queue.
 func pendingBlocksKeyFn(obj interface{}) (string, error) {
-	block, ok := obj.(*ethpb.BeaconBlock)
+	block, ok := obj.(interfaces.BeaconBlock)
 	if !ok {
 		return "", ErrNotBeaconBlock
 	}
-	return slotToString(block.GetSlot()), nil
+	return slotToString(block.Slot()), nil
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
@@ -44,7 +44,7 @@ func NewPendingBlocksCache() *PendingBlocksCache {
 
 // AddPendingBlock adds pending beacon block object to the cache.
 // This method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *PendingBlocksCache) AddPendingBlock(blk *ethpb.BeaconBlock) error {
+func (c *PendingBlocksCache) AddPendingBlock(blk interfaces.BeaconBlock) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -56,7 +56,7 @@ func (c *PendingBlocksCache) AddPendingBlock(blk *ethpb.BeaconBlock) error {
 }
 
 // PendingBlock returns the pending block of the given slot number
-func (c *PendingBlocksCache) PendingBlock(slot types.Slot) (*ethpb.BeaconBlock, error) {
+func (c *PendingBlocksCache) PendingBlock(slot types.Slot) (interfaces.BeaconBlock, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -68,7 +68,7 @@ func (c *PendingBlocksCache) PendingBlock(slot types.Slot) (*ethpb.BeaconBlock, 
 		return nil, nil
 	}
 
-	item, ok := obj.(*ethpb.BeaconBlock)
+	item, ok := obj.(interfaces.BeaconBlock)
 	if !ok {
 		return nil, ErrNotBeaconBlock
 	}
@@ -77,12 +77,12 @@ func (c *PendingBlocksCache) PendingBlock(slot types.Slot) (*ethpb.BeaconBlock, 
 }
 
 // ProposerIndices returns all the pending blocks
-func (c *PendingBlocksCache) PendingBlocks() ([]*ethpb.BeaconBlock, error) {
+func (c *PendingBlocksCache) PendingBlocks() ([]interfaces.BeaconBlock, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	keys := c.PendingBlocksCache.ListKeys()
-	pendingBlocks := make([]*ethpb.BeaconBlock, len(keys))
+	pendingBlocks := make([]interfaces.BeaconBlock, len(keys))
 	for i, key := range keys {
 		obj, exists, err := c.PendingBlocksCache.GetByKey(key)
 		if err != nil {
@@ -92,7 +92,7 @@ func (c *PendingBlocksCache) PendingBlocks() ([]*ethpb.BeaconBlock, error) {
 			return nil, nil
 		}
 
-		item, ok := obj.(*ethpb.BeaconBlock)
+		item, ok := obj.(interfaces.BeaconBlock)
 		if !ok {
 			return nil, ErrNotBeaconBlock
 		}
@@ -116,7 +116,7 @@ func (c *PendingBlocksCache) Delete(slot types.Slot) error {
 		return nil
 	}
 
-	item, ok := obj.(*ethpb.BeaconBlock)
+	item, ok := obj.(interfaces.BeaconBlock)
 	if !ok {
 		return ErrNotBeaconBlock
 	}

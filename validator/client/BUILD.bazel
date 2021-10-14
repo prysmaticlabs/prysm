@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -17,11 +16,13 @@ go_library(
         "service.go",
         "validator.go",
         "wait_for_activation.go",
+        "pan_propose.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/client",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/bls:go_default_library",
@@ -49,8 +50,6 @@ go_library(
         "//validator/keymanager/remote:go_default_library",
         "//validator/slashing-protection/iface:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
@@ -60,7 +59,6 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
@@ -70,11 +68,13 @@ go_library(
         "@org_golang_google_grpc//credentials:go_default_library",
         "@org_golang_google_grpc//resolver:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
         "//validator/pandora:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-         "@org_golang_x_crypto//sha3:go_default_library",
-         "@com_github_ethereum_go_ethereum//rlp:go_default_library",
+        "@org_golang_x_crypto//sha3:go_default_library",
+        "@com_github_ethereum_go_ethereum//rlp:go_default_library",
     ],
 )
 
@@ -95,6 +95,7 @@ go_test(
         "slashing_protection_interchange_test.go",
         "validator_test.go",
         "wait_for_activation_test.go",
+        "pan_propose_test.go",
     ],
     data = [
         "@eip3076_spec_tests//:test_data",
@@ -103,6 +104,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
@@ -111,6 +113,7 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/mock:go_default_library",
+        "//shared/van_mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/slotutil/testing:go_default_library",
@@ -127,12 +130,10 @@ go_test(
         "//validator/keymanager/remote:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format:go_default_library",
         "//validator/testing:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
@@ -140,6 +141,9 @@ go_test(
         "@com_github_wealdtech_go_eth2_util//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
+        "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
     ],
 )

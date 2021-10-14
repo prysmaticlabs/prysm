@@ -1,4 +1,4 @@
-// Package main defines a validator client, a critical actor in eth2 which manages
+// Package main defines a validator client, a critical actor in Ethereum which manages
 // a keystore of private keys, connects to a beacon node to receive assignments,
 // and submits blocks/attestations as needed.
 package main
@@ -103,6 +103,7 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	pandora.PandoraRpcIpcProviderFlag,
 	pandora.PandoraRpcHttpProviderFlag,
+	cmd.VanguardNetwork,
 }
 
 func init() {
@@ -112,7 +113,7 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
+	app.Usage = `launches an Ethereum validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
 	app.Version = version.Version()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
@@ -171,7 +172,10 @@ func main() {
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		return debug.Setup(ctx)
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	app.After = func(ctx *cli.Context) error {

@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,7 +15,10 @@ import (
 	"syscall"
 
 	gethRpc "github.com/ethereum/go-ethereum/rpc"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -22,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -31,21 +36,21 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
-	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// ValidatorClient defines an instance of an eth2 validator that manages
-// the entire lifecycle of services attached to it participating in eth2.
+// ValidatorClient defines an instance of an Ethereum validator that manages
+// the entire lifecycle of services attached to it participating in proof of stake.
 type ValidatorClient struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
@@ -78,7 +83,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfNotSupported(cliCtx.Context)
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
@@ -411,7 +416,7 @@ func (c *ValidatorClient) registerValidatorService(
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
-
+	// Vanguard: pandora chain service is needed for vanguard chain
 	var pandoraService *pandora.Service
 	if err := c.services.FetchService(&pandoraService); err != nil {
 		return err
@@ -423,7 +428,7 @@ func (c *ValidatorClient) registerValidatorService(
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
-		GraffitiFlag:               graffiti,
+		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
@@ -434,12 +439,14 @@ func (c *ValidatorClient) registerValidatorService(
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		PandoraService:             pandoraService,
+		// Vanguard: pandora service and vanguard node flag are needed for vanguard chain
+		PandoraService:     pandoraService,
+		EnableVanguardNode: c.cliCtx.Bool(cmd.VanguardNetwork.Name),
 	})
-
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
 	}
+
 	return c.services.RegisterService(v)
 }
 func (c *ValidatorClient) registerSlasherService() error {
@@ -525,13 +532,54 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	gatewaySrv := gateway.New(
+	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+
+	registrations := []gateway.PbHandlerRegistration{
+		pb.RegisterAuthHandler,
+		pb.RegisterWalletHandler,
+		pb.RegisterHealthHandler,
+		pb.RegisterAccountsHandler,
+		pb.RegisterBeaconHandler,
+		pb.RegisterSlashingProtectionHandler,
+	}
+	mux := gwruntime.NewServeMux(
+		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+			Marshaler: &gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					DiscardUnknown: true,
+				},
+			},
+		}),
+		gwruntime.WithMarshalerOption(
+			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+		),
+	)
+	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/api") {
+			http.StripPrefix("/api", h).ServeHTTP(w, req)
+		} else {
+			web.Handler(w, req)
+		}
+	}
+
+	pbHandler := gateway.PbMux{
+		Registrations: registrations,
+		Patterns:      []string{"/accounts/", "/v2/"},
+		Mux:           mux,
+	}
+
+	gw := gateway.New(
 		cliCtx.Context,
+		[]gateway.PbMux{pbHandler},
+		muxHandler,
 		rpcAddr,
 		gatewayAddress,
-		allowedOrigins,
-	)
-	return c.services.RegisterService(gatewaySrv)
+	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
+
+	return c.services.RegisterService(gw)
 }
 
 func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {

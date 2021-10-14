@@ -11,11 +11,13 @@ var (
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our primary web3 provider",
+		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
+		Value: "",
 	}
+	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
 	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
 		Name:  "fallback-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag maybe used multiple times.",
+		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
@@ -62,11 +64,18 @@ var (
 		Usage: "The host on which the gateway server runs on",
 		Value: "127.0.0.1",
 	}
-	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
+	// GRPCGatewayPort specifies a gRPC gateway port for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
-		Usage: "Enable gRPC gateway for JSON requests",
+		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
+	}
+	// EthApiPort specifies the port which runs the official Ethereum REST API.
+	// Serves JSON values conforming to the specification: https://ethereum.github.io/eth2.0-APIs/
+	EthApiPort = &cli.IntFlag{
+		Name:  "eth-api-port",
+		Usage: "The port which exposes a REST API conforming to the official Ethereum API specification.",
+		Value: 3501,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
@@ -134,6 +143,7 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
+	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
 		Usage: "Subscribe to all possible attestation subnets.",
@@ -156,7 +166,7 @@ var (
 	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpt = &cli.StringFlag{
 		Name: "weak-subjectivity-checkpoint",
-		Usage: "Input in `block_root:epoch_number` format. This guarantee that syncing leads to the given Weak Subjectivity Checkpoint being in the canonical chain. " +
+		Usage: "Input in `block_root:epoch_number` format. This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
 			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
 		Value: "",
 	}
@@ -165,6 +175,12 @@ var (
 		Name:  "eth1-header-req-limit",
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
+	}
+	// GenesisStatePath defines a flag to start the beacon chain from a give genesis state file.
+	GenesisStatePath = &cli.StringFlag{
+		Name: "genesis-state",
+		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
+			"eth2-clients/eth2-testnets repository on github.",
 	}
 	// OrcRpcProviderFlag defines a orchestrator node RPC endpoint
 	OrcRpcProviderFlag = &cli.StringFlag{

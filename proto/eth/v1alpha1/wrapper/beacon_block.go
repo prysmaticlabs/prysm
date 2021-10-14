@@ -189,3 +189,7 @@ func (w Phase0BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 func (w Phase0BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
+
+func (w Phase0BeaconBlockBody) PandoraShards() []*eth.PandoraShard {
+	return w.b.PandoraShard
+}

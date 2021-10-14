@@ -428,7 +428,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 			return err
 		}
 		// Exit early if no genesis state is saved.
-		if genesisState == nil {
+		if genesisState == nil || genesisState.IsNil() {
 			return nil
 		}
 		// We do not call the InsertFinalizedDeposits method if all genesis deposits have not deposited yet

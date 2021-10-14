@@ -7,9 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/orchestrator"
-
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -19,21 +16,24 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
+	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/beacon-chain/orchestrator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -44,15 +44,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 )
 
 const testSkipPowFlag = "test-skip-pow"
@@ -77,83 +76,25 @@ type BeaconNode struct {
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
 	stateGen        *stategen.State
+	collector       *bcnodeCollector
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(cliCtx *cli.Context) (*BeaconNode, error) {
-	if err := tracing.Setup(
-		"beacon-chain", // service name
-		cliCtx.String(cmd.TracingProcessNameFlag.Name),
-		cliCtx.String(cmd.TracingEndpointFlag.Name),
-		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
-		cliCtx.Bool(cmd.EnableTracingFlag.Name),
-	); err != nil {
+	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
-
-	// Warn if user's platform is not supported
-	prereq.WarnIfNotSupported(cliCtx.Context)
-
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
-	}
-
-	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
-		c := params.BeaconConfig()
-		// Save a state every 4 epochs.
-		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
-		params.OverrideBeaconConfig(c)
-		cmdConfig := cmd.Get()
-		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
-		cmd.Init(cmdConfig)
-		log.Warnf(
-			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
-			c.SlotsPerArchivedPoint,
-			cmdConfig.MaxRPCPageSize,
-		)
-	}
-
-	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
-		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
-		params.OverrideBeaconConfig(c)
-	}
-
-	// ETH PoW related flags.
-	if cliCtx.IsSet(flags.ChainID.Name) {
-		c := params.BeaconConfig()
-		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.NetworkID.Name) {
-		c := params.BeaconConfig()
-		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
-		c := params.BeaconConfig()
-		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
-		params.OverrideBeaconConfig(c)
-	}
-
-	// Setting chain network specific flags.
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
-		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
-		params.OverrideBeaconNetworkConfig(c)
-	}
-	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
-		networkCfg := params.BeaconNetworkConfig()
-		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
-		params.OverrideBeaconNetworkConfig(networkCfg)
-	}
+	configureChainConfig(cliCtx)
+	configureHistoricalSlasher(cliCtx)
+	configureSlotsPerArchivedPoint(cliCtx)
+	configureEth1Config(cliCtx)
+	configureNetwork(cliCtx)
+	configureInteropConfig(cliCtx)
 
 	registry := shared.NewServiceRegistry()
 
@@ -172,7 +113,11 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		slashingsPool:   slashings.NewPool(),
 	}
 
-	if err := beacon.startDB(cliCtx); err != nil {
+	depositAddress, err := registration.DepositContractAddress()
+	if err != nil {
+		return nil, err
+	}
+	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
 
@@ -221,6 +166,15 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 			return nil, err
 		}
 	}
+
+	// db.DatabasePath is the path to the containing directory
+	// db.NewDBFilename expands that to the canonical full path using
+	// the same constuction as NewDB()
+	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
+	if err != nil {
+		return nil, err
+	}
+	beacon.collector = c
 
 	return beacon, nil
 }
@@ -284,6 +238,7 @@ func (b *BeaconNode) Close() {
 	if err := b.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	b.collector.unregister()
 	b.cancel()
 	close(b.stop)
 }
@@ -293,7 +248,7 @@ func (b *BeaconNode) startForkChoice() {
 	b.forkChoiceStore = f
 }
 
-func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
+func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
@@ -345,6 +300,49 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 
 	b.depositCache = depositCache
+
+	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
+		r, err := os.Open(cliCtx.String(flags.GenesisStatePath.Name))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				log.WithError(err).Error("Failed to close genesis file")
+			}
+		}()
+		if err := b.db.LoadGenesis(b.ctx, r); err != nil {
+			if err == db.ErrExistingGenesisState {
+				return errors.New("Genesis state flag specified but a genesis state " +
+					"exists already. Run again with --clear-db and/or ensure you are using the " +
+					"appropriate testnet flag to load the given genesis state.")
+			}
+			return errors.Wrap(err, "could not load genesis from file")
+		}
+	}
+
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
+
+	knownContract, err := b.db.DepositContractAddress(b.ctx)
+	if err != nil {
+		return err
+	}
+	addr := common.HexToAddress(depositAddress)
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(b.ctx, addr); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
+	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, addr.Bytes())
+	}
+	log.Infof("Deposit contract: %#x", addr.Bytes())
+
 	return nil
 }
 
@@ -352,52 +350,18 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db)
 }
 
-func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-	listNodes := make([]string, 0)
-	err = yaml.Unmarshal(fileContent, &listNodes)
-	if err != nil {
-		return nil, err
-	}
-	return listNodes, nil
-}
-
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to a YAML file
-	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes // actual CLI values
-	bootnodeAddrs := make([]string, 0)                           // dest of final list of nodes
-	for _, addr := range bootnodesTemp {
-		if filepath.Ext(addr) == ".yaml" {
-			fileNodes, err := readbootNodes(addr)
-			if err != nil {
-				return err
-			}
-			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
-		} else {
-			bootnodeAddrs = append(bootnodeAddrs, addr)
-		}
-	}
-
-	datadir := cliCtx.String(cmd.DataDirFlag.Name)
-	if datadir == "" {
-		datadir = cmd.DefaultDataDir()
-		if datadir == "" {
-			log.Fatal(
-				"Could not determine your system's HOME path, please specify a --datadir you wish " +
-					"to use for your chain data",
-			)
-		}
+	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
+	if err != nil {
+		return err
 	}
 
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeAddrs,
+		BootstrapNodeAddr: bootstrapNodeAddrs,
 		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
-		DataDir:           datadir,
+		DataDir:           dataDir,
 		LocalIP:           cliCtx.String(cmd.P2PIP.Name),
 		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
 		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
@@ -411,6 +375,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
+		DB:                b.db,
 	})
 	if err != nil {
 		return err
@@ -442,13 +407,13 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	var opsService *attestations.Service
-	if err := b.services.FetchService(&opsService); err != nil {
+	var attService *attestations.Service
+	if err := b.services.FetchService(&attService); err != nil {
 		return err
 	}
 
 	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	bRoot, epoch, err := convertWspInput(wsp)
+	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
 		return err
 	}
@@ -469,21 +434,20 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:          b.db,
-		DepositCache:      b.depositCache,
-		ChainStartFetcher: web3Service,
-		AttPool:           b.attestationPool,
-		ExitPool:          b.exitPool,
-		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
-		StateNotifier:     b,
-		BlockNotifier:     b,
-		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService:        opsService,
-		StateGen:          b.stateGen,
-		WspBlockRoot:      bRoot,
-		WspEpoch:          epoch,
+		BeaconDB:                b.db,
+		DepositCache:            b.depositCache,
+		ChainStartFetcher:       web3Service,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		P2p:                     b.fetchP2P(),
+		MaxRoutines:             maxRoutines,
+		StateNotifier:           b,
+		BlockNotifier:           b,
+		ForkChoiceStore:         b.forkChoiceStore,
+		AttService:              attService,
+		StateGen:                b.stateGen,
+		WeakSubjectivityCheckpt: wsCheckpt,
 
 		// vanguard: EnableVanguardNode and OrcRPCClient is used for vanguard chain
 		EnableVanguardNode: b.cliCtx.Bool(cmd.VanguardNetwork.Name),
@@ -499,53 +463,33 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := params.BeaconConfig().DepositContractAddress
-	if depAddress == "" {
-		log.Fatal("Valid deposit contract is required")
+
+	depAddress, endpoints, err := registration.PowchainPreregistration(b.cliCtx)
+	if err != nil {
+		return err
 	}
 
-	if !common.IsHexAddress(depAddress) {
-		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
+	bs, err := powchain.NewPowchainCollector(b.ctx)
+	if err != nil {
+		return err
 	}
-
-	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
-		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
-		log.Error("You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
-	}
-	endpoints := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
-	endpoints = append(endpoints, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndpoints:      endpoints,
-		DepositContract:    common.HexToAddress(depAddress),
-		BeaconDB:           b.db,
-		DepositCache:       b.depositCache,
-		StateNotifier:      b,
-		StateGen:           b.stateGen,
-		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
-		EnableVanguardNode: b.cliCtx.Bool(cmd.VanguardNetwork.Name),
+		HttpEndpoints:          endpoints,
+		DepositContract:        common.HexToAddress(depAddress),
+		BeaconDB:               b.db,
+		DepositCache:           b.depositCache,
+		StateNotifier:          b,
+		StateGen:               b.stateGen,
+		Eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+		BeaconNodeStatsUpdater: bs,
+		EnableVanguardNode:     b.cliCtx.Bool(cmd.VanguardNetwork.Name),
 	}
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
-	knownContract, err := b.db.DepositContractAddress(b.ctx)
-	if err != nil {
-		return err
-	}
-	if len(knownContract) == 0 {
-		if err := b.db.SaveDepositContractAddress(b.ctx, cfg.DepositContract); err != nil {
-			return errors.Wrap(err, "could not save deposit contract")
-		}
-	}
-	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-			"you are trying to run on a different network than what the database contains. You can run once with "+
-			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-			knownContract, cfg.DepositContract.Bytes())
-	}
 
-	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
 }
 
@@ -727,25 +671,31 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		return nil
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	ethApiPort := b.cliCtx.Int(flags.EthApiPort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
-	return b.services.RegisterService(
-		gateway.New(
-			b.ctx,
-			selfAddress,
-			selfCert,
-			gatewayAddress,
-			nil, /*optional mux*/
-			allowedOrigins,
-			enableDebugRPCEndpoints,
-			b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-		),
-	)
+	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+
+	gatewayConfig := gateway2.DefaultConfig(enableDebugRPCEndpoints)
+
+	g := gateway.New(
+		b.ctx,
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		gatewayConfig.Handler,
+		selfAddress,
+		gatewayAddress,
+	).WithAllowedOrigins(allowedOrigins).
+		WithRemoteCert(selfCert).
+		WithMaxCallRecvMsgSize(maxCallSize).
+		WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
+
+	return b.services.RegisterService(g)
 }
 
 func (b *BeaconNode) registerInteropServices() error {
