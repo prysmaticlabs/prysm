@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -145,7 +144,11 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+		commonBase, err := s.getCommonBase(ctx, oldHeadRoot, headRoot)
+		if err != nil {
+			return err
+		}
+		if err := s.saveOrphanedAtts(ctx, oldHeadRoot, commonBase); err != nil {
 			return err
 		}
 
@@ -377,36 +380,90 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
-func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, baseRoot [32]byte) error {
 	if !features.Get().CorrectlyInsertOrphanedAtts {
 		return nil
 	}
 
-	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	// Find all the orphaned blocks
+	orphanedBlks, err := s.getOrphanedBlocks(ctx, orphanedRoot, baseRoot)
 	if err != nil {
 		return err
 	}
-
-	if orphanedBlk == nil || orphanedBlk.IsNil() {
-		return errors.New("orphaned block can't be nil")
+	if len(orphanedBlks) < 1 {
+		return errors.New("the orphaned branch should not be empty")
 	}
+	s.saveAttestations(orphanedBlks)
+	return nil
+}
 
-	for _, a := range orphanedBlk.Block().Body().Attestations() {
-		// Is the attestation one epoch older.
-		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
-			continue
-		}
-		if helpers.IsAggregated(a) {
-			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
-				return err
+func (s *Service) saveAttestations(blocks []block.SignedBeaconBlock) error {
+	for _, b := range blocks {
+		for _, a := range b.Block().Body().Attestations() {
+			// Is the attestation one epoch older.
+			if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+				continue
 			}
-		} else {
-			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
-				return err
+			if helpers.IsAggregated(a) {
+				if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+					return err
+				}
+			} else {
+				if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+					return err
+				}
 			}
+			saveOrphanedAttCount.Inc()
 		}
-		saveOrphanedAttCount.Inc()
 	}
 
 	return nil
+}
+
+// Get the blocks from the head to the base.
+// It includes the head block but excludes the base block
+func (s *Service) getOrphanedBlocks(ctx context.Context, head [32]byte, base [32]byte) ([]block.SignedBeaconBlock, error) {
+	var blocks []block.SignedBeaconBlock
+	for head != base {
+		headBlk, err := s.cfg.BeaconDB.Block(ctx, head)
+		if err != nil {
+			return nil, err
+		}
+		if headBlk == nil {
+			return nil, errors.New("a parent block is missing in the BeaconDB")
+		}
+		blocks = append(blocks, headBlk)
+		head = bytesutil.ToBytes32(headBlk.Block().ParentRoot())
+	}
+	return blocks, nil
+}
+
+// Get the most recent common ancestor that both branches are base off.
+func (s *Service) getCommonBase(ctx context.Context, head1 [32]byte, head2 [32]byte) ([32]byte, error) {
+	head1Blk, err := s.cfg.BeaconDB.Block(ctx, head1)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	head2Blk, err := s.cfg.BeaconDB.Block(ctx, head2)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	// Keep walking back both of the branches until both heads are the same
+	for head1 != head2 {
+		if head1Blk.Block().Slot() >= head2Blk.Block().Slot() {
+			head1 = bytesutil.ToBytes32(head1Blk.Block().ParentRoot())
+			head1Blk, err = s.cfg.BeaconDB.Block(ctx, head1)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			head2 = bytesutil.ToBytes32(head2Blk.Block().ParentRoot())
+			head2Blk, err = s.cfg.BeaconDB.Block(ctx, head2)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+	}
+
+	return head1, nil
 }
