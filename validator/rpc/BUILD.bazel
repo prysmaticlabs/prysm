@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "accounts.go",
-        "auth.go",
+        "auth_token.go",
         "beacon.go",
         "health.go",
         "intercepter.go",
@@ -67,7 +67,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "accounts_test.go",
-        "auth_test.go",
+        "auth_token_test.go",
         "beacon_test.go",
         "health_test.go",
         "intercepter_test.go",
