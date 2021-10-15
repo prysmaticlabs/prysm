@@ -27,12 +27,6 @@ type params struct {
 	ValidatorMetricsPort  int
 	ValidatorMetricsHost  string
 	ValidatorGatewayPort  int
-<<<<<<< HEAD:endtoend/params/params.go
-	ValidatorGatewayHost  string
-	SlasherRPCPort        int
-	SlasherMetricsPort    int
-=======
->>>>>>> develop:testing/endtoend/params/params.go
 }
 
 // TestParams is the globally accessible var for getting config elements.
