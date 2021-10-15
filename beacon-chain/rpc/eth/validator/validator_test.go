@@ -270,8 +270,8 @@ func TestGetProposerDuties(t *testing.T) {
 			}
 		}
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -1152,7 +1152,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		require.NoError(t, err)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(4), subnets[0])
 	})
 
 	t.Run("Multiple subscriptions", func(t *testing.T) {
