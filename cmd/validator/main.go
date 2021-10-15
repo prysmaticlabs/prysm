@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	slashingprotectioncommands "github.com/prysmaticlabs/prysm/cmd/validator/slashing-protection"
 	walletcommands "github.com/prysmaticlabs/prysm/cmd/validator/wallet"
+	"github.com/prysmaticlabs/prysm/cmd/validator/web"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -117,6 +118,7 @@ func main() {
 		accountcommands.Commands,
 		slashingprotectioncommands.Commands,
 		dbcommands.Commands,
+		web.Commands,
 	}
 
 	app.Flags = appFlags

@@ -9,7 +9,7 @@ import (
 
 func TestAllFlagsExistInHelp(t *testing.T) {
 	// If this test is failing, it is because you've recently added/removed a
-	// flag in beacon chain main.go, but did not add/remove it to the usage.go
+	// flag in beacon chain web.go, but did not add/remove it to the usage.go
 	// flag grouping (appHelpFlagGroups).
 
 	var helpFlags []cli.Flag
@@ -27,7 +27,7 @@ func TestAllFlagsExistInHelp(t *testing.T) {
 
 	for _, flag := range helpFlags {
 		if !doesFlagExist(flag, appFlags) {
-			t.Errorf("Flag %s does not exist in main.go, "+
+			t.Errorf("Flag %s does not exist in web.go, "+
 				"but exists in help flags", flag.Names()[0])
 		}
 	}

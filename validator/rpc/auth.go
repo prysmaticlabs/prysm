@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,6 +29,24 @@ const (
 	authTokenFileName = "auth-token"
 )
 
+// CreateAuthToken generates a new jwt key, token, and expiration and writes them
+// to a file in the specified directory. Also, it logs out a prepared URL
+// for the user to navigate to and authenticate with the Prysm web interface.
+func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
+	jwtKey, err := createRandomJWTKey()
+	if err != nil {
+		return err
+	}
+	token, expr, err := createTokenString(jwtKey)
+	if err != nil {
+		return err
+	}
+	authTokenPath := filepath.Join(walletDirPath, authTokenFileName)
+	log.Infof("Generating auth token and saving it to %s", authTokenPath)
+	logValidatorWebAuth(validatorWebAddr, token, expr)
+	return saveAuthToken(walletDirPath, jwtKey, token, expr)
+}
+
 // Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
 func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
@@ -39,22 +58,6 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 		HasSignedUp: file.FileExists(authTokenPath),
 		HasWallet:   walletExists,
 	}, nil
-}
-
-// SaveHashedPassword to disk for the validator RPC.
-func (s *Server) saveAuthToken(token string, expiration uint64) error {
-	hashFilePath := filepath.Join(s.walletDir, authTokenFileName)
-	bytesBuf := new(bytes.Buffer)
-	if _, err := bytesBuf.Write([]byte(token)); err != nil {
-		return err
-	}
-	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
-		return err
-	}
-	if _, err := bytesBuf.Write([]byte(fmt.Sprintf("%d", expiration))); err != nil {
-		return err
-	}
-	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
 }
 
 // Upon launch of the validator client, we initialize an auth token by either creating
@@ -71,6 +74,10 @@ func (s *Server) initializeAuthToken() (string, uint64, error) {
 			return "", 0, err
 		}
 		r := bufio.NewReader(f)
+		jwtKey, err := r.ReadString('\n')
+		if err != nil {
+			return "", 0, err
+		}
 		token, err := r.ReadString('\n')
 		if err != nil {
 			return "", 0, err
@@ -83,17 +90,62 @@ func (s *Server) initializeAuthToken() (string, uint64, error) {
 		if err != nil {
 			return "", 0, err
 		}
+		s.jwtKey = []byte(jwtKey)
 		return token, expiration, nil
 	}
-	token, expiration, err := s.createTokenString()
+	jwtKey, err := createRandomJWTKey()
 	if err != nil {
+		return "", 0, err
+	}
+	s.jwtKey = jwtKey
+	token, expiration, err := createTokenString(s.jwtKey)
+	if err != nil {
+		return "", 0, err
+	}
+	if err := saveAuthToken(s.walletDir, jwtKey, token, expiration); err != nil {
 		return "", 0, err
 	}
 	return token, expiration, nil
 }
 
+func logValidatorWebAuth(validatorWebAddr, token string, expr uint64) {
+	webAuthURLTemplate := "http://%s/initialize?token=%s&expiration=%d"
+	webAuthURL := fmt.Sprintf(
+		webAuthURLTemplate,
+		validatorWebAddr,
+		url.QueryEscape(token),
+		expr,
+	)
+	log.Infof(
+		"Once your validator process is runinng, navigate to the link below to authenticate with " +
+			"the Prysm web interface",
+	)
+	log.Info(webAuthURL)
+}
+
+func saveAuthToken(walletDirPath string, jwtKey []byte, token string, expiration uint64) error {
+	hashFilePath := filepath.Join(walletDirPath, authTokenFileName)
+	bytesBuf := new(bytes.Buffer)
+	if _, err := bytesBuf.Write(jwtKey); err != nil {
+		return err
+	}
+	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+		return err
+	}
+	if _, err := bytesBuf.Write([]byte(token)); err != nil {
+		return err
+	}
+	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+		return err
+	}
+	if _, err := bytesBuf.Write([]byte(fmt.Sprintf("%d", expiration))); err != nil {
+		return err
+	}
+	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
+}
+
 // Creates a JWT token string using the JWT key with an expiration timestamp.
-func (s *Server) createTokenString() (string, uint64, error) {
+func createTokenString(jwtKey []byte) (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	expirationTime := prysmTime.Now().Add(tokenExpiryLength)
@@ -101,7 +153,7 @@ func (s *Server) createTokenString() (string, uint64, error) {
 		ExpiresAt: expirationTime.Unix(),
 	})
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString(s.jwtKey)
+	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		return "", 0, err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -175,13 +174,6 @@ func (s *Server) Start() {
 		log.WithError(err).Fatal("Could not register beacon chain gRPC client")
 	}
 
-	// We create a new, random JWT key upon validator startup.
-	jwtKey, err := createRandomJWTKey()
-	if err != nil {
-		log.WithError(err).Fatal("Could not initialize validator jwt key")
-	}
-	s.jwtKey = jwtKey
-
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
@@ -204,16 +196,8 @@ func (s *Server) Start() {
 		log.Errorf("Could not initialize web auth token: %v", err)
 		return
 	}
-	webAuthURLTemplate := "http://%s:%d/initialize?token=%s&expiration=%d"
-	webAuthURL := fmt.Sprintf(
-		webAuthURLTemplate,
-		s.validatorGatewayHost,
-		s.validatorGatewayPort,
-		url.QueryEscape(token),
-		expr,
-	)
-	log.Infof("Navigate to the link below to authenticate with the Prysm web interface")
-	log.Info(webAuthURL)
+	validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
+	logValidatorWebAuth(validatorWebAddr, token, expr)
 }
 
 // Stop the gRPC server.
