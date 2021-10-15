@@ -11,8 +11,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
@@ -600,14 +598,6 @@ func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.
 		if err != nil {
 			return nil, err
 		}
-
-		// Send the contribution to the operation feed.
-		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: opfeed.SyncCommitteeContributionReceived,
-			Data: &opfeed.SyncCommitteeContributionReceivedData{
-				Contribution: v1alpha1Req,
-			},
-		})
 	}
 
 	return &empty.Empty{}, nil
