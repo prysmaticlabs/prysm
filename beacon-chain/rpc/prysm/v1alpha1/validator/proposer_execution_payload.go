@@ -154,6 +154,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()
 	blkNumber := blk.Number
 	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
+	logged := false
 	for {
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 		parentReachedTTD := terminalTotalDifficulty.Cmp(parentTotalDifficulty) >= 0
@@ -168,6 +169,17 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			}).Info("'Terminal difficulty reached")
 			return common.HexToHash(blk.Hash).Bytes(), true, err
 		} else {
+			if !logged {
+				log.WithFields(logrus.Fields{
+					"currentTotalDifficulty":  currentTotalDifficulty,
+					"parentTotalDifficulty":   parentTotalDifficulty,
+					"terminalTotalDifficulty": terminalTotalDifficulty,
+					"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
+					"terminalBlockNumber":     blkNumber,
+				}).Info("Terminal difficulty NOT reached")
+				logged = true
+			}
+
 			blk := parentBlk
 			blkNumber = blk.Number
 			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
@@ -181,14 +193,6 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			}
 			currentTotalDifficulty = common.HexToHash(blk.TotalDifficulty).Big()
 			parentTotalDifficulty = common.HexToHash(parentBlk.TotalDifficulty).Big()
-
-			log.WithFields(logrus.Fields{
-				"currentTotalDifficulty":  currentTotalDifficulty,
-				"parentTotalDifficulty":   parentTotalDifficulty,
-				"terminalTotalDifficulty": terminalTotalDifficulty,
-				"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
-				"terminalBlockNumber":     blkNumber,
-			}).Info("Terminal difficulty not reached")
 		}
 	}
 }

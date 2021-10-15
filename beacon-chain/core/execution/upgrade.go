@@ -14,6 +14,15 @@ import (
 func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	nextSyncCommittee, err := state.NextSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateMerge{
 		GenesisTime:           state.GenesisTime(),
@@ -42,6 +51,8 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
 		InactivityScores:            make([]uint64, numValidators),
+		CurrentSyncCommittee:        currentSyncCommittee,
+		NextSyncCommittee:           nextSyncCommittee,
 		LatestExecutionPayloadHeader: &ethpb.ExecutionPayloadHeader{
 			ParentHash:       make([]byte, 32),
 			Coinbase:         make([]byte, 20),
