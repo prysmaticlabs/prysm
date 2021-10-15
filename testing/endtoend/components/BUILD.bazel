@@ -14,17 +14,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/components",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
-<<<<<<< HEAD:endtoend/components/BUILD.bazel
-        "//cmd/validator/flags:go_default_library",
-        "//contracts/deposit-contract:go_default_library",
-        "//endtoend/helpers:go_default_library",
-        "//endtoend/params:go_default_library",
-        "//endtoend/types:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/featureconfig:go_default_library",
-        "//shared/params:go_default_library",
-        "//shared/testutil:go_default_library",
-=======
         "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//cmd/validator/flags:go_default_library",
@@ -36,7 +25,6 @@ go_library(
         "//testing/endtoend/params:go_default_library",
         "//testing/endtoend/types:go_default_library",
         "//testing/util:go_default_library",
->>>>>>> develop:testing/endtoend/components/BUILD.bazel
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",

@@ -17,17 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-<<<<<<< HEAD:endtoend/components/validator.go
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-=======
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -38,7 +27,6 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/util"
->>>>>>> develop:testing/endtoend/components/validator.go
 )
 
 const depositGasLimit = 4000000
@@ -142,31 +130,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create graffiti file")
 	}
 	args := []string{
-<<<<<<< HEAD:endtoend/components/validator.go
-		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--log-file=%s", file.Name()),
-		fmt.Sprintf("--graffiti-file=%s", gFile),
-		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", offset),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
-		fmt.Sprintf("--monitoring-host=%s", e2e.TestParams.ValidatorMetricsHost),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
-		fmt.Sprintf("--grpc-gateway-host=%s", e2e.TestParams.ValidatorGatewayHost),
-		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
-		fmt.Sprintf("--wallet-dir=%s", path.Join(e2e.TestParams.TestPath, flags.WalletDefaultDirName)),
-		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
-		"--force-clear-db",
-		"--e2e-config",
-		"--accept-terms-of-use",
-		"--verbosity=debug",
-		"--web",
-	}
-	args = append(args, featureconfig.E2EValidatorFlags...)
-	args = append(args, config.ValidatorFlags...)
-
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args, " "))
-=======
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
 		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
@@ -215,7 +178,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	cmd.Stderr = stderr
 
 	log.Infof("Starting validator client %d with flags: %s %s", index, binaryPath, strings.Join(args, " "))
->>>>>>> develop:testing/endtoend/components/validator.go
 	if err = cmd.Start(); err != nil {
 		return err
 	}
