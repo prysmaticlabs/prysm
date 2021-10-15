@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -65,8 +67,8 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 // user via stdout and the validator client should then attempt to open the default
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
-func (s *Server) initializeAuthToken() (string, uint64, error) {
-	authTokenFile := filepath.Join(s.walletDir, authTokenFileName)
+func (s *Server) initializeAuthToken(walletDir string) (string, uint64, error) {
+	authTokenFile := filepath.Join(walletDir, authTokenFileName)
 	if file.FileExists(authTokenFile) {
 		// #nosec G304
 		f, err := os.Open(authTokenFile)
@@ -74,7 +76,11 @@ func (s *Server) initializeAuthToken() (string, uint64, error) {
 			return "", 0, err
 		}
 		r := bufio.NewReader(f)
-		jwtKey, err := r.ReadString('\n')
+		jwtKeyHex, err := r.ReadString('\n')
+		if err != nil {
+			return "", 0, err
+		}
+		jwtKey, err := hex.DecodeString(strings.TrimSpace(jwtKeyHex))
 		if err != nil {
 			return "", 0, err
 		}
@@ -86,12 +92,13 @@ func (s *Server) initializeAuthToken() (string, uint64, error) {
 		if err != nil {
 			return "", 0, err
 		}
-		expiration, err := strconv.ParseUint(string(exprBytes), 10, 8)
+		exprIntStr := strings.TrimSpace(string(exprBytes))
+		expiration, err := strconv.ParseUint(exprIntStr, 10, 64)
 		if err != nil {
 			return "", 0, err
 		}
-		s.jwtKey = []byte(jwtKey)
-		return token, expiration, nil
+		s.jwtKey = jwtKey
+		return strings.TrimSpace(token), expiration, nil
 	}
 	jwtKey, err := createRandomJWTKey()
 	if err != nil {
@@ -102,7 +109,7 @@ func (s *Server) initializeAuthToken() (string, uint64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if err := saveAuthToken(s.walletDir, jwtKey, token, expiration); err != nil {
+	if err := saveAuthToken(walletDir, jwtKey, token, expiration); err != nil {
 		return "", 0, err
 	}
 	return token, expiration, nil
@@ -126,7 +133,7 @@ func logValidatorWebAuth(validatorWebAddr, token string, expr uint64) {
 func saveAuthToken(walletDirPath string, jwtKey []byte, token string, expiration uint64) error {
 	hashFilePath := filepath.Join(walletDirPath, authTokenFileName)
 	bytesBuf := new(bytes.Buffer)
-	if _, err := bytesBuf.Write(jwtKey); err != nil {
+	if _, err := bytesBuf.Write([]byte(fmt.Sprintf("%x", jwtKey))); err != nil {
 		return err
 	}
 	if _, err := bytesBuf.Write([]byte("\n")); err != nil {

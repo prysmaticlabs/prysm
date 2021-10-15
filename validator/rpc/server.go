@@ -191,7 +191,7 @@ func (s *Server) Start() {
 		}
 	}()
 	log.WithField("address", address).Info("gRPC server listening on address")
-	token, expr, err := s.initializeAuthToken()
+	token, expr, err := s.initializeAuthToken(s.walletDir)
 	if err != nil {
 		log.Errorf("Could not initialize web auth token: %v", err)
 		return
