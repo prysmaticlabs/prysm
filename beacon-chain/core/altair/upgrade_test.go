@@ -62,9 +62,15 @@ func TestTranslateParticipation(t *testing.T) {
 	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyHeadFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyTargetFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelySourceFlagIndex))
+		has, err := altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelySourceFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyTargetFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyHeadFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
 	}
 }
 
