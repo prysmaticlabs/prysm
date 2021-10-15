@@ -107,7 +107,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconBlockBuf:    0,
 		BeaconDB:          beaconDB,
 		DepositCache:      depositCache,
@@ -282,7 +282,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
-	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
@@ -322,7 +322,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
-	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
@@ -379,7 +379,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}))
 
-	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
@@ -417,7 +417,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &Service{
-		cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 	}
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
@@ -439,7 +439,7 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:              &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		cfg:              &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
 		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	block := util.NewBeaconBlock()
@@ -457,7 +457,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:            &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		ctx:            ctx,
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]block.SignedBeaconBlock),
@@ -488,7 +488,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	beaconDB := testDB.SetupDB(b)
 	ctx := context.Background()
 	s := &Service{
-		cfg: &Config{BeaconDB: beaconDB},
+		cfg: &config{BeaconDB: beaconDB},
 	}
 	block := util.NewBeaconBlock()
 	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
@@ -505,7 +505,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:              &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		cfg:              &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
 		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}

@@ -67,7 +67,7 @@ type Service struct {
 	wsVerified            bool
 }
 
-// Config options for the service.
+// config options for the service.
 type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       powchain.ChainStartFetcher

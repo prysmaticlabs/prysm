@@ -137,7 +137,7 @@ func BeaconFuzzBlock(b []byte) {
 		panic(err)
 	}
 
-	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
+	chain, err := blockchain.NewService(context.Background(), &blockchain.config{
 		ChainStartFetcher: powt.NewPOWChain(),
 		BeaconDB:          db1,
 		DepositCache:      nil,

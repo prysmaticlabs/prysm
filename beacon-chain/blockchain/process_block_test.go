@@ -37,7 +37,7 @@ func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		StateGen:        stategen.New(beaconDB),
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
@@ -133,7 +133,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
@@ -188,7 +188,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.genesisTime = time.Now()
@@ -222,7 +222,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	lastJustifiedBlk := util.NewBeaconBlock()
@@ -249,7 +249,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
@@ -282,7 +282,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
@@ -319,7 +319,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}
+	cfg := &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -352,7 +352,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
@@ -390,7 +390,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
@@ -431,7 +431,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
@@ -574,7 +574,7 @@ func TestCurrentSlot_HandlesOverflow(t *testing.T) {
 }
 func TestAncestorByDB_CtxErr(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	service, err := NewService(ctx, &Config{})
+	service, err := NewService(ctx, &config{})
 	require.NoError(t, err)
 
 	cancel()
@@ -586,7 +586,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -629,7 +629,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 
 func TestAncestor_CanUseForkchoice(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -668,7 +668,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -705,7 +705,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 
 func TestEnsureRootNotZeroHashes(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{}
+	cfg := &config{}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	service.genesisRoot = [32]byte{'a'}
@@ -760,7 +760,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		beaconState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint))
-		service, err := NewService(ctx, &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
+		service, err := NewService(ctx, &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
 		require.NoError(t, err)
 		service.justifiedCheckpt = test.args.cachedCheckPoint
 		require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}))
@@ -852,7 +852,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		service, err := NewService(ctx, &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
+		service, err := NewService(ctx, &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New(0, 0, [32]byte{})})
 		require.NoError(t, err)
 		service.finalizedCheckpt = &ethpb.Checkpoint{
 			Root: tt.args.finalizedRoot[:],
@@ -869,7 +869,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 func TestUpdateJustifiedInitSync(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -897,7 +897,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{}
+	cfg := &config{}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -911,7 +911,7 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{}
+	cfg := &config{}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -927,7 +927,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		StateGen:        stategen.New(beaconDB),
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
@@ -972,7 +972,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		StateGen:        stategen.New(beaconDB),
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),

@@ -44,7 +44,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -72,7 +72,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -101,7 +101,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(beaconDB),

@@ -70,7 +70,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				cfg:              &Config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
+				cfg:              &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
 				wsVerified:       tt.wsVerified,
 				finalizedCheckpt: &ethpb.Checkpoint{Epoch: tt.finalizedEpoch},
 			}

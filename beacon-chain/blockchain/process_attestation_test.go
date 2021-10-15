@@ -24,7 +24,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(beaconDB),
@@ -130,7 +130,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB:        beaconDB,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		StateGen:        stategen.New(beaconDB),
@@ -155,7 +155,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
@@ -227,7 +227,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		StateGen: stategen.New(beaconDB),
 	}
@@ -266,7 +266,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -278,7 +278,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -290,7 +290,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -303,7 +303,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -315,7 +315,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -333,7 +333,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB}
+	cfg := &config{BeaconDB: beaconDB}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -351,7 +351,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -378,7 +378,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
@@ -405,7 +405,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 

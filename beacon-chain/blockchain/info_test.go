@@ -25,7 +25,7 @@ func TestService_TreeHandler(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetBalances([]uint64{params.BeaconConfig().GweiPerEth}))
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		ForkChoiceStore: protoarray.New(
 			0, // justifiedEpoch
