@@ -1702,7 +1702,8 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		P2P: &p2pmock.MockBroadcaster{},
 	}
 	server := &Server{
-		V1Alpha1Server: v1Server,
+		V1Alpha1Server:    v1Server,
+		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 
 	t.Run("Single contribution", func(t *testing.T) {
