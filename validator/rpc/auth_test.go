@@ -2,17 +2,56 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func setupWalletDir(t testing.TB) string {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
 	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
 	return walletDir
+}
+
+func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
+	// Initializing for the first time, there is no auth token file in
+	// the wallet directory, so we generate a jwt token and secret from scratch.
+	srv := &Server{}
+	walletDir := setupWalletDir(t)
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(walletDir))
+	})
+	token, _, err := srv.initializeAuthToken(walletDir)
+	require.NoError(t, err)
+	require.Equal(t, true, len(srv.jwtKey) > 0)
+
+	unaryInfo := &grpc.UnaryServerInfo{
+		FullMethod: "Proto.CreateWallet",
+	}
+	unaryHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return nil, nil
+	}
+	ctxMD := map[string][]string{
+		"authorization": {"Bearer " + token},
+	}
+	ctx := context.Background()
+	ctx = metadata.NewIncomingContext(ctx, ctxMD)
+	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
+	require.NoError(t, err)
+
+	// Next up, we make the same request but reinitialize the server and we should still
+	// pass with the same auth token.
+	srv = &Server{}
+	_, _, err = srv.initializeAuthToken(walletDir)
+	require.NoError(t, err)
+	require.Equal(t, true, len(srv.jwtKey) > 0)
+	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
+	require.NoError(t, err)
 }
 
 func Test_initializeAuthToken(t *testing.T) {
