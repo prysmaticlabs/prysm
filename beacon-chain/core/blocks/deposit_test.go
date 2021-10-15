@@ -60,7 +60,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
 			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			Signature:             make([]byte, params.BeaconConfig().BLSSignatureLength),
 		},
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
@@ -139,7 +139,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			PublicKey:             sk.PublicKey().Marshal(),
 			Amount:                1000,
 			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			Signature:             make([]byte, params.BeaconConfig().BLSSignatureLength),
 		},
 	}
 	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))

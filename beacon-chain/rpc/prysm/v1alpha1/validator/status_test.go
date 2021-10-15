@@ -533,7 +533,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 
 	dep = deposits[2]
-	depositTrie.Insert(dep.Data.Signature, 15)
+	assert.NoError(t, depositTrie.Insert(dep.Data.Signature, 15))
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
@@ -737,7 +737,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	dep := deposits[0]
 	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	dep = deposits[2]
-	depositTrie.Insert(dep.Data.Signature, 15)
+	assert.NoError(t, depositTrie.Insert(dep.Data.Signature, 15))
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{

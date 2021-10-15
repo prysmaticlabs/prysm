@@ -271,7 +271,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 			}),
 			AttestingIndices: []uint64{1},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, params.BeaconConfig().BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -280,7 +280,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{47, 99, 101},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, params.BeaconConfig().BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -289,7 +289,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{21, 72},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, params.BeaconConfig().BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -298,7 +298,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{100, 121, 122},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, params.BeaconConfig().BLSSignatureLength),
 		}},
 	}
 

@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -425,35 +424,6 @@ func TestPreparePublishedBlock(t *testing.T) {
 		preparePublishedBlock(endpoint, nil, nil)
 		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
 		assert.Equal(t, true, ok)
-	})
-}
-
-func TestPrepareGraffiti(t *testing.T) {
-	t.Run("32_bytes", func(t *testing.T) {
-		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 32)))
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
-	})
-
-	t.Run("graffiti_less_than_32_bytes", func(t *testing.T) {
-		result := prepareGraffiti("foo")
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
-	})
-
-	t.Run("graffiti_more_than_32_bytes", func(t *testing.T) {
-		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 33)))
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
 	})
 }
 

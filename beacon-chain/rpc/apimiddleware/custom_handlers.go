@@ -84,13 +84,13 @@ func handleGetSSZ(
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
+	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
+	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
-		return true
+		return
 	}
-	if endpoint.Err.Msg() != "" {
-		apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
-		return true
+	if respHasError {
+		return
 	}
 	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)

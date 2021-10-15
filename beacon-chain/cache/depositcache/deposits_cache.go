@@ -136,7 +136,10 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		depositTrie.Insert(depHash[:], insertIndex)
+		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
+			log.WithError(err).Error("Could not insert deposit hash")
+			return
+		}
 		insertIndex++
 	}
 

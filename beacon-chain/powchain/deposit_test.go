@@ -189,7 +189,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
-			Signature:             bytesutil.PadTo([]byte("test"), 96),
+			Signature:             bytesutil.PadTo([]byte("test"), params.BeaconConfig().BLSSignatureLength),
 		},
 	}
 
@@ -220,7 +220,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
-		trie.Insert(dataRoot[:], i)
+		assert.NoError(t, trie.Insert(dataRoot[:], i))
 
 		trieRoot := trie.HashTreeRoot()
 		eth1Data.DepositRoot = trieRoot[:]
