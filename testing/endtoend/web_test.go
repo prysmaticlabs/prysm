@@ -67,7 +67,7 @@ func TestValidatorUI(t *testing.T) {
 	// We should be on the "Imported Wallet Setup" page
 	txt, err := elementText(wd, selenium.ByCSSSelector, "div.create-a-wallet div.text-white.text-3xl")
 	require.NoError(t, err)
-	require.Equal(t, txt, "Imported Wallet Setup")
+	require.Equal(t, txt, "Imported Setup")
 
 	if err := wd.Quit(); err != nil {
 		t.Logf("Error quitting webdriver: %v", err)

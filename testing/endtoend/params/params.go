@@ -27,6 +27,7 @@ type params struct {
 	ValidatorMetricsPort  int
 	ValidatorMetricsHost  string
 	ValidatorGatewayPort  int
+	ValidatorGatewayHost  string
 }
 
 // TestParams is the globally accessible var for getting config elements.
