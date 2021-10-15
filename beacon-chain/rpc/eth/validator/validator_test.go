@@ -62,6 +62,10 @@ func TestGetAttesterDuties(t *testing.T) {
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
+	vals := bs.Validators()
+	vals[len(vals)-1].ExitEpoch = 0
+	require.NoError(t, bs.SetValidators(vals))
+
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
@@ -87,13 +91,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(2), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(7), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(0), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(123), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(171), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Multiple validators", func(t *testing.T) {
@@ -116,13 +120,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(38), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(0), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(62), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(27), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(170), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -192,6 +196,16 @@ func TestGetAttesterDuties(t *testing.T) {
 		_, err := vs.GetAttesterDuties(ctx, req)
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "Invalid validator index", err)
+	})
+
+	t.Run("Inactive validator - no duties", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 1,
+			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys) - 1)},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(resp.Data))
 	})
 }
 
