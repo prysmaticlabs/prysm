@@ -175,7 +175,6 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		// If the current epoch's balance is higher, we mark it as an existing
 		// duplicate.
 		if currBal > nextBal {
-			log.Info("2")
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
