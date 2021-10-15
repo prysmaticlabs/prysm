@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -12,11 +11,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/params:go_default_library",
-        "//shared/progressutil:go_default_library",
-        "//shared/slashutil:go_default_library",
+        "//config/params:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//monitoring/progress:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/slashings:go_default_library",
         "//validator/db:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",
@@ -38,9 +37,9 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",

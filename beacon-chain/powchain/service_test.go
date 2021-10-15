@@ -15,19 +15,23 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/clientstats"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/network"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -179,7 +183,7 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 		}()
 		s.Start()
 	}()
-	testutil.WaitTimeout(wg, time.Second)
+	util.WaitTimeout(wg, time.Second)
 	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -189,8 +193,8 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	st, _ := testutil.DeterministicGenesisState(t, 10)
-	b := testutil.NewBeaconBlock()
+	st, _ := util.DeterministicGenesisState(t, 10)
+	b := util.NewBeaconBlock()
 	genRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
@@ -213,7 +217,7 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 		wg.Done()
 	}()
 	s.cancel()
-	testutil.WaitTimeout(wg, time.Second)
+	util.WaitTimeout(wg, time.Second)
 	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
 	hook.Reset()
 }
@@ -438,7 +442,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
-	gs, _ := testutil.DeterministicGenesisState(t, 1)
+	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
 		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
@@ -454,13 +458,89 @@ func TestInitDepositCache_OK(t *testing.T) {
 
 	blockRootA := [32]byte{'a'}
 
-	emptyState, err := testutil.NewBeaconState()
+	emptyState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
 	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, blockRootA))
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 	require.Equal(t, 3, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
+}
+
+func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
+	ctrs := []*protodb.DepositContainer{
+		{
+			Index:           0,
+			Eth1BlockHeight: 2,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+		{
+			Index:           1,
+			Eth1BlockHeight: 4,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+		{
+			Index:           2,
+			Eth1BlockHeight: 6,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+		},
+	}
+	gs, _ := util.DeterministicGenesisState(t, 1)
+	beaconDB := dbutil.SetupDB(t)
+	s := &Service{
+		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		preGenesisState: gs,
+		cfg:             &Web3ServiceConfig{BeaconDB: beaconDB},
+	}
+	var err error
+	s.cfg.DepositCache, err = depositcache.New()
+	require.NoError(t, err)
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	require.Equal(t, 0, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
+
+	headBlock := util.NewBeaconBlock()
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	stateGen := stategen.New(beaconDB)
+
+	emptyState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), headRoot))
+	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, headRoot))
+	require.NoError(t, stateGen.SaveState(context.Background(), headRoot, emptyState))
+	s.cfg.StateGen = stateGen
+	require.NoError(t, emptyState.SetEth1DepositIndex(2))
+
+	ctx := context.Background()
+	require.NoError(t, stateGen.SaveState(ctx, headRoot, emptyState))
+	require.NoError(t, beaconDB.SaveState(ctx, emptyState, headRoot))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(0), Root: headRoot[:]}))
+
+	s.chainStartData.Chainstarted = true
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+
+	deps := s.cfg.DepositCache.NonFinalizedDeposits(context.Background(), nil)
+	assert.Equal(t, 0, len(deps))
 }
 
 func TestNewService_EarliestVotingBlock(t *testing.T) {
@@ -570,7 +650,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -579,7 +659,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
 
-	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: thirdEndpoint}, httputils.Endpoint{Url: fourthEndpoint})
+	s1.httpEndpoints = append(s1.httpEndpoints, network.Endpoint{Url: thirdEndpoint}, network.Endpoint{Url: fourthEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -622,7 +702,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -646,7 +726,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 
@@ -670,7 +750,7 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	genState, err := testutil.NewBeaconState()
+	genState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, genState.SetSlot(1000))
 

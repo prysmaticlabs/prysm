@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -39,7 +39,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 }
 
 func TestPruneAttestations_OK(t *testing.T) {
-	numKeys := uint64(2048)
+	numKeys := uint64(64)
 	pks := make([][48]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))

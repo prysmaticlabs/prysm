@@ -13,17 +13,17 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
-	// Signing root (32 bytes) + fastsum64(attesting_indices) (8 bytes).
-	attestationRecordKeySize = 40
+	// Signing root (32 bytes)
+	attestationRecordKeySize = 32 // Bytes.
 	signingRootSize          = 32 // Bytes.
 )
 
@@ -103,18 +103,24 @@ func (s *Store) CheckAttesterDoubleVotes(
 		eg.Go(func() error {
 			err := s.db.View(func(tx *bolt.Tx) error {
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
 				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
 					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
-					encExistingAttRecord := signingRootsBkt.Get(validatorEpochKey)
+					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
+					// An attestation record key is comprised of a signing root (32 bytes).
+					if len(attRecordsKey) < attestationRecordKeySize {
+						continue
+					}
+					encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
 					if encExistingAttRecord == nil {
 						continue
 					}
-					existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:signingRootSize])
+					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
 					if existingSigningRoot != attToProcess.SigningRoot {
-						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord[signingRootSize:])
+						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 						if err != nil {
 							return err
 						}
@@ -160,11 +166,16 @@ func (s *Store) AttestationRecordForValidator(
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		indexedAttBytes := signingRootsBkt.Get(key)
+		attRecordKey := signingRootsBkt.Get(key)
+		if attRecordKey == nil {
+			return nil
+		}
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+		indexedAttBytes := attRecordsBkt.Get(attRecordKey)
 		if indexedAttBytes == nil {
 			return nil
 		}
-		decoded, err := decodeAttestationRecord(indexedAttBytes[signingRootSize:])
+		decoded, err := decodeAttestationRecord(indexedAttBytes)
 		if err != nil {
 			return err
 		}
@@ -200,15 +211,16 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		encodedRecords[i] = value
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
+			if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
+				return err
+			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				// signature is prefixed so that double votest can be checked without decoding attestations
-				// and save some cpu cycles
-				value := append(att.SigningRoot[:], encodedRecords[i]...)
-				if err := signingRootsBkt.Put(key, value); err != nil {
+				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
 					return err
 				}
 			}
@@ -259,7 +271,11 @@ func (s *Store) SaveSlasherChunks(
 	encodedChunks := make([][]byte, len(chunkKeys))
 	for i := 0; i < len(chunkKeys); i++ {
 		encodedKeys[i] = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
-		encodedChunks[i] = encodeSlasherChunk(chunks[i])
+		encodedChunk, err := encodeSlasherChunk(chunks[i])
+		if err != nil {
+			return err
+		}
+		encodedChunks[i] = encodedChunk
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
@@ -285,7 +301,10 @@ func (s *Store) CheckDoubleBlockProposals(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
-			key, err := keyForValidatorProposal(proposal)
+			key, err := keyForValidatorProposal(
+				proposal.SignedBeaconBlockHeader.Header.Slot,
+				proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+			)
 			if err != nil {
 				return err
 			}
@@ -310,6 +329,34 @@ func (s *Store) CheckDoubleBlockProposals(
 	return proposerSlashings, err
 }
 
+// BlockProposalForValidator given a validator index and a slot
+// retrieves an existing proposal record we have stored in the database.
+func (s *Store) BlockProposalForValidator(
+	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+) (*slashertypes.SignedBlockHeaderWrapper, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
+	defer span.End()
+	var record *slashertypes.SignedBlockHeaderWrapper
+	key, err := keyForValidatorProposal(slot, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(proposalRecordsBucket)
+		encProposal := bkt.Get(key)
+		if encProposal == nil {
+			return nil
+		}
+		decoded, err := decodeProposalRecord(encProposal)
+		if err != nil {
+			return err
+		}
+		record = decoded
+		return nil
+	})
+	return record, err
+}
+
 // SaveBlockProposals takes in a list of block proposals and saves them to our
 // proposal records bucket in the database.
 func (s *Store) SaveBlockProposals(
@@ -320,7 +367,10 @@ func (s *Store) SaveBlockProposals(
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
 	for i, proposal := range proposals {
-		key, err := keyForValidatorProposal(proposal)
+		key, err := keyForValidatorProposal(
+			proposal.SignedBeaconBlockHeader.Header.Slot,
+			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+		)
 		if err != nil {
 			return err
 		}
@@ -364,17 +414,18 @@ func (s *Store) HighestAttestations(
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
 			c := signingRootsBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
 				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
-					encodedAttRecord := v[signingRootSize:]
+					encodedAttRecord := attRecordsBkt.Get(v)
 					if encodedAttRecord == nil {
 						continue
 					}
-					attWrapper, decodeErr := decodeAttestationRecord(encodedAttRecord)
-					if decodeErr != nil {
-						return decodeErr
+					attWrapper, err := decodeAttestationRecord(encodedAttRecord)
+					if err != nil {
+						return err
 					}
 					highestAtt := &slashpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
@@ -397,27 +448,36 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
-	encSlot, err := proposal.SignedBeaconBlockHeader.Header.Slot.MarshalSSZ()
+func keyForValidatorProposal(slot types.Slot, proposerIndex types.ValidatorIndex) ([]byte, error) {
+	encSlot, err := slot.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx := encodeValidatorIndex(proposal.SignedBeaconBlockHeader.Header.ProposerIndex)
+	encValidatorIdx := encodeValidatorIndex(proposerIndex)
 	return append(encSlot, encValidatorIdx...), nil
 }
 
-func encodeSlasherChunk(chunk []uint16) []byte {
+func encodeSlasherChunk(chunk []uint16) ([]byte, error) {
 	val := make([]byte, 0)
 	for i := 0; i < len(chunk); i++ {
 		val = append(val, ssz.MarshalUint16(make([]byte, 0), chunk[i])...)
 	}
-	return snappy.Encode(nil, val)
+	if len(val) == 0 {
+		return nil, errors.New("cannot encode empty chunk")
+	}
+	return snappy.Encode(nil, val), nil
 }
 
 func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 	chunkBytes, err := snappy.Decode(nil, enc)
 	if err != nil {
 		return nil, err
+	}
+	if len(chunkBytes)%2 != 0 {
+		return nil, fmt.Errorf(
+			"cannot decode slasher chunk with length %d, must be a multiple of 2",
+			len(chunkBytes),
+		)
 	}
 	chunk := make([]uint16, 0)
 	for i := 0; i < len(chunkBytes); i += 2 {

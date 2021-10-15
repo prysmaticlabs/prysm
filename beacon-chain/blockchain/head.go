@@ -10,21 +10,25 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  types.Slot                   // current head slot.
-	root  [32]byte                     // current head root.
-	block interfaces.SignedBeaconBlock // current head block.
-	state iface.BeaconState            // current head state.
+	slot  types.Slot              // current head slot.
+	root  [32]byte                // current head root.
+	block block.SignedBeaconBlock // current head block.
+	state state.BeaconState       // current head state.
 }
 
 // Determined the head from the fork choice service and saves its new data
@@ -118,18 +122,32 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	headSlot := s.HeadSlot()
+	newHeadSlot := newHeadBlock.Block().Slot()
+	oldHeadRoot := s.headRoot()
+	oldStateRoot := s.headBlock().Block().StateRoot()
+	newStateRoot := newHeadBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
-			"newSlot": fmt.Sprintf("%d", newHeadBlock.Block().Slot()),
+			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
+		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{
-				NewSlot: newHeadBlock.Block().Slot(),
-				OldSlot: headSlot,
+			Data: &ethpbv1.EventChainReorg{
+				Slot:         newHeadSlot,
+				Depth:        absoluteSlotDifference,
+				OldHeadBlock: oldHeadRoot[:],
+				NewHeadBlock: headRoot[:],
+				OldHeadState: oldStateRoot,
+				NewHeadState: newStateRoot,
+				Epoch:        slots.ToEpoch(newHeadSlot),
 			},
 		})
+
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
 
 		reorgCount.Inc()
 	}
@@ -142,13 +160,21 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 
+	// Forward an event capturing a new chain head over a common event feed
+	// done in a goroutine to avoid blocking the critical runtime main routine.
+	go func() {
+		if err := s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+			log.WithError(err).Error("Could not notify event feed of new chain head")
+		}
+	}()
+
 	return nil
 }
 
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs iface.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b block.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return err
 	}
@@ -165,7 +191,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlo
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state iface.BeaconState) {
+func (s *Service) setHead(root [32]byte, block block.SignedBeaconBlock, state state.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -181,7 +207,7 @@ func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, sta
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state iface.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block block.SignedBeaconBlock, state state.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -214,14 +240,14 @@ func (s *Service) headRoot() [32]byte {
 // This returns the head block.
 // It does a full copy on head block for immutability.
 // This is a lock free version.
-func (s *Service) headBlock() interfaces.SignedBeaconBlock {
+func (s *Service) headBlock() block.SignedBeaconBlock {
 	return s.head.block.Copy()
 }
 
 // This returns the head state.
 // It does a full copy on head state for immutability.
 // This is a lock free version.
-func (s *Service) headState(ctx context.Context) iface.BeaconState {
+func (s *Service) headState(ctx context.Context) state.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
@@ -232,6 +258,13 @@ func (s *Service) headState(ctx context.Context) iface.BeaconState {
 // This is a lock free version.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+}
+
+// This returns the validator referenced by the provided index in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
 // Returns true if head state exists.
@@ -248,7 +281,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 
 	s.clearInitSyncBlocks()
 
-	var justifiedState iface.BeaconState
+	var justifiedState state.BeaconState
 	var err error
 	if justifiedRoot == s.genesisRoot {
 		justifiedState, err = s.cfg.BeaconDB.GenesisState(ctx)
@@ -265,10 +298,10 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 		return errors.New("justified state can't be nil")
 	}
 
-	epoch := helpers.CurrentEpoch(justifiedState)
+	epoch := time.CurrentEpoch(justifiedState)
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	if err := justifiedState.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
 			justifiedBalances[idx] = val.EffectiveBalance()
 		} else {
@@ -289,4 +322,91 @@ func (s *Service) getJustifiedBalances() []uint64 {
 	s.justifiedBalancesLock.RLock()
 	defer s.justifiedBalancesLock.RUnlock()
 	return s.justifiedBalances
+}
+
+// Notifies a common event feed of a new chain head event. Called right after a new
+// chain head is determined, set, and saved to disk.
+func (s *Service) notifyNewHeadEvent(
+	newHeadSlot types.Slot,
+	newHeadState state.BeaconState,
+	newHeadStateRoot,
+	newHeadRoot []byte,
+) error {
+	previousDutyDependentRoot := s.genesisRoot[:]
+	currentDutyDependentRoot := s.genesisRoot[:]
+
+	var previousDutyEpoch types.Epoch
+	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
+	if currentDutyEpoch > 0 {
+		previousDutyEpoch = currentDutyEpoch.Sub(1)
+	}
+	currentDutySlot, err := slots.EpochStart(currentDutyEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get duty slot")
+	}
+	previousDutySlot, err := slots.EpochStart(previousDutyEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get duty slot")
+	}
+	if currentDutySlot > 0 {
+		currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, currentDutySlot-1)
+		if err != nil {
+			return errors.Wrap(err, "could not get duty dependent root")
+		}
+	}
+	if previousDutySlot > 0 {
+		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, previousDutySlot-1)
+		if err != nil {
+			return errors.Wrap(err, "could not get duty dependent root")
+		}
+	}
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.NewHead,
+		Data: &ethpbv1.EventHead{
+			Slot:                      newHeadSlot,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           slots.IsEpochStart(newHeadSlot),
+			PreviousDutyDependentRoot: previousDutyDependentRoot,
+			CurrentDutyDependentRoot:  currentDutyDependentRoot,
+		},
+	})
+	return nil
+}
+
+// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
+// attestation pool. It also filters out the attestations that is one epoch older as a
+// defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	if !features.Get().CorrectlyInsertOrphanedAtts {
+		return nil
+	}
+
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
+	}
+
+	if orphanedBlk == nil || orphanedBlk.IsNil() {
+		return errors.New("orphaned block can't be nil")
+	}
+
+	for _, a := range orphanedBlk.Block().Body().Attestations() {
+		// Is the attestation one epoch older.
+		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			continue
+		}
+		if helpers.IsAggregated(a) {
+			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+				return err
+			}
+		}
+		saveOrphanedAttCount.Inc()
+	}
+
+	return nil
 }

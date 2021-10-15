@@ -7,10 +7,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -92,7 +92,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "inclusion_distance",
-			Help:      "Inclusion distance of last attestation.",
+			Help:      "Inclusion distance of last attestation. Deprecated after Altair hard fork.",
 		},
 		[]string{
 			"pubkey",
@@ -114,7 +114,10 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_source",
-			Help:      "True if correctly voted source in last attestation.",
+			Help: "True if correctly voted source in last attestation. In Altair, this " +
+				"value will be false if the attestation was not included within " +
+				"integer_squareroot(SLOTS_PER_EPOCH) slots, even if it was a vote for the " +
+				"correct source.",
 		},
 		[]string{
 			"pubkey",
@@ -125,7 +128,9 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_target",
-			Help:      "True if correctly voted target in last attestation.",
+			Help: "True if correctly voted target in last attestation. In Altair, this " +
+				"value will be false if the attestation was not included within " +
+				"SLOTS_PER_EPOCH slots, even if it was a vote for the correct target.",
 		},
 		[]string{
 			"pubkey",
@@ -136,7 +141,8 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "correctly_voted_head",
-			Help:      "True if correctly voted head in last attestation.",
+			Help: "True if correctly voted head in last attestation. In Altair, this value " +
+				"will be false if the attestation was not included in the next slot.",
 		},
 		[]string{
 			"pubkey",
@@ -194,6 +200,17 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorInactivityScoreGaugeVec used to track validator inactivity scores.
+	ValidatorInactivityScoreGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "inactivity_score",
+			Help:      "Validator inactivity score. 0 is optimum number. New in Altair hardfork",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
@@ -201,7 +218,7 @@ var (
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
-	if !helpers.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
+	if !slots.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
 	}
@@ -242,58 +259,125 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	v.prevBalanceLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
+		truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 		pubKeyBytes := bytesutil.ToBytes48(pubKey)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
+
+		// Safely load data from response with slice out of bounds checks. The server should return
+		// the response with all slices of equal length, but the validator could panic if the server
+		// did not do so for whatever reason.
+		var balBeforeEpoch uint64
+		var balAfterEpoch uint64
+		var correctlyVotedSource bool
+		var correctlyVotedTarget bool
+		var correctlyVotedHead bool
+		if i < len(resp.BalancesBeforeEpochTransition) {
+			balBeforeEpoch = resp.BalancesBeforeEpochTransition[i]
+		} else {
+			log.WithField("pubKey", truncatedKey).Warn("Missing balance before epoch transition")
+		}
+		if i < len(resp.BalancesAfterEpochTransition) {
+			balAfterEpoch = resp.BalancesAfterEpochTransition[i]
+		} else {
+		}
+		if i < len(resp.CorrectlyVotedSource) {
+			correctlyVotedSource = resp.CorrectlyVotedSource[i]
+		} else {
+			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted source")
+		}
+		if i < len(resp.CorrectlyVotedTarget) {
+			correctlyVotedTarget = resp.CorrectlyVotedTarget[i]
+		} else {
+			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted target")
+		}
+		if i < len(resp.CorrectlyVotedHead) {
+			correctlyVotedHead = resp.CorrectlyVotedHead[i]
+		} else {
+			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted head")
+		}
+
 		if _, ok := v.startBalances[pubKeyBytes]; !ok {
-			v.startBalances[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+			v.startBalances[pubKeyBytes] = balBeforeEpoch
 		}
 
 		fmtKey := fmt.Sprintf("%#x", pubKey)
-		truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 		if v.prevBalance[pubKeyBytes] > 0 {
-			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
-			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
+			newBalance := float64(balAfterEpoch) / gweiPerEth
+			prevBalance := float64(balBeforeEpoch) / gweiPerEth
 			startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
 			percentSinceStart := (newBalance - startBalance) / startBalance
-			log.WithFields(logrus.Fields{
+
+			previousEpochSummaryFields := logrus.Fields{
 				"pubKey":                  truncatedKey,
 				"epoch":                   prevEpoch,
-				"correctlyVotedSource":    resp.CorrectlyVotedSource[i],
-				"correctlyVotedTarget":    resp.CorrectlyVotedTarget[i],
-				"correctlyVotedHead":      resp.CorrectlyVotedHead[i],
-				"inclusionSlot":           resp.InclusionSlots[i],
-				"inclusionDistance":       resp.InclusionDistances[i],
+				"correctlyVotedSource":    correctlyVotedSource,
+				"correctlyVotedTarget":    correctlyVotedTarget,
+				"correctlyVotedHead":      correctlyVotedHead,
 				"startBalance":            startBalance,
 				"oldBalance":              prevBalance,
 				"newBalance":              newBalance,
 				"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
 				"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
-			}).Info("Previous epoch voting summary")
+			}
+
+			// These fields are deprecated after Altair.
+			if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+				if i < len(resp.InclusionSlots) {
+					previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
+				} else {
+					log.WithField("pubKey", truncatedKey).Warn("Missing inclusion slot")
+				}
+				if i < len(resp.InclusionDistances) {
+					previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[i]
+				} else {
+					log.WithField("pubKey", truncatedKey).Warn("Missing inclusion distance")
+				}
+			}
+			if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
+				if i < len(resp.InactivityScores) {
+					previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[i]
+				} else {
+					log.WithField("pubKey", truncatedKey).Warn("Missing inactivity score")
+				}
+			}
+
+			log.WithFields(previousEpochSummaryFields).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
-				ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
-				if resp.CorrectlyVotedSource[i] {
+				if correctlyVotedSource {
 					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(1)
 				} else {
 					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(0)
 				}
-				if resp.CorrectlyVotedTarget[i] {
+				if correctlyVotedTarget {
 					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(1)
 				} else {
 					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(0)
 				}
-				if resp.CorrectlyVotedHead[i] {
+				if correctlyVotedHead {
 					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(1)
 				} else {
 					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(0)
 				}
 
+				// Phase0 specific metrics
+				if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+					if i < len(resp.InclusionDistances) {
+						ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
+					}
+				} else { // Altair specific metrics.
+					// Reset phase0 fields that no longer apply
+					ValidatorInclusionDistancesGaugeVec.DeleteLabelValues(fmtKey)
+					if i < len(resp.InactivityScores) {
+						ValidatorInactivityScoreGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InactivityScores[i]))
+					}
+				}
 			}
 		}
-		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+		v.prevBalance[pubKeyBytes] = balBeforeEpoch
 	}
 	v.prevBalanceLock.Unlock()
 
@@ -306,25 +390,38 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	summary := &v.voteStats
 	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	var included uint64
-	var correctSource, correctTarget, correctHead int
+	var correctSource, correctTarget, correctHead, inactivityScore int
 
 	for i := range resp.PublicKeys {
-		if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
+		// In phase0, we consider attestations included if the inclusion slot is not max uint64.
+		// In altair, we consider attestations included if correctlyVotedTarget is true.
+		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
+			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
+				included++
+				summary.includedAttestedCount++
+				summary.totalDistance += resp.InclusionDistances[i]
+			}
+		} else if resp.CorrectlyVotedTarget[i] {
 			included++
 			summary.includedAttestedCount++
-			summary.totalDistance += resp.InclusionDistances[i]
 		}
-		if resp.CorrectlyVotedSource[i] {
+
+		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
 			correctSource++
 			summary.correctSources++
 		}
-		if resp.CorrectlyVotedTarget[i] {
+		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
 			correctTarget++
 			summary.correctTargets++
 		}
-		if resp.CorrectlyVotedHead[i] {
+		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
 			correctHead++
 			summary.correctHeads++
+		}
+
+		// Altair metrics
+		if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && i < len(resp.InactivityScores) {
+			inactivityScore += int(resp.InactivityScores[i])
 		}
 	}
 
@@ -334,18 +431,25 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		return
 	}
 
-	summary.totalAttestedCount += uint64(len(resp.InclusionSlots))
+	summary.totalAttestedCount += uint64(len(resp.CorrectlyVotedTarget))
 	summary.totalSources += included
 	summary.totalTargets += included
 	summary.totalHeads += included
 
-	log.WithFields(logrus.Fields{
+	epochSummaryFields := logrus.Fields{
 		"epoch":                   currentEpoch - 1,
-		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
+		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.CorrectlyVotedTarget)))*100),
 		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(included))*100),
 		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(included))*100),
 		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(included))*100),
-	}).Info("Previous epoch aggregated voting summary")
+	}
+
+	// Altair summary fields.
+	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && len(resp.CorrectlyVotedTarget) > 0 {
+		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.CorrectlyVotedTarget)))
+	}
+
+	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
 	for i, val := range v.startBalances {
@@ -353,13 +457,28 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		totalPrevBal += v.prevBalance[i]
 	}
 
-	log.WithFields(logrus.Fields{
+	if totalStartBal == 0 ||
+		summary.includedAttestedCount == 0 ||
+		summary.totalSources == 0 ||
+		summary.totalTargets == 0 ||
+		summary.totalHeads == 0 {
+		log.Error("Failed to print launch summary: one or more divisors is 0")
+		return
+	}
+
+	launchSummaryFields := logrus.Fields{
 		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch),
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
-		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
 		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
 		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
 		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", (float64(totalPrevBal)-float64(totalStartBal))/float64(totalStartBal)*100),
-	}).Info("Vote summary since launch")
+	}
+
+	// Add phase0 specific fields
+	if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+		launchSummaryFields["averageInclusionDistance"] = fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount))
+	}
+
+	log.WithFields(launchSummaryFields).Info("Vote summary since launch")
 }

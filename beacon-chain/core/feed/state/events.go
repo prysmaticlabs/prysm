@@ -7,7 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 const (
@@ -22,6 +22,10 @@ const (
 	// Reorg is an event sent when the new head state's slot after a block
 	// transition is lower than its previous head state slot value.
 	Reorg
+	// FinalizedCheckpoint event.
+	FinalizedCheckpoint
+	// NewHead of the chain event.
+	NewHead
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
@@ -31,7 +35,7 @@ type BlockProcessedData struct {
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock interfaces.SignedBeaconBlock
+	SignedBlock block.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }
@@ -54,12 +58,4 @@ type InitializedData struct {
 	StartTime time.Time
 	// GenesisValidatorsRoot represents state.validators.HashTreeRoot().
 	GenesisValidatorsRoot []byte
-}
-
-// ReorgData is the data alongside a reorg event.
-type ReorgData struct {
-	// NewSlot is the slot of new state after the reorg.
-	NewSlot types.Slot
-	// OldSlot is the slot of the head state before the reorg.
-	OldSlot types.Slot
 }

@@ -1,6 +1,6 @@
 # Specs checker tool
 
-This simple tool helps downloading and parsing [ETH2 specs](https://github.com/ethereum/eth2.0-specs/tree/dev/specs), 
+This simple tool helps downloading and parsing [Ethereum specs](https://github.com/ethereum/consensus-specs/tree/dev/specs), 
 to be later used for making sure that our reference comments match specs definitions precisely.
 
 ### Updating the reference specs

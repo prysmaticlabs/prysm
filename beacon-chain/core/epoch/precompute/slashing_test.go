@@ -5,17 +5,16 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{Slashed: true}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -30,7 +29,7 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
 }
 
 func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -46,11 +45,11 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
 
 func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 	tests := []struct {
-		state *pb.BeaconState
+		state *ethpb.BeaconState
 		want  uint64
 	}{
 		{
-			state: &pb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -64,7 +63,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(31000000000), // 32 * 1e9 - 1000000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -80,7 +79,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(32000000000), // 32 * 1e9 - 500000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -96,7 +95,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(31000000000), // 32 * 1e9 - 1000000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &ethpb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -124,7 +123,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			pBal := &precompute.Balance{ActiveCurrentEpoch: ab}
 
 			original := proto.Clone(tt.state)
-			state, err := stateV0.InitializeFromProto(tt.state)
+			state, err := v1.InitializeFromProto(tt.state)
 			require.NoError(t, err)
 			require.NoError(t, precompute.ProcessSlashingsPrecompute(state, pBal))
 			assert.Equal(t, tt.want, state.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d; wanted %d", original, state.Balances()[0])

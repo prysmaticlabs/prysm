@@ -4,9 +4,9 @@ import (
 	_ "embed"
 
 	"github.com/golang/snappy"
-	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 var (
@@ -27,7 +27,7 @@ func State(name string) (*state.BeaconState, error) {
 
 // load a compressed ssz state file into a beacon state struct.
 func load(b []byte) (*state.BeaconState, error) {
-	st := &pbp2p.BeaconState{}
+	st := &ethpb.BeaconState{}
 	b, err := snappy.Decode(nil /*dst*/, b)
 	if err != nil {
 		return nil, err

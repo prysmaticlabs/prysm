@@ -7,7 +7,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/testing",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//endtoend:__subpackages__",
+        "//testing:__subpackages__",
     ],
     deps = [
         "//beacon-chain/db:go_default_library",

@@ -6,37 +6,37 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/depositutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/math"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
 func ProcessPreGenesisDeposits(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	deposits []*ethpb.Deposit,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	var err error
 	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	beaconState, err = activateValidatorWithEffectiveBalance(beaconState, deposits)
+	beaconState, err = ActivateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
 		return nil, err
 	}
 	return beaconState, nil
 }
 
-// This updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
-func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposits []*ethpb.Deposit) (iface.BeaconState, error) {
+// ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
+func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposits []*ethpb.Deposit) (state.BeaconState, error) {
 	for _, deposit := range deposits {
 		pubkey := deposit.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
@@ -53,7 +53,7 @@ func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposi
 		if err != nil {
 			return nil, err
 		}
-		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		validator.EffectiveBalance = math.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
 		if validator.EffectiveBalance ==
 			params.BeaconConfig().MaxEffectiveBalance {
 			validator.ActivationEligibilityEpoch = 0
@@ -75,12 +75,12 @@ func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposi
 //     process_deposit(state, deposit)
 func ProcessDeposits(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	deposits []*ethpb.Deposit,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	batchVerified, err := batchVerifyDepositsSignatures(ctx, deposits)
+	batchVerified, err := BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func ProcessDeposits(
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, deposit, batchVerified)
+		beaconState, _, err = ProcessDeposit(beaconState, deposit, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
@@ -97,9 +97,10 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
+// BatchVerifyDepositsSignatures batch verifies deposit signatures.
+func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
 	var err error
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -114,6 +115,8 @@ func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 
 // ProcessDeposit takes in a deposit object and inserts it
 // into the registry as a new validator or balance change.
+// Returns the resulting state, a boolean to indicate whether or not the deposit
+// resulted in a new validator entry into the beacon state, and any error.
 //
 // Spec pseudocode definition:
 // def process_deposit(state: BeaconState, deposit: Deposit) -> None:
@@ -151,29 +154,30 @@ func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //        increase_balance(state, index, amount)
-func ProcessDeposit(beaconState iface.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconState, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
+	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
-			return nil, err
+			return nil, newValidator, err
 		}
-		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		return nil, newValidator, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
-		return nil, err
+		return nil, newValidator, err
 	}
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		if verifySignature {
-			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {
-				return nil, err
+				return nil, newValidator, err
 			}
 			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
 				// Ignore this error as in the spec pseudo code.
 				log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
-				return beaconState, nil
+				return beaconState, newValidator, nil
 			}
 		}
 
@@ -190,19 +194,20 @@ func ProcessDeposit(beaconState iface.BeaconState, deposit *ethpb.Deposit, verif
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           effectiveBalance,
 		}); err != nil {
-			return nil, err
+			return nil, newValidator, err
 		}
+		newValidator = true
 		if err := beaconState.AppendBalance(amount); err != nil {
-			return nil, err
+			return nil, newValidator, err
 		}
 	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
-		return nil, err
+		return nil, newValidator, err
 	}
 
-	return beaconState, nil
+	return beaconState, newValidator, nil
 }
 
-func verifyDeposit(beaconState iface.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
+func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	if deposit == nil || deposit.Data == nil {
 		return errors.New("received nil deposit or nil deposit data")
@@ -217,7 +222,7 @@ func verifyDeposit(beaconState iface.ReadOnlyBeaconState, deposit *ethpb.Deposit
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
-	if ok := trieutil.VerifyMerkleBranch(
+	if ok := trie.VerifyMerkleBranch(
 		receiptRoot,
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
@@ -234,7 +239,7 @@ func verifyDeposit(beaconState iface.ReadOnlyBeaconState, deposit *ethpb.Deposit
 }
 
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
-	return depositutil.VerifyDepositSignature(obj, domain)
+	return deposit.VerifyDepositSignature(obj, domain)
 }
 
 func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {
@@ -257,12 +262,12 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		pks[i] = dpk
 		sigs[i] = dep.Data.Signature
-		depositMessage := &pb.DepositMessage{
+		depositMessage := &ethpb.DepositMessage{
 			PublicKey:             dep.Data.PublicKey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			Amount:                dep.Data.Amount,
 		}
-		sr, err := helpers.ComputeSigningRoot(depositMessage, domain)
+		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {
 			return err
 		}

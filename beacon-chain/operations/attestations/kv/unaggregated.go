@@ -3,12 +3,10 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -33,7 +31,7 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-	att = copyutil.CopyAttestation(att) // Copied.
+	att = ethpb.CopyAttestation(att) // Copied.
 	c.unAggregateAttLock.Lock()
 	defer c.unAggregateAttLock.Unlock()
 	c.unAggregatedAtt[r] = att
@@ -64,7 +62,7 @@ func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 			return nil, err
 		}
 		if !seen {
-			atts = append(atts, copyutil.CopyAttestation(att) /* Copied */)
+			atts = append(atts, ethpb.CopyAttestation(att) /* Copied */)
 		}
 	}
 	return atts, nil

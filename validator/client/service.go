@@ -11,14 +11,15 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -26,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -63,7 +63,6 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             iface.Validator
-	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -81,7 +80,6 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingiface.Protector
 	Endpoint                   string
 	Validator                  iface.Validator
 	ValDB                      db.Database
@@ -111,7 +109,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:           cfg.GrpcRetriesFlag,
 		grpcRetryDelay:        cfg.GrpcRetryDelay,
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:             cfg.Protector,
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
@@ -134,7 +131,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	v.ctx = grpcutils.AppendHeaders(v.ctx, v.grpcHeaders)
+	v.ctx = grpcutil.AppendHeaders(v.ctx, v.grpcHeaders)
 
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
@@ -155,11 +152,7 @@ func (v *ValidatorService) Start() {
 		panic(err)
 	}
 
-	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
-	if err != nil {
-		log.Errorf("Could not initialize cache: %v", err)
-		return
-	}
+	aggregatedSlotCommitteeIDCache := lruwrpr.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
@@ -177,10 +170,11 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	v.validator = &validator{
+	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
+		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
@@ -191,7 +185,6 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
@@ -201,6 +194,17 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
+	// To resolve a race condition at startup due to the interface
+	// nature of the abstracted block type. We initialize
+	// the inner type of the feed before hand. So that
+	// during future accesses, there will be no panics here
+	// from type incompatibility.
+	tempChan := make(chan block.SignedBeaconBlock)
+	sub := valStruct.blockFeed.Subscribe(tempChan)
+	sub.Unsubscribe()
+	close(tempChan)
+
+	v.validator = valStruct
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
 }
@@ -294,10 +298,10 @@ func ConstructDialOptions(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogRequests,
+			grpcutil.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
-			grpcutils.LogStream,
+			grpcutil.LogStream,
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),

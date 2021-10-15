@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -7,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/types",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
     ],

@@ -15,17 +15,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testutil.ResetCache()
+
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
@@ -45,11 +45,11 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -110,10 +110,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -166,10 +165,9 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -224,10 +222,9 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	data := deposits[0].Data
 
@@ -294,10 +291,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+	deposits, _, err := util.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 	require.NoError(t, err)
-	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, roots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
@@ -392,9 +388,9 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	deposits, _, err := util.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
 	require.NoError(t, err)
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	depositOffset := 5
 
@@ -484,9 +480,9 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	deposits, _, err := util.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
 	require.NoError(t, err)
-	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	_, depositRoots, err := util.DeterministicDepositTrie(len(deposits))
 	require.NoError(t, err)
 	depositOffset := 5
 
@@ -557,7 +553,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
-	s.checkForChainstart([32]byte{}, nil, 0)
+	s.checkForChainstart(context.Background(), [32]byte{}, nil, 0)
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
 }
 

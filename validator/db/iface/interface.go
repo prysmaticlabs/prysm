@@ -6,8 +6,8 @@ import (
 	"io"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
@@ -17,7 +17,7 @@ var _ = ValidatorDB(&kv.Store{})
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
 type ValidatorDB interface {
 	io.Closer
-	backuputil.BackupExporter
+	backup.BackupExporter
 	DatabasePath() string
 	ClearDB() error
 	RunUpMigrations(ctx context.Context) error

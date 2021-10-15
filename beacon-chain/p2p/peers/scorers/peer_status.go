@@ -8,8 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time"
 )
 
 var _ Scorer = (*PeerStatusScorer)(nil)
@@ -82,6 +82,8 @@ func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
 	// Mark peer as bad, if the latest error is one of the terminal ones.
 	terminalErrs := []error{
 		p2ptypes.ErrWrongForkDigestVersion,
+		p2ptypes.ErrInvalidFinalizedRoot,
+		p2ptypes.ErrInvalidRequest,
 	}
 	for _, err := range terminalErrs {
 		if errors.Is(peerData.ChainStateValidationError, err) {
@@ -112,7 +114,7 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.Status, val
 
 	peerData := s.store.PeerDataGetOrCreate(pid)
 	peerData.ChainState = chainState
-	peerData.ChainStateLastUpdated = timeutils.Now()
+	peerData.ChainStateLastUpdated = time.Now()
 	peerData.ChainStateValidationError = validationError
 
 	// Update maximum known head slot (scores will be calculated with respect to that maximum value).
@@ -133,6 +135,9 @@ func (s *PeerStatusScorer) PeerStatus(pid peer.ID) (*pb.Status, error) {
 // peerStatus lock-free version of PeerStatus.
 func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 	if peerData, ok := s.store.PeerData(pid); ok {
+		if peerData.ChainState == nil {
+			return nil, peerdata.ErrNoPeerStatus
+		}
 		return peerData.ChainState, nil
 	}
 	return nil, peerdata.ErrPeerUnknown

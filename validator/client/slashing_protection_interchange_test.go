@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
 
@@ -64,7 +65,7 @@ func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
 	for _, ff := range testFolders {
 		if strings.Contains(ff.ShortPath, "eip3076_spec_tests") &&
 			strings.Contains(ff.ShortPath, "generated/") {
-			enc, err := fileutil.ReadFileAsBytes(ff.Path)
+			enc, err := file.ReadFileAsBytes(ff.Path)
 			require.NoError(t, err)
 			testCase := &eip3076TestCase{}
 			require.NoError(t, json.Unmarshal(enc, testCase))
@@ -75,12 +76,6 @@ func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
 }
 
 func TestEIP3076SpecTests(t *testing.T) {
-	config := &featureconfig.Flags{
-		SlasherProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-
 	testCases := setupEIP3076SpecTests(t)
 	for _, tt := range testCases {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -119,7 +114,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					require.NoError(t, err)
 					pk, err := interchangeformat.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)
-					b := testutil.NewBeaconBlock()
+					b := util.NewBeaconBlock()
 					b.Block.Slot = bSlot
 
 					var signingRoot [32]byte
@@ -129,21 +124,11 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					err = validator.preBlockSignValidations(context.Background(), pk, b.Block, signingRoot)
+					err = validator.slashableProposalCheck(context.Background(), pk, wrapper.WrappedPhase0SignedBeaconBlock(b), signingRoot)
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {
 						require.NotEqual(t, nil, err, "pre validation should have failed for block")
-					}
-
-					// Only proceed post update if pre validation did not error.
-					if err == nil {
-						err = validator.postBlockSignUpdate(context.Background(), pk, b, signingRoot)
-						if sb.ShouldSucceed {
-							require.NoError(t, err)
-						} else {
-							require.NotEqual(t, nil, err, "post validation should have failed for block")
-						}
 					}
 				}
 
@@ -161,7 +146,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 							Target:          &ethpb.Checkpoint{Epoch: target, Root: make([]byte, 32)},
 							Source:          &ethpb.Checkpoint{Epoch: source, Root: make([]byte, 32)},
 						},
-						Signature: make([]byte, 96),
+						Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
 					}
 
 					var signingRoot [32]byte

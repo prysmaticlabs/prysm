@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestParseGraffitiFile_Default(t *testing.T) {
@@ -24,7 +25,7 @@ func TestParseGraffitiFile_Default(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Hash:    hashutil.Hash(input),
+		Hash:    hash.Hash(input),
 		Default: "Mr T was here",
 	}
 	require.DeepEqual(t, wanted, got)
@@ -46,7 +47,7 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Hash: hashutil.Hash(input),
+		Hash: hash.Hash(input),
 		Random: []string{
 			"Mr A was here",
 			"Mr B was here",
@@ -72,7 +73,7 @@ func TestParseGraffitiFile_Ordered(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Hash: hashutil.Hash(input),
+		Hash: hash.Hash(input),
 		Ordered: []string{
 			"Mr D was here",
 			"Mr E was here",
@@ -99,7 +100,7 @@ specific:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Hash: hashutil.Hash(input),
+		Hash: hash.Hash(input),
 		Specific: map[types.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
@@ -137,7 +138,7 @@ specific:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Hash:    hashutil.Hash(input),
+		Hash:    hash.Hash(input),
 		Default: "Mr T was here",
 		Random: []string{
 			"Mr A was here",
@@ -156,4 +157,65 @@ specific:
 		},
 	}
 	require.DeepEqual(t, wanted, got)
+}
+
+func TestParseHexGraffiti(t *testing.T) {
+	tests := []struct {
+		name  string
+		want  string
+		input string
+	}{
+		{
+			name:  "standard",
+			want:  "hola mundo!",
+			input: "hola mundo!",
+		},
+		{
+			name:  "standard with hex tag",
+			want:  "hola mundo!",
+			input: "hex:686f6c61206d756e646f21",
+		},
+		{
+			name:  "irregularly cased hex tag",
+			want:  "hola mundo!",
+			input: "HEX:686f6c61206d756e646f21",
+		},
+		{
+			name:  "hex tag without accompanying data",
+			want:  "hex:",
+			input: "hex:",
+		},
+		{
+			name:  "Passing non-hex data with hex tag",
+			want:  "hex:hola mundo!",
+			input: "hex:hola mundo!",
+		},
+		{
+			name:  "unmarked hex input",
+			want:  "0x686f6c61206d756e646f21",
+			input: "0x686f6c61206d756e646f21",
+		},
+		{
+			name:  "Properly tagged hex data with 0x prefix",
+			want:  "hola mundo!",
+			input: "hex:0x686f6c61206d756e646f21",
+		},
+		{
+			name:  "hex tag with 0x prefix and no other data",
+			want:  "hex:0x",
+			input: "hex:0x",
+		},
+		{
+			name:  "hex tag with 0x prefix and invalid hex data",
+			want:  "hex:0xhola mundo",
+			input: "hex:0xhola mundo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := ParseHexGraffiti(tt.input)
+			assert.Equal(t, out, tt.want)
+		})
+	}
 }

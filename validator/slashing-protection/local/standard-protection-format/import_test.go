@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -53,7 +53,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
 	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
@@ -111,7 +111,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
 	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	ssz "github.com/ferranbt/fastssz"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
@@ -23,11 +24,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
+
+// We have to declare this again here to prevent a circular dependancy
+// with the main p2p package.
+const metatadataV1Topic = "/eth2/beacon_chain/req/metadata/1"
+const metatadataV2Topic = "/eth2/beacon_chain/req/metadata/2"
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
@@ -39,7 +45,7 @@ type TestP2P struct {
 	DelaySend       bool
 	Digest          [4]byte
 	peers           *peers.Status
-	LocalMetadata   interfaces.Metadata
+	LocalMetadata   metadata.Metadata
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -99,7 +105,11 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 		}
 	}()
 
-	n, err := p.Encoding().EncodeWithMaxLength(s, msg)
+	castedMsg, ok := msg.(ssz.Marshaler)
+	if !ok {
+		p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+	}
+	n, err := p.Encoding().EncodeWithMaxLength(s, castedMsg)
 	if err != nil {
 		_err := s.Reset()
 		_ = _err
@@ -127,8 +137,12 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	// pick up the newly connected peer.
 	time.Sleep(time.Millisecond * 100)
 
+	castedMsg, ok := msg.(ssz.Marshaler)
+	if !ok {
+		p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, castedMsg); err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 	digest, err := p.ForkDigest()
@@ -152,6 +166,12 @@ func (p *TestP2P) Broadcast(_ context.Context, _ proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation.
 func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+	p.BroadcastCalled = true
+	return nil
+}
+
+// BroadcastSyncCommitteeMessage broadcasts a sync committee message.
+func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	p.BroadcastCalled = true
 	return nil
 }
@@ -292,8 +312,12 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 		return nil, err
 	}
 
-	if topic != "/eth2/beacon_chain/req/metadata/1" {
-		if _, err := p.Encoding().EncodeWithMaxLength(stream, msg); err != nil {
+	if topic != metatadataV1Topic && topic != metatadataV2Topic {
+		castedMsg, ok := msg.(ssz.Marshaler)
+		if !ok {
+			p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+		}
+		if _, err := p.Encoding().EncodeWithMaxLength(stream, castedMsg); err != nil {
 			_err := stream.Reset()
 			_ = _err
 			return nil, err
@@ -325,7 +349,7 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return false, nil
 }
 
@@ -338,7 +362,7 @@ func (p *TestP2P) ForkDigest() ([4]byte, error) {
 }
 
 // Metadata mocks the peer's metadata.
-func (p *TestP2P) Metadata() interfaces.Metadata {
+func (p *TestP2P) Metadata() metadata.Metadata {
 	return p.LocalMetadata.Copy()
 }
 

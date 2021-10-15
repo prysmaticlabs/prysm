@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -39,14 +39,14 @@ func setupCliCtx(
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
-	err := fileutil.MkdirAll(outputPath)
+	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
 
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(pubKeys)
 	require.NoError(t, err)
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	protectionFilePath := filepath.Join(outputPath, protectionFileName)
-	err = fileutil.WriteFile(protectionFilePath, encoded)
+	err = file.WriteFile(protectionFilePath, encoded)
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
@@ -74,7 +74,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// Attempt to read the exported file from the output directory.
-	enc, err := fileutil.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
+	enc, err := file.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
 	require.NoError(t, err)
 
 	receivedJSON := &format.EIPSlashingProtectionFormat{}
@@ -112,7 +112,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
-	err := fileutil.MkdirAll(outputPath)
+	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
 
@@ -132,7 +132,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	require.NoError(t, err)
 
 	protectionFilePath := filepath.Join(outputPath, protectionFileName)
-	err = fileutil.WriteFile(protectionFilePath, encoded)
+	err = file.WriteFile(protectionFilePath, encoded)
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
@@ -150,7 +150,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	require.NoError(t, err)
 
 	// Attempt to read the exported file from the output directory.
-	enc, err := fileutil.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
+	enc, err := file.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
 	require.NoError(t, err)
 
 	receivedJSON := &format.EIPSlashingProtectionFormat{}

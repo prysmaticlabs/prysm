@@ -8,10 +8,12 @@ import (
 
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
+	swarm "github.com/libp2p/go-libp2p-swarm"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestContextWrite_NoWrites(t *testing.T) {
@@ -30,8 +32,8 @@ func TestContextWrite_NoWrites(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Nothing will be written to the stream
-	assert.NoError(t, writeContextToStream(strm, nil))
-	if testutil.WaitTimeout(wg, 1*time.Second) {
+	assert.NoError(t, writeContextToStream(nil, strm, nil))
+	if util.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -66,7 +68,52 @@ func TestContextRead_NoReads(t *testing.T) {
 	n, err := strm.Write(wantedData)
 	assert.NoError(t, err)
 	assert.Equal(t, len(wantedData), n)
-	if testutil.WaitTimeout(wg, 1*time.Second) {
+	if util.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
+	}
+}
+
+func TestValidateVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		version  string
+		protocol string
+		error    string
+		wantErr  bool
+	}{
+		{
+			name:     "bad topic",
+			version:  p2p.SchemaVersionV1,
+			protocol: "random",
+			error:    "unable to find a valid protocol prefix",
+			wantErr:  true,
+		},
+		{
+			name:     "valid topic with incorrect version",
+			version:  p2p.SchemaVersionV1,
+			protocol: p2p.RPCBlocksByRootTopicV2,
+			error:    "doesn't match provided version",
+			wantErr:  true,
+		},
+		{
+			name:     "valid topic with correct version",
+			version:  p2p.SchemaVersionV2,
+			protocol: p2p.RPCBlocksByRootTopicV2,
+			error:    "",
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stream := new(swarm.Stream)
+			stream.SetProtocol(protocol.ID(tt.protocol))
+			err := validateVersion(tt.version, stream)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				assert.ErrorContains(t, tt.error, err)
+			}
+		})
 	}
 }

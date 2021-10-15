@@ -12,46 +12,46 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, iface.BeaconState) {
-	state, privKeys := testutil.DeterministicGenesisState(t, 5)
+func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
+	state, privKeys := util.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {
 		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
 	require.NoError(t, state.SetValidators(vals))
 
-	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
+	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	require.NoError(t, err)
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
-	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err)
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
@@ -82,10 +82,11 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
+			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
+		subHandler:                newSubTopicHandler(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -93,13 +94,18 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	msg := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 
 	assert.Equal(t, true, valid, "Failed Validation")
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
@@ -113,20 +119,25 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 		cfg: &Config{
 			P2P:         p,
 			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain:       &mock.ChainService{Genesis: time.Now()},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
+		subHandler:                newSubTopicHandler(),
 	}
 
 	r.setAttesterSlashingIndicesSeen([]uint64{1, 2, 3, 4}, []uint64{3, 4, 5, 6})
 
 	// The below attestations should be filtered hence bad signature is ok.
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.AttesterSlashing{})]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
-		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
 	})
@@ -137,15 +148,17 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 
 	buf = new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{4, 3},
 		}),
-		Attestation_2: testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3, 4},
 		}),
 	})
@@ -156,7 +169,9 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	ignored = r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationIgnore
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	ignored = res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
 }
 
@@ -189,7 +204,9 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "slashing from the far distant future should have timed out and returned false")
 }
 
@@ -218,7 +235,9 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Passed validation")
 }
 

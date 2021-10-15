@@ -4,16 +4,15 @@ import (
 	"context"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestReportEpochMetrics_BadHeadState(t *testing.T) {
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	h, err := testutil.NewBeaconState()
+	h, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, h.SetValidators(nil))
 	err = reportEpochMetrics(context.Background(), s, h)
@@ -21,22 +20,22 @@ func TestReportEpochMetrics_BadHeadState(t *testing.T) {
 }
 
 func TestReportEpochMetrics_BadAttestation(t *testing.T) {
-	s, err := testutil.NewBeaconState()
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	h, err := testutil.NewBeaconState()
+	h, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, h.AppendCurrentEpochAttestations(&pb.PendingAttestation{InclusionDelay: 0}))
+	require.NoError(t, h.AppendCurrentEpochAttestations(&eth.PendingAttestation{InclusionDelay: 0}))
 	err = reportEpochMetrics(context.Background(), s, h)
 	require.ErrorContains(t, "attestation with inclusion delay of 0", err)
 }
 
 func TestReportEpochMetrics_SlashedValidatorOutOfBound(t *testing.T) {
-	h, _ := testutil.DeterministicGenesisState(t, 1)
+	h, _ := util.DeterministicGenesisState(t, 1)
 	v, err := h.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	v.Slashed = true
 	require.NoError(t, h.UpdateValidatorAtIndex(0, v))
-	require.NoError(t, h.AppendCurrentEpochAttestations(&pb.PendingAttestation{InclusionDelay: 1, Data: testutil.HydrateAttestationData(&eth.AttestationData{})}))
+	require.NoError(t, h.AppendCurrentEpochAttestations(&eth.PendingAttestation{InclusionDelay: 1, Data: util.HydrateAttestationData(&eth.AttestationData{})}))
 	err = reportEpochMetrics(context.Background(), h, h)
 	require.ErrorContains(t, "slot 0 out of bounds", err)
 }

@@ -1,0 +1,272 @@
+// Copyright 2021 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/timestamp.proto";
+
+import "proto/eth/ext/options.proto";
+import "proto/eth/v1/attestation.proto";
+import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v1/beacon_state.proto";
+import "proto/eth/v1/validator.proto";
+
+option csharp_namespace = "Ethereum.Eth.V1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
+option java_multiple_files = true;
+option java_outer_classname = "BeaconChainProto";
+option java_package = "org.ethereum.eth.v1";
+option php_namespace = "Ethereum\\Eth\\v1";
+
+// Beacon State API related messages.
+
+message GenesisResponse {
+    Genesis data = 1;
+
+    message Genesis {
+        // UTC time specified in the chain start event in the deposit contract.
+        google.protobuf.Timestamp genesis_time = 1;
+        // 32 byte hash tree root of the genesis validator set.
+        bytes genesis_validators_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+        // 4 byte genesis fork version.
+        bytes genesis_fork_version = 3 [(ethereum.eth.ext.ssz_size) = "4"];
+    }
+}
+
+message StateRequest {
+    // The state id which can be any of: "head" (canonical head in node's view),
+    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+    bytes state_id = 1;
+}
+
+message StateRootResponse {
+    StateRoot data = 1;
+
+    message StateRoot {
+        // SSZ encoded state root for the requested state.
+        bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    }
+}
+
+message StateForkResponse {
+    Fork data = 1;
+}
+
+message StateFinalityCheckpointResponse {
+    StateFinalityCheckpoint data = 1;
+
+    message StateFinalityCheckpoint {
+        ethereum.eth.v1.Checkpoint previous_justified = 1;
+        ethereum.eth.v1.Checkpoint current_justified = 2;
+        ethereum.eth.v1.Checkpoint finalized = 3;
+    }
+}
+
+message StateValidatorsRequest {
+    // The state id which can be any of: "head" (canonical head in node's view),
+    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+    bytes state_id = 1;
+
+    // An array of either hex encoded public keys (with 0x prefix) or validator indexes.
+    repeated bytes id = 2;
+
+    // The status to query validators for, can be one of: pending_initialized, pending_queued, active_ongoing,
+    // active_exiting, active_slashed, exited_unslashed, exited_slashed, withdrawal_possible,
+    // withdrawal_done, active, pending, exited, withdrawal
+    repeated ValidatorStatus status = 3;
+}
+
+message ValidatorBalancesRequest {
+    // The state id which can be any of: "head" (canonical head in node's view),
+    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+    bytes state_id = 1;
+
+    // An array of either hex encoded public keys (with 0x prefix) or validator indexes.
+    repeated bytes id = 2;
+}
+
+message StateValidatorsResponse {
+    repeated ValidatorContainer data = 1;
+}
+
+message ValidatorBalancesResponse {
+    repeated ValidatorBalance data = 1;
+}
+
+message ValidatorBalance {
+    // The index of the validator the retrieved balance is for.
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+    // The balance of the requested validator.
+    uint64 balance = 2;
+}
+
+message StateValidatorRequest {
+    // The state id which can be any of: "head" (canonical head in node's view),
+    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+    bytes state_id = 1;
+
+    // The public key or index for the validator to retrieve information for.
+    bytes validator_id = 2;
+}
+
+message StateValidatorResponse {
+    ValidatorContainer data = 1;
+}
+
+message StateCommitteesRequest {
+    // The state id which can be any of: "head" (canonical head in node's view),
+    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+    bytes state_id = 1;
+
+    // The epoch to retrieve the committees of.
+    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+
+    // Committee index requested.
+    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+
+    // Committee slot requested.
+    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message StateCommitteesResponse {
+    repeated Committee data = 1;
+}
+
+// Beacon Block API related messages.
+
+message BlockAttestationsResponse {
+    repeated ethereum.eth.v1.Attestation data = 1;
+}
+
+message BlockRootContainer {
+    // 32 byte merkle tree root of the ssz encoded block.
+    bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message BlockRootResponse {
+    BlockRootContainer data = 1;
+}
+
+message BlockHeadersRequest {
+    // Beacon chain slot of the requested block.
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+    // 32 byte merkle tree root of the ssz encoded parent block.
+    optional bytes parent_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message BlockHeadersResponse {
+    repeated BlockHeaderContainer data = 1;
+}
+
+message BlockRequest {
+    // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
+    // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
+    bytes block_id = 1;
+}
+
+message BlockHeaderResponse {
+    BlockHeaderContainer data = 1;
+}
+
+message BlockHeaderContainer {
+    // 32 byte merkle tree root of the ssz encoded block.
+    bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Boolean indicating whether the block is canonical.
+    bool canonical = 2;
+
+    // Container for a signed beacon block header.
+    BeaconBlockHeaderContainer header = 3;
+}
+
+message BeaconBlockHeaderContainer {
+    // The unsigned beacon block header.
+    BeaconBlockHeader message = 1;
+
+    // 96 byte BLS signature from the validator that produced this block header.
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BlockResponse {
+    BeaconBlockContainer data = 1;
+}
+
+message BlockSSZResponse {
+    bytes data = 1;
+}
+
+message BeaconBlockContainer {
+    BeaconBlock message = 1;
+
+    // 96 byte BLS signature from the validator that produced this block.
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+// Beacon Pool related API service.
+
+message AttestationsPoolRequest {
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+}
+
+message SubmitAttestationsRequest {
+    repeated ethereum.eth.v1.Attestation data = 1;
+}
+
+message AttestationsPoolResponse {
+    repeated ethereum.eth.v1.Attestation data = 1;
+}
+
+message AttesterSlashingsPoolResponse {
+    repeated AttesterSlashing data = 1;
+}
+
+message ProposerSlashingPoolResponse {
+    repeated ProposerSlashing data = 1;
+}
+
+message VoluntaryExitsPoolResponse {
+    repeated SignedVoluntaryExit data = 1;
+}
+
+// Beacon Config API related messages.
+
+message ForkScheduleResponse {
+    // The fork data used for beacon chain versioning.
+    repeated Fork data = 1;
+}
+
+// Spec response is a generic flat map of key values.
+// Values are returned with following format:
+// - any value starting with 0x in the spec is returned as a hex string
+// - all other values are returned as string-number
+message SpecResponse {
+    map<string, string> data = 1;
+}
+
+message DepositContractResponse {
+    DepositContract data = 1;
+}
+
+message DepositContract {
+    // The chain_id of the network.
+    uint64 chain_id = 1;
+
+    // The address of the deployed deposit contract in use.
+    string address = 2;
+}

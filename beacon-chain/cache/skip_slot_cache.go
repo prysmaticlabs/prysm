@@ -9,7 +9,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"go.opencensus.io/trace"
 )
 
@@ -25,7 +26,7 @@ var (
 	})
 )
 
-// SkipSlotCache is used to store the cached results of processing skip slots in state.ProcessSlots.
+// SkipSlotCache is used to store the cached results of processing skip slots in transition.ProcessSlots.
 type SkipSlotCache struct {
 	cache      *lru.Cache
 	lock       sync.RWMutex
@@ -35,12 +36,8 @@ type SkipSlotCache struct {
 
 // NewSkipSlotCache initializes the map and underlying cache.
 func NewSkipSlotCache() *SkipSlotCache {
-	cache, err := lru.New(8)
-	if err != nil {
-		panic(err)
-	}
 	return &SkipSlotCache{
-		cache:      cache,
+		cache:      lruwrpr.New(8),
 		inProgress: make(map[[32]byte]bool),
 	}
 }
@@ -57,7 +54,7 @@ func (c *SkipSlotCache) Disable() {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (iface.BeaconState, error) {
+func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
 	defer span.End()
 	if c.disabled {
@@ -97,7 +94,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (iface.BeaconState,
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
 		span.AddAttributes(trace.BoolAttribute("hit", true))
-		return item.(iface.BeaconState).Copy(), nil
+		return item.(state.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
 	span.AddAttributes(trace.BoolAttribute("hit", false))
@@ -136,7 +133,7 @@ func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) error {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state iface.BeaconState) error {
+func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) error {
 	if c.disabled {
 		return nil
 	}

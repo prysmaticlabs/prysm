@@ -7,15 +7,16 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -31,16 +32,16 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err, "could not process deposit")
 
-	valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
+	valcount, err := helpers.ActiveValidatorCount(context.Background(), web3Service.preGenesisState, 0)
 	require.NoError(t, err)
 	require.Equal(t, 1, int(valcount), "Did not get correct active validator count")
 }
@@ -54,10 +55,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	deposits[0].Proof = [][]byte{{'f', 'a', 'k', 'e'}}
@@ -80,20 +81,20 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	deposits[0].Data.PublicKey = bytesutil.PadTo([]byte("junk"), 48)
 
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
 	deposits[0].Proof, err = trie.MerkleProof(0)
 	require.NoError(t, err)
 
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -116,7 +117,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
@@ -125,10 +126,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -138,7 +139,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	require.LogsContain(t, hook, pubKeyErr)
+	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytes to signature")
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
@@ -150,16 +151,15 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
-	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()
 
-	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -189,24 +189,24 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
-			Signature:             bytesutil.PadTo([]byte("test"), 96),
+			Signature:             bytesutil.PadTo([]byte("test"), params.BeaconConfig().BLSSignatureLength),
 		},
 	}
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	deposit.Data.PublicKey = priv.PublicKey().Marshal()
-	d, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)
-	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, d)
+	signedRoot, err := signing.ComputeSigningRoot(deposit.Data, d)
 	require.NoError(t, err)
 
 	sig := priv.Sign(signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
-	trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -220,7 +220,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
-		trie.Insert(dataRoot[:], i)
+		assert.NoError(t, trie.Insert(dataRoot[:], i))
 
 		trieRoot := trie.HashTreeRoot()
 		eth1Data.DepositRoot = trieRoot[:]
@@ -231,7 +231,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		err = web3Service.processDeposit(context.Background(), eth1Data, deposit)
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))
 
-		valcount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
+		valcount, err := helpers.ActiveValidatorCount(context.Background(), web3Service.preGenesisState, 0)
 		require.NoError(t, err)
 		require.Equal(t, 0, int(valcount), "Did not get correct active validator count")
 	}
@@ -245,11 +245,10 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
-	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
+	deposits, keys, err := util.DeterministicDepositsAndKeys(10)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 
 	for i := range keys {
@@ -257,7 +256,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		err = web3Service.processDeposit(context.Background(), eth1Data, deposits[i])
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))
 
-		valCount, err := helpers.ActiveValidatorCount(web3Service.preGenesisState, 0)
+		valCount, err := helpers.ActiveValidatorCount(context.Background(), web3Service.preGenesisState, 0)
 		require.NoError(t, err)
 		require.Equal(t, uint64(i+1), valCount, "Did not get correct active validator count")
 

@@ -21,30 +21,17 @@ run --host_force_python=PY2
 build --sandbox_default_allow_network=false
 
 # Stamp binaries with git information
-build --workspace_status_command=./scripts/workspace_status.sh
+build --workspace_status_command=./hack/workspace_status.sh
 build --stamp
-
-# Use mainnet protobufs at runtime
-run --define ssz=mainnet
-test --define ssz=mainnet
-build --define ssz=mainnet
 
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
 test --incompatible_strict_action_env
 run --incompatible_strict_action_env
 
-# Disable kafka by default, it takes a long time to build...
-build --define kafka_enabled=false
-test --define kafka_enabled=false
-run --define kafka_enabled=false
-
 build --define blst_disabled=false
 test --define blst_disabled=false
 run --define blst_disabled=false
-
-build:kafka_enabled --define kafka_enabled=true
-build:kafka_enabled --define gotags=kafka_enabled
 
 build:blst_disabled --define blst_disabled=true
 build:blst_disabled --define gotags=blst_disabled

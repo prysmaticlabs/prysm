@@ -7,11 +7,14 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessAttesterSlashings is one of the operations performed
@@ -35,10 +38,10 @@ import (
 //    assert slashed_any
 func ProcessAttesterSlashings(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	for idx, slashing := range slashings {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
@@ -47,17 +50,22 @@ func ProcessAttesterSlashings(
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
 			return slashableIndices[i] < slashableIndices[j]
 		})
-		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+		currentEpoch := slots.ToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
-		var val iface.ReadOnlyValidator
+		var val state.ReadOnlyValidator
 		for _, validatorIndex := range slashableIndices {
 			val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
 			if err != nil {
 				return nil, err
 			}
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex))
+				cfg := params.BeaconConfig()
+				slashingQuotient := cfg.MinSlashingPenaltyQuotient
+				if beaconState.Version() == version.Altair {
+					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+				}
+				beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)
@@ -73,7 +81,7 @@ func ProcessAttesterSlashings(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(ctx context.Context, beaconState iface.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState state.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
 	if slashing == nil {
 		return errors.New("nil slashing")
 	}
@@ -116,11 +124,11 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false
 	}
-	isDoubleVote := !attestationutil.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
+	isDoubleVote := !attestation.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	att1 := &ethpb.IndexedAttestation{Data: data1}
 	att2 := &ethpb.IndexedAttestation{Data: data2}
 	// Check if att1 is surrounding att2.
-	isSurroundVote := slashutil.IsSurround(att1, att2)
+	isSurroundVote := slashings.IsSurround(att1, att2)
 	return isDoubleVote || isSurroundVote
 }
 
@@ -130,5 +138,5 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_2.AttestingIndices
-	return sliceutil.IntersectionUint64(indices1, indices2)
+	return slice.IntersectionUint64(indices1, indices2)
 }

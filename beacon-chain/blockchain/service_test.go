@@ -8,31 +8,31 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -63,6 +63,11 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 	return nil
 }
 
+func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
+	mb.broadcastCalled = true
+	return nil
+}
+
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
@@ -70,23 +75,23 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
-	bState, _ := testutil.DeterministicGenesisState(t, 10)
-	pbState, err := stateV0.ProtobufBeaconState(bState.InnerStateUnsafe())
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
-	err = beaconDB.SavePowchainData(ctx, &protodb.ETH1ChainData{
+	err = beaconDB.SavePowchainData(ctx, &ethpb.ETH1ChainData{
 		BeaconState: pbState,
-		Trie:        &protodb.SparseMerkleTrie{},
-		CurrentEth1Data: &protodb.LatestETH1Data{
+		Trie:        &ethpb.SparseMerkleTrie{},
+		CurrentEth1Data: &ethpb.LatestETH1Data{
 			BlockHash: make([]byte, 32),
 		},
-		ChainstartData: &protodb.ChainStartData{
+		ChainstartData: &ethpb.ChainStartData{
 			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot:  make([]byte, 32),
 				DepositCount: 0,
 				BlockHash:    make([]byte, 32),
 			},
 		},
-		DepositContainers: []*protodb.DepositContainer{},
+		DepositContainers: []*ethpb.DepositContainer{},
 	})
 	require.NoError(t, err)
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
@@ -96,7 +101,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -112,7 +117,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		AttPool:           attestations.NewPool(),
 		StateGen:          stategen.New(beaconDB),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
-		OpsService:        opsService,
+		AttService:        attService,
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
@@ -132,11 +137,11 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
-	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)))
-	s, err := testutil.NewBeaconState()
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
@@ -162,11 +167,11 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
-	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)))
-	s, err := testutil.NewBeaconState()
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
@@ -192,12 +197,12 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(count)
+	deposits, _, err := util.DeterministicDepositsAndKeys(count)
 	require.NoError(t, err)
-	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 	hashTreeRoot := trie.HashTreeRoot()
-	genState, err := state.EmptyGenesisState()
+	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
 		DepositRoot:  hashTreeRoot[:],
@@ -231,11 +236,11 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
-	genesisBlk := testutil.NewBeaconBlock()
+	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)))
-	s, err := testutil.NewBeaconState()
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(0))
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
@@ -257,17 +262,17 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	genesis := testutil.NewBeaconBlock()
+	genesis := util.NewBeaconBlock()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesis)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := testutil.NewBeaconBlock()
+	headBlock := util.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot
 	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
 	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
@@ -275,8 +280,8 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(headBlock)))
-	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(finalizedSlot), Root: headRoot[:]}))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
 	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)
@@ -298,17 +303,17 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	genesis := testutil.NewBeaconBlock()
+	genesis := util.NewBeaconBlock()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesis)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := testutil.NewBeaconBlock()
+	headBlock := util.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot
 	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
 	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
@@ -316,7 +321,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	c := &Service{cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
@@ -340,28 +345,28 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	genesisBlock := testutil.NewBeaconBlock()
+	genesisBlock := util.NewBeaconBlock()
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 
-	finalizedBlock := testutil.NewBeaconBlock()
+	finalizedBlock := util.NewBeaconBlock()
 	finalizedBlock.Block.Slot = finalizedSlot
 	finalizedBlock.Block.ParentRoot = genesisRoot[:]
 	finalizedRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
 
 	// Set head slot close to the finalization point, no head sync is triggered.
-	headBlock := testutil.NewBeaconBlock()
+	headBlock := util.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*5
 	headBlock.Block.ParentRoot = finalizedRoot[:]
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(headBlock.Block.Slot))
 	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
@@ -370,7 +375,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
-		Epoch: helpers.SlotToEpoch(finalizedBlock.Block.Slot),
+		Epoch: slots.ToEpoch(finalizedBlock.Block.Slot),
 		Root:  finalizedRoot[:],
 	}))
 
@@ -387,12 +392,12 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.LogsDoNotContain(t, hook, "Regenerating state from the last checkpoint at slot")
 
 	// Set head slot far beyond the finalization point, head sync should be triggered.
-	headBlock = testutil.NewBeaconBlock()
+	headBlock = util.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*headSyncMinEpochsAfterCheckpoint
 	headBlock.Block.ParentRoot = finalizedRoot[:]
 	headRoot, err = headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(headBlock)))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 
@@ -414,14 +419,14 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	s := &Service{
 		cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 	}
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
 	r, err := blk.HashTreeRoot()
 	require.NoError(t, err)
-	newState, err := testutil.NewBeaconState()
+	newState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.StateGen.SaveState(ctx, r, newState))
-	require.NoError(t, s.saveHeadNoDB(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk), r, newState))
+	require.NoError(t, s.saveHeadNoDB(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk), r, newState))
 
 	newB, err := s.cfg.BeaconDB.HeadBlock(ctx)
 	require.NoError(t, err)
@@ -437,12 +442,12 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 		cfg:              &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
 		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -455,12 +460,12 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cfg:            &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		ctx:            ctx,
 		cancel:         cancel,
-		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
+		initSyncBlocks: make(map[[32]byte]block.SignedBeaconBlock),
 	}
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s.saveInitSyncBlock(r, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	s.saveInitSyncBlock(r, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, s.Stop())
 	require.Equal(t, true, s.cfg.BeaconDB.HasBlock(ctx, r))
 }
@@ -485,8 +490,8 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	s := &Service{
 		cfg: &Config{BeaconDB: beaconDB},
 	}
-	block := testutil.NewBeaconBlock()
-	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
+	block := util.NewBeaconBlock()
+	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
 
@@ -506,10 +511,10 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
-	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := stateV0.InitializeFromProto(bs)
+	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
+	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

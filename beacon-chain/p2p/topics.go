@@ -1,16 +1,48 @@
 package p2p
 
 const (
+	// GossipProtocolAndDigest represents the protocol and fork digest prefix in a gossip topic.
+	GossipProtocolAndDigest = "/eth2/%x/"
+
+	// Message Types
+	//
+	// GossipAttestationMessage is the name for the attestation message type. It is
+	// specially extracted so as to determine the correct message type from an attestation
+	// subnet.
+	GossipAttestationMessage = "beacon_attestation"
+	// GossipSyncCommitteeMessage is the name for the sync committee message type. It is
+	// specially extracted so as to determine the correct message type from a sync committee
+	// subnet.
+	GossipSyncCommitteeMessage = "sync_committee"
+	// GossipBlockMessage is the name for the block message type.
+	GossipBlockMessage = "beacon_block"
+	// GossipExitMessage is the name for the voluntary exit message type.
+	GossipExitMessage = "voluntary_exit"
+	// GossipProposerSlashingMessage is the name for the proposer slashing message type.
+	GossipProposerSlashingMessage = "proposer_slashing"
+	// GossipAttesterSlashingMessage is the name for the attester slashing message type.
+	GossipAttesterSlashingMessage = "attester_slashing"
+	// GossipAggregateAndProofMessage is the name for the attestation aggregate and proof message type.
+	GossipAggregateAndProofMessage = "beacon_aggregate_and_proof"
+	// GossipContributionAndProofMessage is the name for the sync contribution and proof message type.
+	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
+
+	// Topic Formats
+	//
 	// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
-	AttestationSubnetTopicFormat = "/eth2/%x/beacon_attestation_%d"
+	AttestationSubnetTopicFormat = GossipProtocolAndDigest + GossipAttestationMessage + "_%d"
+	// SyncCommitteeSubnetTopicFormat is the topic format for the sync committee subnet.
+	SyncCommitteeSubnetTopicFormat = GossipProtocolAndDigest + GossipSyncCommitteeMessage + "_%d"
 	// BlockSubnetTopicFormat is the topic format for the block subnet.
-	BlockSubnetTopicFormat = "/eth2/%x/beacon_block"
+	BlockSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockMessage
 	// ExitSubnetTopicFormat is the topic format for the voluntary exit subnet.
-	ExitSubnetTopicFormat = "/eth2/%x/voluntary_exit"
+	ExitSubnetTopicFormat = GossipProtocolAndDigest + GossipExitMessage
 	// ProposerSlashingSubnetTopicFormat is the topic format for the proposer slashing subnet.
-	ProposerSlashingSubnetTopicFormat = "/eth2/%x/proposer_slashing"
+	ProposerSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipProposerSlashingMessage
 	// AttesterSlashingSubnetTopicFormat is the topic format for the attester slashing subnet.
-	AttesterSlashingSubnetTopicFormat = "/eth2/%x/attester_slashing"
+	AttesterSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipAttesterSlashingMessage
 	// AggregateAndProofSubnetTopicFormat is the topic format for the aggregate and proof subnet.
-	AggregateAndProofSubnetTopicFormat = "/eth2/%x/beacon_aggregate_and_proof"
+	AggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
+	// SyncContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
+	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
 )

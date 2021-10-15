@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
+    strip_prefix = "rules_docker-0.19.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
 )
 
 http_archive(
@@ -88,6 +88,8 @@ http_archive(
         # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
+        # Expose internals of go_test for custom build transitions.
+        "//third_party:io_bazel_rules_go_test.patch",
     ],
     sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
@@ -138,6 +140,34 @@ load(
 )
 
 container_pull(
+    name = "cc_image_base",
+    digest = "sha256:2c4bb6b7236db0a55ec54ba8845e4031f5db2be957ac61867872bf42e56c4deb",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "cc_debug_image_base",
+    digest = "sha256:3680c61e81f68fc00bfb5e1ec65e8e678aaafa7c5f056bc2681c29527ebbb30c",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "go_image_base",
+    digest = "sha256:ba7a315f86771332e76fa9c3d423ecfdbb8265879c6f1c264d6fff7d4fa460a4",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
+    name = "go_debug_image_base",
+    digest = "sha256:efd8711717d9e9b5d0dbb20ea10876dab0609c923bc05321b912f9239090ca80",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
     name = "alpine_cc_linux_amd64",
     digest = "sha256:752aa0c9a88461ffc50c5267bb7497ef03a303e38b2c8f7f2ded9bebe5f1f00e",
     registry = "index.docker.io",
@@ -159,36 +189,6 @@ go_register_toolchains(
     go_version = "1.16.4",
     nogo = "@//:nogo",
 )
-
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
-
-load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
-
-gometalinter_dependencies()
-
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
-# Golang images
-# This is using gcr.io/distroless/base
-_go_image_repos()
-
-# CC images
-# This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//cc:image.bzl",
-    _cc_image_repos = "repositories",
-)
-
-_cc_image_repos()
 
 http_archive(
     name = "prysm_testnet_site",
@@ -225,8 +225,12 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
+consensus_spec_version = "v1.1.2"
+
+bls_test_version = "v0.1.1"
+
 http_archive(
-    name = "eth2_spec_tests_general",
+    name = "consensus_spec_tests_general",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -237,12 +241,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "deacc076365c727d653ac064894ecf0d1b0a675d86704dc8de271259f6a7314b",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/general.tar.gz",
+    sha256 = "45f6bd1688a57fd40ab1272dac75de33d9777c84f9ea545815bfd9dc0e841a82",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal",
+    name = "consensus_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -253,12 +257,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
+    sha256 = "e203d4378a59d9b82b1a4e948bef7281be8bb5b59264c7d1a6a394b669cf800b",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet",
+    name = "consensus_spec_tests_mainnet",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -269,20 +273,63 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a7b3d0ffc02a567250f424d69b2474fdc9477cd56eada60af7474560b46a8527",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
+    sha256 = "dd9e01bb871673af49a6b4efad291505e0bdb607df3dd29d1b0b319c1fba2d60",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "consensus_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "55fa6fa9823781195cb5362b734b4b6e2a6940a7411530b9bcdab02d845106ca",
+    strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
+    url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "bls_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "93c7d006e7c5b882cbd11dc9ec6c5d0e07f4a8c6b27a32f964eb17cf2db9763a",
+    url = "https://github.com/ethereum/bls12-381-tests/releases/download/%s/bls_tests_yaml.tar.gz" % bls_test_version,
+)
+
+http_archive(
+    name = "eth2_networks",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = glob([
+        "shared/**/config.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "9dc47bf6b14aed7fac8833e35ab83a69131b43fa5789b3256bf1ac3d4861aeb8",
+    strip_prefix = "eth2-networks-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
+    url = "https://github.com/eth2-clients/eth2-networks/archive/7fa1b868985ee24aad65567f9250cf7fa86f97b1.tar.gz",
 )
 
 http_archive(
     name = "com_github_bazelbuild_buildtools",
-    sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
-    strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
-    url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+    sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
+    strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",
+    url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
 )
-
-load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
-
-buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
@@ -291,33 +338,8 @@ git_repository(
     shallow_since = "1617835118 -0700",
 )
 
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-
-http_archive(
-    name = "rules_foreign_cc",
-    sha256 = "b85ce66a3410f7370d1a9a61dfe3a29c7532b7637caeb2877d8d0dfd41d77abb",
-    strip_prefix = "rules_foreign_cc-3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934.zip",
-)
-
-load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
-
-rules_foreign_cc_dependencies([
-    "@prysm//:built_cmake_toolchain",
-])
-
-http_archive(
-    name = "librdkafka",
-    build_file_content = all_content,
-    sha256 = "3b99a36c082a67ef6295eabd4fb3e32ab0bff7c6b0d397d6352697335f4e57eb",
-    strip_prefix = "librdkafka-1.4.2",
-    urls = ["https://github.com/edenhill/librdkafka/archive/v1.4.2.tar.gz"],
-)
 
 http_archive(
     name = "sigp_beacon_fuzz_corpora",
@@ -340,9 +362,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "edb80f3a695d84f6000f0e05abf7a4bbf207c03abb91219780ec97e7d6ad21c8",
+    sha256 = "54ce527b83d092da01127f2e3816f4d5cfbab69354caba8537f1ea55889b6d7c",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.3/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.4/prysm-web-ui.tar.gz",
     ],
 )
 
@@ -363,6 +385,24 @@ load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
 
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+# Golang images
+# This is using gcr.io/distroless/base
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 
 geth_dependencies()
@@ -378,5 +418,25 @@ go_repositories()
 load("@io_bazel_rules_webtesting//web/versioned:browsers-0.3.2.bzl", "browser_repositories")
 
 browser_repositories(chromium = True)
+
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
+load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
+
+gometalinter_dependencies()
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+gazelle_dependencies()
+
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!

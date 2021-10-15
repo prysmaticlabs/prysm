@@ -4,17 +4,17 @@ import (
 	"context"
 	"math"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, root [32]byte, st iface.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
@@ -45,7 +45,7 @@ func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 // This saves a post beacon state. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
-func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st iface.BeaconState) error {
+func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
@@ -73,14 +73,14 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st ifac
 	}
 
 	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
-	if helpers.IsEpochStart(st.Slot()) {
+	if slots.IsEpochStart(st.Slot()) {
 		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}
 	}
 
 	// On an intermediate slots, save state summary.
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
 	}); err != nil {

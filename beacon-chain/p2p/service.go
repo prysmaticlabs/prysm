@@ -1,4 +1,4 @@
-// Package p2p defines the network protocol implementation for eth2
+// Package p2p defines the network protocol implementation for Ethereum consensus
 // used by beacon nodes, including peer discovery using discv5, gossip-sub
 // using libp2p, and handing peer lifecycles + handshakes.
 package p2p
@@ -18,24 +18,26 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/runtime"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 
 // In the event that we are at our peer limit, we
 // stop looking for new peers and instead poll
@@ -44,10 +46,14 @@ var _ shared.Service = (*Service)(nil)
 var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
-var refreshRate = slotutil.DivideSlotBy(2)
+var refreshRate = slots.DivideSlotBy(2)
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
+
+// pubsubQueueSize is the size that we assign to our validation queue and outbound message queue for
+// gossipsub.
+const pubsubQueueSize = 600
 
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
@@ -56,7 +62,6 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 type Service struct {
 	started               bool
 	isPreGenesis          bool
-	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
@@ -64,7 +69,7 @@ type Service struct {
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	metaData              interfaces.Metadata
+	metaData              metadata.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
@@ -94,7 +99,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
@@ -129,7 +134,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	s.host = h
 	s.host.RemoveStreamHandler(identify.IDDelta)
-
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
@@ -137,15 +141,21 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
-		pubsub.WithMessageIdFn(msgIDFunction),
+		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
+			return MsgID(s.genesisValidatorsRoot, pmsg)
+		}),
 		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(256),
-		pubsub.WithValidateQueueSize(256),
+		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
+		pubsub.WithValidateQueueSize(pubsubQueueSize),
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
+		pubsub.WithGossipSubParams(pubsubGossipParam()),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
+	// Reinitialize them in the event we are running a custom config.
+	attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -163,6 +173,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 			},
 		},
 	})
+
+	// Initialize Data maps.
+	types.InitializeDataMaps()
 
 	return s, nil
 }
@@ -217,17 +230,20 @@ func (s *Service) Start() {
 		}
 		s.connectWithAllPeers(addrs)
 	}
+	// Initialize metadata according to the
+	// current epoch.
+	s.RefreshENR()
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	runutil.RunEvery(s.ctx, refreshRate, func() {
+	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
+	async.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
-	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
+	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
 			"inbound":     len(s.peers.InboundConnected()),
 			"outbound":    len(s.peers.OutboundConnected()),
@@ -250,6 +266,7 @@ func (s *Service) Start() {
 	if p2pHostDNS != "" {
 		logExternalDNSAddr(s.host.ID(), p2pHostDNS, p2pTCPPort)
 	}
+	go s.forkWatcher()
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -273,6 +290,9 @@ func (s *Service) Status() error {
 	}
 	if s.startupErr != nil {
 		return s.startupErr
+	}
+	if s.genesisTime.IsZero() {
+		return errors.New("no genesis time set")
 	}
 	return nil
 }
@@ -341,7 +361,7 @@ func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // Metadata returns a copy of the peer's metadata.
-func (s *Service) Metadata() interfaces.Metadata {
+func (s *Service) Metadata() metadata.Metadata {
 	return s.metaData.Copy()
 }
 
@@ -396,7 +416,7 @@ func (s *Service) awaitStateInitialized() {
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				_, err := s.forkDigest() // initialize fork digest cache
+				_, err := s.currentForkDigest() // initialize fork digest cache
 				if err != nil {
 					log.WithError(err).Error("Could not initialize fork digest")
 				}

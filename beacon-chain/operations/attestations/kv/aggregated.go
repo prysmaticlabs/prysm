@@ -3,13 +3,11 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -121,7 +119,7 @@ func (c *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-	copiedAtt := copyutil.CopyAttestation(att)
+	copiedAtt := ethpb.CopyAttestation(att)
 	c.aggregatedAttLock.Lock()
 	defer c.aggregatedAttLock.Unlock()
 	atts, ok := c.aggregatedAtt[r]
@@ -212,7 +210,9 @@ func (c *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 	filtered := make([]*ethpb.Attestation, 0)
 	for _, a := range attList {
-		if att.AggregationBits.Len() == a.AggregationBits.Len() && !att.AggregationBits.Contains(a.AggregationBits) {
+		if c, err := att.AggregationBits.Contains(a.AggregationBits); err != nil {
+			return err
+		} else if !c {
 			filtered = append(filtered, a)
 		}
 	}
@@ -239,7 +239,9 @@ func (c *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer c.aggregatedAttLock.RUnlock()
 	if atts, ok := c.aggregatedAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
+				return false, err
+			} else if c {
 				return true, nil
 			}
 		}
@@ -249,7 +251,9 @@ func (c *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer c.blockAttLock.RUnlock()
 	if atts, ok := c.blockAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
+				return false, err
+			} else if c {
 				return true, nil
 			}
 		}

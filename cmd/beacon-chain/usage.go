@@ -5,10 +5,10 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
@@ -99,6 +99,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCPort,
 			flags.CertFlag,
 			flags.KeyFlag,
+			flags.HTTPModules,
 			flags.DisableGRPCGateway,
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,
@@ -120,6 +121,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpt,
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
+			flags.MinPeersPerSubnet,
 		},
 	},
 	{
@@ -147,7 +149,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ActiveFlags(featureconfig.BeaconChainFlags),
+		Flags: features.ActiveFlags(features.BeaconChainFlags),
 	},
 	{
 		Name: "interop",

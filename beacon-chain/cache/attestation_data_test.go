@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"google.golang.org/protobuf/proto"
 )
 

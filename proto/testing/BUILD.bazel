@@ -10,8 +10,8 @@ proto_library(
     srcs = ["test.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_google_protobuf//:timestamp_proto",
         "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
 )
 
@@ -26,9 +26,9 @@ go_proto_library(
         "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
-        "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
-    ]
+        "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
+    ],
 )
 
 go_library(
@@ -46,24 +46,23 @@ go_test(
         "tags_test.go",
     ],
     data = [
-        "@eth2_spec_tests_mainnet//:test_data",
-        "@eth2_spec_tests_minimal//:test_data",
+        "@consensus_spec_tests_mainnet//:test_data",
+        "@consensus_spec_tests_minimal//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
-        "//beacon-chain/state/stateV0:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
-        "@com_github_golang_snappy//:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
+        "//config/params:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//testing/util:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

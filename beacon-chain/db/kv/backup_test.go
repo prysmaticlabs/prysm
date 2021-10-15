@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestStore_Backup(t *testing.T) {
@@ -18,18 +18,18 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(head)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
@@ -59,19 +59,19 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	startSlot := types.Slot(5000)
 
 	for i := startSlot; i < 5200; i++ {
-		head := testutil.NewBeaconBlock()
+		head := util.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(head)))
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, st.SetSlot(i))
 		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, root))
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 	}
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
@@ -91,7 +91,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})
 	for i := startSlot; i < 5200; i++ {
-		head := testutil.NewBeaconBlock()
+		head := util.NewBeaconBlock()
 		head.Block.Slot = i
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)

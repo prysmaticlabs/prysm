@@ -6,8 +6,8 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -16,14 +16,14 @@ const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
 // Example for backup at slot 345: $DATADIR/backups/prysm_beacondb_at_slot_0000345.backup
-func (s *Store) Backup(ctx context.Context, outputDir string) error {
+func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride bool) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
 
 	var backupsDir string
 	var err error
 	if outputDir != "" {
-		backupsDir, err = fileutil.ExpandPath(outputDir)
+		backupsDir, err = file.ExpandPath(outputDir)
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.MkdirAll(backupsDir); err != nil {
+	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block().Slot()))
@@ -47,7 +47,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	copyDB, err := bolt.Open(
 		backupPath,
 		params.BeaconIoConfig().ReadWritePermissions,
-		&bolt.Options{NoFreelistSync: true, NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
+		&bolt.Options{NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
 	)
 	if err != nil {
 		return err
@@ -114,6 +114,5 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	// Re-enable sync to allow bolt to fsync
 	// again.
 	copyDB.NoSync = false
-	copyDB.NoFreelistSync = false
 	return nil
 }

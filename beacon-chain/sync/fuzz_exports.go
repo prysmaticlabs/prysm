@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -32,7 +32,9 @@ func NewRegularSyncFuzz(cfg *Config) *Service {
 
 // FuzzValidateBeaconBlockPubSub exports private method validateBeaconBlockPubSub for fuzz testing.
 func (s *Service) FuzzValidateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	return s.validateBeaconBlockPubSub(ctx, pid, msg)
+	res, err := s.validateBeaconBlockPubSub(ctx, pid, msg)
+	_ = err
+	return res
 }
 
 // FuzzBeaconBlockSubscriber exports private method beaconBlockSubscriber for fuzz testing.
@@ -40,6 +42,6 @@ func (s *Service) FuzzBeaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	return s.beaconBlockSubscriber(ctx, msg)
 }
 
-func (s *Service) InitCaches() error {
-	return s.initCaches()
+func (s *Service) InitCaches() {
+	s.initCaches()
 }

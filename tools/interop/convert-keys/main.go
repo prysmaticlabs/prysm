@@ -31,12 +31,12 @@ func main() {
 	}
 	inFile := os.Args[1]
 
-	in, err := ioutil.ReadFile(inFile)
+	in, err := ioutil.ReadFile(inFile) // #nosec G304
 	if err != nil {
 		log.Fatalf("Failed to read file %s: %v", inFile, err)
 	}
 	data := make(KeyPairs, 0)
-	if err := yaml.Unmarshal(in, &data); err != nil {
+	if err := yaml.UnmarshalStrict(in, &data); err != nil {
 		log.Fatalf("Failed to unmarshal yaml: %v", err)
 	}
 

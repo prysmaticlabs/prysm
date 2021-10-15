@@ -2,8 +2,8 @@ package db
 
 import (
 	beacondb "github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -14,7 +14,7 @@ var log = logrus.WithField("prefix", "db")
 var Commands = &cli.Command{
 	Name:     "db",
 	Category: "db",
-	Usage:    "defines commands for interacting with eth2 beacon node database",
+	Usage:    "defines commands for interacting with the Ethereum Beacon Node database",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "restore",

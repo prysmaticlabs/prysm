@@ -3,15 +3,20 @@
 package cache
 
 import (
+	"context"
 	"errors"
+	"math"
 	"sync"
+	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"k8s.io/client-go/tools/cache"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	mathutil "github.com/prysmaticlabs/prysm/math"
 )
 
 var (
@@ -33,8 +38,9 @@ var (
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
-	CommitteeCache *cache.FIFO
+	CommitteeCache *lru.Cache
 	lock           sync.RWMutex
+	inProgress     map[string]bool
 }
 
 // committeeKeyFn takes the seed as the key to retrieve shuffled indices of a committee in a given epoch.
@@ -43,28 +49,25 @@ func committeeKeyFn(obj interface{}) (string, error) {
 	if !ok {
 		return "", ErrNotCommittee
 	}
-
 	return key(info.Seed), nil
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
 	return &CommitteeCache{
-		CommitteeCache: cache.NewFIFO(committeeKeyFn),
+		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
+		inProgress:     make(map[string]bool),
 	}
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
+func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
 
+	obj, exists := c.CommitteeCache.Get(key(seed))
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
@@ -82,7 +85,10 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := uint64(index) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
+	indexOffSet, err := mathutil.Add64(uint64(index), uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot)))
+	if err != nil {
+		return nil, err
+	}
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {
@@ -97,22 +103,20 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
+	key, err := committeeKeyFn(committees)
+	if err != nil {
 		return err
 	}
-	trim(c.CommitteeCache, maxCommitteesCacheSize)
+	_ = c.CommitteeCache.Add(key, committees)
 	return nil
 }
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
+func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]types.ValidatorIndex, error) {
+	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
+	obj, exists := c.CommitteeCache.Get(key(seed))
 
 	if exists {
 		CommitteeCacheHit.Inc()
@@ -130,14 +134,12 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, e
 }
 
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
+func (c *CommitteeCache) ActiveIndicesCount(ctx context.Context, seed [32]byte) (int, error) {
+	if err := c.checkInProgress(ctx, seed); err != nil {
 		return 0, err
 	}
 
+	obj, exists := c.CommitteeCache.Get(key(seed))
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
@@ -155,21 +157,69 @@ func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 
 // HasEntry returns true if the committee cache has a value.
 func (c *CommitteeCache) HasEntry(seed string) bool {
-	_, ok, err := c.CommitteeCache.GetByKey(seed)
-	return err == nil && ok
+	_, ok := c.CommitteeCache.Get(seed)
+	return ok
+}
+
+// MarkInProgress a request so that any other similar requests will block on
+// Get until MarkNotInProgress is called.
+func (c *CommitteeCache) MarkInProgress(seed [32]byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	s := key(seed)
+	if c.inProgress[s] {
+		return ErrAlreadyInProgress
+	}
+	c.inProgress[s] = true
+	return nil
+}
+
+// MarkNotInProgress will release the lock on a given request. This should be
+// called after put.
+func (c *CommitteeCache) MarkNotInProgress(seed [32]byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	s := key(seed)
+	delete(c.inProgress, s)
+	return nil
 }
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.ShuffledIndices))
-	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
-	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
+	start := slice.SplitOffset(validatorCount, c.CommitteeCount, index)
+	end := slice.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 	return start, end
 }
 
 // Using seed as source for key to handle reorgs in the same epoch.
 // The seed is derived from state's array of randao mixes and epoch value
 // hashed together. This avoids collisions on different validator set. Spec definition:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
+// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
 func key(seed [32]byte) string {
 	return string(seed[:])
+}
+
+func (c *CommitteeCache) checkInProgress(ctx context.Context, seed [32]byte) error {
+	delay := minDelay
+	// Another identical request may be in progress already. Let's wait until
+	// any in progress request resolves or our timeout is exceeded.
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		c.lock.RLock()
+		if !c.inProgress[key(seed)] {
+			c.lock.RUnlock()
+			break
+		}
+		c.lock.RUnlock()
+
+		// This increasing backoff is to decrease the CPU cycles while waiting
+		// for the in progress boolean to flip to false.
+		time.Sleep(time.Duration(delay) * time.Nanosecond)
+		delay *= delayFactor
+		delay = math.Min(delay, maxDelay)
+	}
+	return nil
 }

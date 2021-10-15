@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
@@ -20,11 +20,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
 	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
 	}
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
@@ -32,49 +32,49 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not retrieve proposer public keys from DB")
 	}
 	attestedPublicKeys, err := validatorDB.AttestedPublicKeys(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
 	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
-	progress := progressutil.InitializeProgressBar(
+	bar := progress.InitializeProgressBar(
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
 		signedBlocks, err := signedBlocksByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not retrieve signed blocks for public key %s", pubKeyHex)
 		}
 		dataByPubKey[pubKey] = &format.ProtectionData{
 			Pubkey:             pubKeyHex,
 			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
 		}
-		if err := progress.Add(1); err != nil {
+		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
 	}
 
 	// Extract the signed attestations by public key.
-	progress = progressutil.InitializeProgressBar(
-		len(proposedPublicKeys), "Extracting signed attestations by validator public key",
+	bar = progress.InitializeProgressBar(
+		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
 		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not retrieve signed attestations for public key %s", pubKeyHex)
 		}
 		if _, ok := dataByPubKey[pubKey]; ok {
 			dataByPubKey[pubKey].SignedAttestations = signedAttestations
@@ -85,7 +85,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 				SignedAttestations: signedAttestations,
 			}
 		}
-		if err := progress.Add(1); err != nil {
+		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
 	}
@@ -120,12 +120,25 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		return nil, nil
 	}
 	signedAttestations := make([]*format.SignedAttestation, 0)
-	for _, att := range history {
+	for i := 0; i < len(history); i++ {
+		att := history[i]
+		// Special edge case due to a bug in Prysm's old slashing protection schema. The bug
+		// manifests itself as the first entry in attester slashing protection history
+		// having a target epoch greater than the next entry in the list. If this manifests,
+		// we skip it to protect users. This check is the best trade-off we can make at
+		// the moment without creating any false positive slashable attestation exports.
+		// More information on the bug can found in https://github.com/prysmaticlabs/prysm/issues/8893.
+		if i == 0 && len(history) > 1 {
+			nextEntryTargetEpoch := history[1].Target
+			if att.Target > nextEntryTargetEpoch && att.Source == 0 {
+				continue
+			}
+		}
 		var root string
 		if !bytes.Equal(att.SigningRoot[:], params.BeaconConfig().ZeroHash[:]) {
 			root, err = rootToHexString(att.SigningRoot[:])
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not convert signing root to hex string")
 			}
 		}
 		signedAttestations = append(signedAttestations, &format.SignedAttestation{
@@ -144,16 +157,16 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 	// of signed blocks.
 	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not get proposal history for public key: %#x", pubKey)
 	}
 	signedBlocks := make([]*format.SignedBlock, 0)
 	for _, proposal := range proposalHistory {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, errors.Wrap(err, "context canceled")
 		}
 		signingRootHex, err := rootToHexString(proposal.SigningRoot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert signing root to hex string")
 		}
 		signedBlocks = append(signedBlocks, &format.SignedBlock{
 			Slot:        fmt.Sprintf("%d", proposal.Slot),

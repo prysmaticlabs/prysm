@@ -11,14 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 7, "correct number of topics not registered")
+	assert.Equal(t, len(rlimiter.limiterMap), 10, "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 
 	require.NoError(t, stream.Close(), "could not close stream")
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -101,7 +101,7 @@ func TestRateLimiter_ExceedRawCapacity(t *testing.T) {
 	assert.Equal(t, true, p1.Peers().IsBad(p2.PeerID()), "peer is not marked as a bad peer")
 	require.NoError(t, stream.Close(), "could not close stream")
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }

@@ -12,15 +12,14 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for
-// validators on eth2. This file can be generated using the official eth2.0-deposit-cli.
+// validators on Ethereum. This file can be generated using the official eth2.0-deposit-cli.
 type DepositDataJSON struct {
 	PubKey                string `json:"pubkey"`
 	Amount                uint64 `json:"amount"`
@@ -55,16 +54,16 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	var genesisState *pb.BeaconState
+	var genesisState *ethpb.BeaconState
 	var err error
 	if *depositJSONFile != "" {
 		inputFile := *depositJSONFile
-		expanded, err := fileutil.ExpandPath(inputFile)
+		expanded, err := file.ExpandPath(inputFile)
 		if err != nil {
 			log.Printf("Could not expand file path %s: %v", inputFile, err)
 			return
 		}
-		inputJSON, err := os.Open(expanded)
+		inputJSON, err := os.Open(expanded) // #nosec G304
 		if err != nil {
 			log.Printf("Could not open JSON file for reading: %v", err)
 			return
@@ -99,7 +98,7 @@ func main() {
 			log.Printf("Could not ssz marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*sszOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*sszOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -111,7 +110,7 @@ func main() {
 			log.Printf("Could not yaml marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*yamlOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*yamlOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -123,7 +122,7 @@ func main() {
 			log.Printf("Could not json marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*jsonOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*jsonOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -131,7 +130,7 @@ func main() {
 	}
 }
 
-func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.BeaconState, error) {
+func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*ethpb.BeaconState, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err

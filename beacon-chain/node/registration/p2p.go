@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
@@ -42,14 +42,18 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 }
 
 func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName)
+	fileContent, err := ioutil.ReadFile(fileName) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
 	listNodes := make([]string, 0)
-	err = yaml.Unmarshal(fileContent, &listNodes)
+	err = yaml.UnmarshalStrict(fileContent, &listNodes)
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*yaml.TypeError); !ok {
+			return nil, err
+		} else {
+			log.WithError(err).Error("There were some issues parsing the bootnodes from a yaml file.")
+		}
 	}
 	return listNodes, nil
 }

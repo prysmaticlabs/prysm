@@ -6,18 +6,16 @@ import (
 	"errors"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // Prepare attestations for fork choice three times per slot.
-var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
+var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
@@ -89,7 +87,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
 	clonedAtts := make([]*ethpb.Attestation, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = copyutil.CopyAttestation(a)
+		clonedAtts[i] = ethpb.CopyAttestation(a)
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -102,7 +100,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hashutil.HashProto(att.Data)
+	attRoot, err := hash.HashProto(att.Data)
 	if err != nil {
 		return false, err
 	}
@@ -115,11 +113,20 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 		if savedBitlist.Len() == incomingBits.Len() {
 			// Returns true if the node has seen all the bits in the new bit field of the incoming attestation.
-			if bytes.Equal(savedBitlist, incomingBits) || savedBitlist.Contains(incomingBits) {
+			if bytes.Equal(savedBitlist, incomingBits) {
 				return true, nil
 			}
+			if c, err := savedBitlist.Contains(incomingBits); err != nil {
+				return false, err
+			} else if c {
+				return true, nil
+			}
+			var err error
 			// Update the bit fields by Or'ing them with the new ones.
-			incomingBits = incomingBits.Or(savedBitlist)
+			incomingBits, err = incomingBits.Or(savedBitlist)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 

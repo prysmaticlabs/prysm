@@ -1,4 +1,4 @@
-// Package main provides a tool named split-keys which allows for generating any number of eth2 validator keys
+// Package main provides a tool named split-keys which allows for generating any number of Ethereum validator keys
 // from a list of BIP39 mnemonics and spreading them across any number of Prysm wallets. This is useful for creating
 // custom allocations of keys across containers running in a cloud environment, such as for public testnets.
 // An example of why you would use this tool is as follows. Let's say we have 1 mnemonic contained inside of a file.
@@ -20,7 +20,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	log.Printf("Splitting %d keys across %d wallets\n", len(privKeys), *numberOfWalletsFlag)
-	wPass, err := fileutil.ReadFileAsBytes(*walletPasswordFileFlag)
+	wPass, err := file.ReadFileAsBytes(*walletPasswordFileFlag)
 	if err != nil {
 		log.Fatal(err)
 	}

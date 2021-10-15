@@ -3,33 +3,29 @@ package p2p
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
-// ENR key used for eth2-related fork data.
+// ENR key used for Ethereum consensus-related fork data.
 var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 
 // ForkDigest returns the current fork digest of
-// the node.
-func (s *Service) forkDigest() ([4]byte, error) {
-	if s.currentForkDigest != [4]byte{} {
-		return s.currentForkDigest, nil
+// the node according to the local clock.
+func (s *Service) currentForkDigest() ([4]byte, error) {
+	if !s.isInitialized() {
+		return [4]byte{}, errors.New("state is not initialized")
 	}
-	fd, err := p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
-	if err != nil {
-		s.currentForkDigest = fd
-	}
-	return fd, err
+	return forks.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's
@@ -67,18 +63,18 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 		log.WithFields(logrus.Fields{
 			"peerNextForkEpoch": peerForkENR.NextForkEpoch,
 			"peerENR":           enrString,
-		}).Debug("Peer matches fork digest but has different next fork epoch")
+		}).Trace("Peer matches fork digest but has different next fork epoch")
 	}
 	if !bytes.Equal(peerForkENR.NextForkVersion, currentForkENR.NextForkVersion) {
 		log.WithFields(logrus.Fields{
 			"peerNextForkVersion": peerForkENR.NextForkVersion,
 			"peerENR":             enrString,
-		}).Debug("Peer matches fork digest but has different next fork version")
+		}).Trace("Peer matches fork digest but has different next fork version")
 	}
 	return nil
 }
 
-// Adds a fork entry as an ENR record under the eth2EnrKey for
+// Adds a fork entry as an ENR record under the Ethereum consensus EnrKey for
 // the local node. The fork entry is an ssz-encoded enrForkID type
 // which takes into account the current fork version from the current
 // epoch to create a fork digest, the next fork version,
@@ -88,29 +84,22 @@ func addForkEntry(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
-	digest, err := p2putils.CreateForkDigest(genesisTime, genesisValidatorsRoot)
+	digest, err := forks.CreateForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-	currentSlot := helpers.SlotsSince(genesisTime)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
-	if timeutils.Now().Before(genesisTime) {
+	currentSlot := slots.Since(genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	if prysmTime.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}
-	fork, err := p2putils.Fork(currentEpoch)
+	nextForkVersion, nextForkEpoch, err := forks.NextForkData(currentEpoch)
 	if err != nil {
 		return nil, err
-	}
-
-	nextForkEpoch := params.BeaconConfig().NextForkEpoch
-	nextForkVersion := params.BeaconConfig().NextForkVersion
-	// Set to the current fork version if our next fork is not planned.
-	if nextForkEpoch == math.MaxUint64 {
-		nextForkVersion = fork.CurrentVersion
 	}
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
-		NextForkVersion:   nextForkVersion,
+		NextForkVersion:   nextForkVersion[:],
 		NextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := enrForkID.MarshalSSZ()
@@ -123,7 +112,7 @@ func addForkEntry(
 }
 
 // Retrieves an enrForkID from an ENR record by key lookup
-// under the eth2EnrKey.
+// under the Ethereum consensus EnrKey
 func forkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)

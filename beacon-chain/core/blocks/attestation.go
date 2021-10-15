@@ -7,85 +7,24 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"go.opencensus.io/trace"
 )
-
-// ProcessAttestations applies processing operations to a block's inner attestation
-// records.
-func ProcessAttestations(
-	ctx context.Context,
-	beaconState iface.BeaconState,
-	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	var err error
-	for idx, attestation := range b.Block().Body().Attestations() {
-		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
-		}
-	}
-	return beaconState, nil
-}
-
-// ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
-//
-// Spec pseudocode definition:
-//  def process_attestation(state: BeaconState, attestation: Attestation) -> None:
-//    data = attestation.data
-//    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-//    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-//    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
-//
-//    committee = get_beacon_committee(state, data.slot, data.index)
-//    assert len(attestation.aggregation_bits) == len(committee)
-//
-//    pending_attestation = PendingAttestation(
-//        data=data,
-//        aggregation_bits=attestation.aggregation_bits,
-//        inclusion_delay=state.slot - data.slot,
-//        proposer_index=get_beacon_proposer_index(state),
-//    )
-//
-//    if data.target.epoch == get_current_epoch(state):
-//        assert data.source == state.current_justified_checkpoint
-//        state.current_epoch_attestations.append(pending_attestation)
-//    else:
-//        assert data.source == state.previous_justified_checkpoint
-//        state.previous_epoch_attestations.append(pending_attestation)
-//
-//    # Verify signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-func ProcessAttestation(
-	ctx context.Context,
-	beaconState iface.BeaconState,
-	att *ethpb.Attestation,
-) (iface.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
-	if err != nil {
-		return nil, err
-	}
-	return beaconState, VerifyAttestationSignature(ctx, beaconState, att)
-}
 
 // ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
 // records. The only difference would be that the attestation signature would not be verified.
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
-	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+	beaconState state.BeaconState,
+	b block.SignedBeaconBlock,
+) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -104,7 +43,7 @@ func ProcessAttestationsNoVerifySignature(
 // used before processing attestation with the beacon state.
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.ReadOnlyBeaconState,
+	beaconState state.ReadOnlyBeaconState,
 	att *ethpb.Attestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
@@ -113,8 +52,8 @@ func VerifyAttestationNoVerifySignature(
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	currEpoch := helpers.CurrentEpoch(beaconState)
-	prevEpoch := helpers.PrevEpoch(beaconState)
+	currEpoch := time.CurrentEpoch(beaconState)
+	prevEpoch := time.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
 		return fmt.Errorf(
@@ -158,7 +97,7 @@ func VerifyAttestationNoVerifySignature(
 			params.BeaconConfig().SlotsPerEpoch,
 		)
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(beaconState, att.Data.Target.Epoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -167,30 +106,30 @@ func VerifyAttestationNoVerifySignature(
 		return fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 
-	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
+	if err := helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
 		return errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
 	// Verify attesting indices are correct.
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return err
 	}
 
-	return attestationutil.IsValidAttestationIndices(ctx, indexedAtt)
+	return attestation.IsValidAttestationIndices(ctx, indexedAtt)
 }
 
 // ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	att *ethpb.Attestation,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -198,14 +137,14 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	currEpoch := helpers.CurrentEpoch(beaconState)
+	currEpoch := time.CurrentEpoch(beaconState)
 	data := att.Data
 	s := att.Data.Slot
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
-	pendingAtt := &pb.PendingAttestation{
+	pendingAtt := &ethpb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
 		InclusionDelay:  beaconState.Slot() - s,
@@ -227,15 +166,15 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState iface.ReadOnlyBeaconState, att *ethpb.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestation.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return err
 	}
@@ -258,14 +197,14 @@ func VerifyAttestationSignature(ctx context.Context, beaconState iface.ReadOnlyB
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //    signing_root = compute_signing_root(indexed_attestation.data, domain)
 //    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
-	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+	if err := attestation.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(
+	domain, err := signing.Domain(
 		beaconState.Fork(),
 		indexedAtt.Data.Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
@@ -284,5 +223,5 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBea
 		}
 		pubkeys = append(pubkeys, pk)
 	}
-	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
+	return attestation.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 }

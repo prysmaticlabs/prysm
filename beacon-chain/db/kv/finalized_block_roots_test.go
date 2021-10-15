@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
@@ -34,7 +35,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -57,11 +58,11 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -99,7 +100,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 1,
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	// A state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
@@ -150,7 +151,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	// a state is required to save checkpoint
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -169,25 +170,80 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	}
 }
 
-func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
+func TestStore_IsFinalizedChildBlockAltair(t *testing.T) {
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	db := setupDB(t)
+	ctx := context.Background()
+
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+
+	blks := makeBlocksAltair(t, 0, slotsPerEpoch*3, genesisBlockRoot)
+
+	require.NoError(t, db.SaveBlocks(ctx, blks))
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  root[:],
+	}
+
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	// a state is required to save checkpoint
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+
+	// All blocks up to slotsPerEpoch should have a finalized child block.
+	for i := uint64(0); i < slotsPerEpoch; i++ {
+		root, err := blks[i].Block().HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
+		blk, err := db.FinalizedChildBlock(ctx, root)
+		assert.NoError(t, err)
+		if blk == nil {
+			t.Error("Child block doesn't exist for valid finalized block.")
+		}
+	}
+}
+
+func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
+	ifaceBlocks := make([]block.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = testutil.NewBeaconBlock()
+		blocks[j-i] = util.NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = interfaces.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+	}
+	return ifaceBlocks
+}
+
+func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
+	ifaceBlocks := make([]block.SignedBeaconBlock, num)
+	for j := startIdx; j < num+startIdx; j++ {
+		parentRoot := make([]byte, 32)
+		copy(parentRoot, previousRoot[:])
+		blocks[j-startIdx] = util.NewBeaconBlockAltair()
+		blocks[j-startIdx].Block.Slot = types.Slot(j + 1)
+		blocks[j-startIdx].Block.ParentRoot = parentRoot
+		var err error
+		previousRoot, err = blocks[j-startIdx].Block.HashTreeRoot()
+		require.NoError(t, err)
+		ifaceBlocks[j-startIdx], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-startIdx])
+		require.NoError(t, err)
 	}
 	return ifaceBlocks
 }

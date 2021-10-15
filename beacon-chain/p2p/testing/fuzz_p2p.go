@@ -10,12 +10,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"google.golang.org/protobuf/proto"
 )
 
 // FakeP2P stack
@@ -62,7 +61,7 @@ func (p *FakeP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *FakeP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (p *FakeP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return false, nil
 }
 
@@ -75,7 +74,7 @@ func (p *FakeP2P) LeaveTopic(_ string) error {
 }
 
 // Metadata -- fake.
-func (p *FakeP2P) Metadata() interfaces.Metadata {
+func (p *FakeP2P) Metadata() metadata.Metadata {
 	return nil
 }
 
@@ -136,6 +135,11 @@ func (p *FakeP2P) Broadcast(_ context.Context, _ proto.Message) error {
 
 // BroadcastAttestation -- fake.
 func (p *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+	return nil
+}
+
+// BroadcastSyncCommitteeMessage -- fake.
+func (p *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	return nil
 }
 

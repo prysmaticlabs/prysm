@@ -16,12 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -188,7 +189,7 @@ func TestPeerCommitteeIndices(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(id, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -223,7 +224,7 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(expectedPeer, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(expectedPeer, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -302,6 +303,32 @@ func TestPeerChainState(t *testing.T) {
 	}
 }
 
+func TestPeerWithNilChainState(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: maxBadResponses,
+			},
+		},
+	})
+
+	id, err := peer.Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	require.NoError(t, err)
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	require.NoError(t, err, "Failed to create address")
+	direction := network.DirInbound
+	p.Add(new(enr.Record), id, address, direction)
+
+	p.SetChainState(id, nil)
+
+	resChainState, err := p.ChainState(id)
+	require.Equal(t, peerdata.ErrNoPeerStatus, err)
+	var nothing *pb.Status
+	require.Equal(t, resChainState, nothing)
+}
+
 func TestPeerBadResponses(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -374,7 +401,7 @@ func TestAddMetaData(t *testing.T) {
 		SeqNumber: 8,
 		Attnets:   bitfield.NewBitvector64(),
 	}
-	p.SetMetadata(newPeer, interfaces.WrappedMetadataV0(newMetaData))
+	p.SetMetadata(newPeer, wrapper.WrappedMetadataV0(newMetaData))
 
 	md, err := p.Metadata(newPeer)
 	require.NoError(t, err)
@@ -522,6 +549,10 @@ func TestPrune(t *testing.T) {
 }
 
 func TestPeerIPTracker(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -660,6 +691,10 @@ func TestAtInboundPeerLimit(t *testing.T) {
 }
 
 func TestPrunePeers(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &scorers.Config{
@@ -1002,7 +1037,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(id, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}))

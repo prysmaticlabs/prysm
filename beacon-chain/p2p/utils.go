@@ -18,10 +18,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/network"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -88,7 +89,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 
 // Retrieves a p2p networking private key from a file path.
 func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
-	src, err := ioutil.ReadFile(path)
+	src, err := ioutil.ReadFile(path) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -108,7 +109,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
 // TODO: Figure out how to do a v1/v2 check.
-func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
+func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
@@ -118,7 +119,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		return nil, err
 	}
 	if metaDataPath == "" && !defaultMetadataExist {
-		metaData := &pbp2p.MetaDataV0{
+		metaData := &pb.MetaDataV0{
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
@@ -126,29 +127,29 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := fileutil.WriteFile(defaultKeyPath, dst); err != nil {
+		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return interfaces.WrappedMetadataV0(metaData), nil
+		return wrapper.WrappedMetadataV0(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(metaDataPath)
+	src, err := ioutil.ReadFile(metaDataPath) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
-	metaData := &pbp2p.MetaDataV0{}
+	metaData := &pb.MetaDataV0{}
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV0(metaData), nil
+	return wrapper.WrappedMetadataV0(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
 func ipAddr() net.IP {
-	ip, err := iputils.ExternalIP()
+	ip, err := network.ExternalIP()
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}

@@ -6,27 +6,26 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	// Same validator created 3 valid deposits within the same block
-	testutil.ResetCache()
-	dep, _, err := testutil.DeterministicDepositsAndKeysSameValidator(3)
+
+	dep, _, err := util.DeterministicDepositsAndKeysSameValidator(3)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := util.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			// 3 deposits from the same validator
@@ -40,11 +39,11 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -61,26 +60,26 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
 			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			Signature:             make([]byte, params.BeaconConfig().BLSSignatureLength),
 		},
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{deposit},
 		},
 	}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: []byte{0},
 			BlockHash:   []byte{1},
@@ -93,12 +92,12 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 }
 
 func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := util.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{dep[0]},
@@ -111,11 +110,11 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -140,10 +139,10 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			PublicKey:             sk.PublicKey().Marshal(),
 			Amount:                1000,
 			WithdrawalCredentials: make([]byte, 32),
-			Signature:             make([]byte, 96),
+			Signature:             make([]byte, params.BeaconConfig().BLSSignatureLength),
 		},
 	}
-	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()
@@ -151,13 +150,13 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	require.NoError(t, err)
 
 	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate trie")
 	proof, err := depositTrie.MerkleProof(0)
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Deposits: []*ethpb.Deposit{deposit},
@@ -173,8 +172,8 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	}
 	balances := []uint64{0, 50}
-	root := depositTrie.Root()
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	root := depositTrie.HashTreeRoot()
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
@@ -190,9 +189,9 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	// Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	eth1Data, err := util.DeterministicEth1Data(len(dep))
 	require.NoError(t, err)
 
 	registry := []*ethpb.Validator{
@@ -202,18 +201,19 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
+	assert.Equal(t, true, isNewValidator, "Expected isNewValidator to be true")
 	assert.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	assert.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
 	if newState.Balances()[1] != dep[0].Data.Amount {
@@ -227,12 +227,12 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	trie, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
@@ -244,18 +244,19 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
+	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
 
 	if newState.Eth1DepositIndex() != 1 {
 		t.Errorf(
@@ -275,12 +276,11 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 }
 
 func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
-	testutil.ResetCache()
-	dep, _, err := testutil.DeterministicDepositsAndKeys(100)
+
+	dep, _, err := util.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
-	defer testutil.ResetCache()
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	trie, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
 
 	for i := range dep {
@@ -288,7 +288,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		require.NoError(t, err)
 		dep[i].Proof = proof
 	}
-	root := trie.Root()
+	root := trie.HashTreeRoot()
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
@@ -300,11 +300,11 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
+		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
@@ -338,4 +338,55 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	if newState.Balances()[0] != 0 {
 		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
 	}
+}
+
+func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) {
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             sk.PublicKey().Marshal(),
+			Amount:                1000,
+			WithdrawalCredentials: make([]byte, 32),
+			Signature:             make([]byte, 96),
+		},
+	}
+	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	deposit.Data.Signature = sig.Marshal()
+	leaf, err := deposit.Data.HashTreeRoot()
+	require.NoError(t, err)
+
+	// We then create a merkle branch for the test.
+	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not generate trie")
+	proof, err := depositTrie.MerkleProof(0)
+	require.NoError(t, err, "Could not generate proof")
+
+	deposit.Proof = proof
+	registry := []*ethpb.Validator{
+		{
+			PublicKey: []byte{1, 2, 3},
+		},
+		{
+			PublicKey:             sk.PublicKey().Marshal(),
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 50}
+	root := depositTrie.HashTreeRoot()
+	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: root[:],
+			BlockHash:   root[:],
+		},
+	})
+	require.NoError(t, err)
+	newState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
+	require.NoError(t, err, "Process deposit failed")
+	assert.Equal(t, false, isNewValidator, "Expected isNewValidator to be false")
+	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }

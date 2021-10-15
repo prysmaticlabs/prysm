@@ -36,6 +36,7 @@ cc_library(
         "include/mcl/vint.hpp",
         "include/mcl/randgen.hpp",
         "include/mcl/array.hpp",
+        "include/mcl/config.hpp",
         "include/mcl/util.hpp",
         "include/mcl/fp_tower.hpp",
         "include/mcl/fp.hpp",

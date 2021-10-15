@@ -15,22 +15,22 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
+	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1DataSavingInterval = 100
+const eth1DataSavingInterval = 1000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
@@ -138,27 +138,31 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	if s.depositTrie.NumOfItems() != int(index) {
 		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
 	}
-	s.depositTrie.Insert(depositHash[:], int(index))
-
-	proof, err := s.depositTrie.MerkleProof(int(index))
-	if err != nil {
-		return errors.Wrap(err, "Unable to generate merkle proof for deposit")
+	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
+		return err
 	}
 
 	deposit := &ethpb.Deposit{
-		Data:  depositData,
-		Proof: proof,
+		Data: depositData,
+	}
+	// Only generate the proofs during pre-genesis.
+	if !s.chainStartData.Chainstarted {
+		proof, err := s.depositTrie.MerkleProof(int(index))
+		if err != nil {
+			return errors.Wrap(err, "Unable to generate merkle proof for deposit")
+		}
+		deposit.Proof = proof
 	}
 
 	// We always store all historical deposits in the DB.
-	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	if err != nil {
 		return errors.Wrap(err, "unable to insert deposit into cache")
 	}
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
-		root := s.depositTrie.Root()
+		root := s.depositTrie.HashTreeRoot()
 		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
@@ -168,7 +172,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -181,7 +185,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		if !s.chainStartData.Chainstarted {
 			deposits := len(s.chainStartData.ChainstartDeposits)
 			if deposits%512 == 0 {
-				valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+				valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 				if err != nil {
 					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 				}
@@ -217,7 +221,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root := s.depositTrie.Root()
+	root := s.depositTrie.HashTreeRoot()
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],
@@ -334,7 +338,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 		for _, filterLog := range logs {
 			if filterLog.BlockNumber > currentBlockNum {
-				if err := s.checkHeaderRange(currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
+				if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
@@ -345,7 +349,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 				return err
 			}
 		}
-		if err := s.checkHeaderRange(currentBlockNum, end, headersMap, requestHeaders); err != nil {
+		if err := s.checkHeaderRange(ctx, currentBlockNum, end, headersMap, requestHeaders); err != nil {
 			return err
 		}
 		currentBlockNum = end
@@ -432,15 +436,15 @@ func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big
 	if err != nil {
 		return err
 	}
-	s.checkForChainstart(hash, blkNum, timeStamp)
+	s.checkForChainstart(ctx, hash, blkNum, timeStamp)
 	return nil
 }
 
-func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
-	s.checkForChainstart(header.Hash(), header.Number, header.Time)
+func (s *Service) checkHeaderForChainstart(ctx context.Context, header *gethTypes.Header) {
+	s.checkForChainstart(ctx, header.Hash(), header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*gethTypes.Header,
+func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*gethTypes.Header,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {
@@ -453,7 +457,7 @@ func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*get
 				i--
 				continue
 			}
-			s.checkHeaderForChainstart(h)
+			s.checkHeaderForChainstart(ctx, h)
 		}
 	}
 	return nil
@@ -461,11 +465,11 @@ func (s *Service) checkHeaderRange(start, end uint64, headersMap map[uint64]*get
 
 // retrieves the current active validator count and genesis time from
 // the provided block time.
-func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
+func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (uint64, uint64) {
 	if s.preGenesisState.NumValidators() == 0 {
 		return 0, 0
 	}
-	valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	valCount, err := helpers.ActiveValidatorCount(ctx, s.preGenesisState, 0)
 	if err != nil {
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 		return 0, 0
@@ -473,8 +477,8 @@ func (s *Service) currentCountAndTime(blockTime uint64) (uint64, uint64) {
 	return valCount, s.createGenesisTime(blockTime)
 }
 
-func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
-	valCount, genesisTime := s.currentCountAndTime(blockTime)
+func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	if valCount == 0 {
 		return
 	}
@@ -487,7 +491,7 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := stateV0.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

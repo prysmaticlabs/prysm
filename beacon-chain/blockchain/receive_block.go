@@ -7,11 +7,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -20,8 +19,8 @@ var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -30,34 +29,17 @@ type BlockReceiver interface {
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
-	receivedTime := timeutils.Now()
+	receivedTime := time.Now()
 	blockCopy := block.Copy()
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
-	}
-
-	// Update and save head block after fork choice.
-	if !featureconfig.Get().UpdateHeadTimely {
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        blockCopy.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: blockCopy,
-				Verified:    true,
-			},
-		})
 	}
 
 	// Handle post block operations such as attestations and exits.
@@ -86,7 +68,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
@@ -94,14 +76,14 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		// Send notification of the processed block to the state feed.
@@ -134,7 +116,7 @@ func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
+func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
 	// Delete the processed block attestations from attestation pool.
 	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
 		return err
@@ -160,7 +142,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
-	currentEpoch := helpers.SlotToEpoch(s.CurrentSlot())
+	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
 	if currentEpoch > s.finalizedCheckpt.Epoch {

@@ -6,12 +6,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *testing.T) {
@@ -21,7 +20,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -37,7 +36,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
 	}
-	state, err := stateV0.InitializeFromProto(base)
+	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
@@ -58,7 +57,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -74,7 +73,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
 	}
-	state, err := stateV0.InitializeFromProto(base)
+	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
@@ -95,7 +94,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -110,7 +109,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:        blockRoots, FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	state, err := stateV0.InitializeFromProto(base)
+	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}

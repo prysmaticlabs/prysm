@@ -2,8 +2,7 @@ package kv
 
 import (
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
@@ -16,7 +15,7 @@ func (c *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	att = copyutil.CopyAttestation(att)
+	att = ethpb.CopyAttestation(att)
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
 	c.forkchoiceAtt[r] = att
@@ -42,7 +41,7 @@ func (c *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 
 	atts := make([]*ethpb.Attestation, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
-		atts = append(atts, copyutil.CopyAttestation(att) /* Copied */)
+		atts = append(atts, ethpb.CopyAttestation(att) /* Copied */)
 	}
 
 	return atts

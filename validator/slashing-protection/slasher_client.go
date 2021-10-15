@@ -11,8 +11,8 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
+	ethsl "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -74,7 +74,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 		log.Warn("You are using an insecure slasher gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 
-	s.ctx = grpcutils.AppendHeaders(s.ctx, s.grpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(s.ctx, s.grpcHeaders)
 
 	opts := []grpc.DialOption{
 		dialOpt,
@@ -92,7 +92,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogRequests,
+			grpcutil.LogRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(s.ctx, s.cfg.Endpoint, opts...)

@@ -1,10 +1,10 @@
 package wallet
 
 import (
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -16,7 +16,7 @@ var log = logrus.WithField("prefix", "wallet")
 var Commands = &cli.Command{
 	Name:     "wallet",
 	Category: "wallet",
-	Usage:    "defines commands for interacting with eth2 validator wallets",
+	Usage:    "defines commands for interacting with Ethereum validator wallets",
 	Subcommands: []*cli.Command{
 		{
 			Name: "create",
@@ -33,10 +33,9 @@ var Commands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.ToledoTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -46,7 +45,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if _, err := accounts.CreateAndSaveWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
@@ -64,10 +63,9 @@ var Commands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.ToledoTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -77,7 +75,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.EditWalletConfigurationCli(cliCtx); err != nil {
 					log.Fatalf("Could not edit wallet configuration: %v", err)
 				}
@@ -94,10 +92,9 @@ var Commands = &cli.Command{
 				flags.NumAccountsFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.ToledoTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -107,7 +104,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.RecoverWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not recover wallet: %v", err)
 				}

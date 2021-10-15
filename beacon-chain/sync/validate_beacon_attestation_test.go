@@ -7,21 +7,22 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
@@ -35,8 +36,6 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidAttestation: true,
 	}
 
-	c, err := lru.New(10)
-	require.NoError(t, err)
 	s := &Service{
 		cfg: &Config{
 			InitialSync:         &mockSync.Sync{IsSyncing: false},
@@ -45,21 +44,20 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			Chain:               chain,
 			AttestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		seenAttestationCache: c,
+		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		seenUnAggregatedAttestationCache: lruwrpr.New(10),
 	}
-	err = s.initCaches()
-	require.NoError(t, err)
+	s.initCaches()
 
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
 	s.setBadBlock(ctx, invalidRoot)
 
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	require.NoError(t, err)
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 
 	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -69,7 +67,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	}
 
 	validators := uint64(64)
-	savedState, keys := testutil.DeterministicGenesisState(t, validators)
+	savedState, keys := util.DeterministicGenesisState(t, validators)
 	require.NoError(t, savedState.SetSlot(1))
 	require.NoError(t, db.SaveState(context.Background(), savedState, validBlockRoot))
 	chain.State = savedState
@@ -257,11 +255,11 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			helpers.ClearCache()
 			chain.ValidAttestation = tt.validAttestationSignature
 			if tt.validAttestationSignature {
-				com, err := helpers.BeaconCommitteeFromState(savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
+				com, err := helpers.BeaconCommitteeFromState(context.Background(), savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
 				require.NoError(t, err)
-				domain, err := helpers.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
+				domain, err := signing.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
 				require.NoError(t, err)
-				attRoot, err := helpers.ComputeSigningRoot(tt.msg.Data, domain)
+				attRoot, err := signing.ComputeSigningRoot(tt.msg.Data, domain)
 				require.NoError(t, err)
 				for i := 0; ; i++ {
 					if tt.msg.AggregationBits.BitAt(uint64(i)) {
@@ -284,9 +282,14 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			if tt.topic == "" {
 				m.Message.Topic = nil
 			}
-			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
+
+			res, err := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m)
+			received := res == pubsub.ValidationAccept
 			if received != tt.want {
 				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
+			}
+			if tt.want && err != nil {
+				t.Errorf("Non nil error returned: %v", err)
 			}
 			if tt.want && m.ValidatorData == nil {
 				t.Error("Expected validator data to be set")

@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const seedSize = int8(32)
@@ -24,8 +24,8 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 	var divided [][]uint64
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
-		start := sliceutil.SplitOffset(lSize, n, i)
-		end := sliceutil.SplitOffset(lSize, n, i+1)
+		start := slice.SplitOffset(lSize, n, i)
+		end := slice.SplitOffset(lSize, n, i+1)
 		divided = append(divided, l[start:end])
 	}
 	return divided
@@ -90,7 +90,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 	}
 	buf := make([]byte, totalSize)
 	posBuffer := make([]byte, 8)
-	hashfunc := hashutil.CustomSHA256Hasher()
+	hashfunc := hash.CustomSHA256Hasher()
 
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
@@ -168,7 +168,7 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 			len(input))
 	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
-	hashfunc := hashutil.CustomSHA256Hasher()
+	hashfunc := hash.CustomSHA256Hasher()
 	if rounds == 0 {
 		return input, nil
 	}
