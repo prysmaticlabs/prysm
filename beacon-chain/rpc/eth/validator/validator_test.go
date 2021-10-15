@@ -62,6 +62,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
+	// Deactivate last validator.
 	vals := bs.Validators()
 	vals[len(vals)-1].ExitEpoch = 0
 	require.NoError(t, bs.SetValidators(vals))
@@ -200,7 +201,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 	t.Run("Inactive validator - no duties", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 1,
+			Epoch: 0,
 			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys) - 1)},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
