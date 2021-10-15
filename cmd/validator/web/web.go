@@ -21,7 +21,7 @@ var Commands = &cli.Command{
 	Usage:    "defines commands for interacting with the Prysm web interface",
 	Subcommands: []*cli.Command{
 		{
-			Name:        "auth",
+			Name:        "auth-token",
 			Description: `Generate an authentication token for the Prysm web interface`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
