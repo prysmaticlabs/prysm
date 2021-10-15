@@ -29,15 +29,18 @@ const (
 	FinalizedCheckpointTopic = "finalized_checkpoint"
 	// ChainReorgTopic represents a chain reorganization event topic.
 	ChainReorgTopic = "chain_reorg"
+	// SyncCommitteeContributionTopic represents a new sync committee contribution event topic.
+	SyncCommitteeContributionTopic = "contribution_and_proof"
 )
 
 var casesHandled = map[string]bool{
-	HeadTopic:                true,
-	BlockTopic:               true,
-	AttestationTopic:         true,
-	VoluntaryExitTopic:       true,
-	FinalizedCheckpointTopic: true,
-	ChainReorgTopic:          true,
+	HeadTopic:                      true,
+	BlockTopic:                     true,
+	AttestationTopic:               true,
+	VoluntaryExitTopic:             true,
+	FinalizedCheckpointTopic:       true,
+	ChainReorgTopic:                true,
+	SyncCommitteeContributionTopic: true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -159,6 +162,16 @@ func (s *Server) handleBlockOperationEvents(
 		}
 		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
 		return s.streamData(stream, VoluntaryExitTopic, v1Data)
+	case operation.SyncCommitteeContributionReceived:
+		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
+			return nil
+		}
+		contributionData, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
+		if !ok {
+			return nil
+		}
+		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
+		return s.streamData(stream, SyncCommitteeContributionTopic, v2Data)
 	default:
 		return nil
 	}

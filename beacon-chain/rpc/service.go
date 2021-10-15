@@ -211,6 +211,7 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 		},
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		OperationNotifier: s.cfg.OperationNotifier,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
