@@ -1242,7 +1242,7 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 	assert.NoError(t, err)
 	for _, ctr := range assingments {
 		pendingAtt := &ethpb.PendingAttestation{
-			AggregationBits: bitfield.NewBitlist64(4).ToBitlist().Not(),
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
 			Data: &ethpb.AttestationData{
 				Slot:            ctr.AttesterSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
@@ -1274,7 +1274,7 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 	assert.NoError(t, err)
 	for _, ctr := range assingments {
 		pendingAtt := &ethpb.PendingAttestation{
-			AggregationBits: bitfield.NewBitlist64(4).ToBitlist().Not(),
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
 			Data: &ethpb.AttestationData{
 				Slot:            ctr.AttesterSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
@@ -1310,7 +1310,7 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 			continue
 		}
 		pendingAtt := &ethpb.PendingAttestation{
-			AggregationBits: bitfield.NewBitlist64(4).ToBitlist().Not(),
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
 			Data: &ethpb.AttestationData{
 				Slot:            attSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
