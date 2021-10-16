@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -406,6 +407,6 @@ func TestGetCommonBase(t *testing.T) {
 	blk105Root, err := blk105.Block.HashTreeRoot()
 	assert.NoError(t, err)
 
-	commonRoot, err := service.getCommonBase(ctx, blk105Root, blk103Root)
+	commonRoot, err := service.commonAncestorRoot(ctx, blk105Root, blk103Root)
 	require.Equal(t, commonRoot, blkGRoot)
 }

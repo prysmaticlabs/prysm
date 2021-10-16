@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -144,11 +145,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			},
 		})
 
-		commonBase, err := s.getCommonBase(ctx, oldHeadRoot, headRoot)
-		if err != nil {
-			return err
-		}
-		if err := s.saveOrphanedAtts(ctx, oldHeadRoot, commonBase); err != nil {
+		if err := s.saveOrphanedAtts(ctx, oldHeadRoot, headRoot); err != nil {
 			return err
 		}
 
@@ -380,21 +377,22 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
-func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, baseRoot [32]byte) error {
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
 	if !features.Get().CorrectlyInsertOrphanedAtts {
 		return nil
 	}
 
-	// Find all the orphaned blocks
-	orphanedBlks, err := s.getOrphanedBlocks(ctx, orphanedRoot, baseRoot)
+	commonAncestorRoot, err := s.commonAncestorRoot(ctx, orphanedRoot, newHeadRoot)
 	if err != nil {
 		return err
 	}
-	if len(orphanedBlks) < 1 {
-		return errors.New("the orphaned branch should not be empty")
+
+	orphanedBlks, err := s.getOrphanedBlocks(ctx, orphanedRoot, commonAncestorRoot)
+	if err != nil {
+		return err
 	}
-	s.saveAttestations(orphanedBlks)
-	return nil
+
+	return s.saveAttestations(orphanedBlks)
 }
 
 func (s *Service) saveAttestations(blocks []block.SignedBeaconBlock) error {
@@ -438,32 +436,39 @@ func (s *Service) getOrphanedBlocks(ctx context.Context, head [32]byte, base [32
 	return blocks, nil
 }
 
-// Get the most recent common ancestor that both branches are base off.
-func (s *Service) getCommonBase(ctx context.Context, head1 [32]byte, head2 [32]byte) ([32]byte, error) {
-	head1Blk, err := s.cfg.BeaconDB.Block(ctx, head1)
+// Get the latest common ancestor root that both branches are base off.
+func (s *Service) commonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error) {
+	blk1, err := s.cfg.BeaconDB.Block(ctx, root1)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	head2Blk, err := s.cfg.BeaconDB.Block(ctx, head2)
+	blk2, err := s.cfg.BeaconDB.Block(ctx, root2)
 	if err != nil {
 		return [32]byte{}, err
 	}
+	if blk1 == nil || blk2 == nil {
+		return [32]byte{}, errors.New("nil blocks")
+	}
+
 	// Keep walking back both of the branches until both heads are the same
-	for head1 != head2 {
-		if head1Blk.Block().Slot() >= head2Blk.Block().Slot() {
-			head1 = bytesutil.ToBytes32(head1Blk.Block().ParentRoot())
-			head1Blk, err = s.cfg.BeaconDB.Block(ctx, head1)
+	for root1 != root2 {
+		if ctx.Err() != nil {
+			return [32]byte{}, ctx.Err()
+		}
+		if blk1.Block().Slot() >= blk2.Block().Slot() {
+			root1 = bytesutil.ToBytes32(blk1.Block().ParentRoot())
+			blk1, err = s.cfg.BeaconDB.Block(ctx, root1)
 			if err != nil {
 				return [32]byte{}, err
 			}
 		} else {
-			head2 = bytesutil.ToBytes32(head2Blk.Block().ParentRoot())
-			head2Blk, err = s.cfg.BeaconDB.Block(ctx, head2)
+			root2 = bytesutil.ToBytes32(blk2.Block().ParentRoot())
+			blk2, err = s.cfg.BeaconDB.Block(ctx, root2)
 			if err != nil {
 				return [32]byte{}, err
 			}
 		}
 	}
 
-	return head1, nil
+	return root1, nil
 }
