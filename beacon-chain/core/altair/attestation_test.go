@@ -332,11 +332,6 @@ func TestValidatorFlag_Has(t *testing.T) {
 			set:      7,
 			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
 		},
-		{
-			name:     "source, target, head",
-			set:      8,
-			expected: []uint8{params.BeaconConfig().TimelySourceFlagIndex, params.BeaconConfig().TimelyTargetFlagIndex, params.BeaconConfig().TimelyHeadFlagIndex},
-		},
 	}
 
 	for _, tt := range tests {
