@@ -257,7 +257,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "7d2de54b2a1c573de04479c48d51783faf1986de0985328c735e51ff66a0de51",
+    sha256 = "7e2f62eaae9fd541690cc61d252556d0c5deb585ca1873aacbeb5b02d06f1362",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -273,7 +273,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b2e1400bb66f971909b82bfd8851bbef2a7a15d41be4994fd7e9b2e69278d69e",
+    sha256 = "05cbb89810c8acd6c57c4773ddfd167305cd4539960e9b4d7b69e1a988b35ad2",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -288,7 +288,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    #sha256 = "55fa6fa9823781195cb5362b734b4b6e2a6940a7411530b9bcdab02d845106ca",
+    sha256 = "0cef67b08448f7eb43bf66c464451c9e7a4852df8ef90555cca6d440e3436882",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
