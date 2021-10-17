@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -241,25 +239,46 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		CorrectlyInsertOrphanedAtts: true,
 	})
 	defer resetCfg()
-
-	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
-	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now()
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, service.saveOrphanedAtts(ctx, r, bytesutil.ToBytes32(b.Block.ParentRoot)))
+	// Chain setup
+	// Old: 0 <-- 1
+	// New: 0 <-- 2
+	beaconState, keys := util.DeterministicGenesisState(t, 64)
+	blkGenesis, err := util.GenerateFullBlock(beaconState, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	blkGenesis.Block.Slot = 0
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkGenesis)))
+	blkGensisRoot, err := blkGenesis.Block.HashTreeRoot()
+	require.NoError(t, err)
 
-	require.Equal(t, len(b.Block.Body.Attestations), service.cfg.AttPool.AggregatedAttestationCount())
-	savedAtts := service.cfg.AttPool.AggregatedAttestations()
-	atts := b.Block.Body.Attestations
-	require.DeepSSZEqual(t, atts, savedAtts)
+	// We just need some valid attestation BeaconDB.SaveBlock succeed for blk1
+	atts := blkGenesis.Block.Body.Attestations
+
+	blk1 := util.NewBeaconBlock()
+	blk1.Block.Slot = 1
+	blk1.Block.Body.Attestations = atts
+	blk1.Block.ParentRoot = blkGensisRoot[:]
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk1)))
+	blk1Root, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blk2 := util.NewBeaconBlock()
+	blk2.Block.Slot = 2
+	blk2.Block.ParentRoot = blkGensisRoot[:]
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk2)))
+	blk2Root, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, service.saveOrphanedAtts(ctx, blk1Root, blk2Root))
+
+	// Validations
+	require.NotEqual(t, 0, len(blk1.Block.Body.Attestations))
+	require.Equal(t, len(blk1.Block.Body.Attestations), service.cfg.AttPool.AggregatedAttestationCount())
+	require.DeepSSZEqual(t, blk1.Block.Body.Attestations, service.cfg.AttPool.AggregatedAttestations())
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
@@ -268,24 +287,45 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	})
 	defer resetCfg()
 
-	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
-	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch+1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	require.NoError(t, service.saveOrphanedAtts(ctx, r, bytesutil.ToBytes32(b.Block.ParentRoot)))
+	// Chain setup
+	// Old: 0 <-- 1
+	// New: 0 <-- 2
+	beaconState, keys := util.DeterministicGenesisState(t, 64)
+	blkGenesis, err := util.GenerateFullBlock(beaconState, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	blkGenesis.Block.Slot = 0
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkGenesis)))
+	blkGensisRoot, err := blkGenesis.Block.HashTreeRoot()
+	require.NoError(t, err)
 
+	// We just need some valid attestation BeaconDB.SaveBlock succeed for blk1
+	atts := blkGenesis.Block.Body.Attestations
+
+	blk1 := util.NewBeaconBlock()
+	blk1.Block.Slot = 1
+	blk1.Block.Body.Attestations = atts
+	blk1.Block.ParentRoot = blkGensisRoot[:]
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk1)))
+	blk1Root, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blk2 := util.NewBeaconBlock()
+	blk2.Block.Slot = 2
+	blk2.Block.ParentRoot = blkGensisRoot[:]
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk2)))
+	blk2Root, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, service.saveOrphanedAtts(ctx, blk1Root, blk2Root))
+
+	// Validations
+	require.NotEqual(t, 0, blk1.Block.Body.Attestations)
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
-	savedAtts := service.cfg.AttPool.AggregatedAttestations()
-	atts := b.Block.Body.Attestations
-	require.DeepNotSSZEqual(t, atts, savedAtts)
 }
 
 func TestGetOrphanedBlocks(t *testing.T) {

@@ -458,15 +458,12 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1 [32]byte, root2 
 		if blk1.Block().Slot() >= blk2.Block().Slot() {
 			root1 = bytesutil.ToBytes32(blk1.Block().ParentRoot())
 			blk1, err = s.cfg.BeaconDB.Block(ctx, root1)
-			if err != nil {
-				return [32]byte{}, err
-			}
 		} else {
 			root2 = bytesutil.ToBytes32(blk2.Block().ParentRoot())
 			blk2, err = s.cfg.BeaconDB.Block(ctx, root2)
-			if err != nil {
-				return [32]byte{}, err
-			}
+		}
+		if err != nil {
+			return [32]byte{}, err
 		}
 	}
 
