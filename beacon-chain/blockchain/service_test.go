@@ -123,8 +123,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
-	chainService, err := NewService(ctx, cfg)
+	chainService, err := NewService(ctx)
 	require.NoError(t, err, "Unable to setup chain service")
+	chainService.cfg = cfg
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService

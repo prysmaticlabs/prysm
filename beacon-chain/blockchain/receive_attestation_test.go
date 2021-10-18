@@ -45,8 +45,9 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(ctx)
 	require.NoError(t, err)
+	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -73,8 +74,9 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx, cfg)
+	service, err := NewService(ctx)
 	require.NoError(t, err)
+	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -107,9 +109,10 @@ func TestProcessAttestations_Ok(t *testing.T) {
 		StateGen:        stategen.New(beaconDB),
 		AttPool:         attestations.NewPool(),
 	}
-	service, err := NewService(ctx, cfg)
-	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	service, err := NewService(ctx)
 	require.NoError(t, err)
+	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	service.cfg = cfg
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
