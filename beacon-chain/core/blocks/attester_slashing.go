@@ -61,9 +61,14 @@ func ProcessAttesterSlashings(
 			}
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
 				cfg := params.BeaconConfig()
-				slashingQuotient := cfg.MinSlashingPenaltyQuotient
-				if beaconState.Version() == version.Altair {
+				var slashingQuotient uint64
+				switch {
+				case beaconState.Version() == version.Phase0:
+					slashingQuotient = cfg.MinSlashingPenaltyQuotient
+				case beaconState.Version() == version.Altair:
 					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+				default:
+					return nil, errors.New("unknown state version")
 				}
 				beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 				if err != nil {
