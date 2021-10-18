@@ -59,44 +59,44 @@ func ProcessAttesterSlashing(
 	slashing *ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
-		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
-			return nil, errors.Wrap(err, "could not verify attester slashing")
+	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
+		return nil, errors.Wrap(err, "could not verify attester slashing")
+	}
+	slashableIndices := slashableAttesterIndices(slashing)
+	sort.SliceStable(slashableIndices, func(i, j int) bool {
+		return slashableIndices[i] < slashableIndices[j]
+	})
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
+	var err error
+	var slashedAny bool
+	var val state.ReadOnlyValidator
+	for _, validatorIndex := range slashableIndices {
+		val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
+		if err != nil {
+			return nil, err
 		}
-		slashableIndices := slashableAttesterIndices(slashing)
-		sort.SliceStable(slashableIndices, func(i, j int) bool {
-			return slashableIndices[i] < slashableIndices[j]
-		})
-		currentEpoch := slots.ToEpoch(beaconState.Slot())
-		var err error
-		var slashedAny bool
-		var val state.ReadOnlyValidator
-		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
+		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
+			cfg := params.BeaconConfig()
+			var slashingQuotient uint64
+			switch {
+			case beaconState.Version() == version.Phase0:
+				slashingQuotient = cfg.MinSlashingPenaltyQuotient
+			case beaconState.Version() == version.Altair:
+				slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+			default:
+				return nil, errors.New("unknown state version")
+			}
+			beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "could not slash validator index %d",
+					validatorIndex)
 			}
-			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
-				cfg := params.BeaconConfig()
-				var slashingQuotient uint64
-				switch {
-				case beaconState.Version() == version.Phase0:
-					slashingQuotient = cfg.MinSlashingPenaltyQuotient
-				case beaconState.Version() == version.Altair:
-					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-				default:
-					return nil, errors.New("unknown state version")
-				}
-				beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not slash validator index %d",
-						validatorIndex)
-				}
-				slashedAny = true
-			}
+			slashedAny = true
 		}
-		if !slashedAny {
-			return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
-		}
+	}
+	if !slashedAny {
+		return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
+	}
 	return beaconState, nil
 }
 

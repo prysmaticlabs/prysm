@@ -68,26 +68,26 @@ func ProcessProposerSlashing(
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
 	var err error
-		if slashing == nil {
-			return nil, errors.New("nil proposer slashings in block body")
-		}
-		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
-			return nil, errors.Wrap(err, "could not verify proposer slashing")
-		}
-		cfg := params.BeaconConfig()
-		var slashingQuotient uint64
-		switch {
-		case beaconState.Version() == version.Phase0:
-			slashingQuotient = cfg.MinSlashingPenaltyQuotient
-		case beaconState.Version() == version.Altair:
-			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-		default:
-			return nil, errors.New("unknown state version")
-		}
-		beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
-		}
+	if slashing == nil {
+		return nil, errors.New("nil proposer slashings in block body")
+	}
+	if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
+		return nil, errors.Wrap(err, "could not verify proposer slashing")
+	}
+	cfg := params.BeaconConfig()
+	var slashingQuotient uint64
+	switch {
+	case beaconState.Version() == version.Phase0:
+		slashingQuotient = cfg.MinSlashingPenaltyQuotient
+	case beaconState.Version() == version.Altair:
+		slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+	default:
+		return nil, errors.New("unknown state version")
+	}
+	beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
+	}
 	return beaconState, nil
 }
 
