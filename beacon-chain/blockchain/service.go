@@ -97,6 +97,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
 		justifiedBalances:    make([]uint64, 0),
+		cfg:                  &config{},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
