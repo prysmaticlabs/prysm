@@ -159,6 +159,94 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 }
 
+func TestServer_ValidateKeystores_FailedPreconditions(t *testing.T) {
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{})
+	assert.ErrorContains(t, "Password required for keystores", err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+	})
+	assert.ErrorContains(t, "No keystores included in request", err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         []string{"badjson"},
+	})
+	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+}
+
+func TestServer_ValidateKeystores_OK(t *testing.T) {
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+
+	// Create 3 keystores with the strong password.
+	encryptor := keystorev4.New()
+	keystores := make([]string, 3)
+	pubKeys := make([][]byte, 3)
+	for i := 0; i < len(keystores); i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+
+	// Validate the keystores and ensure no error.
+	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         keystores,
+	})
+	require.NoError(t, err)
+
+	// Check that using a different password will return an error.
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: "badpassword",
+		Keystores:         keystores,
+	})
+	require.ErrorContains(t, "is incorrect", err)
+
+	// Add a new keystore that was encrypted with a different password and expect
+	// a failure from the function.
+	differentPassword := "differentkeystorepass"
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := "somepubkey"
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), differentPassword)
+	require.NoError(t, err)
+	item := &keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Pubkey:  pubKey,
+		Name:    encryptor.Name(),
+	}
+	encodedFile, err := json.MarshalIndent(item, "", "\t")
+	keystores = append(keystores, string(encodedFile))
+	require.NoError(t, err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         keystores,
+	})
+	require.ErrorContains(t, "Password for keystore with public key somepubkey is incorrect", err)
+}
+
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
 	s := &Server{}
 	resp, err := s.WalletConfig(context.Background(), &empty.Empty{})
