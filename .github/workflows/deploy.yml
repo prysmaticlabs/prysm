@@ -85,7 +85,7 @@ jobs:
 
       - name: Request network upgrade
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
         run: |
           curl -X POST \
           -H "Accept: application/vnd.github.v3+json" \
