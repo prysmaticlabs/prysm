@@ -486,7 +486,8 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	b.blockchainOpts = append(
+	// skipcq: CRT-D0001
+	opts := append(
 		b.blockchainOpts,
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
@@ -501,7 +502,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 	)
-	blockchainService, err := blockchain.NewService(b.ctx, b.blockchainOpts...)
+	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
