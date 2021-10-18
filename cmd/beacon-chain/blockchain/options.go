@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Options for blockchain service flag configurations.
-func Options(c *cli.Context) ([]blockchain.Option, error) {
+// FlagOptions for blockchain service flag configurations.
+func FlagOptions(c *cli.Context) ([]blockchain.Option, error) {
 	wsp := c.String(flags.WeakSubjectivityCheckpt.Name)
 	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {

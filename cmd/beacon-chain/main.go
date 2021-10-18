@@ -225,12 +225,12 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	blockchainOpts, err := blockchaincmd.Options(ctx)
+	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
 		return nil
 	}
 	opts := []node.Option{
-		node.WithBlockchainOptions(blockchainOpts),
+		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 	}
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {

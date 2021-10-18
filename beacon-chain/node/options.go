@@ -5,10 +5,10 @@ import "github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 // Option for beacon node configuration.
 type Option func(bn *BeaconNode) error
 
-// WithBlockchainOptions includes functional options for the blockchain service.
-func WithBlockchainOptions(opts []blockchain.Option) Option {
+// WithBlockchainFlagOptions includes functional options for the blockchain service related to CLI flags.
+func WithBlockchainFlagOptions(opts []blockchain.Option) Option {
 	return func(bn *BeaconNode) error {
-		bn.blockchainOpts = opts
+		bn.blockchainFlagOpts = opts
 		return nil
 	}
 }

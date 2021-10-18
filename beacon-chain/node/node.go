@@ -86,7 +86,7 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	blockchainOpts          []blockchain.Option
+	blockchainFlagOpts      []blockchain.Option
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -488,7 +488,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	// skipcq: CRT-D0001
 	opts := append(
-		b.blockchainOpts,
+		b.blockchainFlagOpts,
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
