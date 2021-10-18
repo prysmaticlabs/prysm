@@ -51,12 +51,28 @@ func ProcessProposerSlashings(
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
 	var err error
-	for idx, slashing := range slashings {
+	for _, slashing := range slashings {
+		beaconState, err = ProcessProposerSlashing(ctx, beaconState, slashing, slashFunc)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return beaconState, nil
+}
+
+// ProcessProposerSlashing processes individual proposer slashing.
+func ProcessProposerSlashing(
+	ctx context.Context,
+	beaconState state.BeaconState,
+	slashing *ethpb.ProposerSlashing,
+	slashFunc slashValidatorFunc,
+) (state.BeaconState, error) {
+	var err error
 		if slashing == nil {
 			return nil, errors.New("nil proposer slashings in block body")
 		}
 		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
+			return nil, errors.Wrap(err, "could not verify proposer slashing")
 		}
 		cfg := params.BeaconConfig()
 		var slashingQuotient uint64
@@ -72,7 +88,6 @@ func ProcessProposerSlashings(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 		}
-	}
 	return beaconState, nil
 }
 

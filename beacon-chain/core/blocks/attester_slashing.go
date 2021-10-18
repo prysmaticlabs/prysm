@@ -42,9 +42,25 @@ func ProcessAttesterSlashings(
 	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
-	for idx, slashing := range slashings {
+	var err error
+	for _, slashing := range slashings {
+		beaconState, err = ProcessAttesterSlashing(ctx, beaconState, slashing, slashFunc)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return beaconState, nil
+}
+
+// ProcessAttesterSlashing processes individual attester slashing.
+func ProcessAttesterSlashing(
+	ctx context.Context,
+	beaconState state.BeaconState,
+	slashing *ethpb.AttesterSlashing,
+	slashFunc slashValidatorFunc,
+) (state.BeaconState, error) {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
+			return nil, errors.Wrap(err, "could not verify attester slashing")
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
@@ -81,7 +97,6 @@ func ProcessAttesterSlashings(
 		if !slashedAny {
 			return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
 		}
-	}
 	return beaconState, nil
 }
 
