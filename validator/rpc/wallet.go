@@ -11,7 +11,6 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
