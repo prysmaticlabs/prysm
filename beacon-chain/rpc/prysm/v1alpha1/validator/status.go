@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -116,11 +117,11 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	if err != nil {
 		olderEpoch = previousEpoch
 	}
-	prevState, err := vs.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(previousEpoch)))
+	prevState, err := vs.retrieveAfterEpochTransition(ctx, previousEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous state")
 	}
-	olderState, err := vs.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(olderEpoch)))
+	olderState, err := vs.retrieveAfterEpochTransition(ctx, olderEpoch)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get older state")
 	}
@@ -159,6 +160,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		// If the next epoch's balance is higher, we mark it as an existing
 		// duplicate.
 		if nextBal > baseBal {
+			log.Infof("current %d with last epoch %d and difference in bal %d gwei", currEpoch, v.Epoch, nextBal-baseBal)
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -368,4 +370,16 @@ func depositStatus(depositOrBalance uint64) ethpb.ValidatorStatus {
 		return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 	}
 	return ethpb.ValidatorStatus_DEPOSITED
+}
+
+func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
+	endSlot, err := slots.EpochEnd(epoch)
+	if err != nil {
+		return nil, err
+	}
+	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
+	if err != nil {
+		return nil, err
+	}
+	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
 }
