@@ -1,6 +1,7 @@
 package fieldtrie
 
 import (
+	"encoding/binary"
 	"fmt"
 	"reflect"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -60,6 +62,13 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 				reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		return handlePendingAttestation(val, indices, convertAll)
+	case types.Balances:
+		val, ok := elements.([]uint64)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([]uint64{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		return handleBalanceSlice(val, indices, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
@@ -140,4 +149,33 @@ func handlePendingAttestation(val []*ethpb.PendingAttestation, indices []uint64,
 		}
 	}
 	return roots, nil
+}
+
+func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]byte, error) {
+	if convertAll {
+		balancesMarshaling := make([][]byte, 0)
+		for i := 0; i < len(val); i++ {
+			balanceBuf := make([]byte, 8)
+			binary.LittleEndian.PutUint64(balanceBuf, val[i])
+			balancesMarshaling = append(balancesMarshaling, balanceBuf)
+		}
+		balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
+		if err != nil {
+			return [][32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
+		}
+		return balancesChunks, nil
+	}
+	if len(val) > 0 {
+		roots := [][32]byte{}
+		for _, idx := range indices {
+			startIdx := idx / 4
+			chunk := [32]byte{}
+			for i, j := 0, startIdx; j < startIdx+4; i, j = i+1, j+1 {
+				binary.LittleEndian.PutUint64(chunk[i:i+8], val[j])
+			}
+			roots = append(roots, chunk)
+		}
+		return roots, nil
+	}
+	return [][32]byte{}, nil
 }

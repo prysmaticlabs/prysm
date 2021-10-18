@@ -50,7 +50,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
 		}, nil
-	case types.CompositeArray:
+	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
@@ -95,6 +95,22 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 			return [32]byte{}, err
 		}
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
+	case types.CompressedArray:
+		numOfElems, err := f.field.CompressedLength()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		newIndices := []uint64{}
+		for _, idx := range indices {
+			startIdx := idx / numOfElems
+			newIndices = append(newIndices, startIdx)
+		}
+		// TODO:Remove duplicate indexes.
+		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, newIndices, f.fieldLayers)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
 	}
@@ -132,7 +148,7 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	switch f.dataType {
 	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
-	case types.CompositeArray:
+	case types.CompositeArray, types.CompressedArray:
 		trieRoot := *f.fieldLayers[len(f.fieldLayers)-1][0]
 		return stateutil.AddInMixin(trieRoot, uint64(len(f.fieldLayers[0])))
 	default:

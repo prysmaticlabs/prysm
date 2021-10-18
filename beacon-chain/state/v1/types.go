@@ -17,7 +17,6 @@ var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
 	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
-
 	// Initialize the fixed sized arrays.
 	fieldMap[types.BlockRoots] = types.BasicArray
 	fieldMap[types.StateRoots] = types.BasicArray
@@ -28,6 +27,7 @@ func init() {
 	fieldMap[types.Validators] = types.CompositeArray
 	fieldMap[types.PreviousEpochAttestations] = types.CompositeArray
 	fieldMap[types.CurrentEpochAttestations] = types.CompositeArray
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
