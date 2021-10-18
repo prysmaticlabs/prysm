@@ -34,7 +34,7 @@ jobs:
       - name: Gosec security scanner
         uses: securego/gosec@master
         with:
-          args: '-exclude-dir=crypto/bls/herumi ./...'
+          args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
 
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v2
