@@ -811,7 +811,6 @@ def prysm_deps():
         patch_args = ["-p1"],
         patches = ["//third_party:com_github_ethereum_go_ethereum_secp256k1.patch"],
         build_directives = [
-            # "gazelle:resolve go github.com/ethereum/go-ethereum/crypto/secp256k1 @prysm//third_party/secp256k1:go_default_library",
             "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
         ],
     )
