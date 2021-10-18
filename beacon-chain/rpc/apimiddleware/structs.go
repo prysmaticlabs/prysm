@@ -672,7 +672,7 @@ func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (ssz *blockSSZResponseJson) SSZVersion() string {
+func (_ *blockSSZResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
@@ -699,7 +699,7 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (ssz *beaconStateSSZResponseJson) SSZVersion() string {
+func (_ *beaconStateSSZResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
