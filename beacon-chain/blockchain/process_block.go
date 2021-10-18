@@ -581,7 +581,7 @@ func validateTerminalBlock(transitionBlock *gethTypes.Block, transitionParentBlo
 		return true
 	}
 	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
+	terminalTotalDifficulty.SetUint64(params.BeaconConfig().TerminalTotalDifficulty)
 
 	totalDifficultyReached := transitionBlock.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0
 	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlock.TotalDifficulty()) >= 0

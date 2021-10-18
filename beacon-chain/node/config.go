@@ -105,7 +105,7 @@ func configureExecutionMode(cliCtx *cli.Context) {
 	}
 	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
 		c := params.BeaconConfig()
-		c.TerminalTotalDifficulty = []byte(cliCtx.String(flags.TerminalTotalDifficultyOverride.Name))
+		c.TerminalTotalDifficulty = cliCtx.Uint64(flags.TerminalTotalDifficultyOverride.Name)
 		params.OverrideBeaconConfig(c)
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {

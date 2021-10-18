@@ -148,7 +148,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}
 
 	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetBytes(params.BeaconConfig().TerminalTotalDifficulty)
+	terminalTotalDifficulty.SetUint64(params.BeaconConfig().TerminalTotalDifficulty)
 
 	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
 	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()

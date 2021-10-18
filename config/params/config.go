@@ -182,7 +182,7 @@ type BeaconChainConfig struct {
 	MaxExecutionTransactions     uint64         `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
 	MaxBytesPerOpaqueTransaction uint64         `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
 	TerminalBlockHash            common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
-	TerminalTotalDifficulty      []byte         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	TerminalTotalDifficulty      uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
 	FeeRecipient                 common.Address // FeeRecipient where the transaction fee goes to.
 
 	// Light client

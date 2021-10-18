@@ -197,7 +197,7 @@ var (
 		Value: false,
 	}
 	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
-	TerminalTotalDifficultyOverride = &cli.StringFlag{
+	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
 		Name: "terminal-total-difficulty-override",
 		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value." +
 			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty." +
