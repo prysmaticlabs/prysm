@@ -153,7 +153,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
 			genesisRoot: [32]byte{1},
@@ -182,7 +182,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		genesisRoot := [32]byte{1}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
 			genesisRoot: genesisRoot,
