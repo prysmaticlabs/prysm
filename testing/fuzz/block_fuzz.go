@@ -137,19 +137,19 @@ func BeaconFuzzBlock(b []byte) {
 		panic(err)
 	}
 
-	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		ChainStartFetcher: powt.NewPOWChain(),
-		BeaconDB:          db1,
-		DepositCache:      nil,
-		AttPool:           ap,
-		ExitPool:          ep,
-		SlashingPool:      sp,
-		P2p:               p2p,
-		StateNotifier:     sn,
-		ForkChoiceStore:   protoarray.New(0, 0, [32]byte{}),
-		AttService:        ops,
-		StateGen:          sgen,
-	})
+	chain, err := blockchain.NewService(
+		context.Background(),
+		blockchain.WithChainStartFetcher(powt.NewPOWChain()),
+		blockchain.WithDatabase(db1),
+		blockchain.WithAttestationPool(ap),
+		blockchain.WithExitPool(ep),
+		blockchain.WithSlashingPool(sp),
+		blockchain.WithP2PBroadcaster(p2p),
+		blockchain.WithStateNotifier(sn),
+		blockchain.WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		blockchain.WithAttestationService(ops),
+		blockchain.WithStateGen(sgen),
+	)
 	if err != nil {
 		panic(err)
 	}
