@@ -81,23 +81,19 @@ func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 // Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	eth1VotesRoots := make([][]byte, 0)
+	eth1VotesRoots := make([][32]byte, 0)
 	for i := 0; i < len(eth1Datas); i++ {
 		eth1, err := Eth1DataRootWithHasher(hasher, eth1Datas[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}
-		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
-	}
-	eth1Chunks, err := ssz.Pack(eth1VotesRoots)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
+		eth1VotesRoots = append(eth1VotesRoots, eth1)
 	}
 
-	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(
+	eth1VotesRootsRoot, err := ssz.BitwiseMerkleizeArrays(
 		hasher,
-		eth1Chunks,
-		uint64(len(eth1Chunks)),
+		eth1VotesRoots,
+		uint64(len(eth1VotesRoots)),
 		uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))),
 	)
 	if err != nil {

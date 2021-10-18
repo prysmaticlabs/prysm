@@ -45,7 +45,7 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 		if err != nil {
 			return [32]byte{}, err
 		}
-		pubKeyRoot, err := ssz.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		pubKeyRoot, err := ssz.BitwiseMerkleizeArrays(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -79,7 +79,7 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 			balLimit = uint64(len(balances))
 		}
 	}
-	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
+	balancesRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}

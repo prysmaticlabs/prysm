@@ -8,6 +8,7 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const bytesPerChunk = 32
@@ -33,7 +34,7 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 	}
 	output := make([]byte, 32)
 	copy(output, buf.Bytes())
-	root, err := BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), limit)
+	root, err := BitwiseMerkleizeArrays(hasher, chunks, uint64(len(chunks)), limit)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -69,7 +70,7 @@ func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count, limit uint6
 }
 
 // Pack a given byte array's final chunk with zeroes if needed.
-func Pack(serializedItems [][]byte) ([][]byte, error) {
+func Pack(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
 	areAllEmpty := true
 	for _, item := range serializedItems {
 		if !bytes.Equal(item, []byte{}) {
@@ -79,11 +80,15 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 	}
 	// If there are no items, we return an empty chunk.
 	if len(serializedItems) == 0 || areAllEmpty {
-		emptyChunk := make([]byte, bytesPerChunk)
-		return [][]byte{emptyChunk}, nil
+		emptyChunk := [bytesPerChunk]byte{}
+		return [][32]byte{emptyChunk}, nil
 	} else if len(serializedItems[0]) == bytesPerChunk {
 		// If each item has exactly BYTES_PER_CHUNK length, we return the list of serialized items.
-		return serializedItems, nil
+		chunks := make([][bytesPerChunk]byte, 0, len(serializedItems))
+		for _, c := range serializedItems {
+			chunks = append(chunks, bytesutil.ToBytes32(c))
+		}
+		return chunks, nil
 	}
 	// We flatten the list in order to pack its items into byte chunks correctly.
 	var orderedItems []byte
@@ -91,7 +96,7 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		orderedItems = append(orderedItems, item...)
 	}
 	numItems := len(orderedItems)
-	var chunks [][]byte
+	var chunks [][32]byte
 	for i := 0; i < numItems; i += bytesPerChunk {
 		j := i + bytesPerChunk
 		// We create our upper bound index of the chunk, if it is greater than numItems,
@@ -101,15 +106,10 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		}
 		// We create chunks from the list of items based on the
 		// indices determined above.
-		chunks = append(chunks, orderedItems[i:j])
+		// The bytes helper will right-pad the last chunk with zero
+		// bytes if it does not have length bytesPerChunk.
+		chunks = append(chunks, bytesutil.ToBytes32(orderedItems[i:j]))
 	}
-	// Right-pad the last chunk with zero bytes if it does not
-	// have length bytesPerChunk.
-	lastChunk := chunks[len(chunks)-1]
-	for len(lastChunk) < bytesPerChunk {
-		lastChunk = append(lastChunk, 0)
-	}
-	chunks[len(chunks)-1] = lastChunk
 	return chunks, nil
 }
 

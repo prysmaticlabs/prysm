@@ -45,5 +45,5 @@ func merkleizePubkey(hasher ssz.HashFn, pubkey []byte) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return ssz.BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), uint64(len(chunks)))
+	return ssz.BitwiseMerkleizeArrays(hasher, chunks, uint64(len(chunks)), uint64(len(chunks)))
 }
