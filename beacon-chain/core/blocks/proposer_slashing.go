@@ -59,9 +59,14 @@ func ProcessProposerSlashings(
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		cfg := params.BeaconConfig()
-		slashingQuotient := cfg.MinSlashingPenaltyQuotient
-		if beaconState.Version() == version.Altair {
+		var slashingQuotient uint64
+		switch {
+		case beaconState.Version() == version.Phase0:
+			slashingQuotient = cfg.MinSlashingPenaltyQuotient
+		case beaconState.Version() == version.Altair:
 			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+		default:
+			return nil, errors.New("unknown state version")
 		}
 		beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 		if err != nil {
