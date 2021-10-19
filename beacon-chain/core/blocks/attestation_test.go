@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -46,7 +47,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -76,7 +77,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -104,11 +105,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to current justified checkpoint"
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -142,12 +143,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to previous justified checkpoint"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -178,7 +179,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, expected, err)
 }
 
@@ -221,7 +222,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 
@@ -352,7 +353,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block)
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 
@@ -466,7 +467,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -524,7 +525,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Slot:       5,
 		Validators: validators,
 		Fork: &pb.Fork{
@@ -611,7 +612,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
-	err := blocks.VerifyIndexedAttestation(context.Background(), &stateV0.BeaconState{}, indexedAtt1)
+	err := blocks.VerifyIndexedAttestation(context.Background(), &v1.BeaconState{}, indexedAtt1)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -782,4 +783,65 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	verified, err := set.Verify()
 	require.NoError(t, err)
 	assert.Equal(t, true, verified, "Multiple signatures were unable to be verified.")
+}
+
+func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
+	validators := make([]*ethpb.Validator, numOfValidators)
+	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	require.NoError(t, err)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             keys[i].PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
+		}
+	}
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(5))
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetFork(&pb.Fork{Epoch: 1, CurrentVersion: []byte{0, 1, 2, 3}, PreviousVersion: []byte{0, 1, 1, 1}}))
+
+	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
+	require.NoError(t, err)
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
+		Data: &ethpb.AttestationData{
+			Slot: 1,
+		},
+	})
+	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	require.NoError(t, err)
+	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	require.NoError(t, err)
+	var sigs []bls.Signature
+	for i, u := range comm1 {
+		att1.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
+	require.NoError(t, err)
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 1,
+		},
+	})
+	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	require.NoError(t, err)
+	sigs = nil
+	for i, u := range comm2 {
+		att2.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	_, err = blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	require.NoError(t, err)
 }

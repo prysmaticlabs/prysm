@@ -5,8 +5,8 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -21,6 +21,7 @@ type attSubmitted struct {
 	aggregatorIndices []types.ValidatorIndex
 }
 
+// LogAttestationsSubmitted logs info about submitted attestations.
 func (v *validator) LogAttestationsSubmitted() {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
@@ -42,6 +43,7 @@ func (v *validator) LogAttestationsSubmitted() {
 	v.attLogs = make(map[[32]byte]*attSubmitted)
 }
 
+// LogNextDutyTimeLeft logs the next duty info.
 func (v *validator) LogNextDutyTimeLeft(slot types.Slot) error {
 	if !v.logDutyCountDown {
 		return nil

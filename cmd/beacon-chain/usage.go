@@ -73,6 +73,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreSourceFileFlag,
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.VanguardNetwork,
 		},
 	},
 	{
@@ -102,6 +103,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableGRPCGateway,
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,
+			flags.EthApiPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
 			flags.FallbackWeb3ProviderFlag,
@@ -119,6 +121,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.NetworkID,
 			flags.WeakSubjectivityCheckpt,
 			flags.Eth1HeaderReqLimit,
+			flags.OrcRpcProviderFlag,
 			flags.GenesisStatePath,
 		},
 	},

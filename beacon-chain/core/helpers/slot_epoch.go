@@ -19,9 +19,9 @@ const MaxSlotBuffer = uint64(1 << 7)
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//  def compute_epoch_at_slot(slot: Slot) -> Epoch:
 //    """
-//    Return the epoch number of ``slot``.
+//    Return the epoch number at ``slot``.
 //    """
 //    return Epoch(slot // SLOTS_PER_EPOCH)
 func SlotToEpoch(slot types.Slot) types.Epoch {
@@ -36,7 +36,7 @@ func SlotToEpoch(slot types.Slot) types.Epoch {
 //    """
 //    Return the current epoch.
 //    """
-//    return compute_epoch_of_slot(state.slot)
+//    return compute_epoch_at_slot(state.slot)
 func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }
@@ -192,4 +192,12 @@ func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	startTime := uint64((slot - slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
 	return genesis + startTime
+}
+
+// PrevSlot returns previous slot, with an exception in slot 0 to prevent underflow.
+func PrevSlot(slot types.Slot) types.Slot {
+	if slot > 0 {
+		return slot.Sub(1)
+	}
+	return 0
 }

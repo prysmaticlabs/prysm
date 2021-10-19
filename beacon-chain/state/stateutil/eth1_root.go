@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
@@ -62,7 +62,7 @@ func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([
 	return root, nil
 }
 
-// Eth1DataEncKey returns the encoded key in bytes of input `eth1Data`s,
+// Eth1DatasEncKey returns the encoded key in bytes of input `eth1Data`s,
 // the returned key bytes can be used for caching purposes.
 func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()

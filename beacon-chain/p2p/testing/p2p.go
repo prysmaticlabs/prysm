@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
@@ -21,12 +20,13 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/multiformats/go-multiaddr"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 )
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -39,7 +39,7 @@ type TestP2P struct {
 	DelaySend       bool
 	Digest          [4]byte
 	peers           *peers.Status
-	LocalMetadata   *pb.MetaData
+	LocalMetadata   interfaces.Metadata
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -338,13 +338,13 @@ func (p *TestP2P) ForkDigest() ([4]byte, error) {
 }
 
 // Metadata mocks the peer's metadata.
-func (p *TestP2P) Metadata() *pb.MetaData {
-	return proto.Clone(p.LocalMetadata).(*pb.MetaData)
+func (p *TestP2P) Metadata() interfaces.Metadata {
+	return p.LocalMetadata.Copy()
 }
 
 // MetadataSeq mocks metadata sequence number.
 func (p *TestP2P) MetadataSeq() uint64 {
-	return p.LocalMetadata.SeqNumber
+	return p.LocalMetadata.SequenceNumber()
 }
 
 // AddPingMethod mocks the p2p func.

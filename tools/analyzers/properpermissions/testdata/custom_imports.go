@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 )
 
+// UseAliasedPackages --
 func UseAliasedPackages() {
 	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	p := filepath.Join(tempDir(), fmt.Sprintf("/%d", randPath))

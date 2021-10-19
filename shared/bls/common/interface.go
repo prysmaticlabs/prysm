@@ -10,7 +10,6 @@ type SecretKey interface {
 	PublicKey() PublicKey
 	Sign(msg []byte) Signature
 	Marshal() []byte
-	IsZero() bool
 }
 
 // PublicKey represents a BLS public key.
@@ -27,6 +26,7 @@ type Signature interface {
 	// Deprecated: Use FastAggregateVerify or use this method in spectests only.
 	AggregateVerify(pubKeys []PublicKey, msgs [][32]byte) bool
 	FastAggregateVerify(pubKeys []PublicKey, msg [32]byte) bool
+	Eth2FastAggregateVerify(pubKeys []PublicKey, msg [32]byte) bool
 	Marshal() []byte
 	Copy() Signature
 }

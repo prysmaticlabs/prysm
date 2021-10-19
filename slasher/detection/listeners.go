@@ -1,7 +1,7 @@
 /*
 Package detection defines a service that reacts to incoming blocks/attestations
 by running slashing detection for double proposals, double votes, and surround votes
-according to the eth2 specification. As soon as slashing objects are found, they are
+according to the Ethereum Beacon Chain specification. As soon as slashing objects are found, they are
 sent over a feed for the beaconclient service to submit to a beacon node via gRPC.
 */
 package detection
@@ -9,7 +9,7 @@ package detection
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )

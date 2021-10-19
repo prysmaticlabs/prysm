@@ -4,14 +4,14 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// PendingAttestationRoot describes a method from which the hash tree root
+// PendingAttRootWithHasher describes a method from which the hash tree root
 // of a pending attestation is returned.
 func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte

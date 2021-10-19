@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestExitAccountsCli_OK(t *testing.T) {
@@ -32,7 +33,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -92,14 +93,14 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
@@ -122,7 +123,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -187,14 +188,14 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)
@@ -265,4 +266,16 @@ func TestDisplayExitInfo_NoKeys(t *testing.T) {
 	logHook := test.NewGlobal()
 	displayExitInfo([][]byte{}, []string{})
 	assert.LogsContain(t, logHook, "No successful voluntary exits")
+}
+
+func TestPrepareAllKeys(t *testing.T) {
+	key1 := bytesutil.ToBytes48([]byte("key1"))
+	key2 := bytesutil.ToBytes48([]byte("key2"))
+	raw, formatted := prepareAllKeys([][48]byte{key1, key2})
+	require.Equal(t, 2, len(raw))
+	require.Equal(t, 2, len(formatted))
+	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 49}), bytesutil.ToBytes48(raw[0]))
+	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 50}), bytesutil.ToBytes48(raw[1]))
+	assert.Equal(t, "0x6b6579310000", formatted[0])
+	assert.Equal(t, "0x6b6579320000", formatted[1])
 }

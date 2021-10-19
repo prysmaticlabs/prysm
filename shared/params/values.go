@@ -6,6 +6,7 @@ const (
 	Pyrmont
 	Toledo
 	Prater
+	L15
 )
 
 // ConfigNames provides network configuration names.
@@ -15,6 +16,7 @@ var ConfigNames = map[ConfigName]string{
 	Pyrmont:  "pyrmont",
 	Toledo:   "toledo",
 	Prater:   "prater",
+	L15:      "lukso-private-testnet",
 }
 
 // ConfigName enum describes the type of known network in use.

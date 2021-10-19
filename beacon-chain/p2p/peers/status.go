@@ -1,4 +1,4 @@
-// Package peers provides information about peers at the eth2 protocol level.
+// Package peers provides information about peers at the Ethereum consensus protocol level.
 //
 // "Protocol level" is the level above the network level, so this layer never sees or interacts with
 // (for example) hosts that are uncontactable due to being down, firewalled, etc. Instead, this works
@@ -29,17 +29,18 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -73,6 +74,11 @@ const (
 	// MaxBackOffDuration maximum amount (in milliseconds) to wait before peer is re-dialed.
 	MaxBackOffDuration = 5000
 )
+
+// ErrNoPeerStatus is returned when there is a map entry for a given peer but there is no chain
+// status for that peer. This should happen in rare circumstances only, but is a very possible
+// scenario in a chaotic and adversarial network.
+var ErrNoPeerStatus = errors.New("no chain status for peer")
 
 // Status is the structure holding the peer status information.
 type Status struct {
@@ -190,10 +196,17 @@ func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 }
 
 // ChainState gets the chain state of the given remote peer.
-// This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
+// This will error if there is no known chain state for the peer.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
-	return p.scorers.PeerStatusScorer().PeerStatus(pid)
+	s, err := p.scorers.PeerStatusScorer().PeerStatus(pid)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, ErrNoPeerStatus
+	}
+	return s, nil
 }
 
 // IsActive checks if a peers is active and returns the result appropriately.
@@ -230,7 +243,7 @@ func (p *Status) InboundLimit() int {
 }
 
 // SetMetadata sets the metadata of the given remote peer.
-func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
+func (p *Status) SetMetadata(pid peer.ID, metaData interfaces.Metadata) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -240,12 +253,15 @@ func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
 
 // Metadata returns a copy of the metadata corresponding to the provided
 // peer id.
-func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
+func (p *Status) Metadata(pid peer.ID) (interfaces.Metadata, error) {
 	p.store.RLock()
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
-		return proto.Clone(peerData.MetaData).(*pb.MetaData), nil
+		if peerData.MetaData == nil || peerData.MetaData.IsNil() {
+			return nil, nil
+		}
+		return peerData.MetaData.Copy(), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -256,10 +272,10 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
-		if peerData.Enr == nil || peerData.MetaData == nil {
+		if peerData.Enr == nil || peerData.MetaData == nil || peerData.MetaData.IsNil() {
 			return []uint64{}, nil
 		}
-		return indicesFromBitfield(peerData.MetaData.Attnets), nil
+		return indicesFromBitfield(peerData.MetaData.AttnetsBitfield()), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -274,8 +290,8 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	for pid, peerData := range p.store.Peers() {
 		// look at active peers
 		connectedStatus := peerData.ConnState == PeerConnecting || peerData.ConnState == PeerConnected
-		if connectedStatus && peerData.MetaData != nil && peerData.MetaData.Attnets != nil {
-			indices := indicesFromBitfield(peerData.MetaData.Attnets)
+		if connectedStatus && peerData.MetaData != nil && !peerData.MetaData.IsNil() && peerData.MetaData.AttnetsBitfield() != nil {
+			indices := indicesFromBitfield(peerData.MetaData.AttnetsBitfield())
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)

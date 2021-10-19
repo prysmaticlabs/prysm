@@ -3,19 +3,20 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,6 +26,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	grpc "google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func init() {
@@ -36,7 +39,7 @@ var _ iface.Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
-func genMockKeymanger(numKeys int) *mockKeymanager {
+func genMockKeymanager(numKeys int) *mockKeymanager {
 	km := make(map[[48]byte]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
 		k, err := bls.RandKey()
@@ -126,7 +129,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -147,7 +150,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -175,7 +178,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -198,7 +201,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -226,7 +229,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -260,7 +263,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, errors.New("failed stream"))
 	err = v.WaitForChainStart(context.Background())
 	want := "could not setup beacon chain ChainStart streaming client"
@@ -278,7 +281,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		nil,
@@ -559,7 +562,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})
@@ -614,7 +617,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})
@@ -650,7 +653,7 @@ func TestRolesAt_OK(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, iface.ValidatorRole(iface.RoleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -676,7 +679,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, iface.ValidatorRole(iface.RoleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
@@ -817,7 +820,7 @@ func TestAllValidatorsAreExited_AllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, true, exited)
@@ -838,7 +841,7 @@ func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -858,7 +861,7 @@ func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.ErrorContains(t, "number of status responses did not match number of requested keys", err)
 	assert.Equal(t, false, exited)
@@ -868,7 +871,7 @@ func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	v := validator{keyManager: genMockKeymanger(0), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(0), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -968,4 +971,262 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	connectionErrorChannel := make(chan error)
 	v.ReceiveBlocks(ctx, connectionErrorChannel)
 	require.Equal(t, slot, v.highestValidSlot)
+}
+
+type doppelGangerRequestMatcher struct {
+	req *ethpb.DoppelGangerRequest
+}
+
+var _ gomock.Matcher = (*doppelGangerRequestMatcher)(nil)
+
+func (m *doppelGangerRequestMatcher) Matches(x interface{}) bool {
+	r, ok := x.(*ethpb.DoppelGangerRequest)
+	if !ok {
+		panic("Invalid match type")
+	}
+	return gomock.InAnyOrder(m.req.ValidatorRequests).Matches(r.ValidatorRequests)
+}
+
+func (m *doppelGangerRequestMatcher) String() string {
+	return fmt.Sprintf("%#v", m.req.ValidatorRequests)
+}
+
+func TestValidator_CheckDoppelGanger(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	flgs := featureconfig.Get()
+	flgs.EnableDoppelGanger = true
+	reset := featureconfig.InitWithReset(flgs)
+	defer reset()
+	tests := []struct {
+		name            string
+		validatorSetter func(t *testing.T) *validator
+		err             string
+	}{
+		{
+			name: "no doppelganger",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanager(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				resp := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				for _, k := range keys {
+					pkey := k
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+					resp.ValidatorRequests = append(resp.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
+				).Return(nil, nil /*err*/)
+
+				return v
+			},
+		},
+		{
+			name: "multiple doppelganger exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanager(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				for i, k := range keys {
+					pkey := k
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+					if i%3 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
+					}
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instances exists in the network for validator keys",
+		},
+		{
+			name: "single doppelganger exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanager(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				for i, k := range keys {
+					pkey := k
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+					if i%9 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
+					}
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instances exists in the network for validator keys",
+		},
+		{
+			name: "multiple attestations saved",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanager(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				attLimit := 5
+				for i, k := range keys {
+					pkey := k
+					for j := 0; j < attLimit; j++ {
+						att := createAttestation(10+types.Epoch(j), 12+types.Epoch(j))
+						rt, err := att.Data.HashTreeRoot()
+						assert.NoError(t, err)
+						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+						if j == attLimit-1 {
+							req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+						}
+					}
+					if i%3 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
+					}
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instances exists in the network for validator keys",
+		},
+		{
+			name: "no history exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				// Use only 1 key for deterministic order.
+				km := genMockKeymanager(1)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				for _, k := range keys {
+					resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: false})
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: k[:], SignedRoot: make([]byte, 32), Epoch: 0})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					req,          // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := tt.validatorSetter(t)
+			if err := v.CheckDoppelGanger(context.Background()); tt.err != "" {
+				assert.ErrorContains(t, tt.err, err)
+			}
+		})
+	}
+}
+
+func TestValidatorAttestationsAreOrdered(t *testing.T) {
+	km := genMockKeymanager(10)
+	keys, err := km.FetchValidatingPublicKeys(context.Background())
+	assert.NoError(t, err)
+	db := dbTest.SetupDB(t, keys)
+
+	k := keys[0]
+	att := createAttestation(10, 14)
+	rt, err := att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(6, 8)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(10, 12)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(2, 3)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	histories, err := db.AttestationHistoryForPubKey(context.Background(), k)
+	assert.NoError(t, err)
+	r := retrieveLatestRecord(histories)
+	assert.Equal(t, r.Target, types.Epoch(14))
+}
+
+func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: source,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: target,
+				Root:  make([]byte, 32),
+			},
+			BeaconBlockRoot: make([]byte, 32),
+		},
+		Signature: make([]byte, 96),
+	}
 }

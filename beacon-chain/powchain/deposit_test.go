@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +24,7 @@ const pubKeyErr = "could not convert bytes to public key"
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
@@ -48,7 +48,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -74,7 +74,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -110,7 +110,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -138,19 +138,18 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	require.LogsContain(t, hook, pubKeyErr)
+	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytes to signature")
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
@@ -178,11 +177,12 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
+	require.NoError(t, web3Service.preGenesisState.SetValidators([]*ethpb.Validator{}))
 
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
@@ -239,12 +239,11 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints: []string{endpoint},
+		HttpEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
 	require.NoError(t, err)

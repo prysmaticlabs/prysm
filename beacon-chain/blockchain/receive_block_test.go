@@ -7,14 +7,18 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -53,7 +57,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				if hs := s.head.state.Slot(); hs != 2 {
 					t.Errorf("Unexpected state slot. Got %d but wanted %d", hs, 2)
 				}
-				if bs := s.head.block.Block.Slot; bs != 2 {
+				if bs := s.head.block.Block().Slot(); bs != 2 {
 					t.Errorf("Unexpected head block slot. Got %d but wanted %d", bs, 2)
 				}
 			},
@@ -139,12 +143,12 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
-			gRoot, err := gBlk.Block.HashTreeRoot()
+			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, tt.args.block, root)
+			err = s.ReceiveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block), root)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -180,7 +184,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
-	gRoot, err := gBlk.Block.HashTreeRoot()
+	gRoot, err := gBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 	root, err := b.Block.HashTreeRoot()
@@ -188,7 +192,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		require.NoError(t, s.ReceiveBlock(ctx, b, root))
+		require.NoError(t, s.ReceiveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b), root))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -225,7 +229,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			},
 			check: func(t *testing.T, s *Service) {
 				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, types.Slot(2), s.head.block.Block.Slot, "Incorrect head block slot")
+				assert.Equal(t, types.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
 			},
 		},
 		{
@@ -263,12 +267,12 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := gBlk.Block.HashTreeRoot()
+			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			blks := []*ethpb.SignedBeaconBlock{tt.args.block}
+			blks := []interfaces.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block)}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -281,6 +285,62 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	}
 }
 
+func TestService_ReceiveBlockBatch_UpdateFinalizedCheckpoint(t *testing.T) {
+	// Must enable head timely feature flag to test this.
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		UpdateHeadTimely: true,
+	})
+	defer resetCfg()
+
+	ctx := context.Background()
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+
+	// Generate 5 epochs worth of blocks.
+	var blks []interfaces.SignedBeaconBlock
+	var roots [][32]byte
+	copied := genesis.Copy()
+	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
+		b, err := testutil.GenerateFullBlock(copied, keys, testutil.DefaultBlockGenConfig(), i)
+		assert.NoError(t, err)
+		copied, err = state.ExecuteStateTransition(context.Background(), copied, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		assert.NoError(t, err)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		blks = append(blks, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		roots = append(roots, r)
+	}
+
+	beaconDB := testDB.SetupDB(t)
+	genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	cfg := &Config{
+		BeaconDB: beaconDB,
+		ForkChoiceStore: protoarray.New(
+			0, // justifiedEpoch
+			0, // finalizedEpoch
+			genesisBlockRoot,
+		),
+		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: false},
+		StateGen:      stategen.New(beaconDB),
+	}
+	s, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	err = s.saveGenesisData(ctx, genesis)
+	require.NoError(t, err)
+	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+
+	// Process 5 epochs worth of blocks.
+	require.NoError(t, s.ReceiveBlockBatch(ctx, blks, roots))
+
+	// Finalized epoch must be updated.
+	require.Equal(t, types.Epoch(2), s.finalizedCheckpt.Epoch)
+}
+
 func TestService_HasInitSyncBlock(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{StateNotifier: &blockchainTesting.MockStateNotifier{}})
 	require.NoError(t, err)
@@ -288,7 +348,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
 	}
-	s.saveInitSyncBlock(r, testutil.NewBeaconBlock())
+	s.saveInitSyncBlock(r, wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	if !s.HasInitSyncBlock(r) {
 		t.Error("Should have block")
 	}

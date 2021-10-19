@@ -1,9 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["grpcutils.go"],
+    srcs = [
+        "grpcutils.go",
+        "parameters.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/grpcutils",
     visibility = ["//visibility:public"],
     deps = [
@@ -20,7 +22,9 @@ go_test(
     deps = [
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
     ],
 )

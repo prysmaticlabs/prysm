@@ -8,13 +8,13 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -67,7 +67,11 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
-	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
+
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
+	// processing tolerance.
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime(),
+		earlyAttestationProcessingTolerance); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -201,19 +205,19 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
 func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
-	s.seenAttestationLock.RLock()
-	defer s.seenAttestationLock.RUnlock()
+	s.seenAggregatedAttestationLock.RLock()
+	defer s.seenAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	_, seen := s.seenAttestationCache.Get(string(b))
+	_, seen := s.seenAggregatedAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
 func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
-	s.seenAttestationLock.Lock()
-	defer s.seenAttestationLock.Unlock()
+	s.seenAggregatedAttestationLock.Lock()
+	defer s.seenAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	s.seenAttestationCache.Add(string(b), true)
+	s.seenAggregatedAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the beacon committee.

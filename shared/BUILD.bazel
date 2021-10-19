@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -18,4 +17,14 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
     ],
+)
+
+genrule(
+    name = "version_file",
+    srcs = [],
+    outs = ["version.txt"],
+    cmd = "cat bazel-out/stable-status.txt | grep STABLE_GIT_TAG | cut -d' ' -f2 | tr -d v > $@",
+    stamp = True,
+    tags = ["local"],
+    visibility = ["//visibility:public"],
 )

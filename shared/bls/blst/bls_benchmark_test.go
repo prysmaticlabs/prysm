@@ -1,5 +1,5 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst_test
 
@@ -41,7 +41,7 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggregated := blst.Aggregate(sigs)
+	aggregated := blst.AggregateSignatures(sigs)
 
 	b.ResetTimer()
 	b.ReportAllocs()

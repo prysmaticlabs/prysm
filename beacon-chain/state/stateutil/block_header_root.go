@@ -3,14 +3,14 @@ package stateutil
 import (
 	"encoding/binary"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 // BlockHeaderRoot computes the HashTreeRoot Merkleization of
-// a BeaconBlockHeader struct according to the eth2
+// a BeaconBlockHeader struct according to the Ethereum
 // Simple Serialize specification.
 func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)

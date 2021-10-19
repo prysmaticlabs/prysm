@@ -58,7 +58,7 @@ func emptyHistoryData() *deprecatedHistoryData {
 // newDeprecatedAttestingHistory creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
 func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestingHistory {
-	relativeTarget := types.Epoch(target % params.BeaconConfig().WeakSubjectivityPeriod)
+	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
 	historyDataSize := (relativeTarget + 1) * historySize
 	arraySize := latestEpochWrittenSize + historyDataSize
 	en := make(deprecatedEncodedAttestingHistory, arraySize)

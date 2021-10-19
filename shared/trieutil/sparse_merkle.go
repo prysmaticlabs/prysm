@@ -1,4 +1,4 @@
-// Package trieutil defines utilities for sparse merkle tries for eth2.
+// Package trieutil defines utilities for sparse merkle tries for Ethereum consensus.
 package trieutil
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
-// across ETH2.0 Phase 0 functionality.
+// across Ethereum consensus functionality.
 type SparseMerkleTrie struct {
 	depth         uint
 	branches      [][][]byte
@@ -210,4 +210,16 @@ func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
 		branches:      dstBranches,
 		originalItems: bytesutil.Copy2dBytes(m.originalItems),
 	}
+}
+
+// NumOfItems returns the num of items stored in
+// the sparse merkle trie. We handle a special case
+// where if there is only one item stored and it is a
+// empty 32-byte root.
+func (m *SparseMerkleTrie) NumOfItems() int {
+	var zeroBytes [32]byte
+	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
+		return 0
+	}
+	return len(m.originalItems)
 }

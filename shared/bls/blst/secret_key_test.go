@@ -1,10 +1,11 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"testing"
 
@@ -84,4 +85,15 @@ func TestSerialize(t *testing.T) {
 
 	_, err = blst.SecretKeyFromBytes(b)
 	assert.NoError(t, err)
+}
+
+func TestZeroKey(t *testing.T) {
+	// Is Zero
+	zKey := [32]byte{}
+	assert.Equal(t, true, blst.IsZero(zKey[:]))
+
+	// Is Not Zero
+	_, err := rand.Read(zKey[:])
+	assert.NoError(t, err)
+	assert.Equal(t, false, blst.IsZero(zKey[:]))
 }

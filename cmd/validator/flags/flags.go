@@ -191,20 +191,6 @@ var (
 		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to delete",
 		Value: "",
 	}
-	// DisablePublicKeysFlag defines a comma-separated list of hex string public keys
-	// for accounts which a user desires to disable for their wallet.
-	DisablePublicKeysFlag = &cli.StringFlag{
-		Name:  "disable-public-keys",
-		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to disable",
-		Value: "",
-	}
-	// EnablePublicKeysFlag defines a comma-separated list of hex string public keys
-	// for accounts which a user desires to enable for their wallet.
-	EnablePublicKeysFlag = &cli.StringFlag{
-		Name:  "enable-public-keys",
-		Usage: "Comma-separated list of public key hex strings to specify which validator accounts to enable",
-		Value: "",
-	}
 	// BackupPublicKeysFlag defines a comma-separated list of hex string public keys
 	// for accounts which a user desires to backup from their wallet.
 	BackupPublicKeysFlag = &cli.StringFlag{

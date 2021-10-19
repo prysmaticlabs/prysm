@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if gs == nil {
+	if gs == nil || gs.IsNil() {
 		panic("nil genesis state")
 	}
 	b, err := gs.MarshalSSZ()

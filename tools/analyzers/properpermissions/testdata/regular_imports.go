@@ -17,6 +17,7 @@ func tempDir() string {
 	return d
 }
 
+// UseOsMkdirAllAndWriteFile --
 func UseOsMkdirAllAndWriteFile() {
 	randPath, _ := rand.Int(rand.Reader, big.NewInt(1000000))
 	p := filepath.Join(tempDir(), fmt.Sprintf("/%d", randPath))

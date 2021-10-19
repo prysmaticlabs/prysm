@@ -5,11 +5,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ PendingDepositsFetcher = (*DepositCache)(nil)
@@ -90,7 +90,7 @@ func TestPendingDeposits_OK(t *testing.T) {
 		{Proof: [][]byte{[]byte("A")}},
 		{Proof: [][]byte{[]byte("B")}},
 	}
-	assert.DeepEqual(t, expected, deposits)
+	assert.DeepSSZEqual(t, expected, deposits)
 
 	all := dc.PendingDeposits(context.Background(), nil)
 	assert.Equal(t, len(dc.pendingDeposits), len(all), "PendingDeposits(ctx, nil) did not return all deposits")

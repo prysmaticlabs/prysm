@@ -5,10 +5,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -36,7 +36,7 @@ func FillRootsNaturalOpt(state *pb.BeaconState) error {
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *pb.BeaconState) error) (*stateV0.BeaconState, error) {
+func NewBeaconState(options ...func(state *pb.BeaconState) error) (*v1.BeaconState, error) {
 	seed := &pb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
@@ -69,12 +69,12 @@ func NewBeaconState(options ...func(state *pb.BeaconState) error) (*stateV0.Beac
 		}
 	}
 
-	var st, err = stateV0.InitializeFromProtoUnsafe(seed)
+	var st, err = v1.InitializeFromProtoUnsafe(seed)
 	if err != nil {
 		return nil, err
 	}
 
-	return st.Copy().(*stateV0.BeaconState), nil
+	return st.Copy().(*v1.BeaconState), nil
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

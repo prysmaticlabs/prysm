@@ -1,5 +1,5 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst
 
@@ -56,6 +56,9 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
+	}
+	if pubs == nil || len(pubs) == 0 {
+		return nil, errors.New("nil or empty public keys")
 	}
 	agg := new(blstAggregatePublicKey)
 	mulP1 := make([]*blstPublicKey, 0, len(pubs))

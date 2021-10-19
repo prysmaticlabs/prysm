@@ -16,7 +16,7 @@ func TestStore_Backup(t *testing.T) {
 	ctx := context.Background()
 	pubKey := []byte("hello")
 	require.NoError(t, db.SavePubKey(ctx, types.ValidatorIndex(1), pubKey))
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)

@@ -4,9 +4,9 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -98,8 +98,8 @@ func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 }
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
-func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub, signature, domain []byte) error {
-	set, err := BlockSignatureSet(blk, pub, signature, domain)
+func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) error {
+	set, err := BlockSignatureSet(pub, signature, domain, rootFunc)
 	if err != nil {
 		return err
 	}
@@ -120,13 +120,13 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub, signature, domain []byt
 
 // BlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
 // into a signature set object.
-func BlockSignatureSet(blk *ethpb.BeaconBlock, pub, signature, domain []byte) (*bls.SignatureSet, error) {
+func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	// utilize custom block hashing function
-	root, err := signingData(blk.HashTreeRoot, domain)
+	root, err := signingData(rootFunc, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}

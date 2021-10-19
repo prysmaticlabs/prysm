@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,45 +60,51 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 }
 
 // VerifyBlockSignature verifies the proposer signature of a beacon block.
-func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) error {
+func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState,
+	proposerIndex types.ValidatorIndex,
+	sig []byte,
+	rootFunc func() ([32]byte, error)) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
 	if err != nil {
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey, block.Signature, domain)
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
-func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
+func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState,
+	proposerIndex types.ValidatorIndex,
+	sig []byte,
+	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
 	if err != nil {
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.BlockSignatureSet(block.Block, proposerPubKey, block.Signature, domain)
+	return helpers.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
 }
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object
 // from a block and its corresponding state.
 func RandaoSignatureSet(beaconState iface.ReadOnlyBeaconState,
-	body *ethpb.BeaconBlockBody,
+	reveal []byte,
 ) (*bls.SignatureSet, error) {
 	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
 		return nil, err
 	}
-	set, err := signatureSet(buf, proposerPub, body.RandaoReveal, domain)
+	set, err := signatureSet(buf, proposerPub, reveal, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +206,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeac
 	set := bls.NewSet()
 
 	// Check attestations from before the fork.
-	if fork.Epoch > 0 { // Check to prevent underflow.
+	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig set.
 		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
 		if err != nil {
 			return nil, err
@@ -209,22 +215,30 @@ func AttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeac
 		if err != nil {
 			return nil, err
 		}
-		set.Join(aSet)
+		if aSet != nil {
+			set.Join(aSet)
+		}
 	} else if len(preForkAtts) > 0 {
 		// This is a sanity check that preForkAtts were not ignored when fork.Epoch == 0. This
 		// condition is not possible, but it doesn't hurt to check anyway.
 		return nil, errors.New("some attestations were not verified from previous fork before genesis")
 	}
 
-	// Then check attestations from after the fork.
-	currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
-	if err != nil {
-		return nil, err
+	if len(postForkAtts) > 0 {
+		// Then check attestations from after the fork.
+		currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
+		if err != nil {
+			return nil, err
+		}
+
+		aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
+		if err != nil {
+			return nil, err
+		}
+		if aSet != nil {
+			return set.Join(aSet), nil
+		}
 	}
 
-	aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
-	if err != nil {
-		return nil, err
-	}
-	return set.Join(aSet), nil
+	return set, nil
 }

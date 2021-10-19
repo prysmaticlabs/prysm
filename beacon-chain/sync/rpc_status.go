@@ -139,7 +139,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.Chain.HeadSlot(),
 	}
-	stream, err := s.cfg.P2P.Send(ctx, resp, p2p.RPCStatusTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, resp, p2p.RPCStatusTopicV1, id)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(id)
 		return errors.New(errMsg)
 	}
-
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, s.cfg.Chain)
+	if err != nil {
+		return err
+	}
 	msg := &pb.Status{}
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
@@ -311,10 +315,10 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
-	if blk == nil {
+	if blk == nil || blk.IsNil() {
 		return p2ptypes.ErrGeneric
 	}
-	if helpers.SlotToEpoch(blk.Block.Slot) == msg.FinalizedEpoch {
+	if helpers.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
 		return nil
 	}
 
@@ -322,19 +326,19 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
-	if startSlot > blk.Block.Slot {
+	if startSlot > blk.Block().Slot() {
 		childBlock, err := s.cfg.DB.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
 			return p2ptypes.ErrGeneric
 		}
 		// Is a valid finalized block if no
 		// other child blocks exist yet.
-		if childBlock == nil {
+		if childBlock == nil || childBlock.IsNil() {
 			return nil
 		}
 		// If child finalized block also has a smaller or
 		// equal slot number we return an error.
-		if startSlot >= childBlock.Block.Slot {
+		if startSlot >= childBlock.Block().Slot() {
 			return p2ptypes.ErrInvalidEpoch
 		}
 		return nil

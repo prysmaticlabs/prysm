@@ -46,14 +46,14 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 	return func(key interface{}, value interface{}) {
 		log.Tracef("Evicting flat span map for epoch: %d", key)
 		err := db.update(func(tx *bolt.Tx) error {
-			epoch, keyOK := key.(uint64)
+			epoch, keyOK := key.(types.Epoch)
 			epochStore, valueOK := value.(*slashertypes.EpochStore)
 			if !keyOK || !valueOK {
 				return errors.New("could not cast key and value into needed types")
 			}
 
 			bucket := tx.Bucket(validatorsMinMaxSpanBucketNew)
-			if err := bucket.Put(bytesutil.Bytes8(epoch), epochStore.Bytes()); err != nil {
+			if err := bucket.Put(bytesutil.Bytes8(uint64(epoch)), epochStore.Bytes()); err != nil {
 				return err
 			}
 			epochSpansCacheEvictions.Inc()

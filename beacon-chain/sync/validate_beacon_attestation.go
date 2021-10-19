@@ -9,13 +9,13 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -75,8 +75,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		},
 	})
 
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
+	// processing tolerance.
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime(),
+		earlyAttestationProcessingTolerance); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -185,7 +187,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
-	// Note: eth2 spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+	// Note: The Ethereum Beacon Chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if a.AggregationBits.Count() != 1 || a.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject
@@ -202,21 +204,21 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
 func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
-	s.seenAttestationLock.RLock()
-	defer s.seenAttestationLock.RUnlock()
+	s.seenUnAggregatedAttestationLock.RLock()
+	defer s.seenUnAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	_, seen := s.seenAttestationCache.Get(string(b))
+	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
 func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) {
-	s.seenAttestationLock.Lock()
-	defer s.seenAttestationLock.Unlock()
+	s.seenUnAggregatedAttestationLock.Lock()
+	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, aggregateBits...)
-	s.seenAttestationCache.Add(string(b), true)
+	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the

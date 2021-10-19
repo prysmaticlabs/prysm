@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -24,6 +27,20 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	for i, val := range genesisState.Validators {
 		assert.DeepEqual(t, fmt.Sprintf("%#x", val.PublicKey), jsonData[i].PubKey)
 	}
+}
+
+func Test_genesisStateFromJSONFile(t *testing.T) {
+	expanded, err := fileutil.ExpandPath("./test-data/deposit_data_32_keys.json")
+	require.NoError(t, err)
+	inputJSON, err := os.Open(expanded)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, inputJSON.Close())
+	}()
+	genesisState, err := genesisStateFromJSONValidators(inputJSON, *genesisTime)
+	require.NoError(t, err)
+	depositRootHex := hexutil.Encode(genesisState.Eth1Data.DepositRoot)
+	assert.DeepEqual(t, "0x35d4191c0f6510d5f352868ff9a55c4a82a98a470f365d2495ff632b63c6c94a", depositRootHex)
 }
 
 func createGenesisDepositData(t *testing.T, numKeys int) []*DepositDataJSON {

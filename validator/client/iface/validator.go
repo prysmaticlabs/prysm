@@ -20,9 +20,9 @@ const (
 	RoleUnknown ValidatorRole = iota
 	// RoleAttester means that the validator should submit an attestation.
 	RoleAttester
-	// RoleAttester means that the validator should propose a block.
+	// RoleProposer means that the validator should propose a block.
 	RoleProposer
-	// RoleAttester means that the validator should submit an aggregation and proof.
+	// RoleAggregator means that the validator should submit an aggregation and proof.
 	RoleAggregator
 )
 
@@ -50,4 +50,5 @@ type Validator interface {
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
+	CheckDoppelGanger(ctx context.Context) error
 }

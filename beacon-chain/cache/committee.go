@@ -6,12 +6,12 @@ import (
 	"errors"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"k8s.io/client-go/tools/cache"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
-	CommitteeCache *cache.FIFO
+	CommitteeCache *lru.Cache
 	lock           sync.RWMutex
 }
 
@@ -43,14 +43,19 @@ func committeeKeyFn(obj interface{}) (string, error) {
 	if !ok {
 		return "", ErrNotCommittee
 	}
-
 	return key(info.Seed), nil
 }
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
+	cCache, err := lru.New(int(maxCommitteesCacheSize))
+	// An error is only returned if the size of the cache is
+	// <= 0.
+	if err != nil {
+		panic(err)
+	}
 	return &CommitteeCache{
-		CommitteeCache: cache.NewFIFO(committeeKeyFn),
+		CommitteeCache: cCache,
 	}
 }
 
@@ -60,11 +65,7 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
-		return nil, err
-	}
-
+	obj, exists := c.CommitteeCache.Get(key(seed))
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
@@ -97,11 +98,11 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.C
 func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
+	key, err := committeeKeyFn(committees)
+	if err != nil {
 		return err
 	}
-	trim(c.CommitteeCache, maxCommitteesCacheSize)
+	_ = c.CommitteeCache.Add(key, committees)
 	return nil
 }
 
@@ -109,10 +110,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
-		return nil, err
-	}
+	obj, exists := c.CommitteeCache.Get(key(seed))
 
 	if exists {
 		CommitteeCacheHit.Inc()
@@ -133,11 +131,7 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, e
 func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
-	if err != nil {
-		return 0, err
-	}
-
+	obj, exists := c.CommitteeCache.Get(key(seed))
 	if exists {
 		CommitteeCacheHit.Inc()
 	} else {
@@ -155,8 +149,8 @@ func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 
 // HasEntry returns true if the committee cache has a value.
 func (c *CommitteeCache) HasEntry(seed string) bool {
-	_, ok, err := c.CommitteeCache.GetByKey(seed)
-	return err == nil && ok
+	_, ok := c.CommitteeCache.Get(seed)
+	return ok
 }
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {

@@ -41,6 +41,7 @@ func (bld *builder) walk(n ast.Node) {
 	}
 }
 
+// Visit --
 func (bld *builder) Visit(n ast.Node) ast.Visitor {
 	switch n := n.(type) {
 	case *ast.FuncDecl:
@@ -341,7 +342,7 @@ func (bld *builder) swtch(stmt ast.Stmt, cases []ast.Stmt) {
 			}
 		}
 
-		parents := []*block{}
+		var parents []*block
 		if c.List != nil {
 			parents = append(parents, list)
 		}
@@ -545,6 +546,11 @@ func used(obj *ast.Object, b *block, seen map[*block]bool) bool {
 
 type idents []*ast.Ident
 
-func (ids idents) Len() int           { return len(ids) }
+// Len --
+func (ids idents) Len() int { return len(ids) }
+
+// Less --
 func (ids idents) Less(i, j int) bool { return ids[i].Pos() < ids[j].Pos() }
-func (ids idents) Swap(i, j int)      { ids[i], ids[j] = ids[j], ids[i] }
+
+// Swap --
+func (ids idents) Swap(i, j int) { ids[i], ids[j] = ids[j], ids[i] }

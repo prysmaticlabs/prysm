@@ -2,7 +2,7 @@
 # across machines, developers, and workspaces.
 # 
 # This config is loaded from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/latest.bazelrc
-build:remote-cache --remote_timeout=3600
+#build:remote-cache --remote_timeout=3600
 #build:remote-cache --spawn_strategy=standalone
 #build:remote-cache --strategy=Javac=standalone
 #build:remote-cache --strategy=Closure=standalone
@@ -11,11 +11,18 @@ build:remote-cache --remote_timeout=3600
 # Prysm specific remote-cache properties.
 #build:remote-cache --disk_cache=
 build:remote-cache --remote_download_minimal
+build:remote-cache --remote_cache=grpc://bazel-remote-cache:9092
+build:remote-cache --experimental_remote_downloader=grpc://bazel-remote-cache:9092
+build:remote-cache --remote_local_fallback
+# Enforce stricter environment rules, which eliminates some non-hermetic
+# behavior and therefore improves both the remote cache hit rate and the
+# correctness and repeatability of the build.
+build:remote-cache --incompatible_strict_action_env=true
 
 # Import workspace options.
 import %workspace%/.bazelrc
 
-startup --host_jvm_args=-Xmx1000m --host_jvm_args=-Xms1000m
+startup --host_jvm_args=-Xmx2g --host_jvm_args=-Xms2g
 query --repository_cache=/tmp/repositorycache
 query --experimental_repository_cache_hardlinks
 build --repository_cache=/tmp/repositorycache

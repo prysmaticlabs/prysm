@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/client/testutil"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -237,4 +238,20 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	run(ctx, v)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
 	assert.Equal(t, 2, v.WaitForActivationCalled)
+}
+
+func TestKeyReload_RemoteKeymanager(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	km := remote.NewMock()
+	v := &testutil.FakeValidator{Keymanager: &km}
+
+	ticker := make(chan types.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- types.Slot(55)
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.Equal(t, true, km.ReloadPublicKeysCalled)
 }

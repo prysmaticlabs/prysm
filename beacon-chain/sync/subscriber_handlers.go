@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message) error {

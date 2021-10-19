@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
@@ -101,7 +101,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
-	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
 	}
@@ -189,7 +189,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
-	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
 	}

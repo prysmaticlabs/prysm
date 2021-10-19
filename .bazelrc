@@ -39,16 +39,15 @@ build --define kafka_enabled=false
 test --define kafka_enabled=false
 run --define kafka_enabled=false
 
-# Enable blst by default, we use a config so that our fuzzer stops complaining.
-build --config=blst_enabled
-test --config=blst_enabled
-run --config=blst_enabled
+build --define blst_disabled=false
+test --define blst_disabled=false
+run --define blst_disabled=false
 
 build:kafka_enabled --define kafka_enabled=true
 build:kafka_enabled --define gotags=kafka_enabled
 
-build:blst_enabled --define blst_enabled=true
-build:blst_enabled --define gotags=blst_enabled
+build:blst_disabled --define blst_disabled=true
+build:blst_disabled --define gotags=blst_disabled
 
 # Release flags
 build:release --compilation_mode=opt
@@ -84,7 +83,7 @@ build:fuzz --linkopt -Wl,--no-as-needed
 build:fuzz --define=gc_goopts=-d=libfuzzer,checkptr
 build:fuzz --run_under=//tools:fuzz_wrapper
 build:fuzz --compilation_mode=opt
-build:fuzz --define=blst_enabled=false
+build:fuzz --define=blst_disabled=true
 
 test:fuzz --local_test_jobs="HOST_CPUS*.5"
 

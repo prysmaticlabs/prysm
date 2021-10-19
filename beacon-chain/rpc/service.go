@@ -13,8 +13,6 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethpbv1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -27,18 +25,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
+	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -61,10 +62,15 @@ type Service struct {
 	listener             net.Listener
 	grpcServer           *grpc.Server
 	canonicalStateChan   chan *pbp2p.BeaconState
-	incomingAttestation  chan *ethpb.Attestation
+	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
 	clientConnectionLock sync.Mutex
+
+	// Vanguard: vanguard chain related attributes
+	enableVanguardNode      bool
+	unconfirmedBlockFetcher blockchain.PendingBlocksFetcher
+	pendingQueueFetcher     blockchain.PendingQueueFetcher
 }
 
 // Config options for the beacon node RPC server.
@@ -89,6 +95,7 @@ type Config struct {
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
 	MockEth1Votes           bool
+	EnableVanguardNode      bool // vanguard: vanguard chain enable flag
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
@@ -104,6 +111,10 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
+
+	// Vanguard un-confirmed cached block fetcher
+	UnconfirmedBlockFetcher blockchain.PendingBlocksFetcher
+	PendingQueueFetcher     blockchain.PendingQueueFetcher
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -115,8 +126,13 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		ctx:                 ctx,
 		cancel:              cancel,
 		canonicalStateChan:  make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation: make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
+
+		// Vanguard: un-confirmed cached block fetcher
+		enableVanguardNode:      cfg.EnableVanguardNode,
+		unconfirmedBlockFetcher: cfg.UnconfirmedBlockFetcher,
+		pendingQueueFetcher:     cfg.PendingQueueFetcher,
 	}
 }
 
@@ -164,7 +180,7 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	validatorServer := &validator.Server{
+	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.cfg.BeaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -190,8 +206,12 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
+
+		// vanguard: initiate pending queue fetcher
+		EnableVanguardNode:  s.enableVanguardNode,
+		PendingQueueFetcher: s.pendingQueueFetcher,
 	}
-	nodeServer := &node.Server{
+	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.cfg.BeaconDB,
@@ -204,19 +224,18 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
-	nodeServerV1 := &nodev1.Server{
+	nodeServerV1 := &node.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.cfg.SyncService,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		PeersFetcher:       s.cfg.PeersFetcher,
 		PeerManager:        s.cfg.PeerManager,
-		GenesisFetcher:     s.cfg.GenesisFetcher,
 		MetadataProvider:   s.cfg.MetadataProvider,
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	beaconChainServer := &beacon.Server{
+	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
@@ -235,41 +254,44 @@ func (s *Service) Start() {
 		Broadcaster:                 s.cfg.Broadcaster,
 		StateGen:                    s.cfg.StateGen,
 		SyncChecker:                 s.cfg.SyncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
+		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
+
+		// Vanguard: un-confirmed cached block fetcher
+		UnconfirmedBlockFetcher: s.unconfirmedBlockFetcher,
 	}
-	beaconChainServerV1 := &beaconv1.Server{
-		Ctx:                 s.ctx,
-		BeaconDB:            s.cfg.BeaconDB,
-		AttestationsPool:    s.cfg.AttestationsPool,
-		SlashingsPool:       s.cfg.SlashingsPool,
-		ChainInfoFetcher:    s.cfg.ChainInfoFetcher,
-		ChainStartFetcher:   s.cfg.ChainStartFetcher,
-		DepositFetcher:      s.cfg.DepositFetcher,
-		BlockFetcher:        s.cfg.POWChainService,
-		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.cfg.GenesisTimeFetcher,
-		StateNotifier:       s.cfg.StateNotifier,
-		BlockNotifier:       s.cfg.BlockNotifier,
-		AttestationNotifier: s.cfg.OperationNotifier,
-		Broadcaster:         s.cfg.Broadcaster,
-		StateGenService:     s.cfg.StateGen,
-		SyncChecker:         s.cfg.SyncService,
-		StateFetcher: statefetcher.StateProvider{
+	beaconChainServerV1 := &beacon.Server{
+		BeaconDB:           s.cfg.BeaconDB,
+		AttestationsPool:   s.cfg.AttestationsPool,
+		SlashingsPool:      s.cfg.SlashingsPool,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlockNotifier:      s.cfg.BlockNotifier,
+		Broadcaster:        s.cfg.Broadcaster,
+		BlockReceiver:      s.cfg.BlockReceiver,
+		StateGenService:    s.cfg.StateGen,
+		StateFetcher: &statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
-	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
+	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
+		Ctx:               s.ctx,
+		StateNotifier:     s.cfg.StateNotifier,
+		BlockNotifier:     s.cfg.BlockNotifier,
+		OperationNotifier: s.cfg.OperationNotifier,
+	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
-		debugServer := &debug.Server{
+		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,
@@ -277,9 +299,9 @@ func (s *Service) Start() {
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
-		debugServerV1 := &debugv1.Server{
-			Ctx:      s.ctx,
-			BeaconDB: s.cfg.BeaconDB,
+		debugServerV1 := &debug.Server{
+			BeaconDB:    s.cfg.BeaconDB,
+			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
@@ -290,7 +312,7 @@ func (s *Service) Start() {
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
-	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

@@ -31,7 +31,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 	return nil
 }
 
-// Masks the url credentials before logging for security purpose
+// MaskCredentialsLogging masks the url credentials before logging for security purpose
 // [scheme:][//[userinfo@]host][/]path[?query][#fragment] -->  [scheme:][//[***]host][/***][#***]
 // if the format is not matched nothing is done, string is returned as is.
 func MaskCredentialsLogging(currUrl string) string {

@@ -78,13 +78,17 @@ type byAlignAndSize struct {
 	sizeofs  []int64
 }
 
+// Len --
 func (s *byAlignAndSize) Len() int { return len(s.fields) }
+
+// Swap --
 func (s *byAlignAndSize) Swap(i, j int) {
 	s.fields[i], s.fields[j] = s.fields[j], s.fields[i]
 	s.alignofs[i], s.alignofs[j] = s.alignofs[j], s.alignofs[i]
 	s.sizeofs[i], s.sizeofs[j] = s.sizeofs[j], s.sizeofs[i]
 }
 
+// Less --
 func (s *byAlignAndSize) Less(i, j int) bool {
 	// Place zero sized objects before non-zero sized objects.
 	if s.sizeofs[i] == 0 && s.sizeofs[j] != 0 {
@@ -114,6 +118,7 @@ type gcSizes struct {
 	MaxAlign int64
 }
 
+// Alignof --
 func (s *gcSizes) Alignof(T types.Type) int64 {
 	// NOTE: On amd64, complex64 is 8 byte aligned,
 	// even though float32 is only 4 byte aligned.
@@ -164,6 +169,7 @@ var basicSizes = [...]byte{
 	types.Complex128: 16,
 }
 
+// Sizeof --
 func (s *gcSizes) Sizeof(T types.Type) int64 {
 	switch t := T.Underlying().(type) {
 	case *types.Basic:

@@ -9,23 +9,26 @@ proto_library(
     srcs = ["slashing.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
+        "//proto/eth/v1alpha1:proto",
+        "//proto/eth/ext:proto",
         "@com_google_protobuf//:empty_proto",
-        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],
 )
 
 go_proto_library(
     name = "ethereum_slashing_go_proto",
-    compilers = ["@prysm//:grpc_proto_compiler"],
+    compilers = ["@prysm//:cast_grpc_proto_compiler"],
     importpath = "github.com/prysmaticlabs/prysm/proto/slashing",
     proto = ":ethereum_slashing_proto",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_gogo_protobuf//gogoproto:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/eth/ext:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],
 )
 

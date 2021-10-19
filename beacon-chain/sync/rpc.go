@@ -31,27 +31,27 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
 	s.registerRPC(
-		p2p.RPCStatusTopic,
+		p2p.RPCStatusTopicV1,
 		s.statusRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCGoodByeTopic,
+		p2p.RPCGoodByeTopicV1,
 		s.goodbyeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBlocksByRangeTopic,
+		p2p.RPCBlocksByRangeTopicV1,
 		s.beaconBlocksByRangeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBlocksByRootTopic,
+		p2p.RPCBlocksByRootTopicV1,
 		s.beaconBlocksRootRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCPingTopic,
+		p2p.RPCPingTopicV1,
 		s.pingHandler,
 	)
 	s.registerRPC(
-		p2p.RPCMetaDataTopic,
+		p2p.RPCMetaDataTopicV1,
 		s.metaDataHandler,
 	)
 }
@@ -113,7 +113,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopic {
+		if baseTopic == p2p.RPCMetaDataTopicV1 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
@@ -131,7 +131,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			msg := reflect.New(t.Elem())
 			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
 				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
+				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
 					traceutil.AnnotateError(span, err)
 					return

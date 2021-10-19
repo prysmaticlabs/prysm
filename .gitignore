@@ -36,3 +36,6 @@ crash-*
 
 # deepsource cli
 bin
+
+# Igonre external
+external

@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -22,7 +23,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 }
 
@@ -35,7 +36,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 }
 
@@ -53,7 +54,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 		helpers.ClearCache()
 		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 		require.NoError(t, err)
-		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		require.NoError(t, err)
 	}
 
@@ -78,7 +79,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot()+1)
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	slashableIndice := block.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
@@ -97,7 +98,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
@@ -117,7 +118,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 	atts, err := beaconState.CurrentEpochAttestations()
 	require.NoError(t, err)
@@ -138,7 +139,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	depositedPubkey := block.Block.Body.Deposits[0].Data.PublicKey
@@ -164,7 +165,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	exitedIndex := block.Block.Body.VoluntaryExits[0].Exit.ValidatorIndex

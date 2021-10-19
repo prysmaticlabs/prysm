@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -91,39 +91,47 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 
 	remoteKm, ok := v.keyManager.(remote.RemoteKeymanager)
 	if ok {
-		for range v.NextSlot() {
-			if ctx.Err() == context.Canceled {
-				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
-			}
+		for {
+			select {
+			case <-accountsChangedChan:
+				// Accounts (keys) changed, restart the process.
+				return v.waitForActivation(ctx, accountsChangedChan)
+			case <-v.NextSlot():
+				if ctx.Err() == context.Canceled {
+					return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
+				}
 
-			validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
-			if err != nil {
-				return errors.Wrap(err, msgCouldNotFetchKeys)
-			}
-			statusRequestKeys := make([][]byte, len(validatingKeys))
-			for i := range validatingKeys {
-				statusRequestKeys[i] = validatingKeys[i][:]
-			}
-			resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
-				PublicKeys: statusRequestKeys,
-			})
-			if err != nil {
-				return err
-			}
-			statuses := make([]*validatorStatus, len(resp.Statuses))
-			for i, s := range resp.Statuses {
-				statuses[i] = &validatorStatus{
-					publicKey: resp.PublicKeys[i],
-					status:    s,
-					index:     resp.Indices[i],
+				validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
+				if err != nil {
+					return errors.Wrap(err, msgCouldNotFetchKeys)
+				}
+				statusRequestKeys := make([][]byte, len(validatingKeys))
+				for i := range validatingKeys {
+					statusRequestKeys[i] = validatingKeys[i][:]
+				}
+				resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+					PublicKeys: statusRequestKeys,
+				})
+				if err != nil {
+					return err
+				}
+				statuses := make([]*validatorStatus, len(resp.Statuses))
+				for i, s := range resp.Statuses {
+					statuses[i] = &validatorStatus{
+						publicKey: resp.PublicKeys[i],
+						status:    s,
+						index:     resp.Indices[i],
+					}
+				}
+
+				valActivated := v.checkAndLogValidatorStatus(statuses)
+				if valActivated {
+					logActiveValidatorStatus(statuses)
+				} else {
+					continue
 				}
 			}
-
-			valActivated := v.checkAndLogValidatorStatus(statuses)
-			if valActivated {
-				logActiveValidatorStatus(statuses)
-				break
-			}
+			break
 		}
 	} else {
 		for {

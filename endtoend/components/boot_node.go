@@ -35,7 +35,7 @@ func (node *BootNode) ENR() string {
 	return node.enr
 }
 
-// StartBootnode starts a bootnode blocks up until ctx is cancelled.
+// Start starts a bootnode blocks up until ctx is cancelled.
 func (node *BootNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
 	if !found {

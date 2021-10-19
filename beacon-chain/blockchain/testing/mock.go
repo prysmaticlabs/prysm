@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,8 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -31,11 +33,11 @@ import (
 type ChainService struct {
 	State                       iface.BeaconState
 	Root                        []byte
-	Block                       *ethpb.SignedBeaconBlock
+	Block                       interfaces.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []*ethpb.SignedBeaconBlock
+	BlocksReceived              []interfaces.SignedBeaconBlock
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
@@ -70,13 +72,47 @@ func (s *ChainService) BlockNotifier() blockfeed.Notifier {
 
 // MockBlockNotifier mocks the block notifier.
 type MockBlockNotifier struct {
-	feed *event.Feed
+	feed     *event.Feed
+	feedLock sync.Mutex
+
+	recv     []*feed.Event
+	recvLock sync.Mutex
+	recvCh   chan *feed.Event
+
+	RecordEvents bool
+}
+
+// ReceivedEvents returns the events received by the block feed in this mock.
+func (mbn *MockBlockNotifier) ReceivedEvents() []*feed.Event {
+	mbn.recvLock.Lock()
+	defer mbn.recvLock.Unlock()
+	return mbn.recv
 }
 
 // BlockFeed returns a block feed.
 func (mbn *MockBlockNotifier) BlockFeed() *event.Feed {
-	if mbn.feed == nil {
+	mbn.feedLock.Lock()
+	defer mbn.feedLock.Unlock()
+
+	if mbn.feed == nil && mbn.recvCh == nil {
 		mbn.feed = new(event.Feed)
+		if mbn.RecordEvents {
+			mbn.recvCh = make(chan *feed.Event)
+			sub := mbn.feed.Subscribe(mbn.recvCh)
+
+			go func() {
+				for {
+					select {
+					case evt := <-mbn.recvCh:
+						mbn.recvLock.Lock()
+						mbn.recv = append(mbn.recv, evt)
+						mbn.recvLock.Unlock()
+					case <-sub.Err():
+						sub.Unsubscribe()
+					}
+				}
+			}()
+		}
 	}
 	return mbn.feed
 }
@@ -148,18 +184,18 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
-	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
+	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
-	if err := s.State.SetSlot(block.Block.Slot); err != nil {
+	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
 		return err
 	}
 	s.BlocksReceived = append(s.BlocksReceived, block)
-	signingRoot, err := block.Block.HashTreeRoot()
+	signingRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -167,7 +203,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb
 		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
 	}
 	s.Root = signingRoot[:]
 	s.Block = block
@@ -175,19 +211,19 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
 	for _, block := range blks {
-		if !bytes.Equal(s.Root, block.Block.ParentRoot) {
-			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
+		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 		}
-		if err := s.State.SetSlot(block.Block.Slot); err != nil {
+		if err := s.State.SetSlot(block.Block().Slot()); err != nil {
 			return err
 		}
 		s.BlocksReceived = append(s.BlocksReceived, block)
-		signingRoot, err := block.Block.HashTreeRoot()
+		signingRoot, err := block.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -195,7 +231,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sign
 			if err := s.DB.SaveBlock(ctx, block); err != nil {
 				return err
 			}
-			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
 		}
 		s.Root = signingRoot[:]
 		s.Block = block
@@ -204,18 +240,18 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sign
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
-	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
+	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
-	if err := s.State.SetSlot(block.Block.Slot); err != nil {
+	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
 		return err
 	}
 	s.BlocksReceived = append(s.BlocksReceived, block)
-	signingRoot, err := block.Block.HashTreeRoot()
+	signingRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -223,7 +259,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeac
 		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
 	}
 	s.Root = signingRoot[:]
 	s.Block = block
@@ -247,7 +283,7 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
@@ -385,5 +421,30 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 
 // ChainHeads mocks ChainHeads and always return nil.
 func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
-	return [][32]byte{}, []types.Slot{}
+	return [][32]byte{
+			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
+			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
+		},
+		[]types.Slot{0, 1}
+}
+
+// Vanguard: UnConfirmedBlocksFromCache mocks UnConfirmedBlocksFromCache method and send it nil
+func (s *ChainService) SortedUnConfirmedBlocksFromCache() ([]interfaces.BeaconBlock, error) {
+	return nil, nil
+}
+
+func (s *ChainService) ActivateOrcVerification() {
+	return
+}
+
+func (s *ChainService) CanPropose() error {
+	return nil
+}
+
+func (s *ChainService) DeactivateOrcVerification() {
+	return
+}
+
+func (s *ChainService) OrcVerification() bool {
+	return true
 }

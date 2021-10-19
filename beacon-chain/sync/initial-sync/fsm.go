@@ -8,8 +8,8 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -46,7 +46,7 @@ type stateMachine struct {
 	start   types.Slot
 	state   stateID
 	pid     peer.ID
-	blocks  []*eth.SignedBeaconBlock
+	blocks  []interfaces.SignedBeaconBlock
 	updated time.Time
 }
 
@@ -78,7 +78,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot types.Slot) *stateMach
 		smm:     smm,
 		start:   startSlot,
 		state:   stateNew,
-		blocks:  []*eth.SignedBeaconBlock{},
+		blocks:  []interfaces.SignedBeaconBlock{},
 		updated: timeutils.Now(),
 	}
 	smm.recalculateMachineAttribs()

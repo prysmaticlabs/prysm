@@ -7,12 +7,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -20,15 +18,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	interfaces2 "github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
@@ -171,11 +174,11 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	require.NoError(t, db.SaveBlock(context.Background(), finalized))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(finalized)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -249,23 +252,23 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	db := testingDB.SetupDB(t)
 
-	p1.LocalMetadata = &pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'A', 'B'}, 8),
-	}
+	})
 
-	p2.LocalMetadata = &pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
-	}
+	})
 
-	st, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	st, err := v1.InitializeFromProto(&pb.BeaconState{
 		Slot: 5,
 	})
 	require.NoError(t, err)
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 0
-	require.NoError(t, db.SaveBlock(context.Background(), blk))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -394,7 +397,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	finalized.Block.Slot = 40
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
@@ -471,13 +474,13 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
+	genesisState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
-	require.NoError(t, db.SaveBlock(context.Background(), blk))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -550,7 +553,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	db, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
 	require.NoError(t, err)
-	bState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
+	bState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
 	blk := testutil.NewBeaconBlock()
@@ -558,24 +561,24 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(context.Background(), blk))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genRoot))
 	blocksTillHead := makeBlocks(t, 1, 1000, genRoot)
 	require.NoError(t, db.SaveBlocks(context.Background(), blocksTillHead))
 
 	stateSummaries := make([]*pb.StateSummary, len(blocksTillHead))
 	for i, b := range blocksTillHead {
-		bRoot, err := b.Block.HashTreeRoot()
+		bRoot, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
 		stateSummaries[i] = &pb.StateSummary{
-			Slot: b.Block.Slot,
+			Slot: b.Block().Slot(),
 			Root: bRoot[:],
 		}
 	}
 	require.NoError(t, db.SaveStateSummaries(context.Background(), stateSummaries))
 
 	rootFetcher := func(slot types.Slot) [32]byte {
-		rt, err := blocksTillHead[slot-1].Block.HashTreeRoot()
+		rt, err := blocksTillHead[slot-1].Block().HashTreeRoot()
 		require.NoError(t, err)
 		return rt
 	}
@@ -634,11 +637,11 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		nState := bState.Copy()
 		// Set up a head state with data we expect.
 		head := blocksTillHead[len(blocksTillHead)-1]
-		headRoot, err := head.Block.HashTreeRoot()
+		headRoot, err := head.Block().HashTreeRoot()
 		require.NoError(t, err)
 
 		rHead := blocksTillHead[tt.remoteHeadSlot-1]
-		rHeadRoot, err := rHead.Block.HashTreeRoot()
+		rHeadRoot, err := rHead.Block().HashTreeRoot()
 		require.NoError(t, err)
 
 		require.NoError(t, nState.SetSlot(headSlot))
@@ -736,7 +739,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	finalized := testutil.NewBeaconBlock()
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
@@ -817,7 +820,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
@@ -904,7 +907,7 @@ func TestShouldResync(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		headState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+		headState, err := state.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
 		require.NoError(t, err)
 		require.NoError(t, headState.SetSlot(tt.args.headSlot))
 		r := &Service{
@@ -925,8 +928,9 @@ func TestShouldResync(t *testing.T) {
 	}
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces2.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces2.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
@@ -936,6 +940,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
+		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
 	}
-	return blocks
+	return ifaceBlocks
 }

@@ -11,6 +11,7 @@ go_library(
     x_defs = {
         "gitCommit": "{STABLE_GIT_COMMIT}",
         "buildDate": "{DATE}",
+        "buildDateUnix": "{DATE_UNIX}",
         "gitTag": "{STABLE_GIT_TAG}",
     },
     deps = [

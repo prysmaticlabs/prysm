@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -55,6 +55,8 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	}
 	require.NoError(t, bState.SetSlot(10000))
 	require.NoError(t, db.SaveState(s.ctx, bState, [32]byte{'a'}))
+	// Reset count
+	s.activeValidatorCount = 0
 
 	// Retrieve last archived state.
 	vals, err = s.retrieveActiveValidators()

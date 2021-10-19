@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	lru "github.com/hashicorp/golang-lru"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -22,7 +22,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 			AttPool:             attestations.NewPool(),
 			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
@@ -35,7 +35,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 		Signature: make([]byte, 96),
 	}
 	require.NoError(t, r.beaconAggregateProofSubscriber(context.Background(), a))
-	assert.DeepEqual(t, []*ethpb.Attestation{a.Message.Aggregate}, r.cfg.AttPool.AggregatedAttestations(), "Did not save aggregated attestation")
+	assert.DeepSSZEqual(t, []*ethpb.Attestation{a.Message.Aggregate}, r.cfg.AttPool.AggregatedAttestations(), "Did not save aggregated attestation")
 }
 
 func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testing.T) {
@@ -46,7 +46,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 			AttPool:             attestations.NewPool(),
 			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		seenAttestationCache: c,
+		seenUnAggregatedAttestationCache: c,
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{

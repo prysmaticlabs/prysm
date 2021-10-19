@@ -9,10 +9,14 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -21,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -232,4 +237,79 @@ func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
 	keys, err = s.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, len(pubKeys)-1, len(keys))
+}
+
+func TestServer_VoluntaryExit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ctx := context.Background()
+	mockValidatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	mockNodeClient := mock.NewMockNodeClient(ctrl)
+
+	mockValidatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 0}, nil)
+
+	mockValidatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), gomock.Any()).
+		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
+
+	// Any time in the past will suffice
+	genesisTime := &timestamppb.Timestamp{
+		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
+	}
+
+	mockNodeClient.EXPECT().
+		GetGenesis(gomock.Any(), gomock.Any()).
+		Times(2).
+		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
+
+	mockValidatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Times(2).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+
+	mockValidatorClient.EXPECT().
+		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
+		Times(2).
+		Return(&ethpb.ProposeExitResponse{}, nil)
+
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	// We attempt to create the wallet.
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	s := &Server{
+		keymanager:                km,
+		walletInitialized:         true,
+		wallet:                    w,
+		beaconNodeClient:          mockNodeClient,
+		beaconNodeValidatorClient: mockValidatorClient,
+	}
+	numAccounts := 2
+	dr, ok := km.(*derived.Keymanager)
+	require.Equal(t, true, ok)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	require.NoError(t, err)
+	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	rawPubKeys := make([][]byte, len(pubKeys))
+	for i, key := range pubKeys {
+		rawPubKeys[i] = key[:]
+	}
+	res, err := s.VoluntaryExit(ctx, &pb.VoluntaryExitRequest{
+		PublicKeys: rawPubKeys,
+	})
+	require.NoError(t, err)
+	require.DeepEqual(t, rawPubKeys, res.ExitedKeys)
 }

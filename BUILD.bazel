@@ -14,6 +14,7 @@ exports_files([
 
 # gazelle:prefix github.com/prysmaticlabs/prysm
 # gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
+# gazelle:map_kind go_test go_test @prysm//tools/go:def.bzl
 # gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
 gazelle(
     name = "gazelle",
@@ -23,7 +24,16 @@ gazelle(
 # Protobuf compiler (non-gRPC)
 alias(
     name = "proto_compiler",
-    actual = "@io_bazel_rules_go//proto:gogofast_proto",
+    actual = "@io_bazel_rules_go//proto:go_proto",
+    visibility = [
+        "//proto:__subpackages__",
+    ],
+)
+
+# Cast protobuf compiler (non-gRPC)
+alias(
+    name = "cast_proto_compiler",
+    actual = "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast",
     visibility = [
         "//proto:__subpackages__",
     ],
@@ -32,21 +42,21 @@ alias(
 # Protobuf compiler (gRPC)
 alias(
     name = "grpc_proto_compiler",
-    actual = "@io_bazel_rules_go//proto:gogofast_grpc",
+    actual = "@io_bazel_rules_go//proto:go_grpc",
     visibility = ["//visibility:public"],
 )
 
-# Protobuf gRPC compiler without gogoproto. Required for gRPC gateway.
+# Cast protobuf compiler (gRPC)
 alias(
-    name = "grpc_nogogo_proto_compiler",
-    actual = "@io_bazel_rules_go//proto:go_grpc",
+    name = "cast_grpc_proto_compiler",
+    actual = "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
     visibility = ["//visibility:public"],
 )
 
 # Protobuf gRPC gateway compiler
 alias(
     name = "grpc_gateway_proto_compiler",
-    actual = "@com_github_grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    actual = "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     visibility = ["//visibility:public"],
 )
 
@@ -111,6 +121,7 @@ nogo(
         "//tools/analyzers/shadowpredecl:go_tool_library",
         "//tools/analyzers/nop:go_tool_library",
         "//tools/analyzers/slicedirect:go_tool_library",
+        "//tools/analyzers/interfacechecker:go_tool_library",
         "//tools/analyzers/ineffassign:go_tool_library",
         "//tools/analyzers/properpermissions:go_tool_library",
     ] + select({
@@ -146,4 +157,10 @@ string_setting(
         "",
         "libfuzzer",
     ],
+)
+
+sh_binary(
+    name = "prysm_sh",
+    srcs = ["prysm.sh"],
+    visibility = ["//visibility:public"],
 )

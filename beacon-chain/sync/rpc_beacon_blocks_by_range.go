@@ -7,11 +7,11 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -139,7 +139,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
+		blks = append([]interfaces.SignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
 	// Filter and sort our retrieved blocks, so that
@@ -159,10 +159,10 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	for _, b := range blks {
-		if b == nil || b.Block == nil {
+		if b == nil || b.IsNil() || b.Block().IsNil() {
 			continue
 		}
-		if chunkErr := s.chunkWriter(stream, b); chunkErr != nil {
+		if chunkErr := s.chunkWriter(stream, b.Proto()); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			traceutil.AnnotateError(span, chunkErr)
@@ -207,22 +207,22 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
-func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
-	step uint64, startSlot types.Slot) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
+	step uint64, startSlot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	if len(blks) != len(roots) {
 		return nil, errors.New("input blks and roots are diff lengths")
 	}
 
-	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
 		isCanonical, err := s.cfg.Chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err
 		}
 		parentValid := *prevRoot != [32]byte{}
-		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block.ParentRoot)
+		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block().ParentRoot())
 		isSingular := step == 1
-		slotDiff, err := b.Block.Slot.SafeSubSlot(startSlot)
+		slotDiff, err := b.Block().Slot().SafeSubSlot(startSlot)
 		if err != nil {
 			return nil, err
 		}
@@ -250,12 +250,12 @@ func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, s
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.P2P)
 }
 
-func (s *Service) retrieveGenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, [32]byte, error) {
+func (s *Service) retrieveGenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, [32]byte, error) {
 	genBlock, err := s.cfg.DB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	genRoot, err := genBlock.Block.HashTreeRoot()
+	genRoot, err := genBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

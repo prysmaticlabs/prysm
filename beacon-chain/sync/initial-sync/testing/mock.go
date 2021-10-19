@@ -6,6 +6,7 @@ package testing
 type Sync struct {
 	IsSyncing     bool
 	IsInitialized bool
+	IsSynced      bool
 }
 
 // Syncing --
@@ -26,4 +27,9 @@ func (s *Sync) Status() error {
 // Resync --
 func (s *Sync) Resync() error {
 	return nil
+}
+
+// Synced --
+func (s *Sync) Synced() bool {
+	return s.IsSynced
 }

@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -156,7 +156,7 @@ func ActivationExitEpoch(epoch types.Epoch) types.Epoch {
 //    Return the validator churn limit for the current epoch.
 //    """
 //    active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
-//    return max(MIN_PER_EPOCH_CHURN_LIMIT, len(active_validator_indices) // CHURN_LIMIT_QUOTIENT)
+//    return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
 func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 	churnLimit := activeValidatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
@@ -173,7 +173,7 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    Return the beacon proposer index at the current slot.
 //    """
 //    epoch = get_current_epoch(state)
-//    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
+//    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + uint_to_bytes(state.slot))
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex, error) {
@@ -229,19 +229,20 @@ func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex,
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
 //
 // Spec pseudocode definition:
-//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
+//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Bytes32) -> ValidatorIndex:
 //    """
 //    Return from ``indices`` a random index sampled by effective balance.
 //    """
 //    assert len(indices) > 0
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    i = 0
+//    i = uint64(0)
+//    total = uint64(len(indices))
 //    while True:
-//        candidate_index = indices[compute_shuffled_index(ValidatorIndex(i % len(indices)), len(indices), seed)]
-//        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
+//        candidate_index = indices[compute_shuffled_index(i % total, total, seed)]
+//        random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
 //        effective_balance = state.validators[candidate_index].effective_balance
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            return ValidatorIndex(candidate_index)
+//            return candidate_index
 //        i += 1
 func ComputeProposerIndex(bState iface.ReadOnlyValidators, activeIndices []types.ValidatorIndex, seed [32]byte) (types.ValidatorIndex, error) {
 	length := uint64(len(activeIndices))

@@ -81,27 +81,101 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 	return true
 }
 
+var privateCIDRList = []string{
+	// Private ip addresses specified by rfc-1918.
+	// See: https://tools.ietf.org/html/rfc1918
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	// Reserved address space for CGN devices, specified by rfc-6598
+	// See: https://tools.ietf.org/html/rfc6598
+	"100.64.0.0/10",
+	// IPv4 Link-Local addresses, specified by rfc-3926
+	// See: https://tools.ietf.org/html/rfc3927
+	"169.254.0.0/16",
+}
+
 // configureFilter looks at the provided allow lists and
 // deny lists to appropriately create a filter.
 func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 	addrFilter := multiaddr.NewFilters()
-	// Configure from provided allow list in the config.
-	if cfg.AllowListCIDR != "" {
+	var privErr error
+	switch {
+	case cfg.AllowListCIDR == "public":
+		cfg.DenyListCIDR = append(cfg.DenyListCIDR, privateCIDRList...)
+	case cfg.AllowListCIDR == "private":
+		addrFilter, privErr = privateCIDRFilter(addrFilter, multiaddr.ActionAccept)
+		if privErr != nil {
+			return nil, privErr
+		}
+	case cfg.AllowListCIDR != "":
 		_, ipnet, err := net.ParseCIDR(cfg.AllowListCIDR)
 		if err != nil {
 			return nil, err
 		}
 		addrFilter.AddFilter(*ipnet, multiaddr.ActionAccept)
 	}
+
 	// Configure from provided deny list in the config.
 	if len(cfg.DenyListCIDR) > 0 {
 		for _, cidr := range cfg.DenyListCIDR {
+			// If an entry in the deny list is "private", we iterate through the
+			// private addresses and add them to the filter. Likewise, if the deny
+			// list is "public", then we add all private address to the accept filter,
+			switch {
+			case cidr == "private":
+				addrFilter, privErr = privateCIDRFilter(addrFilter, multiaddr.ActionDeny)
+				if privErr != nil {
+					return nil, privErr
+				}
+				continue
+			case cidr == "public":
+				addrFilter, privErr = privateCIDRFilter(addrFilter, multiaddr.ActionAccept)
+				if privErr != nil {
+					return nil, privErr
+				}
+				continue
+			}
 			_, ipnet, err := net.ParseCIDR(cidr)
 			if err != nil {
 				return nil, err
 			}
+			// Check if the address already has an action associated with it
+			// If this address was previously accepted, log a warning before placing
+			// it in the deny filter
+			action, _ := addrFilter.ActionForFilter(*ipnet)
+			if action == multiaddr.ActionAccept {
+				log.Warnf("Address %s is in conflict with previous rule.", ipnet.String())
+			}
 			addrFilter.AddFilter(*ipnet, multiaddr.ActionDeny)
 		}
+	}
+	return addrFilter, nil
+}
+
+//helper function to either accept or deny all private addresses
+//if a new rule for a private address is in conflict with a previous one, log a warning
+func privateCIDRFilter(addrFilter *multiaddr.Filters, action multiaddr.Action) (*multiaddr.Filters, error) {
+	for _, privCidr := range privateCIDRList {
+		_, ipnet, err := net.ParseCIDR(privCidr)
+		if err != nil {
+			return nil, err
+		}
+		// Get the current filter action for the address
+		// If it conflicts with the action given by the function call,
+		// log a warning
+		curAction, _ := addrFilter.ActionForFilter(*ipnet)
+		switch {
+		case action == multiaddr.ActionAccept:
+			if curAction == multiaddr.ActionDeny {
+				log.Warnf("Address %s is in conflict with previous rule.", ipnet.String())
+			}
+		case action == multiaddr.ActionDeny:
+			if curAction == multiaddr.ActionAccept {
+				log.Warnf("Address %s is in conflict with previous rule.", ipnet.String())
+			}
+		}
+		addrFilter.AddFilter(*ipnet, action)
 	}
 	return addrFilter, nil
 }

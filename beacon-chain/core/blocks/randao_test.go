@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -38,7 +39,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	}
 
 	want := "block randao: signature did not verify"
-	_, err = blocks.ProcessRandao(context.Background(), beaconState, b)
+	_, err = blocks.ProcessRandao(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -59,7 +60,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	newState, err := blocks.ProcessRandao(
 		context.Background(),
 		beaconState,
-		b,
+		wrapper.WrappedPhase0SignedBeaconBlock(b),
 	)
 	require.NoError(t, err, "Unexpected error processing block randao")
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -80,7 +81,7 @@ func TestRandaoSignatureSet_OK(t *testing.T) {
 		},
 	}
 
-	set, err := blocks.RandaoSignatureSet(beaconState, block.Body)
+	set, err := blocks.RandaoSignatureSet(beaconState, block.Body.RandaoReveal)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)

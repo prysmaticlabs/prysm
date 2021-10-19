@@ -1,5 +1,5 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst_test
 
@@ -75,4 +75,10 @@ func TestPublicKey_Copy(t *testing.T) {
 	pubkeyB.Aggregate(priv2.PublicKey())
 
 	require.DeepEqual(t, pubkeyA.Marshal(), pubkeyBytes, "Pubkey was mutated after copy")
+}
+
+func TestPublicKeysEmpty(t *testing.T) {
+	pubs := [][]byte{}
+	_, err := blst.AggregatePublicKeys(pubs)
+	require.ErrorContains(t, "nil or empty public keys", err)
 }

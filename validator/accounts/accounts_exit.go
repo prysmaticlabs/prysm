@@ -2,15 +2,16 @@ package accounts
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -25,12 +26,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-type performExitCfg struct {
-	validatorClient  ethpb.BeaconNodeValidatorClient
-	nodeClient       ethpb.NodeClient
-	keymanager       keymanager.IKeymanager
-	rawPubKeys       [][]byte
-	formattedPubKeys []string
+// PerformExitCfg for account voluntary exits.
+type PerformExitCfg struct {
+	ValidatorClient  ethpb.BeaconNodeValidatorClient
+	NodeClient       ethpb.NodeClient
+	Keymanager       keymanager.IKeymanager
+	RawPubKeys       [][]byte
+	FormattedPubKeys []string
 }
 
 const exitPassphrase = "Exit my validator"
@@ -56,20 +58,58 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return err
 	}
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		*validatorClient,
 		*nodeClient,
 		kManager,
 		rawPubKeys,
 		trimmedPubKeys,
 	}
-	rawExitedKeys, trimmedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, trimmedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	if err != nil {
 		return err
 	}
 	displayExitInfo(rawExitedKeys, trimmedExitedKeys)
 
 	return nil
+}
+
+// PerformVoluntaryExit uses gRPC clients to submit a voluntary exit message to a beacon node.
+func PerformVoluntaryExit(
+	ctx context.Context, cfg PerformExitCfg,
+) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
+	var rawNotExitedKeys [][]byte
+	for i, key := range cfg.RawPubKeys {
+		if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key); err != nil {
+			rawNotExitedKeys = append(rawNotExitedKeys, key)
+
+			msg := err.Error()
+			if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
+				strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
+				log.Warningf("Could not perform voluntary exit for account %s: %s", cfg.FormattedPubKeys[i], msg)
+			} else {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
+			}
+		}
+	}
+
+	rawExitedKeys = make([][]byte, 0)
+	formattedExitedKeys = make([]string, 0)
+	for i, key := range cfg.RawPubKeys {
+		found := false
+		for _, notExited := range rawNotExitedKeys {
+			if bytes.Equal(notExited, key) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			rawExitedKeys = append(rawExitedKeys, key)
+			formattedExitedKeys = append(formattedExitedKeys, cfg.FormattedPubKeys[i])
+		}
+	}
+
+	return rawExitedKeys, formattedExitedKeys, nil
 }
 
 func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km keymanager.IKeymanager, err error) {
@@ -151,12 +191,7 @@ func interact(
 			}
 		}
 	} else {
-		rawPubKeys = make([][]byte, len(validatingPublicKeys))
-		formattedPubKeys = make([]string, len(validatingPublicKeys))
-		for i, pk := range validatingPublicKeys {
-			rawPubKeys[i] = pk[:]
-			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
-		}
+		rawPubKeys, formattedPubKeys = prepareAllKeys(validatingPublicKeys)
 		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
 	}
 
@@ -181,6 +216,17 @@ func interact(
 	return rawPubKeys, formattedPubKeys, nil
 }
 
+func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string) {
+	raw = make([][]byte, len(validatingKeys))
+	formatted = make([]string, len(validatingKeys))
+	for i, pk := range validatingKeys {
+		raw[i] = make([]byte, len(pk))
+		copy(raw[i], pk[:])
+		formatted[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
+	}
+	return
+}
+
 func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
 	dialOpts := client.ConstructDialOptions(
 		cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
@@ -202,41 +248,6 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(conn)
 	return &validatorClient, &nodeClient, nil
-}
-
-func performExit(cliCtx *cli.Context, cfg performExitCfg) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
-	var rawNotExitedKeys [][]byte
-	for i, key := range cfg.rawPubKeys {
-		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
-			rawNotExitedKeys = append(rawNotExitedKeys, key)
-
-			msg := err.Error()
-			if strings.Contains(msg, blocks.ValidatorAlreadyExitedMsg) ||
-				strings.Contains(msg, blocks.ValidatorCannotExitYetMsg) {
-				log.Warningf("Could not perform voluntary exit for account %s: %s", cfg.formattedPubKeys[i], msg)
-			} else {
-				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.formattedPubKeys[i])
-			}
-		}
-	}
-
-	rawExitedKeys = make([][]byte, 0)
-	formattedExitedKeys = make([]string, 0)
-	for i, key := range cfg.rawPubKeys {
-		found := false
-		for _, notExited := range rawNotExitedKeys {
-			if bytes.Equal(notExited, key) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			rawExitedKeys = append(rawExitedKeys, key)
-			formattedExitedKeys = append(formattedExitedKeys, cfg.formattedPubKeys[i])
-		}
-	}
-
-	return rawExitedKeys, formattedExitedKeys, nil
 }
 
 func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {

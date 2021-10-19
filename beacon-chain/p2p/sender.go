@@ -33,7 +33,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 		return nil, err
 	}
 	// do not encode anything if we are sending a metadata request
-	if baseTopic != RPCMetaDataTopic {
+	if baseTopic != RPCMetaDataTopicV1 {
 		if _, err := s.Encoding().EncodeWithMaxLength(stream, message); err != nil {
 			traceutil.AnnotateError(span, err)
 			_err := stream.Reset()

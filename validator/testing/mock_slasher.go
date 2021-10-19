@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/golang/protobuf/proto"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 // MockSlasher mocks the slasher rpc server.

@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -29,7 +29,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	if cachedState != nil {
+	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
 
@@ -54,22 +54,13 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 			}
 		}
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-		return baseState, nil
 	}
-
-	// To avoid sharing the same state across checkpoint state cache and hot state cache,
-	// we don't add the state to check point cache.
-	has, err := s.cfg.StateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
-	if err != nil {
-		return nil, err
-	}
-	if !has {
-		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
+	// Sharing the same state across caches is perfectly fine here, the fetching
+	// of attestation prestate is by far the most accessed state fetching pattern in
+	// the beacon node. An extra state instance cached isn't an issue in the bigger
+	// picture.
+	if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
+		return nil, errors.Wrap(err, "could not save checkpoint state to cache")
 	}
 	return baseState, nil
 
@@ -99,14 +90,14 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	}
 	// If the block does not exist in db, check again if block exists in initial sync block cache.
 	// This could happen as the node first syncs to head.
-	if b == nil && s.hasInitSyncBlock(r) {
+	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return err
 	}
-	if b.Block.Slot > data.Slot {
-		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
+	if b.Block().Slot() > data.Slot {
+		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block().Slot(), data.Slot)
 	}
 	return nil
 }

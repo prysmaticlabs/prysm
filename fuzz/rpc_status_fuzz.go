@@ -8,12 +8,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
@@ -60,6 +60,12 @@ func init() {
 		InitialSync:         &mockSync.Sync{IsSyncing: false},
 		BlockNotifier:       nil,
 	})
+}
+
+// FuzzP2PRPCStatus wraps BeaconFuzzP2PRPCStatus in a go-fuzz compatible interface
+func FuzzP2PRPCStatus(b []byte) int {
+	BeaconFuzzP2PRPCStatus(b)
+	return 0
 }
 
 // BeaconFuzzP2PRPCStatus implements libfuzzer and beacon fuzz interface.

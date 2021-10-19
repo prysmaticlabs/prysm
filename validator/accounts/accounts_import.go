@@ -36,7 +36,10 @@ var derivationPathRegex = regexp.MustCompile(`m_12381_3600_(\d+)_(\d+)_(\d+)`)
 // in a directory and import them nicely in order of the derivation path.
 type byDerivationPath []string
 
+// Len is the number of elements in the collection.
 func (fileNames byDerivationPath) Len() int { return len(fileNames) }
+
+// Less reports whether the element with index i must sort before the element with index j.
 func (fileNames byDerivationPath) Less(i, j int) bool {
 	// We check if file name at index i has a derivation path
 	// in the filename. If it does not, then it is not less than j, and
@@ -63,6 +66,7 @@ func (fileNames byDerivationPath) Less(i, j int) bool {
 	return a < b
 }
 
+// Swap swaps the elements with indexes i and j.
 func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }
@@ -79,6 +83,38 @@ type ImportAccountsConfig struct {
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+		walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+		if err != nil {
+			return nil, err
+		}
+		exists, err := wallet.Exists(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, wallet.CheckExistsErrMsg)
+		}
+		if exists {
+			isValid, err := wallet.IsValid(walletDir)
+			if err != nil {
+				return nil, errors.Wrap(err, wallet.CheckValidityErrMsg)
+			}
+			if !isValid {
+				return nil, errors.New(wallet.InvalidWalletErrMsg)
+			}
+			walletPassword, err := wallet.InputPassword(
+				cliCtx,
+				flags.WalletPasswordFileFlag,
+				wallet.PasswordPromptText,
+				false, /* Do not confirm password */
+				wallet.ValidateExistingPass,
+			)
+			if err != nil {
+				return nil, err
+			}
+			return wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+				WalletDir:      walletDir,
+				WalletPassword: walletPassword,
+			})
+		}
+
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
 		if err != nil {
 			return nil, err

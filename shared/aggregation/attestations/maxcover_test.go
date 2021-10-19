@@ -3,8 +3,8 @@ package attestations
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -102,7 +102,7 @@ func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
 				&ethpb.Attestation{},
 			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			wantedErr: "bitlist cannot be nil or empty",
 		},
 		{
 			name: "first bitlist is empty",
@@ -117,17 +117,7 @@ func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
 				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{}},
 			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
-		},
-		{
-			name: "bitlists of non equal length",
-			atts: attList{
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(63)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			wantedErr: "bitlist cannot be nil or empty",
 		},
 		{
 			name: "valid bitlists",
@@ -295,7 +285,11 @@ func TestAggregateAttestations_rearrangeProcessedAttestations(t *testing.T) {
 			candidates := make([]*bitfield.Bitlist64, len(tt.atts))
 			for i := 0; i < len(tt.atts); i++ {
 				if tt.atts[i] != nil {
-					candidates[i] = tt.atts[i].AggregationBits.ToBitlist64()
+					var err error
+					candidates[i], err = tt.atts[i].AggregationBits.ToBitlist64()
+					if err != nil {
+						t.Error(err)
+					}
 				}
 			}
 			rearrangeProcessedAttestations(tt.atts, candidates, tt.keys)
@@ -381,7 +375,13 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 			},
 			wantTargetIdx: 0,
 			keys:          []int{0, 1},
-			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011}),
+			coverage: func() *bitfield.Bitlist64 {
+				b, err := bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return b
+			}(),
 		},
 		{
 			name: "many attestations, several selected",
@@ -403,7 +403,13 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 			},
 			wantTargetIdx: 1,
 			keys:          []int{1, 2, 4},
-			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110}),
+			coverage: func() *bitfield.Bitlist64 {
+				b, err := bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return b
+			}(),
 		},
 	}
 	for _, tt := range tests {

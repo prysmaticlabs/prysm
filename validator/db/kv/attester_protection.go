@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -114,6 +114,7 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
 				record := &AttestationRecord{
+					PubKey: pubKey,
 					Source: sourceEpoch,
 					Target: targetEpoch,
 				}

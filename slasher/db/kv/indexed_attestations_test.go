@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -318,7 +318,7 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 
 			idxAtts, err := db.IndexedAttestationsWithPrefix(ctx, tt.targetEpoch, tt.searchPrefix)
 			require.NoError(t, err, "Failed to get indexed attestation")
-			require.DeepEqual(t, tt.expectedResult, idxAtts)
+			require.DeepSSZEqual(t, tt.expectedResult, idxAtts)
 		})
 	}
 }
@@ -474,7 +474,7 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 
 			idxAtts, err := db.IndexedAttestationsForTarget(ctx, tt.targetEpoch)
 			require.NoError(t, err, "Failed to get indexed attestation: %v", err)
-			require.DeepEqual(t, tt.expectedResult, idxAtts)
+			require.DeepSSZEqual(t, tt.expectedResult, idxAtts)
 		})
 	}
 }

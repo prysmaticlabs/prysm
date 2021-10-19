@@ -1,5 +1,6 @@
 package testdata
 
+// NoIndexProvided --
 func NoIndexProvided() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[:] // want "Expression is already a slice."
@@ -7,6 +8,7 @@ func NoIndexProvided() {
 	}
 }
 
+// StartindexprovidedNodiagnostic --
 func StartindexprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[1:]
@@ -14,6 +16,7 @@ func StartindexprovidedNodiagnostic() {
 	}
 }
 
+// EndindexprovidedNodiagnostic --
 func EndindexprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[:2]
@@ -21,6 +24,7 @@ func EndindexprovidedNodiagnostic() {
 	}
 }
 
+// BothindicesprovidedNodiagnostic --
 func BothindicesprovidedNodiagnostic() {
 	x := []byte{'f', 'o', 'o'}
 	y := x[1:2]
@@ -28,6 +32,7 @@ func BothindicesprovidedNodiagnostic() {
 	}
 }
 
+// StringSlice --
 func StringSlice() {
 	x := "foo"
 	y := x[:] // want "Expression is already a slice."
@@ -35,6 +40,7 @@ func StringSlice() {
 	}
 }
 
+// SliceFromFunction --
 func SliceFromFunction() {
 	x := slice()[:] // want "Expression is already a slice."
 	if len(x) == 3 {

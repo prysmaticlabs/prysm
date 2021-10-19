@@ -68,14 +68,15 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--wsport=%d", e2e.TestParams.Eth1RPCPort+1),
+		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+1),
 		"--rpc",
 		"--rpcaddr=127.0.0.1",
 		"--rpccorsdomain=\"*\"",
 		"--rpcvhosts=\"*\"",
+		"--rpc.allow-unprotected-txs",
 		"--ws",
-		"--wsaddr=127.0.0.1",
-		"--wsorigins=\"*\"",
+		"--ws.addr=127.0.0.1",
+		"--ws.origins=\"*\"",
 		"--dev",
 		"--dev.period=2",
 		"--ipcdisable",
@@ -122,7 +123,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return fmt.Errorf("unable to advance chain: %w", err)
 	}
 
-	txOpts, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
+	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), "" /*password*/, big.NewInt(1337))
 	if err != nil {
 		return err
 	}
@@ -131,6 +132,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return err
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
+	txOpts.Context = context.Background()
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
 	if err != nil {
 		return fmt.Errorf("failed to deploy deposit contract: %w", err)

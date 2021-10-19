@@ -6,10 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,14 +22,14 @@ import (
 func ProcessAttestations(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
 
 	var err error
-	for idx, attestation := range b.Block.Body.Attestations {
+	for idx, attestation := range b.Block().Body().Attestations() {
 		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
@@ -64,7 +65,7 @@ func ProcessAttestations(
 //        assert data.source == state.previous_justified_checkpoint
 //        state.previous_epoch_attestations.append(pending_attestation)
 //
-//    # Check signature
+//    # Verify signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(
 	ctx context.Context,
@@ -83,14 +84,14 @@ func ProcessAttestation(
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	body := b.Block.Body
+	body := b.Block().Body()
 	var err error
-	for idx, attestation := range body.Attestations {
+	for idx, attestation := range body.Attestations() {
 		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)

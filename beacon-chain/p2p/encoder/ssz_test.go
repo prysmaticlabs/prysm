@@ -8,13 +8,14 @@ import (
 	"math"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	gogo "github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
@@ -185,7 +186,7 @@ func newBadSnappyStream() *badSnappyStream {
 	payload[3] = 0
 
 	return &badSnappyStream{
-		varint:  proto.EncodeVarint(1000),
+		varint:  gogo.EncodeVarint(1000),
 		header:  header,
 		repeat:  payload,
 		i:       0,

@@ -2,7 +2,8 @@ version = 1
 
 exclude_patterns = [
   "tools/analyzers/**",
-  "validator/keymanager/remote/keymanager_test.go"
+  "validator/keymanager/remote/keymanager_test.go",
+  "validator/web/site_data.go"
 ]
 
 [[analyzers]]

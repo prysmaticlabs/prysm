@@ -5,9 +5,14 @@ go_library(
     testonly = True,
     srcs = ["setup_db.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//endtoend:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
+        "//beacon-chain/db/slasherkv:go_default_library",
     ],
 )

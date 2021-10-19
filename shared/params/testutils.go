@@ -7,10 +7,10 @@ import "testing"
 func SetupTestConfigCleanup(t testing.TB) {
 	prevDefaultBeaconConfig := mainnetBeaconConfig.Copy()
 	prevBeaconConfig := beaconConfig.Copy()
-	prevNetworkCfg := mainnetNetworkConfig.Copy()
+	prevNetworkCfg := networkConfig.Copy()
 	t.Cleanup(func() {
 		mainnetBeaconConfig = prevDefaultBeaconConfig
 		beaconConfig = prevBeaconConfig
-		mainnetNetworkConfig = prevNetworkCfg
+		networkConfig = prevNetworkCfg
 	})
 }

@@ -4,8 +4,10 @@ import (
 	"math/rand"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -75,7 +77,7 @@ func Bitlists64WithMultipleBitSet(t testing.TB, n, length, count uint64) []*bitf
 	return lists
 }
 
-// MakeAttestationsFromBitlists creates list of bitlists from list of attestations.
+// MakeAttestationsFromBitlists creates list of attestations from list of bitlist.
 func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, len(bl))
 	for i, b := range bl {
@@ -89,4 +91,18 @@ func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
 		}
 	}
 	return atts
+}
+
+// MakeSyncContributionsFromBitVector creates list of sync contributions from list of bitvector.
+func MakeSyncContributionsFromBitVector(bl []bitfield.Bitvector128) []*prysmv2.SyncCommitteeContribution {
+	c := make([]*prysmv2.SyncCommitteeContribution, len(bl))
+	for i, b := range bl {
+		c[i] = &prysmv2.SyncCommitteeContribution{
+			Slot:              types.Slot(1),
+			SubcommitteeIndex: 2,
+			AggregationBits:   b,
+			Signature:         bls.NewAggregateSignature().Marshal(),
+		}
+	}
+	return c
 }

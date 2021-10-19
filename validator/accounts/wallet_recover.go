@@ -153,19 +153,20 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 			return "", err
 		}
 		enteredMnemonic := string(data)
-		if err := validateMnemonic(enteredMnemonic); err != nil {
+		if err := ValidateMnemonic(enteredMnemonic); err != nil {
 			return "", errors.Wrap(err, "mnemonic phrase did not pass validation")
 		}
 		return enteredMnemonic, nil
 	}
 	allowedLanguages := map[string][]string{
-		"english":             wordlists.English,
 		"chinese_simplified":  wordlists.ChineseSimplified,
 		"chinese_traditional": wordlists.ChineseTraditional,
+		"czech":               wordlists.Czech,
+		"english":             wordlists.English,
 		"french":              wordlists.French,
-		"italian":             wordlists.Italian,
 		"japanese":            wordlists.Japanese,
 		"korean":              wordlists.Korean,
+		"italian":             wordlists.Italian,
 		"spanish":             wordlists.Spanish,
 	}
 	languages := make([]string, 0)
@@ -190,7 +191,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	mnemonicPhrase, err = promptutil.ValidatePrompt(
 		os.Stdin,
 		"Enter the seed phrase for the wallet you would like to recover",
-		validateMnemonic)
+		ValidateMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("could not get mnemonic phrase: %w", err)
 	}
@@ -219,7 +220,9 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	return int64(numAccountsInt), nil
 }
 
-func validateMnemonic(mnemonic string) error {
+// ValidateMnemonic ensures that it is not empty and that the count of the words are
+// as specified(currently 24).
+func ValidateMnemonic(mnemonic string) error {
 	if strings.Trim(mnemonic, " ") == "" {
 		return errors.New("phrase cannot be empty")
 	}

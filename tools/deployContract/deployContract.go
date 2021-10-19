@@ -109,9 +109,13 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			txOps = bind.NewKeyedTransactor(privKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey, big.NewInt(1337))
+			if err != nil {
+				log.Fatal(err)
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
+			txOps.Context = context.Background()
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
 			// #nosec - Inclusion of file via variable is OK for this tool.
@@ -135,9 +139,13 @@ func main() {
 				return err
 			}
 
-			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey.PrivateKey, big.NewInt(1337))
+			if err != nil {
+				log.Fatal(err)
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
+			txOps.Context = context.Background()
 		}
 
 		drain := txOps.From

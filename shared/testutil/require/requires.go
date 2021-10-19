@@ -16,11 +16,17 @@ func NotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, ms
 }
 
 // DeepEqual compares values using DeepEqual.
+// NOTE: this function does not work for checking arrays/slices or maps of protobuf messages.
+// For arrays/slices, please use DeepSSZEqual.
+// For maps, please iterate through and compare the individual keys and values.
 func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepEqual(tb.Fatalf, expected, actual, msg...)
 }
 
 // DeepNotEqual compares values using DeepEqual.
+// NOTE: this function does not work for checking arrays/slices or maps of protobuf messages.
+// For arrays/slices, please use DeepNotSSZEqual.
+// For maps, please iterate through and compare the individual keys and values.
 func DeepNotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepNotEqual(tb.Fatalf, expected, actual, msg...)
 }

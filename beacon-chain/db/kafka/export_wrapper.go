@@ -3,24 +3,22 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 
 	fssz "github.com/ferranbt/fastssz"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
+	jsonpb "google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
 	"gopkg.in/errgo.v2/fmt/errors"
 )
 
 var _ iface.Database = (*Exporter)(nil)
-var marshaler = &jsonpb.Marshaler{}
+var marshaler = jsonpb.MarshalOptions{}
 
 // Exporter wraps a database interface and exports certain objects to kafka topics.
 type Exporter struct {
@@ -35,7 +33,6 @@ func Wrap(db iface.Database) (iface.Database, error) {
 		log.Debug("Empty Kafka bootstrap servers list, database was not wrapped with Kafka exporter")
 		return db, nil
 	}
-
 	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": featureconfig.Get().KafkaBootstrapServers})
 	if err != nil {
 		return nil, err
@@ -44,18 +41,18 @@ func Wrap(db iface.Database) (iface.Database, error) {
 	return &Exporter{db: db, p: p}, nil
 }
 
-func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) error {
+func (e Exporter) publish(ctx context.Context, topic string, msg interfaces.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "kafka.publish")
 	defer span.End()
 
-	buf := bytes.NewBuffer(nil)
-	if err := marshaler.Marshal(buf, msg); err != nil {
+	var err error
+	var buf []byte
+	if buf, err = marshaler.Marshal(msg.Proto()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
 	}
 
 	var key [32]byte
-	var err error
 	if v, ok := msg.(fssz.HashRoot); ok {
 		key, err = v.HashTreeRoot()
 	} else {
@@ -70,7 +67,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		TopicPartition: kafka.TopicPartition{
 			Topic: &topic,
 		},
-		Value: buf.Bytes(),
+		Value: buf,
 		Key:   key[:],
 	}, nil); err != nil {
 		traceutil.AnnotateError(span, err)
@@ -86,7 +83,7 @@ func (e Exporter) Close() error {
 }
 
 // SaveBlock publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error {
+func (e Exporter) SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error {
 	go func() {
 		if err := e.publish(ctx, "beacon_block", block); err != nil {
 			log.WithError(err).Error("Failed to publish block")
@@ -97,7 +94,7 @@ func (e Exporter) SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) e
 }
 
 // SaveBlocks publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error {
+func (e Exporter) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
 			if err := e.publish(ctx, "beacon_block", block); err != nil {

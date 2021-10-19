@@ -1,0 +1,146 @@
+package v1
+
+import (
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
+)
+
+// Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
+func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Eth1Data == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1Data()
+}
+
+// eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Eth1Data == nil {
+		return nil
+	}
+
+	return copyutil.CopyETH1Data(b.state.Eth1Data)
+}
+
+// Eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
+// data retrieved from eth1.
+func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Eth1DataVotes == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1DataVotes()
+}
+
+// eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
+// data retrieved from eth1.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Eth1DataVotes == nil {
+		return nil
+	}
+
+	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+	for i := 0; i < len(res); i++ {
+		res[i] = copyutil.CopyETH1Data(b.state.Eth1DataVotes[i])
+	}
+	return res
+}
+
+// Eth1DepositIndex corresponds to the index of the deposit made to the
+// validator deposit contract at the time of this state's eth1 data.
+func (b *BeaconState) Eth1DepositIndex() uint64 {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1DepositIndex()
+}
+
+// eth1DepositIndex corresponds to the index of the deposit made to the
+// validator deposit contract at the time of this state's eth1 data.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1DepositIndex() uint64 {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	return b.state.Eth1DepositIndex
+}
+
+// eth1Root computes the HashTreeRoot Merkleization of
+// a BeaconBlockHeader struct according to the Ethereum
+// Simple Serialize specification.
+func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+	if eth1Data == nil {
+		return [32]byte{}, errors.New("nil eth1 data")
+	}
+
+	enc := stateutil.Eth1DataEncKey(eth1Data)
+	if featureconfig.Get().EnableSSZCache {
+		if found, ok := cachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
+			return found.([32]byte), nil
+		}
+	}
+
+	root, err := stateutil.Eth1DataRootWithHasher(hasher, eth1Data)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	if featureconfig.Get().EnableSSZCache {
+		cachedHasher.rootsCache.Set(string(enc), root, 32)
+	}
+	return root, nil
+}
+
+// eth1DataVotesRoot computes the HashTreeRoot Merkleization of
+// a list of Eth1Data structs according to the Ethereum
+// Simple Serialize specification.
+func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
+	hashKey, err := stateutil.Eth1DatasEncKey(eth1DataVotes)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	if featureconfig.Get().EnableSSZCache {
+		if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
+			return found.([32]byte), nil
+		}
+	}
+	root, err := stateutil.Eth1DatasRoot(eth1DataVotes)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if featureconfig.Get().EnableSSZCache {
+		cachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
+	}
+	return root, nil
+}

@@ -1,4 +1,4 @@
-// +build  !blst_enabled
+// +build  blst_disabled libfuzzer
 
 package blst
 
@@ -7,7 +7,7 @@ import (
 )
 
 // This stub file exists until build issues can be resolved for libfuzz.
-const err = "blst is only supported on linux,darwin,windows with blst_enabled gotag"
+const err = "blst is only supported on linux,darwin,windows"
 
 // SecretKey -- stub
 type SecretKey struct{}
@@ -70,6 +70,11 @@ func (s Signature) AggregateVerify(_ []common.PublicKey, _ [][32]byte) bool {
 
 // FastAggregateVerify -- stub
 func (s Signature) FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
+	panic(err)
+}
+
+// Eth2FastAggregateVerify -- stub
+func (s Signature) Eth2FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
 	panic(err)
 }
 

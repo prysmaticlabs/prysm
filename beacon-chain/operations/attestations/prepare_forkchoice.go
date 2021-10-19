@@ -6,9 +6,10 @@ import (
 	"errors"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -88,7 +89,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
 	clonedAtts := make([]*ethpb.Attestation, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = stateV0.CopyAttestation(a)
+		clonedAtts[i] = copyutil.CopyAttestation(a)
 	}
 	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
@@ -114,11 +115,20 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 		if savedBitlist.Len() == incomingBits.Len() {
 			// Returns true if the node has seen all the bits in the new bit field of the incoming attestation.
-			if bytes.Equal(savedBitlist, incomingBits) || savedBitlist.Contains(incomingBits) {
+			if bytes.Equal(savedBitlist, incomingBits) {
 				return true, nil
 			}
+			if c, err := savedBitlist.Contains(incomingBits); err != nil {
+				return false, err
+			} else if c {
+				return true, nil
+			}
+			var err error
 			// Update the bit fields by Or'ing them with the new ones.
-			incomingBits = incomingBits.Or(savedBitlist)
+			incomingBits, err = incomingBits.Or(savedBitlist)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 

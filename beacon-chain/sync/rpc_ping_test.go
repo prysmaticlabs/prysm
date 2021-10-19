@@ -15,6 +15,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -25,15 +26,15 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = &pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
-	}
+	})
 
-	p2.LocalMetadata = &pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
-	}
+	})
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
@@ -82,15 +83,15 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = &pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
-	}
+	})
 
-	p2.LocalMetadata = &pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
-	}
+	})
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
@@ -147,15 +148,15 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = &pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
-	}
+	})
 
-	p2.LocalMetadata = &pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
-	}
+	})
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
@@ -167,13 +168,13 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 		rateLimiter: newRateLimiter(p1),
 	}
 
-	badMetadata := &pb.MetaData{
+	badMetadata := &pb.MetaDataV0{
 		SeqNumber: 3,
 		Attnets:   []byte{'E', 'F'},
 	}
 
 	p1.Peers().Add(new(enr.Record), p2.BHost.ID(), p2.BHost.Addrs()[0], network.DirUnknown)
-	p1.Peers().SetMetadata(p2.BHost.ID(), badMetadata)
+	p1.Peers().SetMetadata(p2.BHost.ID(), interfaces.WrappedMetadataV0(badMetadata))
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
@@ -189,7 +190,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
-	wantedSeq := types.SSZUint64(p2.LocalMetadata.SeqNumber)
+	wantedSeq := types.SSZUint64(p2.LocalMetadata.SequenceNumber())
 	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
 	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 

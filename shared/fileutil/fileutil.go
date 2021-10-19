@@ -32,6 +32,34 @@ func ExpandPath(p string) (string, error) {
 	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
 }
 
+// HandleBackupDir takes an input directory path and either alters its permissions to be usable if it already exists, creates it if not
+func HandleBackupDir(dirPath string, permissionOverride bool) error {
+	expanded, err := ExpandPath(dirPath)
+	if err != nil {
+		return err
+	}
+	exists, err := HasDir(expanded)
+	if err != nil {
+		return err
+	}
+	if exists {
+		info, err := os.Stat(expanded)
+		if err != nil {
+			return err
+		}
+		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
+			if permissionOverride {
+				if err := os.Chmod(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("dir already exists without proper 0700 permissions")
+			}
+		}
+	}
+	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
+}
+
 // MkdirAll takes in a path, expands it if necessary, and looks through the
 // permissions of every directory along the path, ensuring we are not attempting
 // to overwrite any existing permissions. Finally, creates the directory accordingly
@@ -136,6 +164,7 @@ func FileExists(filename string) bool {
 // Define non-fatal error to stop the recursive directory walk
 var stopWalk = errors.New("stop walking")
 
+// RecursiveFileFind searches for file in a directory and its subdirectories.
 func RecursiveFileFind(filename, dir string) (bool, string, error) {
 	var found bool
 	var fpath string
@@ -173,17 +202,19 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 
 // CopyFile copy a file from source to destination path.
 func CopyFile(src, dst string) error {
-	input, err := ioutil.ReadFile(src)
+	if !FileExists(src) {
+		return errors.New("source file does not exist at provided path")
+	}
+	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-
-	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
-		err := errors.Wrapf(err, "error creating file %s", dst)
 		return err
 	}
-	return nil
+	_, err = io.Copy(dstFile, f)
+	return err
 }
 
 // CopyDir copies contents of one directory into another, recursively.

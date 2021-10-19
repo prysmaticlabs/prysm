@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -7,6 +6,7 @@ go_library(
         "attestation.go",
         "block.go",
         "committee.go",
+        "genesis.go",
         "randao.go",
         "rewards_penalties.go",
         "shuffle.go",
@@ -27,7 +27,9 @@ go_library(
         "//shared/keystore:__pkg__",
         "//shared/p2putils:__pkg__",
         "//shared/testutil:__pkg__",
+        "//shared/testutil/altair:__pkg__",
         "//slasher:__subpackages__",
+        "//spectest:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
     ],
@@ -35,6 +37,8 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/interfaces:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -42,10 +46,10 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/timeutils:go_default_library",
+        "//shared/trieutil:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
@@ -70,8 +74,9 @@ go_test(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -83,7 +88,6 @@ go_test(
         "//shared/timeutils:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )

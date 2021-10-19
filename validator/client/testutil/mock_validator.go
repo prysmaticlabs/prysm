@@ -6,7 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -172,7 +172,7 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
-// LogNextDutyCountDown for mocking.
+// LogNextDutyTimeLeft for mocking.
 func (fv *FakeValidator) LogNextDutyTimeLeft(slot types.Slot) error {
 	return nil
 }
@@ -211,6 +211,11 @@ func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, erro
 // GetKeymanager for mocking
 func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 	return fv.Keymanager
+}
+
+// CheckDoppelGanger for mocking
+func (fv *FakeValidator) CheckDoppelGanger(ctx context.Context) error {
+	return nil
 }
 
 // ReceiveBlocks for mocking

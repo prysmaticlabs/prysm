@@ -24,9 +24,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	powt "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -69,7 +71,7 @@ func setupDB() {
 		panic(err)
 	}
 	b := testutil.NewBeaconBlock()
-	if err := db1.SaveBlock(ctx, b); err != nil {
+	if err := db1.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 		panic(err)
 	}
 	br, err := b.HashTreeRoot()
@@ -98,6 +100,15 @@ func (fakeChecker) Status() error {
 func (fakeChecker) Resync() error {
 	return nil
 }
+func (fakeChecker) Synced() bool {
+	return false
+}
+
+// FuzzBlock wraps BeaconFuzzBlock in a go-fuzz compatible interface
+func FuzzBlock(b []byte) int {
+	BeaconFuzzBlock(b)
+	return 0
+}
 
 // BeaconFuzzBlock runs full processing of beacon block against a given state.
 func BeaconFuzzBlock(b []byte) {
@@ -106,7 +117,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err := input.UnmarshalSSZ(b); err != nil {
 		return
 	}
-	st, err := stateV0.InitializeFromProtoUnsafe(input.State)
+	st, err := v1.InitializeFromProtoUnsafe(input.State)
 	if err != nil {
 		return
 	}
@@ -127,7 +138,7 @@ func BeaconFuzzBlock(b []byte) {
 	}
 
 	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		ChainStartFetcher: nil,
+		ChainStartFetcher: powt.NewPOWChain(),
 		BeaconDB:          db1,
 		DepositCache:      nil,
 		AttPool:           ap,
@@ -136,7 +147,7 @@ func BeaconFuzzBlock(b []byte) {
 		P2p:               p2p,
 		StateNotifier:     sn,
 		ForkChoiceStore:   protoarray.New(0, 0, [32]byte{}),
-		OpsService:        ops,
+		AttService:        ops,
 		StateGen:          sgen,
 	})
 	if err != nil {
@@ -184,11 +195,11 @@ func BeaconFuzzBlock(b []byte) {
 		return
 	}
 
-	if err := s.FuzzBeaconBlockSubscriber(ctx, msg); err != nil {
+	if err := s.FuzzBeaconBlockSubscriber(ctx, input.Block); err != nil {
 		_ = err
 	}
 
-	if _, err := state.ProcessBlock(ctx, st, input.Block); err != nil {
+	if _, err := state.ProcessBlock(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
 		_ = err
 	}
 }

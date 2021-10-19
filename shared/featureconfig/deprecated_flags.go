@@ -32,6 +32,26 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableBlst = &cli.BoolFlag{
+		Name:   "disable-blst",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:   "proposer-atts-selection-using-max-cover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedUpdateHeadTimely = &cli.BoolFlag{
+		Name:   "update-head-timely",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:   "enable-optimized-balance-update",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -40,4 +60,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableSyncBacktracking,
 	deprecatedDisablePruningDepositProofs,
 	deprecatedDisableEth1DataMajorityVote,
+	deprecatedDisableBlst,
+	deprecatedProposerAttsSelectionUsingMaxCover,
+	deprecatedUpdateHeadTimely,
+	deprecatedEnableOptimizedBalanceUpdate,
 }

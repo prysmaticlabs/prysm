@@ -7,9 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -26,7 +27,7 @@ func (s *Service) CurrentSlot() types.Slot {
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (iface.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -35,16 +36,16 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (i
 		return nil, err
 	}
 
-	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot()))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
-	if preState == nil {
-		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+	if preState == nil || preState.IsNil() {
+		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot())
 	}
 
 	// Verify block slot time is not from the future.
-	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -57,11 +58,11 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (i
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
-	parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
@@ -69,7 +70,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -96,11 +97,11 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	if err != nil {
 		return err
 	}
-	if finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+	if finalizedBlkSigned == nil || finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
 		return errors.New("nil finalized block")
 	}
-	finalizedBlk := finalizedBlkSigned.Block
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
+	finalizedBlk := finalizedBlkSigned.Block()
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
@@ -110,7 +111,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
@@ -120,13 +121,13 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 	finalizedSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if err != nil {
 		return err
 	}
-	if finalizedSlot >= b.Slot {
-		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
+	if finalizedSlot >= b.Slot() {
+		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
 	}
 	return nil
 }
@@ -139,7 +140,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
+	var newJustifiedBlockSigned interfaces.SignedBeaconBlock
 	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if s.hasInitSyncBlock(justifiedRoot) {
@@ -150,19 +151,19 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 			return false, err
 		}
 	}
-	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
+	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.IsNil() || newJustifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil new justified block")
 	}
 
-	newJustifiedBlock := newJustifiedBlockSigned.Block
+	newJustifiedBlock := newJustifiedBlockSigned.Block()
 	jSlot, err := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 	if err != nil {
 		return false, err
 	}
-	if newJustifiedBlock.Slot <= jSlot {
+	if newJustifiedBlock.Slot() <= jSlot {
 		return false, nil
 	}
-	var justifiedBlockSigned *ethpb.SignedBeaconBlock
+	var justifiedBlockSigned interfaces.SignedBeaconBlock
 	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
@@ -173,11 +174,11 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		}
 	}
 
-	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
+	if justifiedBlockSigned == nil || justifiedBlockSigned.IsNil() || justifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil justified block")
 	}
-	justifiedBlock := justifiedBlockSigned.Block
-	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot)
+	justifiedBlock := justifiedBlockSigned.Block()
+	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot())
 	if err != nil {
 		return false, err
 	}
@@ -307,15 +308,15 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		signed = s.getInitSyncBlock(r)
 	}
 
-	if signed == nil || signed.Block == nil {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
-	b := signed.Block
-	if b.Slot == slot || b.Slot < slot {
+	b := signed.Block()
+	if b.Slot() == slot || b.Slot() < slot {
 		return r[:], nil
 	}
 
-	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot), slot)
+	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
@@ -363,13 +364,13 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state iface.
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	pendingNodes := make([]interfaces.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
-	slot := blk.Slot
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
+	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
 	fSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if err != nil {
@@ -383,11 +384,11 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 			return err
 		}
 
-		pendingNodes = append(pendingNodes, b.Block)
+		pendingNodes = append(pendingNodes, b.Block())
 		copiedRoot := parentRoot
 		pendingRoots = append(pendingRoots, copiedRoot)
-		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
-		slot = b.Block.Slot
+		parentRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
+		slot = b.Block().Slot()
 		higherThanFinalized = slot > fSlot
 	}
 
@@ -397,7 +398,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		b := pendingNodes[i]
 		r := pendingRoots[i]
 		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot), bytesutil.ToBytes32(b.Body.Graffiti),
+			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), bytesutil.ToBytes32(b.Body().Graffiti()),
 			jCheckpoint.Epoch,
 			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
@@ -421,6 +422,20 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// We can be confident that these deposits will be included in some block
 	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
 	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+	if s.enableVanguardNode {
+		genesisState, err := s.cfg.BeaconDB.GenesisState(ctx)
+		if err != nil {
+			return err
+		}
+		// Exit early if no genesis state is saved.
+		if genesisState == nil || genesisState.IsNil() {
+			return nil
+		}
+		// We do not call the InsertFinalizedDeposits method if all genesis deposits have not deposited yet
+		if uint64(eth1DepositIndex) < genesisState.Eth1Data().DepositCount {
+			return nil
+		}
+	}
 	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
 	if err = s.cfg.DepositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {

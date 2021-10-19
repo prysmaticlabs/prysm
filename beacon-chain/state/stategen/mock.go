@@ -4,9 +4,9 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // MockStateManager is a fake implementation of StateManager.
@@ -42,7 +42,7 @@ func (m *MockStateManager) MigrateToCold(ctx context.Context, fRoot [32]byte) er
 func (m *MockStateManager) ReplayBlocks(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed []*eth.SignedBeaconBlock,
+	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
 ) (iface.BeaconState, error) {
 	panic("implement me")
@@ -53,7 +53,7 @@ func (m *MockStateManager) LoadBlocks(
 	ctx context.Context,
 	startSlot, endSlot types.Slot,
 	endBlockRoot [32]byte,
-) ([]*eth.SignedBeaconBlock, error) {
+) ([]interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 

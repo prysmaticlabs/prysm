@@ -1,4 +1,4 @@
-// Package p2p defines the network protocol implementation for eth2
+// Package p2p defines the network protocol implementation for Ethereum consensus
 // used by beacon nodes, including peer discovery using discv5, gossip-sub
 // using libp2p, and handing peer lifecycles + handshakes.
 package p2p
@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -27,9 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -66,7 +64,7 @@ type Service struct {
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	metaData              *pb.MetaData
+	metaData              interfaces.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
@@ -80,6 +78,7 @@ type Service struct {
 	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
+	activeValidatorCount  uint64
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -142,13 +141,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(256),
 		pubsub.WithValidateQueueSize(256),
-	}
-	// Add gossip scoring options.
-	if featureconfig.Get().EnablePeerScorer {
-		psOpts = append(
-			psOpts,
-			pubsub.WithPeerScore(peerScoringParams()),
-			pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute))
+		pubsub.WithPeerScore(peerScoringParams()),
+		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
@@ -347,13 +341,13 @@ func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // Metadata returns a copy of the peer's metadata.
-func (s *Service) Metadata() *pb.MetaData {
-	return proto.Clone(s.metaData).(*pb.MetaData)
+func (s *Service) Metadata() interfaces.Metadata {
+	return s.metaData.Copy()
 }
 
 // MetadataSeq returns the metadata sequence number.
 func (s *Service) MetadataSeq() uint64 {
-	return s.metaData.SeqNumber
+	return s.metaData.SequenceNumber()
 }
 
 // AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can

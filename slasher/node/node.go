@@ -35,7 +35,7 @@ import (
 )
 
 // SlasherNode defines a struct that handles the services running a slashing detector
-// for eth2. It handles the lifecycle of the entire system and registers
+// for Ethereum. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type SlasherNode struct {
 	cliCtx                *cli.Context
@@ -63,7 +63,7 @@ func New(cliCtx *cli.Context) (*SlasherNode, error) {
 	}
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfNotSupported(cliCtx.Context)
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 
 	if cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.

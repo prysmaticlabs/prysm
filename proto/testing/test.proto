@@ -2,12 +2,17 @@ syntax = "proto3";
 
 package testing;
 
+import "google/protobuf/descriptor.proto";
 import "google/protobuf/timestamp.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+extend google.protobuf.FieldOptions {
+  string ssz_size = 60001;
+  string spec_name = 60003;
+}
 
 message TestMessage {
   string foo = 1;
-  string bar = 2 [(gogoproto.moretags) = "fizz:\"buzz\" spec-name:\"baz\""];
+  string bar = 2 [(ssz_size) = "32", (spec_name) = "foo"];
 }
 
 message TestNestedMessage {

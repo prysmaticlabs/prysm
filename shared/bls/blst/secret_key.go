@@ -1,9 +1,10 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst
 
 import (
+	"crypto/subtle"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
@@ -28,7 +29,7 @@ func RandKey() (common.SecretKey, error) {
 	}
 	// Defensive check, that we have not generated a secret key,
 	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
-	if secKey.IsZero() {
+	if IsZero(secKey.Marshal()) {
 		return nil, common.ErrZeroKey
 	}
 	return secKey, nil
@@ -44,7 +45,7 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 		return nil, common.ErrSecretUnmarshal
 	}
 	wrappedKey := &bls12SecretKey{p: secKey}
-	if wrappedKey.IsZero() {
+	if IsZero(privKey) {
 		return nil, common.ErrZeroKey
 	}
 	return wrappedKey, nil
@@ -56,9 +57,12 @@ func (s *bls12SecretKey) PublicKey() common.PublicKey {
 }
 
 // IsZero checks if the secret key is a zero key.
-func (s *bls12SecretKey) IsZero() bool {
-	zeroKey := new(blst.SecretKey)
-	return s.p.Equals(zeroKey)
+func IsZero(sKey []byte) bool {
+	b := byte(0)
+	for _, s := range sKey {
+		b |= s
+	}
+	return subtle.ConstantTimeByteEq(b, 0) == 1
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
@@ -67,7 +71,7 @@ func (s *bls12SecretKey) IsZero() bool {
 // Sign(SK, message) -> signature: a signing algorithm that generates
 //      a deterministic signature given a secret key SK and a message.
 //
-// In ETH2.0 specification:
+// In Ethereum proof of stake specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
 func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
 	if featureconfig.Get().SkipBLSVerify {
@@ -80,9 +84,5 @@ func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *bls12SecretKey) Marshal() []byte {
 	keyBytes := s.p.Serialize()
-	if len(keyBytes) < params.BeaconConfig().BLSSecretKeyLength {
-		emptyBytes := make([]byte, params.BeaconConfig().BLSSecretKeyLength-len(keyBytes))
-		keyBytes = append(emptyBytes, keyBytes...)
-	}
 	return keyBytes
 }

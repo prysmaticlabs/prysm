@@ -5,18 +5,18 @@ import (
 	"os"
 	"path"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
-func WriteBlockToDisk(block *ethpb.SignedBeaconBlock, failed bool) {
+func WriteBlockToDisk(block interfaces.SignedBeaconBlock, failed bool) {
 	if !featureconfig.Get().WriteSSZStateTransitions {
 		return
 	}
 
-	filename := fmt.Sprintf("beacon_block_%d.ssz", block.Block.Slot)
+	filename := fmt.Sprintf("beacon_block_%d.ssz", block.Block().Slot())
 	if failed {
 		filename = "failed_" + filename
 	}

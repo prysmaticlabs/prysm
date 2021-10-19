@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func FakeDeposits(n uint64) []*ethpb.Eth1Data {
@@ -70,7 +71,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
 
-			s, err := stateV0.InitializeFromProto(&pb.BeaconState{
+			s, err := v1.InitializeFromProto(&pb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
 			})
 			require.NoError(t, err)
@@ -160,7 +161,7 @@ func TestAreEth1DataEqual(t *testing.T) {
 }
 
 func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	})
 	require.NoError(t, err)
@@ -178,9 +179,9 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	var ok bool
 	for i := uint64(0); i < period; i++ {
-		processedState, err := blocks.ProcessEth1DataInBlock(context.Background(), beaconState, b)
+		processedState, err := blocks.ProcessEth1DataInBlock(context.Background(), beaconState, b.Block.Body.Eth1Data)
 		require.NoError(t, err)
-		beaconState, ok = processedState.(*stateV0.BeaconState)
+		beaconState, ok = processedState.(*v1.BeaconState)
 		require.Equal(t, true, ok)
 	}
 
@@ -188,7 +189,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if !proto.Equal(beaconState.Eth1Data(), stateV0.CopyETH1Data(b.Block.Body.Eth1Data)) {
+	if !proto.Equal(beaconState.Eth1Data(), copyutil.CopyETH1Data(b.Block.Body.Eth1Data)) {
 		t.Errorf(
 			"Expected latest eth1 data to have been set to %v, received %v",
 			b.Block.Body.Eth1Data,

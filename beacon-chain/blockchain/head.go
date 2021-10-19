@@ -7,25 +7,27 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  types.Slot               // current head slot.
-	root  [32]byte                 // current head root.
-	block *ethpb.SignedBeaconBlock // current head block.
-	state iface.BeaconState        // current head state.
+	slot  types.Slot                   // current head slot.
+	root  [32]byte                     // current head root.
+	block interfaces.SignedBeaconBlock // current head block.
+	state iface.BeaconState            // current head state.
 }
 
 // Determined the head from the fork choice service and saves its new data
@@ -64,7 +66,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 			return err
 		}
 		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block, headStartRoot, f, j); err != nil {
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
 			return err
 		}
 	}
@@ -104,7 +106,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if newHeadBlock == nil || newHeadBlock.Block == nil {
+	if newHeadBlock == nil || newHeadBlock.IsNil() || newHeadBlock.Block().IsNil() {
 		return errors.New("cannot save nil head block")
 	}
 
@@ -113,24 +115,38 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
-	if newHeadState == nil {
+	if newHeadState == nil || newHeadState.IsNil() {
 		return errors.New("cannot save nil head state")
 	}
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	headSlot := s.HeadSlot()
-	if bytesutil.ToBytes32(newHeadBlock.Block.ParentRoot) != bytesutil.ToBytes32(r) {
+	newHeadSlot := newHeadBlock.Block().Slot()
+	oldHeadRoot := s.headRoot()
+	oldStateRoot := s.headBlock().Block().StateRoot()
+	newStateRoot := newHeadBlock.Block().StateRoot()
+	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
-			"newSlot": fmt.Sprintf("%d", newHeadBlock.Block.Slot),
+			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
+		absoluteSlotDifference := slotutil.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{
-				NewSlot: newHeadBlock.Block.Slot,
-				OldSlot: headSlot,
+			Data: &ethpbv1.EventChainReorg{
+				Slot:         newHeadSlot,
+				Depth:        absoluteSlotDifference,
+				OldHeadBlock: oldHeadRoot[:],
+				NewHeadBlock: headRoot[:],
+				OldHeadState: oldStateRoot,
+				NewHeadState: newStateRoot,
+				Epoch:        helpers.SlotToEpoch(newHeadSlot),
 			},
 		})
+
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+			return err
+		}
 
 		reorgCount.Inc()
 	}
@@ -143,13 +159,21 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 
+	// Forward an event capturing a new chain head over a common event feed
+	// done in a goroutine to avoid blocking the critical runtime main routine.
+	go func() {
+		if err := s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+			log.WithError(err).Error("Could not notify event feed of new chain head")
+		}
+	}()
+
 	return nil
 }
 
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs iface.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs iface.BeaconState) error {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return err
 	}
@@ -161,20 +185,20 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return nil
 	}
 
-	s.setHeadInitialSync(r, stateV0.CopySignedBeaconBlock(b), hs)
+	s.setHeadInitialSync(r, b.Copy(), hs)
 	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state iface.BeaconState) {
+func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state iface.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block and state.
 	s.head = &head{
-		slot:  block.Block.Slot,
+		slot:  block.Block().Slot(),
 		root:  root,
-		block: stateV0.CopySignedBeaconBlock(block),
+		block: block.Copy(),
 		state: state.Copy(),
 	}
 }
@@ -182,15 +206,15 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state i
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state iface.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state iface.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block only.
 	s.head = &head{
-		slot:  block.Block.Slot,
+		slot:  block.Block().Slot(),
 		root:  root,
-		block: stateV0.CopySignedBeaconBlock(block),
+		block: block.Copy(),
 		state: state,
 	}
 }
@@ -215,8 +239,8 @@ func (s *Service) headRoot() [32]byte {
 // This returns the head block.
 // It does a full copy on head block for immutability.
 // This is a lock free version.
-func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
-	return stateV0.CopySignedBeaconBlock(s.head.block)
+func (s *Service) headBlock() interfaces.SignedBeaconBlock {
+	return s.head.block.Copy()
 }
 
 // This returns the head state.
@@ -262,7 +286,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 			return err
 		}
 	}
-	if justifiedState == nil {
+	if justifiedState == nil || justifiedState.IsNil() {
 		return errors.New("justified state can't be nil")
 	}
 
@@ -290,4 +314,91 @@ func (s *Service) getJustifiedBalances() []uint64 {
 	s.justifiedBalancesLock.RLock()
 	defer s.justifiedBalancesLock.RUnlock()
 	return s.justifiedBalances
+}
+
+// Notifies a common event feed of a new chain head event. Called right after a new
+// chain head is determined, set, and saved to disk.
+func (s *Service) notifyNewHeadEvent(
+	newHeadSlot types.Slot,
+	newHeadState iface.BeaconState,
+	newHeadStateRoot,
+	newHeadRoot []byte,
+) error {
+	previousDutyDependentRoot := s.genesisRoot[:]
+	currentDutyDependentRoot := s.genesisRoot[:]
+
+	var previousDutyEpoch types.Epoch
+	currentDutyEpoch := helpers.SlotToEpoch(newHeadSlot)
+	if currentDutyEpoch > 0 {
+		previousDutyEpoch = currentDutyEpoch.Sub(1)
+	}
+	currentDutySlot, err := helpers.StartSlot(currentDutyEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get duty slot")
+	}
+	previousDutySlot, err := helpers.StartSlot(previousDutyEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get duty slot")
+	}
+	if currentDutySlot > 0 {
+		currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, currentDutySlot-1)
+		if err != nil {
+			return errors.Wrap(err, "could not get duty dependent root")
+		}
+	}
+	if previousDutySlot > 0 {
+		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, previousDutySlot-1)
+		if err != nil {
+			return errors.Wrap(err, "could not get duty dependent root")
+		}
+	}
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.NewHead,
+		Data: &ethpbv1.EventHead{
+			Slot:                      newHeadSlot,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
+			PreviousDutyDependentRoot: previousDutyDependentRoot,
+			CurrentDutyDependentRoot:  currentDutyDependentRoot,
+		},
+	})
+	return nil
+}
+
+// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
+// attestation pool. It also filters out the attestations that is one epoch older as a
+// defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
+	if !featureconfig.Get().CorrectlyInsertOrphanedAtts {
+		return nil
+	}
+
+	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	if err != nil {
+		return err
+	}
+
+	if orphanedBlk == nil || orphanedBlk.IsNil() {
+		return errors.New("orphaned block can't be nil")
+	}
+
+	for _, a := range orphanedBlk.Block().Body().Attestations() {
+		// Is the attestation one epoch older.
+		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+			continue
+		}
+		if helpers.IsAggregated(a) {
+			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+				return err
+			}
+		} else {
+			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+				return err
+			}
+		}
+		saveOrphanedAttCount.Inc()
+	}
+
+	return nil
 }

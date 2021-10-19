@@ -1,10 +1,11 @@
 package interop_test
 
 import (
+	"context"
 	"testing"
 
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -23,7 +24,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
 	require.NoError(t, err)
 	root := trie.Root()
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &eth.Eth1Data{
+	genesisState, err := state.GenesisBeaconState(context.Background(), deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 	})

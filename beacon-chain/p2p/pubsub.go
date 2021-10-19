@@ -96,18 +96,16 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	if err != nil {
 		return nil, err
 	}
-	if featureconfig.Get().EnablePeerScorer {
-		scoringParams, err := s.topicScoreParams(topic)
-		if err != nil {
+	scoringParams, err := s.topicScoreParams(topic)
+	if err != nil {
+		return nil, err
+	}
+
+	if scoringParams != nil {
+		if err := topicHandle.SetScoreParams(scoringParams); err != nil {
 			return nil, err
 		}
-
-		if scoringParams != nil {
-			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
-				return nil, err
-			}
-			logGossipParameters(topic, scoringParams)
-		}
+		logGossipParameters(topic, scoringParams)
 	}
 	return topicHandle.Subscribe(opts...)
 }
@@ -125,7 +123,7 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 
 // Content addressable ID function.
 //
-// ETH2 spec defines the message ID as:
+// Ethereum Beacon Chain spec defines the message ID as:
 //    The `message-id` of a gossipsub message MUST be the following 20 byte value computed from the message data:
 //    If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
 //    the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,

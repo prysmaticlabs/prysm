@@ -4,39 +4,42 @@ import (
 	"errors"
 	"sort"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // A type to represent beacon blocks and roots which have methods
 // which satisfy the Interface in `Sort` so that this type can
 // be sorted in ascending order.
 type sortedObj struct {
-	blks  []*ethpb.SignedBeaconBlock
+	blks  []interfaces.SignedBeaconBlock
 	roots [][32]byte
 }
 
+// Less reports whether the element with index i must sort before the element with index j.
 func (s sortedObj) Less(i, j int) bool {
-	return s.blks[i].Block.Slot < s.blks[j].Block.Slot
+	return s.blks[i].Block().Slot() < s.blks[j].Block().Slot()
 }
 
+// Swap swaps the elements with indexes i and j.
 func (s sortedObj) Swap(i, j int) {
 	s.blks[i], s.blks[j] = s.blks[j], s.blks[i]
 	s.roots[i], s.roots[j] = s.roots[j], s.roots[i]
 }
 
+// Len is the number of elements in the collection.
 func (s sortedObj) Len() int {
 	return len(s.blks)
 }
 
 // removes duplicates from provided blocks and roots.
-func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
+func (s *Service) dedupBlocksAndRoots(blks []interfaces.SignedBeaconBlock, roots [][32]byte) ([]interfaces.SignedBeaconBlock, [][32]byte, error) {
 	if len(blks) != len(roots) {
 		return nil, nil, errors.New("input blks and roots are diff lengths")
 	}
 
 	// Remove duplicate blocks received
 	rootMap := make(map[[32]byte]bool, len(blks))
-	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	newRoots := make([][32]byte, 0, len(roots))
 	for i, r := range roots {
 		if rootMap[r] {
@@ -64,7 +67,7 @@ func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
 
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
-func (s *Service) sortBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
+func (s *Service) sortBlocksAndRoots(blks []interfaces.SignedBeaconBlock, roots [][32]byte) ([]interfaces.SignedBeaconBlock, [][32]byte) {
 	obj := sortedObj{
 		blks:  blks,
 		roots: roots,

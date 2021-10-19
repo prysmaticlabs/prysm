@@ -2,8 +2,8 @@ syntax = "proto3";
 package ethereum.validator.accounts.v2;
 
 import "proto/beacon/rpc/v1/health.proto";
-import "eth/v1alpha1/beacon_chain.proto";
-import "eth/v1alpha1/node.proto";
+import "proto/eth/v1alpha1/beacon_chain.proto";
+import "proto/eth/v1alpha1/node.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -30,6 +30,12 @@ service Wallet {
             body: "*"
         };
     }
+    rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/recover"
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -53,6 +59,12 @@ service Accounts {
     rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/password/edit",
+            body: "*"
+        };
+    }
+    rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/accounts/voluntary-exit",
             body: "*"
         };
     }
@@ -100,6 +112,21 @@ service Beacon {
     rpc GetPeers(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.Peers) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/peers"
+        };
+    }
+}
+
+service SlashingProtection {
+    rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/slashing-protection/export"
+            body: "*"
+        };
+    }
+    rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/slashing-protection/import"
+            body: "*"
         };
     }
 }
@@ -204,6 +231,14 @@ message GenerateMnemonicResponse {
 message WalletResponse {
     string wallet_path = 1;
     KeymanagerKind keymanager_kind = 2;
+}
+
+message RecoverWalletRequest {
+    string mnemonic = 1;
+    uint64 num_accounts = 2;
+    string wallet_password = 3;
+    string language = 4;
+    string mnemonic25th_word = 5;
 }
 
 message ListAccountsRequest {
@@ -336,6 +371,16 @@ message BeaconStatusResponse {
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
 }
 
+message VoluntaryExitRequest {
+    // List of public keys to voluntarily exit.
+    repeated bytes public_keys = 1;
+}
+
+message VoluntaryExitResponse {
+    // List of keys that successfully exited.
+    repeated bytes exited_keys = 1;
+}
+
 message BackupAccountsRequest {
     // List of public keys to backup.
     repeated bytes public_keys = 1;
@@ -356,4 +401,14 @@ message DeleteAccountsRequest {
 message DeleteAccountsResponse {
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
+}
+
+message ExportSlashingProtectionResponse {
+    // JSON representation of the slash protection
+    string file = 1;
+}
+
+message ImportSlashingProtectionRequest {
+    // JSON representation of the slash protection
+    string slashing_protection_json = 1;
 }

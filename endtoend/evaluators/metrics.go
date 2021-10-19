@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const maxMemStatsBytes = 2000000000 // 2 GiB.
@@ -85,7 +85,7 @@ var metricComparisonTests = []comparisonTest{
 }
 
 func metricsTest(conns ...*grpc.ClientConn) error {
-	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &ptypes.Empty{})
+	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		}
 		time.Sleep(connTimeDelay)
 
-		chainHead, err := eth.NewBeaconChainClient(conns[i]).GetChainHead(context.Background(), &ptypes.Empty{})
+		chainHead, err := eth.NewBeaconChainClient(conns[i]).GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err
 		}

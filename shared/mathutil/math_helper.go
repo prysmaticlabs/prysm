@@ -1,10 +1,12 @@
-// Package mathutil includes important helpers for eth2 such as fast integer square roots.
+// Package mathutil includes important helpers for Ethereum such as fast integer square roots.
 package mathutil
 
 import (
 	"errors"
 	"math"
 	"math/bits"
+
+	"github.com/thomaso-mirodin/intmath/u64"
 )
 
 // Common square root values.
@@ -27,6 +29,12 @@ var squareRootTable = map[uint64]uint64{
 func IntegerSquareRoot(n uint64) uint64 {
 	if v, ok := squareRootTable[n]; ok {
 		return v
+	}
+
+	// Golang floating point precision may be lost above 52 bits, so we use a
+	// non floating point method. u64.Sqrt is about x2.5 slower than math.Sqrt.
+	if n >= 1<<52 {
+		return u64.Sqrt(n)
 	}
 
 	return uint64(math.Sqrt(float64(n)))
@@ -57,16 +65,6 @@ func PowerOf2(n uint64) uint64 {
 		panic("integer overflow")
 	}
 	return 1 << n
-}
-
-// ClosestPowerOf2 returns an integer that is the closest
-// power of 2 that is less than or equal to the argument.
-func ClosestPowerOf2(n uint64) uint64 {
-	if n == 0 {
-		return uint64(1)
-	}
-	exponent := math.Floor(math.Log2(float64(n)))
-	return PowerOf2(uint64(exponent))
 }
 
 // Max returns the larger integer of the two

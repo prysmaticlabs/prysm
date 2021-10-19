@@ -8,11 +8,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -24,7 +24,7 @@ import (
 // either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
-	blocks []*eth.SignedBeaconBlock
+	blocks []interfaces.SignedBeaconBlock
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -78,8 +78,8 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 		}
 		if len(blocks) > 0 {
 			for _, block := range blocks {
-				if block.Block.Slot > slot {
-					return block.Block.Slot, nil
+				if block.Block().Slot() > slot {
+					return block.Block().Slot(), nil
 				}
 			}
 		}
@@ -233,11 +233,11 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
-		parentRoot := bytesutil.ToBytes32(block.Block.ParentRoot)
+		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
 		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
 			log.WithFields(logrus.Fields{
 				"peer": pid,
-				"slot": block.Block.Slot,
+				"slot": block.Block().Slot(),
 				"root": fmt.Sprintf("%#x", parentRoot),
 			}).Debug("Block with unknown parent root has been found")
 			// Backtrack only if the first block is diverging,
@@ -257,14 +257,14 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block *eth.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := []*eth.SignedBeaconBlock{block}
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block interfaces.SignedBeaconBlock) (*forkData, error) {
+	outBlocks := []interfaces.SignedBeaconBlock{block}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
-		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block.ParentRoot)
+		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
 		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {
-				return outBlocks[i].Block.Slot < outBlocks[j].Block.Slot
+				return outBlocks[i].Block().Slot() < outBlocks[j].Block().Slot()
 			})
 			return &forkData{
 				peer:   pid,

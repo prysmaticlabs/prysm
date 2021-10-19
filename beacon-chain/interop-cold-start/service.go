@@ -10,13 +10,13 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -66,7 +66,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
-		genesisTrie, err := stateV0.InitializeFromProto(genesisState)
+		genesisTrie, err := v1.InitializeFromProto(genesisState)
 		if err != nil {
 			log.Fatalf("Could not get state trie: %v", err)
 		}
@@ -77,11 +77,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(s.cfg.GenesisTime, s.cfg.NumValidators)
+	genesisState, _, err := interop.GenerateGenesisState(ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
-	genesisTrie, err := stateV0.InitializeFromProto(genesisState)
+	genesisTrie, err := v1.InitializeFromProto(genesisState)
 	if err != nil {
 		log.Fatalf("Could not get state trie: %v", err)
 	}
@@ -133,7 +133,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns an empty beacon state.
 func (s *Service) PreGenesisState() iface.BeaconState {
-	return &stateV0.BeaconState{}
+	return &v1.BeaconState{}
 }
 
 // ClearPreGenesisData --

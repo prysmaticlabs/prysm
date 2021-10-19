@@ -1,0 +1,228 @@
+// Copyright 2020 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/ext/options.proto";
+import "proto/eth/v1/attestation.proto";
+import "proto/eth/v1/beacon_block.proto";
+
+option csharp_namespace = "Ethereum.Eth.v1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
+option java_multiple_files = true;
+option java_outer_classname = "ValidatorServiceProto";
+option java_package = "org.ethereum.eth.v1";
+option php_namespace = "Ethereum\\Eth\\v1";
+
+// Beacon chain validator API
+//
+// The beacon chain validator API is a set of endpoints to be used by validators for performing their roles.
+//
+// This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/validator).
+service BeaconValidator {
+  // GetAttesterDuties requests the beacon node to provide a set of attestation duties, which should be performed
+  // by validators, for a particular epoch. Duties should only need to be checked once per epoch, however
+  // a chain reorganization (of > MIN_SEED_LOOKAHEAD epochs) could occur, resulting in a change of duties.
+  // For full safety, you should monitor chain reorganization events.
+  rpc GetAttesterDuties(AttesterDutiesRequest) returns (AttesterDutiesResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/duties/attester/{epoch}" };
+  }
+
+  // GetProposerDuties requests beacon node to provide all validators that are scheduled to
+  // propose a block in the given epoch
+  rpc GetProposerDuties(ProposerDutiesRequest) returns (ProposerDutiesResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
+  }
+
+  // GetBlock requests the beacon node to produce a valid unsigned beacon block,
+  // which can then be signed by a proposer and submitted.
+  rpc GetBlock(ProposerBlockRequest) returns (ProposerBlockResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
+  }
+
+  // GetAttestationData requests that the beacon node provides the attestation data for
+  // the requested committee index and slot based on the nodes current head.
+  rpc GetAttestationData(AttestationDataRequest) returns (AttestationDataResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/attestation_data" };
+  }
+
+  // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot,
+  // returning the aggregated result.
+  rpc GetAggregateAttestation(AggregateAttestationRequest) returns (AttestationResponse) {
+    option (google.api.http) = { get: "/eth/v1/validator/aggregate_attestation" };
+  }
+
+  // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+  //
+  // Response usage:
+  // - 200: Successful response
+  //
+  // - 400: Invalid request syntax.
+  //
+  // - 500: Beacon node internal error.
+  rpc SubmitAggregateAndProofs(AggregateAndProofsSubmit) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/aggregate_and_proofs"
+      body: "data"
+    };
+  }
+
+  // SubmitBeaconCommitteeSubscription requests the beacon node to search using discv5 for peers related to
+  // the provided subnet information and replaces current peers with those ones if necessary.
+  //
+  // If validator is_aggregator, beacon node must:
+  //   - announce subnet topic subscription on gossipsub.
+  //   - aggregate attestations received on that subnet.
+  //
+  // Response usage:
+  // - 200: Slot signature is valid and beacon node has prepared the attestation subnet.
+  //   Note that, we cannot be certain Beacon node will find peers for that subnet for various reasons.
+  //
+  // - 500: Beacon node internal error.
+  //
+  // - 503: Beacon node is currently syncing, try again later.
+  rpc SubmitBeaconCommitteeSubscription(BeaconCommitteeSubscribeSubmit) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v1/validator/beacon_committee_subscriptions"
+      body: "data"
+    };
+  }
+}
+
+message AttesterDutiesRequest {
+  // Epoch to request, should only be allowed 1 epoch ahead.
+  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+
+  // Validator index to request duties for.
+  repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+}
+
+message AttesterDutiesResponse {
+  bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  repeated AttesterDuty data = 2;
+}
+
+message AttesterDuty {
+  // 48 byte BLS public key for the validator who's assigned to perform a duty.
+  bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+
+  // The index of the validator in the beacon state.
+  uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+  // The index of the committee where the validator belongs to.
+  uint64 committee_index = 3  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+
+  // The length of the committee the validator belongs to.
+  uint64 committee_length = 4;
+
+  // The total amount of committees for this slot.
+  uint64 committees_at_slot = 5;
+
+  // The index of the committee the validator belongs to.
+  uint64 validator_committee_index = 6  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+
+  // The slot this duty is for.
+  uint64 slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message ProposerDutiesRequest {
+  // Epoch to request duties for.
+  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+message ProposerDutiesResponse {
+  bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  repeated ProposerDuty data = 2;
+}
+
+message ProposerDuty {
+  // 48 byte BLS public key for the validator who's assigned to perform a duty.
+  bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+
+  // The index of the validator in the beacon state.
+  uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+  // The slot this duty is for.
+  uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message ProposerBlockRequest {
+  // The slot to request a block for.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+  // The validators RANDAO reveal 96 byte value.
+  bytes randao_reveal = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+
+  // 32 byte field of arbitrary data. This field may contain any data and
+  // is not used for anything other than a fun message.
+  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message ProposerBlockResponse {
+  BeaconBlock data = 1;
+}
+
+message AttestationDataRequest {
+  // Slot for which the attestation data should be retrieved for.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+  // Committee index for which the attestation data should be retrieved for.
+  uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+}
+
+message AttestationDataResponse {
+  AttestationData data = 1;
+}
+
+message AggregateAttestationRequest {
+  // The root of the attestation data requesting the aggregate for.
+  bytes attestation_data_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // The slot for the requested aggregate attestation.
+  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message AttestationResponse {
+  Attestation data = 1;
+}
+
+message AggregateAndProofsSubmit {
+  repeated SignedAggregateAttestationAndProof data = 1;
+}
+
+message BeaconCommitteeSubscribeSubmit {
+  repeated BeaconCommitteeSubscribe data = 1;
+}
+
+message BeaconCommitteeSubscribe {
+  // The validator index to subscribe for.
+  uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+  // The committee index to be subscribed to.
+  uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+
+  // The total amount of committees for the given slot.
+  uint64 committees_at_slot = 3;
+
+  // The slot to be subscribed to.
+  uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+  // If subscribing for aggregator, the beacon node will aggregate all attestations received.
+  bool is_aggregator = 5;
+}

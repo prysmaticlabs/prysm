@@ -5,19 +5,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 // Ensure Service implements chain info interface.
@@ -104,7 +105,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
 	assert.Equal(t, types.Slot(100), c.HeadSlot())
@@ -125,7 +126,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
@@ -136,18 +137,18 @@ func TestHeadRoot_UseDB(t *testing.T) {
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}
-	c.head = &head{block: b, state: s}
+	c.head = &head{block: wrapper.WrappedPhase0SignedBeaconBlock(b), state: s}
 
 	recevied, err := c.HeadBlock(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, b, recevied, "Incorrect head block received")
+	assert.DeepEqual(t, b, recevied.Proto(), "Incorrect head block received")
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -164,7 +165,7 @@ func TestGenesisTime_CanRetrieve(t *testing.T) {
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
 	f := &pb.Fork{Epoch: 999}
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{Fork: f})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{Fork: f})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -189,7 +190,7 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
 
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
 	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
@@ -203,7 +204,7 @@ func TestHeadETH1Data_Nil(t *testing.T) {
 
 func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 	d := &ethpb.Eth1Data{DepositCount: 999}
-	s, err := stateV0.InitializeFromProto(&pb.BeaconState{Eth1Data: d})
+	s, err := v1.InitializeFromProto(&pb.BeaconState{Eth1Data: d})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -221,7 +222,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 	can, err := c.IsCanonical(ctx, root)
 	require.NoError(t, err)

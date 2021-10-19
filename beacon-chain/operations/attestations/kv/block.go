@@ -2,8 +2,8 @@ package kv
 
 import (
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -25,12 +25,14 @@ func (c *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 
 	// Ensure that this attestation is not already fully contained in an existing attestation.
 	for _, a := range atts {
-		if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
+		if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
+			return err
+		} else if c {
 			return nil
 		}
 	}
 
-	c.blockAtt[r] = append(atts, stateV0.CopyAttestation(att))
+	c.blockAtt[r] = append(atts, copyutil.CopyAttestation(att))
 
 	return nil
 }

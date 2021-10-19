@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -13,6 +14,7 @@ import (
 // The value of these vars are set through linker options.
 var gitCommit = "Local build"
 var buildDate = "Moments ago"
+var buildDateUnix = "0"
 var gitTag = "Unknown"
 
 // Version returns the version string of this build.
@@ -20,6 +22,9 @@ func Version() string {
 	if buildDate == "{DATE}" {
 		now := time.Now().Format(time.RFC3339)
 		buildDate = now
+	}
+	if buildDateUnix == "{DATE_UNIX}" {
+		buildDateUnix = strconv.Itoa(int(time.Now().Unix()))
 	}
 	return fmt.Sprintf("%s. Built at: %s", BuildData(), buildDate)
 }

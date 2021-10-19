@@ -26,7 +26,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	fSlot := fBlock.Block.Slot
+	fSlot := fBlock.Block().Slot()
 	if oldFSlot > fSlot {
 		return nil
 	}
@@ -64,7 +64,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				if len(blks) != 1 {
 					return errUnknownBlock
 				}
-				missingRoot, err := blks[0].Block.HashTreeRoot()
+				missingRoot, err := blks[0].Block().HashTreeRoot()
 				if err != nil {
 					return err
 				}

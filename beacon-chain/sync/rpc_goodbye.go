@@ -91,7 +91,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.cfg.P2P.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, &code, p2p.RPCGoodByeTopicV1, id)
 	if err != nil {
 		return err
 	}

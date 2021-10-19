@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -16,14 +18,13 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 32
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	tests := []struct {
 		wsVerified     bool
 		wantErr        bool
-		wsRoot         [32]byte
-		wsEpoch        types.Epoch
+		checkpt        *ethpb.Checkpoint
 		finalizedEpoch types.Epoch
 		errString      string
 		name           string
@@ -34,37 +35,34 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 		},
 		{
 			name:           "already verified",
-			wsEpoch:        2,
+			checkpt:        &ethpb.Checkpoint{Epoch: 2},
 			finalizedEpoch: 2,
 			wsVerified:     true,
 			wantErr:        false,
 		},
 		{
 			name:           "not yet to verify, ws epoch higher than finalized epoch",
-			wsEpoch:        2,
+			checkpt:        &ethpb.Checkpoint{Epoch: 2},
 			finalizedEpoch: 1,
 			wantErr:        false,
 		},
 		{
 			name:           "can't find the block in DB",
-			wsEpoch:        1,
-			wsRoot:         [32]byte{'a'},
+			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
 			finalizedEpoch: 3,
 			wantErr:        true,
 			errString:      "node does not have root in DB",
 		},
 		{
 			name:           "can't find the block corresponds to ws epoch in DB",
-			wsEpoch:        2,
-			wsRoot:         r, // Root belongs in epoch 1.
+			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: 2}, // Root belongs in epoch 1.
 			finalizedEpoch: 3,
 			wantErr:        true,
 			errString:      "node does not have root in db corresponding to epoch",
 		},
 		{
 			name:           "can verify and pass",
-			wsEpoch:        1,
-			wsRoot:         r,
+			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: 1},
 			finalizedEpoch: 3,
 			wantErr:        false,
 		},
@@ -72,7 +70,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				cfg:              &Config{BeaconDB: beaconDB, WspBlockRoot: tt.wsRoot[:], WspEpoch: tt.wsEpoch},
+				cfg:              &Config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
 				wsVerified:       tt.wsVerified,
 				finalizedCheckpt: &ethpb.Checkpoint{Epoch: tt.finalizedEpoch},
 			}

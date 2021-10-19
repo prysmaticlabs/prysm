@@ -28,7 +28,7 @@ const (
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
-	// WalletPasswordPromptText for wallet unlocking.
+	// PasswordPromptText for wallet unlocking.
 	PasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"
@@ -74,7 +74,7 @@ type Config struct {
 
 // Wallet is a primitive in Prysm's account management which
 // has the capability of creating new accounts, reading existing accounts,
-// and providing secure access to eth2 secrets depending on an
+// and providing secure access to Ethereum proof of stake secrets depending on an
 // associated keymanager (either imported, derived, or remote signing enabled).
 type Wallet struct {
 	walletDir      string
@@ -177,7 +177,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := inputPassword(
+	walletPassword, err := InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		PasswordPromptText,
@@ -414,7 +414,9 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 	return 0, errors.New("no keymanager folder (imported, remote, derived) found in wallet path")
 }
 
-func inputPassword(
+// InputPassword prompts for a password and optionally for password confirmation.
+// The password is validated according to custom rules.
+func InputPassword(
 	cliCtx *cli.Context,
 	passwordFileFlag *cli.StringFlag,
 	promptText string,

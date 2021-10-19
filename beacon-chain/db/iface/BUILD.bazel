@@ -11,12 +11,14 @@ go_library(
     visibility = ["//beacon-chain/db:__subpackages__"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
+        "//beacon-chain/slasher/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/interfaces:go_default_library",
         "//shared/backuputil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

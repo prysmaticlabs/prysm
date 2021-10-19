@@ -1,10 +1,12 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst
 
 import (
+	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
@@ -51,7 +53,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 //      algorithm that outputs VALID if signature is a valid signature of
 //      message under public key PK, and INVALID otherwise.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
@@ -74,7 +76,7 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //      signature for a collection of public keys and messages, and
 //      outputs INVALID otherwise.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> bool
 //
 // Deprecated: Use FastAggregateVerify or use this method in spectests only.
@@ -107,7 +109,7 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 //      signatures on the same message.  This function is faster than
 //      AggregateVerify.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
@@ -115,6 +117,33 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 	}
 	if len(pubKeys) == 0 {
 		return false
+	}
+	rawKeys := make([]*blstPublicKey, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		rawKeys[i] = pubKeys[i].(*PublicKey).p
+	}
+
+	return s.s.FastAggregateVerify(true, rawKeys, msg[:], dst)
+}
+
+// Eth2FastAggregateVerify implements a wrapper on top of bls's FastAggregateVerify. It accepts G2_POINT_AT_INFINITY signature
+// when pubkeys empty.
+//
+// Spec code:
+// def eth2_fast_aggregate_verify(pubkeys: Sequence[BLSPubkey], message: Bytes32, signature: BLSSignature) -> bool:
+//    """
+//    Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
+//    """
+//    if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
+//        return True
+//    return bls.FastAggregateVerify(pubkeys, message, signature)
+func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
+	if featureconfig.Get().SkipBLSVerify {
+		return true
+	}
+	g2PointAtInfinity := append([]byte{0xC0}, make([]byte, 95)...)
+	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), g2PointAtInfinity) {
+		return true
 	}
 	rawKeys := make([]*blstPublicKey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
@@ -157,7 +186,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 //      aggregation algorithm that compresses a collection of signatures
 //      into a single signature.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
 //
 // Deprecated: Use AggregateSignatures.
@@ -195,10 +224,17 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 	}
 	// Secure source of RNG
 	randGen := rand.NewGenerator()
+	randLock := new(sync.Mutex)
 
 	randFunc := func(scalar *blst.Scalar) {
 		var rbytes [scalarBytes]byte
+		randLock.Lock()
+		// Ignore error as the error will always be nil in `read` in math/rand.
 		randGen.Read(rbytes[:])
+		randLock.Unlock()
+		// Protect against the generator returning 0. Since the scalar value is
+		// derived from a big endian byte slice, we take the last byte.
+		rbytes[len(rbytes)-1] |= 0x01
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blstSignature)
@@ -224,7 +260,7 @@ func (s *Signature) Copy() common.Signature {
 
 // VerifyCompressed verifies that the compressed signature and pubkey
 // are valid from the message provided.
-func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+func VerifyCompressed(signature, pub, msg []byte) bool {
 	// Validate signature and PKs since we will uncompress them here
 	return new(blstSignature).VerifyCompressed(signature, true, pub, true, msg, dst)
 }

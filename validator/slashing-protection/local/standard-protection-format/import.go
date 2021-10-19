@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -19,7 +19,7 @@ import (
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
-// by eth2 validators and imports its data into Prysm's internal representation of slashing
+// by Ethereum validators and imports its data into Prysm's internal representation of slashing
 // protection in the validator client's database. For more information, see the EIP document here:
 // https://eips.ethereum.org/EIPS/eip-3076.
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
@@ -36,7 +36,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return nil
 	}
 
-	// We validate the `Metadata` field of the slashing protection JSON file.
+	// We validate the `MetadataV0` field of the slashing protection JSON file.
 	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}

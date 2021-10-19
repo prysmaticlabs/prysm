@@ -54,7 +54,7 @@ type Config struct {
 }
 
 // Store defines an implementation of the Prysm Database interface
-// using BoltDB as the underlying persistent kv-store for eth2.
+// using BoltDB as the underlying persistent kv-store for Ethereum Beacon Nodes.
 type Store struct {
 	db                  *bolt.DB
 	databasePath        string
@@ -62,6 +62,13 @@ type Store struct {
 	validatorIndexCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
 	ctx                 context.Context
+}
+
+// KVStoreDatafilePath is the canonical construction of a full
+// database file path from the directory path, so that code outside
+// this package can find the full path in a consistent way.
+func KVStoreDatafilePath(dirPath string) string {
+	return path.Join(dirPath, DatabaseFileName)
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -77,7 +84,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			return nil, err
 		}
 	}
-	datafile := path.Join(dirPath, DatabaseFileName)
+	datafile := KVStoreDatafilePath(dirPath)
 	boltDB, err := bolt.Open(
 		datafile,
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -143,7 +150,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
-			// New State Management service bucket.
+			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Migrations
 			migrationsBucket,

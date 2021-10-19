@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -28,21 +28,21 @@ import (
 func ProcessRandao(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	body := b.Block.Body
+	body := b.Block().Body()
 	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
+	if err := verifySignature(buf, proposerPub, body.RandaoReveal(), domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
+	beaconState, err = ProcessRandaoNoVerify(beaconState, body.RandaoReveal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
@@ -60,7 +60,7 @@ func ProcessRandao(
 //     )
 func ProcessRandaoNoVerify(
 	beaconState iface.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	randaoReveal []byte,
 ) (iface.BeaconState, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
@@ -70,7 +70,7 @@ func ProcessRandaoNoVerify(
 	if err != nil {
 		return nil, err
 	}
-	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
 		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
 	}

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -33,4 +36,24 @@ func TestVerifyConnectivity(t *testing.T) {
 				}
 			})
 	}
+}
+
+func TestSerializeENR(t *testing.T) {
+	t.Run("Ok", func(t *testing.T) {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		db, err := enode.OpenDB("")
+		require.NoError(t, err)
+		lNode := enode.NewLocalNode(db, key)
+		record := lNode.Node().Record()
+		s, err := SerializeENR(record)
+		require.NoError(t, err)
+		assert.NotEqual(t, "", s)
+	})
+
+	t.Run("Nil record", func(t *testing.T) {
+		_, err := SerializeENR(nil)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "could not serialize nil record", err)
+	})
 }

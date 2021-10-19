@@ -6,12 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -38,7 +39,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 	if err != nil {
 		return nil, err
 	}
-	return stateV0.InitializeFromProtoUnsafe(st)
+	return v1.InitializeFromProtoUnsafe(st)
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -79,7 +80,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	if st == nil {
 		return nil, nil
 	}
-	return stateV0.InitializeFromProtoUnsafe(st)
+	return v1.InitializeFromProtoUnsafe(st)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
@@ -99,7 +100,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	}
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		pbState, err := stateV0.ProtobufBeaconState(st.InnerStateUnsafe())
+		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
@@ -128,11 +129,19 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
-	enc, err := s.stateBytes(ctx, blockRoot)
+	hasState := false
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateBucket)
+		stBytes := bkt.Get(blockRoot[:])
+		if len(stBytes) > 0 {
+			hasState = true
+		}
+		return nil
+	})
 	if err != nil {
 		panic(err)
 	}
-	return len(enc) > 0
+	return hasState
 }
 
 // DeleteState by block root.
@@ -204,7 +213,16 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateBucket)
-		dst = bkt.Get(blockRoot[:])
+		stBytes := bkt.Get(blockRoot[:])
+		if len(stBytes) == 0 {
+			return nil
+		}
+		// Due to https://github.com/boltdb/bolt/issues/204, we need to
+		// allocate a byte slice separately in the transaction or there
+		// is the possibility of a panic when accessing that particular
+		// area of memory.
+		dst = make([]byte, len(stBytes))
+		copy(dst, stBytes)
 		return nil
 	})
 	return dst, err
@@ -244,7 +262,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 		if err != nil {
 			return 0, err
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.VerifyNilBeaconBlock(wrapper.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 			return 0, err
 		}
 		return b.Block.Slot, nil
@@ -294,7 +312,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-	if st == nil {
+	if st == nil || st.IsNil() {
 		st, err = s.GenesisState(ctx)
 		if err != nil {
 			return nil, err

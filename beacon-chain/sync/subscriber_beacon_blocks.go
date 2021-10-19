@@ -4,25 +4,28 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, ok := msg.(*ethpb.SignedBeaconBlock)
+	rBlock, ok := msg.(*ethpb.SignedBeaconBlock)
 	if !ok {
 		return errors.New("message is not type *ethpb.SignedBeaconBlock")
 	}
+	signed := wrapper.WrappedPhase0SignedBeaconBlock(rBlock)
 
-	if signed == nil || signed.Block == nil {
+	if signed.IsNil() || signed.Block().IsNil() {
 		return errors.New("nil block")
 	}
 
-	s.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
+	s.setSeenBlockIndexSlot(signed.Block().Slot(), signed.Block().ProposerIndex())
 
-	block := signed.Block
+	block := signed.Block()
 
 	root, err := block.HashTreeRoot()
 	if err != nil {
@@ -31,16 +34,25 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	if err := s.cfg.Chain.ReceiveBlock(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
-		s.setBadBlock(ctx, root)
+		switch {
+		case errors.Is(err, errPendingBlockTryLimitExceed):
+			log.WithError(err).Debug("Block is not processed")
+		case errors.Is(err, errInvalidBlock):
+			log.WithError(err).Debug("Block is not processed")
+		default:
+			log.Debugf("Could not process block from slot %d: %v", block.Slot(), err)
+			s.setBadBlock(ctx, root)
+		}
 		return err
 	}
 
-	// Delete attestations from the block in the pool to avoid inclusion in future block.
-	if err := s.deleteAttsInPool(block.Body.Attestations); err != nil {
-		log.Debugf("Could not delete attestations in pool: %v", err)
-		return nil
+	if !featureconfig.Get().CorrectlyPruneCanonicalAtts {
+		// Delete attestations from the block in the pool to avoid inclusion in future block.
+		if err := s.deleteAttsInPool(block.Body().Attestations()); err != nil {
+			log.Debugf("Could not delete attestations in pool: %v", err)
+			return nil
+		}
 	}
-
 	return err
 }
 

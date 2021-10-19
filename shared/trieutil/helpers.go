@@ -10,16 +10,23 @@ import (
 // NextPowerOf2 returns the next power of 2 >= the input
 //
 // Spec pseudocode definition:
-//   def get_next_power_of_two(x: int) -> int:
+//   def get_power_of_two_ceil(x: int) -> int:
 //    """
-//    Get next power of 2 >= the input.
+//    Get the power of 2 for given input, or the closest higher power of 2 if the input is not a power of 2.
+//    Commonly used for "how many nodes do I need for a bottom tree layer fitting x elements?"
+//    Example: 0->1, 1->1, 2->2, 3->4, 4->4, 5->8, 6->8, 7->8, 8->8, 9->16.
 //    """
-//    if x <= 2:
-//        return x
+//    if x <= 1:
+//        return 1
+//    elif x == 2:
+//        return 2
 //    else:
-//        return 2 * get_next_power_of_two((x + 1) // 2)
+//        return 2 * get_power_of_two_ceil((x + 1) // 2)
 func NextPowerOf2(n int) int {
-	if n <= 2 {
+	if n <= 1 {
+		return 1
+	}
+	if n == 2 {
 		return n
 	}
 	return 2 * NextPowerOf2((n+1)/2)
@@ -28,16 +35,24 @@ func NextPowerOf2(n int) int {
 // PrevPowerOf2 returns the previous power of 2 >= the input
 //
 // Spec pseudocode definition:
-//   def get_previous_power_of_two(x: int) -> int:
+//   def get_power_of_two_floor(x: int) -> int:
 //    """
-//    Get the previous power of 2 >= the input.
+//    Get the power of 2 for given input, or the closest lower power of 2 if the input is not a power of 2.
+//    The zero case is a placeholder and not used for math with generalized indices.
+//    Commonly used for "what power of two makes up the root bit of the generalized index?"
+//    Example: 0->1, 1->1, 2->2, 3->2, 4->4, 5->4, 6->4, 7->4, 8->8, 9->8
 //    """
-//    if x <= 2:
+//    if x <= 1:
+//        return 1
+//    if x == 2:
 //        return x
 //    else:
-//        return 2 * get_previous_power_of_two(x // 2)
+//        return 2 * get_power_of_two_floor(x // 2)
 func PrevPowerOf2(n int) int {
-	if n <= 2 {
+	if n <= 1 {
+		return 1
+	}
+	if n == 2 {
 		return n
 	}
 	return 2 * PrevPowerOf2(n/2)
@@ -46,10 +61,15 @@ func PrevPowerOf2(n int) int {
 // MerkleTree returns all the nodes in a merkle tree from inputting merkle leaves.
 //
 // Spec pseudocode definition:
-//   def merkle_tree(leaves: Sequence[Hash]) -> Sequence[Hash]:
-//    padded_length = get_next_power_of_two(len(leaves))
-//    o = [Hash()] * padded_length + list(leaves) + [Hash()] * (padded_length - len(leaves))
-//    for i in range(padded_length - 1, 0, -1):
+//   def merkle_tree(leaves: Sequence[Bytes32]) -> Sequence[Bytes32]:
+//    """
+//    Return an array representing the tree nodes by generalized index:
+//    [0, 1, 2, 3, 4, 5, 6, 7], where each layer is a power of 2. The 0 index is ignored. The 1 index is the root.
+//    The result will be twice the size as the padded bottom layer for the input leaves.
+//    """
+//    bottom_length = get_power_of_two_ceil(len(leaves))
+//    o = [Bytes32()] * bottom_length + list(leaves) + [Bytes32()] * (bottom_length - len(leaves))
+//    for i in range(bottom_length - 1, 0, -1):
 //        o[i] = hash(o[i * 2] + o[i * 2 + 1])
 //    return o
 func MerkleTree(leaves [][]byte) [][]byte {
@@ -90,7 +110,7 @@ func MerkleTree(leaves [][]byte) [][]byte {
 //    """
 //    o = GeneralizedIndex(1)
 //    for i in indices:
-//        o = GeneralizedIndex(o * get_previous_power_of_two(i) + (i - get_previous_power_of_two(i)))
+//        o = GeneralizedIndex(o * get_power_of_two_floor(i) + (i - get_power_of_two_floor(i)))
 //    return o
 func ConcatGeneralizedIndices(indices []int) int {
 	index := 1

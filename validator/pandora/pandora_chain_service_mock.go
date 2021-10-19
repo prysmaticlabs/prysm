@@ -92,7 +92,8 @@ func getDummyBlock() *types.Block {
 //   result[1] - 32 bytes hex encoded seed hash used for DAG
 //   result[2] - 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 //   result[3] - hex encoded block number
-func (api *mockPandoraService) GetWork() ([4]string, error) {
+func (api *mockPandoraService) GetShardingWork(parentHash common.Hash, blockNumber uint64,
+	slotNumber uint64, epoch uint64) ([4]string, error) {
 	block := getDummyBlock()
 	var response [4]string
 	rlpHeader, _ := rlp.EncodeToBytes(block.Header())
@@ -106,12 +107,12 @@ func (api *mockPandoraService) GetWork() ([4]string, error) {
 }
 
 // SubmitWork is a mock api which returns a boolean status
-func (api *mockPandoraService) SubmitWorkBLS(nonce types.BlockNonce, hash common.Hash, digest [96]byte) bool {
+func (api *mockPandoraService) SubmitWorkBLS(nonce types.BlockNonce, hash common.Hash, blsSignature string) bool {
 	block := getDummyBlock()
 	if block.Hash() != hash {
 		return false
 	}
-	if len(digest) != 96 {
+	if len(blsSignature) != 194 {
 		return false
 	}
 	return true

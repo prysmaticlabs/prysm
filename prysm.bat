@@ -5,7 +5,7 @@ SetLocal EnableDelayedExpansion & REM All variables are set local to this run & 
 set PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E
 
 REM Complain if invalid arguments were provided.
-for %%a in (beacon-chain validator slasher) do (
+for %%a in (beacon-chain validator client-stats) do (
     if %1 equ %%a (
         goto validprocess
     )
@@ -13,7 +13,7 @@ for %%a in (beacon-chain validator slasher) do (
 echo [31mERROR: PROCESS missing or invalid[0m
 echo Usage: ./prysm.bat PROCESS FLAGS.
 echo.
-echo PROCESS can be beacon-chain, validator, or slasher.
+echo PROCESS can be beacon-chain, validator, or client-stats.
 echo FLAGS are the flags or arguments passed to the PROCESS.
 echo. 
 echo Use this script to download the latest Prysm release binaries.
@@ -60,17 +60,22 @@ echo Using prysm version %prysm_version%.
 
 set BEACON_CHAIN_REAL=%wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%
 set VALIDATOR_REAL=%wrapper_dir%\validator-%prysm_version%-%system%-%arch%
-set SLASHER_REAL=%wrapper_dir%\slasher-%prysm_version%-%system%-%arch%
+set CLIENT_STATS_REAL=%wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%
 
 if [%1]==[beacon-chain] (
     if exist %BEACON_CHAIN_REAL% (
         echo [32mBeacon chain is up to date.[0m
     ) else (
         echo [35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%[0m
-        curl -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%
-        curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
+		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%') do set http=%%i
+		if %http%==400 (
+			echo [35mNo prysm beacon chain found for %prysm_version%[0m
+			exit \b 1
+		)		
+		curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sig
     )
+	goto startprocess
 )
 
 if [%1]==[validator] (
@@ -78,26 +83,42 @@ if [%1]==[validator] (
         echo [32mValidator is up to date.[0m
     ) else (
         echo [35mDownloading validator %prysm_version% to %VALIDATOR_REAL% %reason%[0m
-        curl -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% -o %VALIDATOR_REAL%
+		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% -o %VALIDATOR_REAL%') do set http=%%i
+		if %http%==400 (
+			echo [35mNo prysm validator found for %prysm_version%[0m
+			exit \b 1
+		)
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sig
     )
+	goto startprocess
+)
+
+if [%1]==[client-stats] (
+    if exist %CLIENT_STATS_REAL% (
+        echo [32mClient-stats is up to date.[0m
+    ) else (
+        echo [35mDownloading client-stats %prysm_version% to %CLIENT_STATS_REAL% %reason%[0m
+		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch% -o %CLIENT_STATS_REAL%') do set http=%%i
+		if %http%==400 (
+			echo [35mNo prysm client stats found for %prysm_version%[0m
+			exit \b 1
+		)
+        curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sha256
+        curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sig
+    )
+	goto startprocess
 )
 
 if [%1]==[slasher] (
-    if exist %SLASHER_REAL% (
-        echo [32mSlasher is up to date.[0m
-    ) else (
-        echo [35mDownloading slasher %prysm_version% to %SLASHER_REAL% %reason%[0m
-        curl -L https://prysmaticlabs.com/releases/slasher-%prysm_version%-%system%-%arch% -o %SLASHER_REAL%
-        curl --silent -L https://prysmaticlabs.com/releases/slasher-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\slasher-%prysm_version%-%system%-%arch%.sha256
-        curl --silent -L https://prysmaticlabs.com/releases/slasher-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\slasher-%prysm_version%-%system%-%arch%.sig
-    )
+    echo [31mThe slasher binary is no longer available. Please use the --slasher flag with your beacon node. See: https://docs.prylabs.network/docs/prysm-usage/slasher/[0m
+    exit /b 1
 )
 
+:startprocess
 if [%1]==[beacon-chain] ( set process=%BEACON_CHAIN_REAL%)
 if [%1]==[validator] ( set process=%VALIDATOR_REAL%) 
-if [%1]==[slasher] ( set process=%SLASHER_REAL%)
+if [%1]==[client-stats] ( set process=%CLIENT_STATS_REAL%)
 
 REM GPG not natively available on Windows, external module required
 echo [33mWARN GPG verification is not natively available on Windows.[0m

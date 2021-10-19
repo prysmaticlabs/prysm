@@ -7,10 +7,10 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // BeaconState has read and write access to beacon state methods.
@@ -20,6 +20,8 @@ type BeaconState interface {
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	ToProto() (*v1.BeaconState, error)
+	Version() int
+	FutureForkStub
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -43,6 +45,7 @@ type ReadOnlyBeaconState interface {
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
+	IsNil() bool
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -194,4 +197,22 @@ type WriteOnlyAttestations interface {
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
 	RotateAttestations() error
+}
+
+// FutureForkStub defines methods that are used for future forks. This is a low cost solution to enable
+// various state casting of interface to work.
+type FutureForkStub interface {
+	AppendCurrentParticipationBits(val byte) error
+	AppendPreviousParticipationBits(val byte) error
+	AppendInactivityScore(s uint64) error
+	CurrentEpochParticipation() ([]byte, error)
+	PreviousEpochParticipation() ([]byte, error)
+	InactivityScores() ([]uint64, error)
+	SetInactivityScores(val []uint64) error
+	CurrentSyncCommittee() (*pbp2p.SyncCommittee, error)
+	SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error
+	SetPreviousParticipationBits(val []byte) error
+	SetCurrentParticipationBits(val []byte) error
+	NextSyncCommittee() (*pbp2p.SyncCommittee, error)
+	SetNextSyncCommittee(val *pbp2p.SyncCommittee) error
 }

@@ -5,15 +5,17 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -25,7 +27,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	prevBlock := testutil.NewBeaconBlock()
 	prevBlock.Block.Slot = slot - 1
 	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	require.NoError(t, db.SaveBlock(ctx, prevBlock))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(prevBlock)))
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = slot
@@ -33,7 +35,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
-		require.NoError(t, db.SaveBlock(ctx, block))
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	}
 	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
 	retrieved, _, err := db.Blocks(ctx, f)
@@ -55,12 +57,12 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	assert.Equal(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, block))
+	assert.DeepEqual(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock.Proto(), "Expected nil block")
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock), "Wanted: %v, received: %v", block, retrievedBlock)
+	assert.Equal(t, true, proto.Equal(block, retrievedBlock.Proto()), "Wanted: %v, received: %v", block, retrievedBlock)
 	require.NoError(t, db.deleteBlock(ctx, blockRoot))
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
@@ -69,16 +71,16 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]*ethpb.SignedBeaconBlock, 0)
+	oddBlocks := make([]interfaces.SignedBeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 		if i%2 == 0 {
-			r, err := totalBlocks[i].Block.HashTreeRoot()
+			r, err := totalBlocks[i].Block().HashTreeRoot()
 			require.NoError(t, err)
 			blockRoots = append(blockRoots, r)
 		} else {
@@ -95,10 +97,10 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
 	require.NoError(t, err)
 	sort.Slice(retrieved, func(i, j int) bool {
-		return retrieved[i].Block.Slot < retrieved[j].Block.Slot
+		return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
 	})
 	for i, block := range retrieved {
-		assert.Equal(t, true, proto.Equal(block, oddBlocks[i]), "Wanted: %v, received: %v", block, oddBlocks[i])
+		assert.Equal(t, true, proto.Equal(block.Proto(), oddBlocks[i].Proto()), "Wanted: %v, received: %v", block, oddBlocks[i])
 	}
 }
 
@@ -106,13 +108,13 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
-		_, err := totalBlocks[i].Block.HashTreeRoot()
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
+		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -126,14 +128,14 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i) + 1
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
-		_, err := totalBlocks[i].Block.HashTreeRoot()
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
+		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -155,10 +157,10 @@ func TestStore_GenesisBlock(t *testing.T) {
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	retrievedBlock, err := db.GenesisBlock(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
+	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
 }
 
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
@@ -171,13 +173,13 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, block))
+	require.DeepEqual(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock.Proto(), "Expected nil block")
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	db.blockCache.Del(string(blockRoot[:]))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock), "Wanted: %v, received: %v", block, retrievedBlock)
+	assert.Equal(t, true, proto.Equal(block, retrievedBlock.Proto()), "Wanted: %v, received: %v", block, retrievedBlock)
 	require.NoError(t, db.deleteBlock(ctx, blockRoot))
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
@@ -199,7 +201,13 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	b8 := testutil.NewBeaconBlock()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
-	blocks := []*ethpb.SignedBeaconBlock{b4, b5, b6, b7, b8}
+	blocks := []interfaces.SignedBeaconBlock{
+		wrapper.WrappedPhase0SignedBeaconBlock(b4),
+		wrapper.WrappedPhase0SignedBeaconBlock(b5),
+		wrapper.WrappedPhase0SignedBeaconBlock(b6),
+		wrapper.WrappedPhase0SignedBeaconBlock(b7),
+		wrapper.WrappedPhase0SignedBeaconBlock(b8),
+	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, blocks))
 
@@ -277,8 +285,8 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(ctx, b1))
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 
 	filter := filters.NewFilter().SetStartSlot(b1.Block.Slot).SetEndSlot(b2.Block.Slot)
 	roots, err := db.BlockRoots(ctx, filter)
@@ -289,12 +297,12 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, 500)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -306,12 +314,12 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, slots)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
 	for i := types.Slot(0); i < slots; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -327,12 +335,12 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, 500)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = b
+		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 	}
 	const step = 2
 	ctx := context.Background()
@@ -341,7 +349,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 150, len(retrieved))
 	for _, b := range retrieved {
-		assert.Equal(t, types.Slot(0), (b.Block.Slot-100)%step, "Unexpect block slot %d", b.Block.Slot)
+		assert.Equal(t, types.Slot(0), (b.Block().Slot()-100)%step, "Unexpect block slot %d", b.Block().Slot())
 	}
 }
 
@@ -351,26 +359,26 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 
 	block1 := testutil.NewBeaconBlock()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, block1))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block1)))
 	block2 := testutil.NewBeaconBlock()
 	block2.Block.Slot = 10
-	require.NoError(t, db.SaveBlock(ctx, block2))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block2)))
 	block3 := testutil.NewBeaconBlock()
 	block3.Block.Slot = 100
-	require.NoError(t, db.SaveBlock(ctx, block3))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block3)))
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-	assert.Equal(t, true, proto.Equal(block1, highestAt[0]), "Wanted: %v, received: %v", block1, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block1, highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
 	require.NoError(t, err)
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-	assert.Equal(t, true, proto.Equal(block2, highestAt[0]), "Wanted: %v, received: %v", block2, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	require.NoError(t, err)
 	assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-	assert.Equal(t, true, proto.Equal(block3, highestAt[0]), "Wanted: %v, received: %v", block3, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block3, highestAt[0].Proto()), "Wanted: %v, received: %v", block3, highestAt[0])
 
 	r3, err := block3.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -378,7 +386,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block2, highestAt[0]), "Wanted: %v, received: %v", block2, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 }
 
 func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
@@ -389,32 +397,32 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	block1 := testutil.NewBeaconBlock()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, block1))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block1)))
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block1, highestAt[0]), "Wanted: %v, received: %v", block1, highestAt[0])
+	assert.Equal(t, true, proto.Equal(block1, highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0]), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
+	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0]), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
+	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
 }
 
 func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b := make([]*ethpb.SignedBeaconBlock, 500)
+	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = blk
+		b[i] = wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	}
 
 	require.NoError(t, db.SaveBlock(ctx, b[0]))
@@ -430,12 +438,12 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b := make([]*ethpb.SignedBeaconBlock, 500)
+	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlock()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = blk
+		b[i] = wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	}
 
 	require.NoError(t, db.SaveBlocks(ctx, b))
@@ -446,7 +454,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
 
 	for i, blk := range blks {
-		rt, err := blk.Block.HashTreeRoot()
+		rt, err := blk.Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, roots[i], rt, "mismatch of block roots")
 	}
@@ -458,15 +466,15 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 
 	b1 := testutil.NewBeaconBlock()
 	b1.Block.Slot = 20
-	require.NoError(t, db.SaveBlock(ctx, b1))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 	b2 := testutil.NewBeaconBlock()
 	b2.Block.Slot = 100
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
-	require.NoError(t, db.SaveBlock(ctx, b2))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlock()
 	b3.Block.Slot = 100
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	require.NoError(t, db.SaveBlock(ctx, b3))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -481,12 +489,12 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 	assert.Equal(t, false, hasBlocks, "Expected no blocks")
 	hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(b1, retrievedBlocks[0]), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
+	assert.Equal(t, true, proto.Equal(b1, retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
 	assert.Equal(t, true, hasBlocks, "Expected to have blocks")
 	hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(b2, retrievedBlocks[0]), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
-	assert.Equal(t, true, proto.Equal(b3, retrievedBlocks[1]), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
+	assert.Equal(t, true, proto.Equal(b2, retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
+	assert.Equal(t, true, proto.Equal(b3, retrievedBlocks[1].Proto()), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
 	assert.Equal(t, true, hasBlocks, "Expected to have blocks")
 
 	hasBlockRoots, retrievedBlockRoots, err := db.BlockRootsBySlot(ctx, 1)

@@ -2,11 +2,11 @@ package kv
 
 import (
 	"context"
-	"reflect"
 	"sort"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -14,7 +14,6 @@ import (
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
-
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -111,7 +110,7 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		}
 		t.Log(diff)
 
-		if len(proposerSlashings) == 0 || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+		if len(proposerSlashings) == 0 || !sszutil.DeepEqual(proposerSlashings[0], tt.ps) {
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
@@ -243,7 +242,7 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	sort.SliceStable(proposerSlashings, func(i, j int) bool {
 		return proposerSlashings[i].Header_1.Header.ProposerIndex < proposerSlashings[j].Header_1.Header.ProposerIndex
 	})
-	if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings, ps) {
+	if proposerSlashings == nil || !sszutil.DeepEqual(proposerSlashings, ps) {
 		diff, _ := messagediff.PrettyDiff(proposerSlashings, ps)
 		t.Log(diff)
 		t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", ps, proposerSlashings)

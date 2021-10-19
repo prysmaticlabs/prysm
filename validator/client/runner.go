@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,6 +84,14 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not wait for validator activation: %v", err)
 		}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
+		}
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not get current canonical head slot: %v", err)
@@ -134,6 +143,14 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+
+			remoteKm, ok := v.GetKeymanager().(remote.RemoteKeymanager)
+			if ok {
+				_, err := remoteKm.ReloadPublicKeys(ctx)
+				if err != nil {
+					log.WithError(err).Error(msgCouldNotFetchKeys)
+				}
+			}
 
 			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {

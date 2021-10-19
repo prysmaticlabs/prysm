@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +22,7 @@ import (
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
-	testutil.ResetCache()
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 20)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -49,12 +50,12 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 		},
 	}
 	want := "mismatched header slots"
-	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
+	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b.Block.Body.ProposerSlashings, v.SlashValidator)
 	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
-	testutil.ResetCache()
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 2)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -82,7 +83,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 		},
 	}
 	want := "expected slashing headers to differ"
-	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
+	_, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, b.Block.Body.ProposerSlashings, v.SlashValidator)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -117,7 +118,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		},
 	}
 
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -132,7 +133,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		"validator with key %#x is not slashable",
 		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
-	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, b)
+	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, b.Block.Body.ProposerSlashings, v.SlashValidator)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -171,7 +172,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	block.Block.Body.ProposerSlashings = slashings
 
-	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block)
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
 	require.NoError(t, err)
 
 	newStateVals := newState.Validators()
@@ -275,7 +276,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetCache()
+
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
 			d, err := helpers.Domain(tt.args.beaconState.Fork(), helpers.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
 			require.NoError(t, err)

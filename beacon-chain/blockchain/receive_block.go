@@ -5,11 +5,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -21,8 +20,8 @@ var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -31,11 +30,11 @@ type BlockReceiver interface {
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := timeutils.Now()
-	blockCopy := stateV0.CopySignedBeaconBlock(block)
+	blockCopy := block.Copy()
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -49,11 +48,16 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.WithError(err).Warn("Could not update head")
 		}
+
+		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
+			return err
+		}
+
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
-				Slot:        blockCopy.Block.Slot,
+				Slot:        blockCopy.Block().Slot(),
 				BlockRoot:   blockRoot,
 				SignedBlock: blockCopy,
 				Verified:    true,
@@ -62,7 +66,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 
 	// Handle post block operations such as attestations and exits.
-	if err := s.handlePostBlockOperations(blockCopy.Block); err != nil {
+	if err := s.handlePostBlockOperations(blockCopy.Block()); err != nil {
 		return err
 	}
 
@@ -72,14 +76,14 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	}
 
 	// Reports on block and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, s.finalizedCheckpt, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		return err
 	}
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block)
+	logStateTransitionData(blockCopy.Block())
 
 	return nil
 }
@@ -87,7 +91,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
@@ -100,7 +104,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 	}
 
 	for i, b := range blocks {
-		blockCopy := stateV0.CopySignedBeaconBlock(b)
+		blockCopy := b.Copy()
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
@@ -109,7 +113,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
-				Slot:        blockCopy.Block.Slot,
+				Slot:        blockCopy.Block().Slot(),
 				BlockRoot:   blkRoots[i],
 				SignedBlock: blockCopy,
 				Verified:    true,
@@ -117,7 +121,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedB
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		reportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
 	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
@@ -135,24 +139,24 @@ func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
 }
 
-func (s *Service) handlePostBlockOperations(b *ethpb.BeaconBlock) error {
+func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 	// Delete the processed block attestations from attestation pool.
-	if err := s.deletePoolAtts(b.Body.Attestations); err != nil {
+	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
 		return err
 	}
 
 	// Add block attestations to the fork choice pool to compute head.
-	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body.Attestations); err != nil {
+	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body().Attestations()); err != nil {
 		log.Errorf("Could not save block attestations for fork choice: %v", err)
 		return nil
 	}
 	// Mark block exits as seen so we don't include same ones in future blocks.
-	for _, e := range b.Body.VoluntaryExits {
+	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
-	for _, as := range b.Body.AttesterSlashings {
+	for _, as := range b.Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil

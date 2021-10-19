@@ -14,21 +14,21 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -168,7 +168,7 @@ func (r *testRunner) run() {
 
 		// Calculate genesis time.
 		nodeClient := eth.NewNodeClient(conns[0])
-		genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
+		genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 		require.NoError(t, err)
 		tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
@@ -181,11 +181,7 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
-			return err
-		}
-
-		return nil
+		return r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR())
 	})
 
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {

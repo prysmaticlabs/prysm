@@ -8,11 +8,15 @@ go_library(
         "mock_powchain.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/powchain/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/trieutil:go_default_library",
@@ -21,6 +25,5 @@ go_library(
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

@@ -1,4 +1,4 @@
-// Package beacon-chain defines the entire runtime of an eth2 beacon node.
+// Package beacon-chain defines the entire runtime of an Ethereum beacon node.
 package main
 
 import (
@@ -39,6 +39,7 @@ var appFlags = []cli.Flag{
 	flags.DisableGRPCGateway,
 	flags.GRPCGatewayHost,
 	flags.GRPCGatewayPort,
+	flags.EthApiPort,
 	flags.GPRCGatewayCorsDomain,
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
@@ -110,6 +111,8 @@ var appFlags = []cli.Flag{
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.VanguardNetwork,
+	flags.OrcRpcProviderFlag,
 }
 
 func init() {
@@ -119,7 +122,7 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
-	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
+	app.Usage = "this is a beacon chain implementation for Ethereum"
 	app.Action = startNode
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
@@ -176,7 +179,10 @@ func main() {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		return debug.Setup(ctx)
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	defer func() {

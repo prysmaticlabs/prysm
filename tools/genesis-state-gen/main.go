@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -11,15 +12,15 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for
-// validators on eth2. This file can be generated using the official eth2.0-deposit-cli.
+// validators on Ethereum. This file can be generated using the official eth2.0-deposit-cli.
 type DepositDataJSON struct {
 	PubKey                string `json:"pubkey"`
 	Amount                uint64 `json:"amount"`
@@ -85,7 +86,7 @@ func main() {
 			return
 		}
 		// If no JSON input is specified, we create the state deterministically from interop keys.
-		genesisState, _, err = interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
+		genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
 		if err != nil {
 			log.Printf("Could not generate genesis beacon state: %v", err)
 			return
@@ -149,7 +150,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 		depositDataList[i] = data
 		depositDataRoots[i] = dataRootBytes
 	}
-	beaconState, _, err := interop.GenerateGenesisStateFromDepositData(genesisTime, depositDataList, depositDataRoots)
+	beaconState, _, err := interop.GenerateGenesisStateFromDepositData(context.Background(), genesisTime, depositDataList, depositDataRoots)
 	if err != nil {
 		return nil, err
 	}

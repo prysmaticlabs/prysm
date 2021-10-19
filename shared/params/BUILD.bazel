@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -16,8 +15,10 @@ go_library(
         "testnet_prater_config.go",
         "testnet_pyrmont_config.go",
         "testnet_toledo_config.go",
+        "testnet_l15_config.go",
         "testutils.go",
         "values.go",
+        "van_types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
     visibility = ["//visibility:public"],

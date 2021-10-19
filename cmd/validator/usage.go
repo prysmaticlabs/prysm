@@ -67,6 +67,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.VanguardNetwork,
 		},
 	},
 	{

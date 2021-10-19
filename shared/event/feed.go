@@ -196,6 +196,7 @@ type feedSub struct {
 	err     chan error
 }
 
+// Unsubscribe remove feed subscription.
 func (sub *feedSub) Unsubscribe() {
 	sub.errOnce.Do(func() {
 		sub.feed.remove(sub)
@@ -203,6 +204,7 @@ func (sub *feedSub) Unsubscribe() {
 	})
 }
 
+// Err returns error channel.
 func (sub *feedSub) Err() <-chan error {
 	return sub.err
 }

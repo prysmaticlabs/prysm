@@ -11,8 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -27,7 +28,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, genesisBlk); err != nil {
+	if err := s.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
@@ -70,7 +71,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	}
 	// If some different genesis state existed already, return an error. The same genesis state is
 	// considered a no-op.
-	if existing != nil {
+	if existing != nil && !existing.IsNil() {
 		a, err := existing.HashTreeRoot(ctx)
 		if err != nil {
 			return err
@@ -101,14 +102,14 @@ func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if gb != nil {
+	if gb != nil && !gb.IsNil() {
 		return nil
 	}
 	gs, err := s.GenesisState(ctx)
 	if err != nil {
 		return err
 	}
-	if gs != nil {
+	if gs != nil && !gs.IsNil() {
 		return s.SaveGenesisData(ctx, gs)
 	}
 	return nil

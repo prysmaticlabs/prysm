@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
+// EnvBls defines an environment variable name to check whether BLS is enabled or not.
 const EnvBls = "BLS_ENABLED"
 
 func init() {

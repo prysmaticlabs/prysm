@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -15,11 +17,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	cmdshared "github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -95,9 +99,17 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 	}
 }
 
-// StartNewValidatorNode starts a validator client.
+// Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
-	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
+	var pkg, target string
+	if v.config.UsePrysmShValidator {
+		pkg = ""
+		target = "prysm_sh"
+	} else {
+		pkg = "cmd/validator"
+		target = "validator"
+	}
+	binaryPath, found := bazel.FindBinary(pkg, target)
 	if !found {
 		return errors.New("validator binary not found")
 	}
@@ -118,25 +130,54 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return err
 	}
 	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--log-file=%s", file.Name()),
-		fmt.Sprintf("--graffiti-file=%s", gFile),
-		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", offset),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
-		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
-		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
-		"--force-clear-db",
-		"--e2e-config",
-		"--accept-terms-of-use",
-		"--verbosity=debug",
+		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
+		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
+		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
+		fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
+		fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
+		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.ValidatorGatewayPort+index),
+		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
+		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
+		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
+		"--" + cmdshared.ForceClearDB.Name,
+		"--" + cmdshared.E2EConfigFlag.Name,
+		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	args = append(args, featureconfig.E2EValidatorFlags...)
+	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
+	if !v.config.UsePrysmShValidator {
+		args = append(args, featureconfig.E2EValidatorFlags...)
+	}
 	args = append(args, config.ValidatorFlags...)
 
+	if v.config.UsePrysmShValidator {
+		args = append([]string{"validator"}, args...)
+		log.Warning("Using latest release validator via prysm.sh")
+	}
+
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
+
+	// Write stdout and stderr to log files.
+	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stdout.log", index)))
+	if err != nil {
+		return err
+	}
+	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stderr.log", index)))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := stdout.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stdout file")
+		}
+		if err := stderr.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stderr file")
+		}
+	}()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	log.Infof("Starting validator client %d with flags: %s %s", index, binaryPath, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
 		return err
 	}
@@ -180,11 +221,12 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
 func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
-	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
+	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), "" /*password*/, big.NewInt(1337))
 	if err != nil {
 		return err
 	}
 	txOps.GasLimit = depositGasLimit
+	txOps.Context = context.Background()
 	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
 	if err != nil {
 		return err

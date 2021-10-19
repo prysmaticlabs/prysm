@@ -14,6 +14,7 @@ import (
 //    """
 //    Return the combined effective balance of the ``indices``.
 //    ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+//    Math safe up to ~10B ETH, afterwhich this overflows uint64.
 //    """
 //    return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])))
 func TotalBalance(state iface.ReadOnlyValidators, indices []types.ValidatorIndex) uint64 {
@@ -42,6 +43,7 @@ func TotalBalance(state iface.ReadOnlyValidators, indices []types.ValidatorIndex
 //   def get_total_active_balance(state: BeaconState) -> Gwei:
 //    """
 //    Return the combined effective balance of the active validators.
+//    Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
 //    """
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state iface.ReadOnlyBeaconState) (uint64, error) {
@@ -118,4 +120,22 @@ func DecreaseBalanceWithVal(currBalance, delta uint64) uint64 {
 		return 0
 	}
 	return currBalance - delta
+}
+
+// IsInInactivityLeak returns true if the state is experiencing inactivity leak.
+//
+// Spec code:
+// def is_in_inactivity_leak(state: BeaconState) -> bool:
+//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+func IsInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
+	return FinalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
+}
+
+// FinalityDelay returns the finality delay using the beacon state.
+//
+// Spec code:
+// def get_finality_delay(state: BeaconState) -> uint64:
+//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
+func FinalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
+	return prevEpoch - finalizedEpoch
 }

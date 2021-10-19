@@ -6,8 +6,8 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -17,13 +17,13 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.P2P, id, blockRoots, func(blk *ethpb.SignedBeaconBlock) error {
-		blkRoot, err := blk.Block.HashTreeRoot()
+	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.Chain, s.cfg.P2P, id, blockRoots, func(blk interfaces.SignedBeaconBlock) error {
+		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		s.pendingQueueLock.Lock()
-		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blkRoot); err != nil {
+		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blkRoot); err != nil {
 			return err
 		}
 		s.pendingQueueLock.Unlock()
@@ -68,10 +68,10 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if blk == nil {
+		if blk == nil || blk.IsNil() {
 			continue
 		}
-		if err := s.chunkWriter(stream, blk); err != nil {
+		if err := s.chunkWriter(stream, blk.Proto()); err != nil {
 			return err
 		}
 	}

@@ -39,7 +39,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("Could not get head state")
 		return
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		if _, err := w.Write([]byte("Unavailable during initial syncing")); err != nil {
 			log.WithError(err).Error("Failed to render p2p info page")
 		}

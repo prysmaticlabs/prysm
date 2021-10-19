@@ -2,11 +2,11 @@ $folderDist = "dist";
 $ProgressPreference = 'SilentlyContinue' # Disable Invoke-WebRequest progress bar, makes it silent and faster.
 
 # Complain if invalid arguments were provided.
-if ("beacon-chain", "validator", "slasher" -notcontains $args[0]) {
+if ("beacon-chain", "validator", "client-stats" -notcontains $args[0]) {
     Write-Host @"
 Usage: ./prysm.sh1 PROCESS FLAGS.
 
-PROCESS can be beacon-chain, validator, or slasher.
+PROCESS can be beacon-chain, validator, or client-stats.
 FLAGS are the flags or arguments passed to the PROCESS.
  
 Use this script to download the latest Prysm release binaries.

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -20,7 +21,7 @@ func TestStore_Backup(t *testing.T) {
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, head))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
@@ -28,7 +29,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
@@ -60,7 +61,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := testutil.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, head))
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
 		st, err := testutil.NewBeaconState()
@@ -70,7 +71,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 	}
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
@@ -97,7 +98,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		nBlock, err := backedDB.Block(ctx, root)
 		require.NoError(t, err)
 		require.NotNil(t, nBlock)
-		require.Equal(t, nBlock.Block.Slot, i)
+		require.Equal(t, nBlock.Block().Slot(), i)
 		nState, err := backedDB.State(ctx, root)
 		require.NoError(t, err)
 		require.NotNil(t, nState)

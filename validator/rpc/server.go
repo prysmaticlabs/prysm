@@ -11,8 +11,8 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
@@ -58,41 +58,42 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	logsStreamer             logutil.Streamer
-	streamLogsBufferSize     int
-	beaconChainClient        ethpb.BeaconChainClient
-	beaconNodeClient         ethpb.NodeClient
-	beaconNodeHealthClient   healthpb.HealthClient
-	valDB                    db.Database
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	beaconClientEndpoint     string
-	clientMaxCallRecvMsgSize int
-	clientGrpcRetries        uint
-	clientGrpcRetryDelay     time.Duration
-	clientGrpcHeaders        []string
-	clientWithCert           string
-	host                     string
-	port                     string
-	listener                 net.Listener
-	keymanager               keymanager.IKeymanager
-	withCert                 string
-	withKey                  string
-	credentialError          error
-	grpcServer               *grpc.Server
-	jwtKey                   []byte
-	validatorService         *client.ValidatorService
-	syncChecker              client.SyncChecker
-	genesisFetcher           client.GenesisFetcher
-	walletDir                string
-	wallet                   *wallet.Wallet
-	walletInitializedFeed    *event.Feed
-	walletInitialized        bool
-	nodeGatewayEndpoint      string
-	validatorMonitoringHost  string
-	validatorMonitoringPort  int
-	validatorGatewayHost     string
-	validatorGatewayPort     int
+	logsStreamer              logutil.Streamer
+	streamLogsBufferSize      int
+	beaconChainClient         ethpb.BeaconChainClient
+	beaconNodeClient          ethpb.NodeClient
+	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
+	beaconNodeHealthClient    healthpb.HealthClient
+	valDB                     db.Database
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	beaconClientEndpoint      string
+	clientMaxCallRecvMsgSize  int
+	clientGrpcRetries         uint
+	clientGrpcRetryDelay      time.Duration
+	clientGrpcHeaders         []string
+	clientWithCert            string
+	host                      string
+	port                      string
+	listener                  net.Listener
+	keymanager                keymanager.IKeymanager
+	withCert                  string
+	withKey                   string
+	credentialError           error
+	grpcServer                *grpc.Server
+	jwtKey                    []byte
+	validatorService          *client.ValidatorService
+	syncChecker               client.SyncChecker
+	genesisFetcher            client.GenesisFetcher
+	walletDir                 string
+	wallet                    *wallet.Wallet
+	walletInitializedFeed     *event.Feed
+	walletInitialized         bool
+	nodeGatewayEndpoint       string
+	validatorMonitoringHost   string
+	validatorMonitoringPort   int
+	validatorGatewayHost      string
+	validatorGatewayPort      int
 }
 
 // NewServer instantiates a new gRPC server.
@@ -187,6 +188,7 @@ func (s *Server) Start() {
 	pb.RegisterHealthServer(s.grpcServer, s)
 	pb.RegisterBeaconServer(s.grpcServer, s)
 	pb.RegisterAccountsServer(s.grpcServer, s)
+	pb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {

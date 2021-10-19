@@ -1,5 +1,5 @@
 // Package client represents a gRPC polling-based implementation
-// of an eth2 validator client.
+// of an Ethereum validator client.
 package client
 
 import (
@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"io"
 	"strconv"
 	"strings"
@@ -15,13 +16,11 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -32,12 +31,14 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/pandora"
 	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // reconnectPeriod is the frequency that we try to restart our
@@ -58,6 +59,7 @@ type validator struct {
 	useWeb                             bool
 	emitAccountMetrics                 bool
 	logDutyCountDown                   bool
+	enableVanguardNode                 bool // Vanguard: bool used for checking vanguard chain
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
@@ -85,7 +87,7 @@ type validator struct {
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
-	pandoraService                     pandora.PandoraService
+	pandoraService                     pandora.PandoraService // Vanguard: Pandora service is needed for vanguard chain
 }
 
 type validatorStatus struct {
@@ -138,7 +140,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(
 			iface.ErrConnectionIssue,
@@ -196,7 +198,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
@@ -208,7 +210,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot.
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
@@ -353,7 +355,7 @@ func logActiveValidatorStatus(statuses []*validatorStatus) {
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	head, err := v.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return 0, errors.Wrap(iface.ErrConnectionIssue, err.Error())
 	}
@@ -369,6 +371,97 @@ func (v *validator) NextSlot() <-chan types.Slot {
 func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 	secs := time.Duration((slot + 1).Mul(params.BeaconConfig().SecondsPerSlot))
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(secs * time.Second)
+}
+
+// CheckDoppelGanger checks if the current actively provided keys have
+// any duplicates active in the network.
+func (v *validator) CheckDoppelGanger(ctx context.Context) error {
+	if !featureconfig.Get().EnableDoppelGanger {
+		return nil
+	}
+	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	log.WithField("keys", len(pubkeys)).Info("Running doppelganger check")
+	// Exit early if no validating pub keys are found.
+	if len(pubkeys) == 0 {
+		return nil
+	}
+	req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+	for _, pkey := range pubkeys {
+		attRec, err := v.db.AttestationHistoryForPubKey(ctx, pkey)
+		if err != nil {
+			return err
+		}
+		if len(attRec) == 0 {
+			// If no history exists we simply send in a zero
+			// value for the request epoch and root.
+			req.ValidatorRequests = append(req.ValidatorRequests,
+				&ethpb.DoppelGangerRequest_ValidatorRequest{
+					PublicKey:  pkey[:],
+					Epoch:      0,
+					SignedRoot: make([]byte, 32),
+				})
+			continue
+		}
+		r := retrieveLatestRecord(attRec)
+		if pkey != r.PubKey {
+			return errors.New("attestation record mismatched public key")
+		}
+		req.ValidatorRequests = append(req.ValidatorRequests,
+			&ethpb.DoppelGangerRequest_ValidatorRequest{
+				PublicKey:  r.PubKey[:],
+				Epoch:      r.Target,
+				SignedRoot: r.SigningRoot[:],
+			})
+	}
+	resp, err := v.validatorClient.CheckDoppelGanger(ctx, req)
+	if err != nil {
+		return err
+	}
+	// If nothing is returned by the beacon node, we return an
+	// error as it is unsafe for us to proceed.
+	if resp == nil || resp.Responses == nil || len(resp.Responses) == 0 {
+		return errors.New("beacon node returned 0 responses for doppelganger check")
+	}
+	return buildDuplicateError(resp.Responses)
+}
+
+func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+	duplicates := make([][]byte, 0)
+	for _, valRes := range respones {
+		if valRes.DuplicateExists {
+			duplicates = append(duplicates, valRes.PublicKey)
+		}
+	}
+	if len(duplicates) == 0 {
+		return nil
+	}
+	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
+}
+
+// Ensures that the latest attestion history is retrieved.
+func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
+	if len(recs) == 0 {
+		return nil
+	}
+	lastSource := recs[len(recs)-1].Source
+	chosenRec := recs[len(recs)-1]
+	for i := len(recs) - 1; i >= 0; i-- {
+		// Exit if we are now on a different source
+		// as it is assumed that all source records are
+		// byte sorted.
+		if recs[i].Source != lastSource {
+			break
+		}
+		// If we have a smaller target, we do
+		// change our chosen record.
+		if chosenRec.Target < recs[i].Target {
+			chosenRec = recs[i]
+		}
+	}
+	return chosenRec
 }
 
 // UpdateDuties checks the slot number to determine if the validator's
@@ -548,15 +641,15 @@ func (v *validator) GetKeymanager() keymanager.IKeymanager {
 	return v.keyManager
 }
 
-// isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// isAggregator checks if a validator is an aggregator of a given slot and committee,
+// it uses a modulo calculated by validator count in committee and samples randomness around it.
 func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	slotSig, err := v.signSlot(ctx, pubKey, slot)
+	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
 	if err != nil {
 		return false, err
 	}

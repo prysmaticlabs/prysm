@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -12,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
@@ -27,7 +27,6 @@ go_library(
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
@@ -50,9 +49,10 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/copyutil:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
@@ -64,7 +64,6 @@ go_test(
         "//slasher/detection:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],

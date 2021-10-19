@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -28,10 +27,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -39,14 +40,21 @@ var _ shared.Service = (*Service)(nil)
 
 const rangeLimit = 1024
 const seenBlockSize = 1000
-const seenAttSize = 10000
+const seenUnaggregatedAttSize = 20000
+const seenAggregatedAttSize = 1024
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
-
 const syncMetricsInterval = 10 * time.Second
 
-var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second // Seconds in one epoch.
+var (
+	// Seconds in one epoch.
+	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	// time to allow processing early blocks.
+	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
+	// time to allow processing early attestations.
+	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
+)
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -78,29 +86,31 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                       *Config
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	slotToPendingBlocks       *gcache.Cache
-	seenPendingBlocks         map[[32]byte]bool
-	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
-	pendingAttsLock           sync.RWMutex
-	pendingQueueLock          sync.RWMutex
-	chainStarted              *abool.AtomicBool
-	validateBlockLock         sync.RWMutex
-	rateLimiter               *limiter
-	seenBlockLock             sync.RWMutex
-	seenBlockCache            *lru.Cache
-	seenAttestationLock       sync.RWMutex
-	seenAttestationCache      *lru.Cache
-	seenExitLock              sync.RWMutex
-	seenExitCache             *lru.Cache
-	seenProposerSlashingLock  sync.RWMutex
-	seenProposerSlashingCache *lru.Cache
-	seenAttesterSlashingLock  sync.RWMutex
-	seenAttesterSlashingCache map[uint64]bool
-	badBlockCache             *lru.Cache
-	badBlockLock              sync.RWMutex
+	cfg                              *Config
+	ctx                              context.Context
+	cancel                           context.CancelFunc
+	slotToPendingBlocks              *gcache.Cache
+	seenPendingBlocks                map[[32]byte]bool
+	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
+	pendingAttsLock                  sync.RWMutex
+	pendingQueueLock                 sync.RWMutex
+	chainStarted                     *abool.AtomicBool
+	validateBlockLock                sync.RWMutex
+	rateLimiter                      *limiter
+	seenBlockLock                    sync.RWMutex
+	seenBlockCache                   *lru.Cache
+	seenAggregatedAttestationLock    sync.RWMutex
+	seenAggregatedAttestationCache   *lru.Cache
+	seenUnAggregatedAttestationLock  sync.RWMutex
+	seenUnAggregatedAttestationCache *lru.Cache
+	seenExitLock                     sync.RWMutex
+	seenExitCache                    *lru.Cache
+	seenProposerSlashingLock         sync.RWMutex
+	seenProposerSlashingCache        *lru.Cache
+	seenAttesterSlashingLock         sync.RWMutex
+	seenAttesterSlashingCache        map[uint64]bool
+	badBlockCache                    *lru.Cache
+	badBlockLock                     sync.RWMutex
 }
 
 // NewService initializes new regular sync service.
@@ -187,7 +197,11 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	attCache, err := lru.New(seenAttSize)
+	aggregatedAttCache, err := lru.New(seenAggregatedAttSize)
+	if err != nil {
+		return err
+	}
+	unAggregatedAttCache, err := lru.New(seenUnaggregatedAttSize)
 	if err != nil {
 		return err
 	}
@@ -204,7 +218,8 @@ func (s *Service) initCaches() error {
 		return err
 	}
 	s.seenBlockCache = blkCache
-	s.seenAttestationCache = attCache
+	s.seenAggregatedAttestationCache = aggregatedAttCache
+	s.seenUnAggregatedAttestationCache = unAggregatedAttCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
@@ -271,6 +286,7 @@ func (s *Service) markForChainStart() {
 type Checker interface {
 	Initialized() bool
 	Syncing() bool
+	Synced() bool
 	Status() error
 	Resync() error
 }

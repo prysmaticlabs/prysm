@@ -67,14 +67,21 @@ function get_realpath() {
 if [ "$#" -lt 1 ]; then
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
     color "31" "       ./prysm.sh PROCESS --download-only."
-    color "31" "PROCESS can be beacon-chain, validator, or slasher."
+    color "31" "PROCESS can be beacon-chain, validator, or client-stats."
     exit 1
 fi
 
 readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
+
+# for Apple M1s
+if [ "$(uname -s)" == "Darwin" ] && [ "$(uname -m)" == "arm64" ]
+then
+arch="amd64"
+else
 arch=$(uname -m)
 arch=${arch/x86_64/amd64}
 arch=${arch/aarch64/arm64}
+fi
 readonly os_arch_suffix="$(uname -s | tr '[:upper:]' '[:lower:]')-$arch"
 
 system=""
@@ -168,13 +175,17 @@ color "37" "Latest Prysm version is $prysm_version."
 
 BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
 VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
-SLASHER_REAL="${wrapper_dir}/slasher-${prysm_version}-${system}-${arch}"
+CLIENT_STATS_REAL="${wrapper_dir}/client-stats-${prysm_version}-${system}-${arch}"
 
 if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
         file=beacon-chain-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$BEACON_CHAIN_REAL"
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}"  -o "$BEACON_CHAIN_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$BEACON_CHAIN_REAL"
@@ -188,7 +199,11 @@ if [[ $1 == validator ]]; then
         color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
         file=validator-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL"
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm validator found for ${prysm_version}, (${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$VALIDATOR_REAL"
@@ -197,18 +212,27 @@ if [[ $1 == validator ]]; then
     fi
 fi
 
-if [[ $1 == slasher ]]; then
-    if [[ ! -x $SLASHER_REAL ]]; then
-        color "34" "Downloading slasher@${prysm_version} to ${SLASHER_REAL} (${reason})"
+if [[ $1 == client-stats ]]; then
+    if [[ ! -x $CLIENT_STATS_REAL ]]; then
+        color "34" "Downloading client-stats@${prysm_version} to ${CLIENT_STATS_REAL} (${reason})"
 
-        file=slasher-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$SLASHER_REAL"
+        file=client-stats-${prysm_version}-${system}-${arch}
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$CLIENT_STATS_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm client stats found for ${prysm_version},(${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-        chmod +x "$SLASHER_REAL"
+        chmod +x "$CLIENT_STATS_REAL"
     else
-        color "37" "Slasher is up to date."
+        color "37" "Client-stats is up to date."
     fi
+fi
+
+if [[ $1 == slasher ]]; then
+    color "41" "The slasher binary is no longer available. Please use the --slasher flag with your beacon node. See: https://docs.prylabs.network/docs/prysm-usage/slasher/"
+    exit 1
 fi
 
 case $1 in
@@ -220,15 +244,15 @@ validator)
     readonly process=$VALIDATOR_REAL
     ;;
 
-slasher)
-    readonly process=$SLASHER_REAL
+client-stats)
+    readonly process=$CLIENT_STATS_REAL
     ;;
 
 *)
     color "31" "Process '$1' is not found!"
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
     color "31" "       ./prysm.sh PROCESS --download-only."
-    color "31" "PROCESS can be beacon-chain, validator, or slasher."
+    color "31" "PROCESS can be beacon-chain, validator, or client-stats."
     exit 1
     ;;
 esac

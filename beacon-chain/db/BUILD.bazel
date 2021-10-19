@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 #  Build with --define=kafka_enabled=false to exclude kafka wrapper.
 config_setting(
@@ -34,6 +33,7 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
+        "//beacon-chain/db/slasherkv:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/promptutil:go_default_library",
@@ -58,6 +58,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/db/kv:go_default_library",
+        "//proto/eth/v1alpha1/wrapper:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
-import "eth/v1alpha1/node.proto";
+import "proto/eth/ext/options.proto";
+import "proto/eth/v1alpha1/node.proto";
 import "proto/beacon/p2p/v1/messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // Debug service API
 //
@@ -60,17 +60,17 @@ service Debug {
 
 message InclusionSlotRequest {
     uint64 id = 1;
-    uint64 slot = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 message InclusionSlotResponse {
-    uint64 slot = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 message BeaconStateRequest {
     oneof query_filter {
         // The slot corresponding to a desired beacon state.
-        uint64 slot = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
+        uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
@@ -100,9 +100,9 @@ message ProtoArrayForkChoiceResponse {
     // The prune threshold of how many nodes allowed in proto array store.
     uint64 prune_threshold = 1;
     // Latest justified epoch in proto array store.
-    uint64 justified_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 justified_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // Latest finalized epoch in proto array store.
-    uint64 finalized_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 finalized_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // The list of the proto array nodes in store.
     repeated ProtoArrayNode proto_array_nodes = 4;
     // Root to indices mapping of the proto array nodes in store.
@@ -111,15 +111,15 @@ message ProtoArrayForkChoiceResponse {
 
 message ProtoArrayNode {
     // Slot of the proto array node.
-    uint64 slot = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
     // Root of the proto array node.
     bytes root = 2;
     // Parent of the proto array node.
     uint64 parent = 3;
     // Justified epoch of the current proto array node.
-    uint64 justified_epoch = 4 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 justified_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // finalized epoch of the current proto array node.
-    uint64 finalized_epoch = 5 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // Current weight of the current proto array node.
     uint64 weight = 6;
     // Best child of the current proto array node.
@@ -137,17 +137,18 @@ message DebugPeerResponse {
     message PeerInfo {
         // Metadata of the peer, containing their bitfield
         // and sequence number.
-        ethereum.beacon.p2p.v1.MetaData metadata = 1;
+        ethereum.beacon.p2p.v1.MetaDataV0 metadataV0 = 1;
+        ethereum.beacon.p2p.v1.MetaDataV1 metadataV1 = 2;
         // List of protocols the peer supports.
-        repeated string protocols = 2;
+        repeated string protocols = 3;
         // Number of times peer has been penalised.
-        uint64 fault_count = 3;
+        uint64 fault_count = 4;
         // Protocol Version peer is running.
-        string protocol_version = 4;
+        string protocol_version = 5;
         // Agent Version peer is running.
-        string agent_version = 5;
+        string agent_version = 6;
         // Latency of responses from peer(in ms).
-        uint64 peer_latency = 6;
+        uint64 peer_latency = 7;
     }
     // Listening addresses know of the peer.
     repeated string listening_addresses = 1;

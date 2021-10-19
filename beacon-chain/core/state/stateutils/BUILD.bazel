@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -10,9 +9,9 @@ go_library(
         "//shared/testutil:__pkg__",
     ],
     deps = [
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
 
@@ -22,12 +21,12 @@ go_test(
     srcs = ["validator_index_map_test.go"],
     deps = [
         ":go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

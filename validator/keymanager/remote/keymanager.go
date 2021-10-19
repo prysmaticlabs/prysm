@@ -207,6 +207,7 @@ func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return km.opts
 }
 
+// ReloadPublicKeys reloads public keys.
 func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][48]byte, error) {
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {

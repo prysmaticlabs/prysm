@@ -3,8 +3,8 @@ package sszutil_test
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -60,15 +60,15 @@ func TestDeepEqualStructs_Unexported(t *testing.T) {
 }
 
 func TestDeepEqualProto(t *testing.T) {
-	var fork1, fork2 pb.Fork
+	var fork1, fork2 *pb.Fork
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork2))
 
-	fork1 = pb.Fork{
+	fork1 = &pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,
 	}
-	fork2 = pb.Fork{
+	fork2 = &pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{125},
 		Epoch:           1234567890,
@@ -76,13 +76,59 @@ func TestDeepEqualProto(t *testing.T) {
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork1))
 	assert.Equal(t, false, sszutil.DeepEqual(fork1, fork2))
 
-	checkpoint1 := ethpb.Checkpoint{
+	checkpoint1 := &ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  []byte{},
 	}
-	checkpoint2 := ethpb.Checkpoint{
+	checkpoint2 := &ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  nil,
 	}
 	assert.Equal(t, true, sszutil.DeepEqual(checkpoint1, checkpoint2))
+}
+
+func Test_IsProto(t *testing.T) {
+	tests := []struct {
+		name string
+		item interface{}
+		want bool
+	}{
+		{
+			name: "uint64",
+			item: 0,
+			want: false,
+		},
+		{
+			name: "string",
+			item: "foobar cheese",
+			want: false,
+		},
+		{
+			name: "uint64 array",
+			item: []uint64{1, 2, 3, 4, 5, 6},
+			want: false,
+		},
+		{
+			name: "Attestation",
+			item: &ethpb.Attestation{},
+			want: true,
+		},
+		{
+			name: "Array of attestations",
+			item: []*ethpb.Attestation{},
+			want: true,
+		},
+		{
+			name: "Map of attestations",
+			item: make(map[uint64]*ethpb.Attestation),
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sszutil.IsProto(tt.item); got != tt.want {
+				t.Errorf("isProtoSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

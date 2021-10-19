@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package prysm.beacon.db;
 
-import "eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/beacon/p2p/v1/types.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/db";

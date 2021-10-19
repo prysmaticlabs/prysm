@@ -1,4 +1,4 @@
-// Package main defines slasher server implementation for eth2. A slasher
+// Package main defines slasher server implementation for Ethereum. A slasher
 // listens for all broadcasted messages using a running beacon node in order
 // to detect malicious attestations and block proposals.
 package main
@@ -132,7 +132,10 @@ func main() {
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		return debug.Setup(ctx)
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	app.After = func(ctx *cli.Context) error {

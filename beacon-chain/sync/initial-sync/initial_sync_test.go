@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -23,6 +22,8 @@ import (
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -82,7 +83,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()
@@ -216,7 +217,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), ret[i]))
+			assert.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), ret[i]))
 		}
 	})
 
@@ -285,7 +286,7 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blocks)) {
 				break
 			}
-			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
+			require.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), blocks[i]))
 		}
 	})
 

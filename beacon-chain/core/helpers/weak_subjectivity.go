@@ -1,11 +1,16 @@
 package helpers
 
 import (
+	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -94,4 +99,103 @@ func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, e
 	}
 
 	return types.Epoch(wsp), nil
+}
+
+// IsWithinWeakSubjectivityPeriod verifies if a given weak subjectivity checkpoint is not stale i.e.
+// the current node is so far beyond, that a given state and checkpoint are not for the latest weak
+// subjectivity point. Provided checkpoint still can be used to double-check that node's block root
+// at a given epoch matches that of the checkpoint.
+//
+// Reference implementation:
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
+//
+// def is_within_weak_subjectivity_period(store: Store, ws_state: BeaconState, ws_checkpoint: Checkpoint) -> bool:
+//    # Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint
+//    assert ws_state.latest_block_header.state_root == ws_checkpoint.root
+//    assert compute_epoch_at_slot(ws_state.slot) == ws_checkpoint.epoch
+//
+//    ws_period = compute_weak_subjectivity_period(ws_state)
+//    ws_state_epoch = compute_epoch_at_slot(ws_state.slot)
+//    current_epoch = compute_epoch_at_slot(get_current_slot(store))
+//    return current_epoch <= ws_state_epoch + ws_period
+func IsWithinWeakSubjectivityPeriod(
+	currentEpoch types.Epoch, wsState iface.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
+	// Make sure that incoming objects are not nil.
+	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
+		return false, errors.New("invalid weak subjectivity state or checkpoint")
+	}
+
+	// Assert that state and checkpoint have the same root and epoch.
+	if !bytes.Equal(wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot) {
+		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
+			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
+	}
+	if SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
+			SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+	}
+
+	// Compare given epoch to state epoch + weak subjectivity period.
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(wsState)
+	if err != nil {
+		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
+	}
+	wsStateEpoch := SlotToEpoch(wsState.Slot())
+
+	return currentEpoch <= wsStateEpoch+wsPeriod, nil
+}
+
+// LatestWeakSubjectivityEpoch returns epoch of the most recent weak subjectivity checkpoint known to a node.
+//
+// Within the weak subjectivity period, if two conflicting blocks are finalized, 1/3 - D (D := safety decay)
+// of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
+// period is protected by this safety margin.
+func LatestWeakSubjectivityEpoch(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(st)
+	if err != nil {
+		return 0, err
+	}
+
+	finalizedEpoch := st.FinalizedCheckpointEpoch()
+	return finalizedEpoch - (finalizedEpoch % wsPeriod), nil
+}
+
+// ParseWeakSubjectivityInputString parses "blocks_root:epoch_number" string into a checkpoint.
+func ParseWeakSubjectivityInputString(wsCheckpointString string) (*eth.Checkpoint, error) {
+	if wsCheckpointString == "" {
+		return nil, nil
+	}
+
+	// Weak subjectivity input string must contain ":" to separate epoch and block root.
+	if !strings.Contains(wsCheckpointString, ":") {
+		return nil, fmt.Errorf("%s did not contain column", wsCheckpointString)
+	}
+
+	// Strip prefix "0x" if it's part of the input string.
+	wsCheckpointString = strings.TrimPrefix(wsCheckpointString, "0x")
+
+	// Get the hexadecimal block root from input string.
+	s := strings.Split(wsCheckpointString, ":")
+	if len(s) != 2 {
+		return nil, errors.New("weak subjectivity checkpoint input should be in `block_root:epoch_number` format")
+	}
+
+	bRoot, err := hex.DecodeString(s[0])
+	if err != nil {
+		return nil, err
+	}
+	if len(bRoot) != 32 {
+		return nil, errors.New("block root is not length of 32")
+	}
+
+	// Get the epoch number from input string.
+	epoch, err := strconv.ParseUint(s[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &eth.Checkpoint{
+		Epoch: types.Epoch(epoch),
+		Root:  bRoot,
+	}, nil
 }

@@ -66,9 +66,22 @@ func (oc *PandoraClient) Close() error {
 //  - result[1], 32 bytes hex encoded receipt hash for transaction proof
 //  - result[2], hex encoded rlp block header
 //  - result[3], hex encoded block number
-func (oc *PandoraClient) GetShardBlockHeader(ctx context.Context) (*ShardBlockHeaderResponse, error) {
+func (oc *PandoraClient) GetShardBlockHeader(
+	ctx context.Context,
+	parentHash common.Hash,
+	nextBlockNumber uint64,
+	slot uint64,
+	epoch uint64,
+) (*ShardBlockHeaderResponse, error) {
+
+	log.WithField("latestPandoraHash", parentHash.Hex()).
+		WithField("nextBlockNumber", nextBlockNumber).
+		WithField("slot", slot).
+		WithField("epoch", epoch).
+		Debug("calling pandora chain for new sharding info")
+
 	var response []string
-	if err := oc.c.CallContext(ctx, &response, "eth_getWork"); err != nil {
+	if err := oc.c.CallContext(ctx, &response, "eth_getShardingWork", parentHash, nextBlockNumber, slot, epoch); err != nil {
 		return nil, errors.Wrap(err, "Got error when calls to eth_getWork api")
 	}
 
@@ -96,10 +109,9 @@ func (oc *PandoraClient) SubmitShardBlockHeader(ctx context.Context, blockNonce 
 	sig [96]byte) (bool, error) {
 
 	nonecHex := types.EncodeNonce(blockNonce)
-	headerHashHex := headerHash.Hex()
-
+	sigHex := "0x" + common.Bytes2Hex(sig[:])
 	var status bool
-	if err := oc.c.CallContext(ctx, &status, "eth_submitWorkBLS", nonecHex, headerHashHex, sig); err != nil {
+	if err := oc.c.CallContext(ctx, &status, "eth_submitWorkBLS", nonecHex, headerHash, sigHex); err != nil {
 		return false, errors.Wrap(err, "Got error when calls to eth_submitWork api")
 	}
 	return status, nil

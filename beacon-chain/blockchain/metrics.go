@@ -6,9 +6,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -98,6 +99,10 @@ var (
 	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "beacon_reorg_total",
 		Help: "Count the number of times beacon chain has a reorg",
+	})
+	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "saved_orphaned_att_total",
+		Help: "Count the number of times an orphaned attestation is saved",
 	})
 	attestationInclusionDelay = promauto.NewHistogram(
 		prometheus.HistogramOpts{
@@ -227,8 +232,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
-	for _, att := range blk.Body.Attestations {
-		attestationInclusionDelay.Observe(float64(blk.Slot - att.Data.Slot))
+func reportAttestationInclusion(blk interfaces.BeaconBlock) {
+	for _, att := range blk.Body().Attestations() {
+		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}
 }

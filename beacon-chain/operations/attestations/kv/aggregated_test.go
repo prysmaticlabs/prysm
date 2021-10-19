@@ -7,9 +7,10 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -256,7 +257,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
-	assert.DeepEqual(t, atts, returned)
+	assert.DeepSSZEqual(t, atts, returned)
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
@@ -297,9 +298,9 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 	t.Run("non-filtered deletion", func(t *testing.T) {
 		cache := NewAttCaches()
-		att1 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
-		att2 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
-		att3 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
+		att1 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}})
+		att2 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11010}})
+		att3 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11010}})
 		att4 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}})
 		atts := []*ethpb.Attestation{att1, att2, att3, att4}
 		require.NoError(t, cache.SaveAggregatedAttestations(atts))
@@ -338,21 +339,21 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		existing []*ethpb.Attestation
 		input    *ethpb.Attestation
 		want     bool
-		error    bool
+		err      error
 	}{
 		{
 			name:  "nil attestation",
 			input: nil,
 			want:  false,
-			error: true,
+			err:   errors.New("can't be nil"),
 		},
 		{
 			name: "nil attestation data",
 			input: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1111},
 			},
-			want:  false,
-			error: true,
+			want: false,
+			err:  errors.New("can't be nil"),
 		},
 		{
 			name: "empty cache aggregated",
@@ -503,6 +504,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b1111},
 			},
 			want: false,
+			err:  bitfield.ErrBitlistDifferentLength,
 		},
 	}
 
@@ -515,9 +517,9 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 				tt.input.Signature = make([]byte, 96)
 			}
 
-			if tt.error == true {
+			if tt.err != nil {
 				_, err := cache.HasAggregatedAttestation(tt.input)
-				require.ErrorContains(t, "can't be nil", err)
+				require.ErrorContains(t, tt.err.Error(), err)
 			} else {
 				result, err := cache.HasAggregatedAttestation(tt.input)
 				require.NoError(t, err)

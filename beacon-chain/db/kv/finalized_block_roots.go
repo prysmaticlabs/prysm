@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -83,15 +85,15 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		if signedBlock == nil || signedBlock.Block == nil {
+		if signedBlock == nil || signedBlock.IsNil() || signedBlock.Block().IsNil() {
 			err := fmt.Errorf("missing block in database: block root=%#x", root)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		block := signedBlock.Block
+		block := signedBlock.Block()
 
 		container := &dbpb.FinalizedBlockRootContainer{
-			ParentRoot: block.ParentRoot,
+			ParentRoot: block.ParentRoot(),
 			ChildRoot:  previousRoot,
 		}
 
@@ -106,7 +108,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		}
 
 		// Found parent, loop exit condition.
-		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
+		if parentBytes := bkt.Get(block.ParentRoot()); parentBytes != nil {
 			parent := &dbpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, parentBytes, parent); err != nil {
 				traceutil.AnnotateError(span, err)
@@ -118,14 +120,14 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 				traceutil.AnnotateError(span, err)
 				return err
 			}
-			if err := bkt.Put(block.ParentRoot, enc); err != nil {
+			if err := bkt.Put(block.ParentRoot(), enc); err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
 			}
 			break
 		}
 		previousRoot = root
-		root = block.ParentRoot
+		root = block.ParentRoot()
 	}
 
 	// Upsert blocks from the current finalized epoch.
@@ -182,7 +184,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
@@ -208,5 +210,5 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*e
 		return decode(ctx, enc, blk)
 	})
 	traceutil.AnnotateError(span, err)
-	return blk, err
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
 }

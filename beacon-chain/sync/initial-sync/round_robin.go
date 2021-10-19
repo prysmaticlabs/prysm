@@ -11,9 +11,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
@@ -24,10 +24,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error
+type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBlock, roots [][32]byte) error
+type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -178,41 +178,41 @@ func (s *Service) highestFinalizedEpoch() types.Epoch {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot [32]byte) {
+func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.BeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(1)
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
 		rate = 1
 	}
-	if helpers.IsEpochStart(blk.Slot) {
-		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
+	if helpers.IsEpochStart(blk.Slot()) {
+		timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot())/rate) * time.Second
 		log.WithFields(logrus.Fields{
 			"peers":           len(s.cfg.P2P.Peers().Connected()),
 			"blocksPerSecond": fmt.Sprintf("%.1f", rate),
 		}).Infof(
 			"Processing block %s %d/%d - estimated time remaining %s",
 			fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
-			blk.Slot, helpers.SlotsSince(genesis), timeRemaining,
+			blk.Slot(), helpers.SlotsSince(genesis), timeRemaining,
 		)
 	}
 }
 
 // logBatchSyncStatus and increments the block processing counter.
-func (s *Service) logBatchSyncStatus(genesis time.Time, blks []*eth.SignedBeaconBlock, blkRoot [32]byte) {
+func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.SignedBeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(int64(len(blks)))
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
 		rate = 1
 	}
 	firstBlk := blks[0]
-	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-firstBlk.Block.Slot)/rate) * time.Second
+	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-firstBlk.Block().Slot())/rate) * time.Second
 	log.WithFields(logrus.Fields{
 		"peers":           len(s.cfg.P2P.Peers().Connected()),
 		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
 	}).Infof(
 		"Processing block batch of size %d starting from  %s %d/%d - estimated time remaining %s",
 		len(blks), fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
-		firstBlk.Block.Slot, helpers.SlotsSince(genesis), timeRemaining,
+		firstBlk.Block().Slot(), helpers.SlotsSince(genesis), timeRemaining,
 	)
 }
 
@@ -220,61 +220,61 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, blks []*eth.SignedBeacon
 func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
-	blk *eth.SignedBeaconBlock,
+	blk interfaces.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
-	blkRoot, err := blk.Block.HashTreeRoot()
+	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return err
 	}
 	if s.isProcessedBlock(ctx, blk, blkRoot) {
-		return fmt.Errorf("slot: %d , root %#x: %w", blk.Block.Slot, blkRoot, errBlockAlreadyProcessed)
+		return fmt.Errorf("slot: %d , root %#x: %w", blk.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
 	}
 
-	s.logSyncStatus(genesis, blk.Block, blkRoot)
-	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+	s.logSyncStatus(genesis, blk.Block(), blkRoot)
+	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
-		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block.ParentRoot)
+		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []*eth.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
 	firstBlock := blks[0]
-	blkRoot, err := firstBlock.Block.HashTreeRoot()
+	blkRoot, err := firstBlock.Block().HashTreeRoot()
 	if err != nil {
 		return err
 	}
 	headSlot := s.cfg.Chain.HeadSlot()
-	for headSlot >= firstBlock.Block.Slot && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
+	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
 			return errors.New("no good blocks in batch")
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
-		blkRoot, err = firstBlock.Block.HashTreeRoot()
+		blkRoot, err = firstBlock.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := bytesutil.ToBytes32(firstBlock.Block.ParentRoot)
+	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
-		return fmt.Errorf("%w: %#x", errParentDoesNotExist, firstBlock.Block.ParentRoot)
+		return fmt.Errorf("%w: %#x", errParentDoesNotExist, firstBlock.Block().ParentRoot())
 	}
 	blockRoots := make([][32]byte, len(blks))
 	blockRoots[0] = blkRoot
 	for i := 1; i < len(blks); i++ {
 		b := blks[i]
-		if !bytes.Equal(b.Block.ParentRoot, blockRoots[i-1][:]) {
+		if !bytes.Equal(b.Block().ParentRoot(), blockRoots[i-1][:]) {
 			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
-				blockRoots[i-1][:], b.Block.ParentRoot)
+				blockRoots[i-1][:], b.Block().ParentRoot())
 		}
-		blkRoot, err := b.Block.HashTreeRoot()
+		blkRoot, err := b.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -299,12 +299,20 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 }
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
-func (s *Service) isProcessedBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blkRoot [32]byte) bool {
+func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
 	finalizedSlot, err := helpers.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		return false
 	}
-	if blk.Block.Slot <= finalizedSlot || (s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)) {
+	// If block is before our finalized checkpoint
+	// we do not process it.
+	if blk.Block().Slot() <= finalizedSlot {
+		return true
+	}
+	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
+	// If block exists in our db and is before or equal to our current head
+	// we ignore it.
+	if blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
 		return true
 	}
 	return false

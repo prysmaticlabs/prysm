@@ -5,13 +5,14 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -23,15 +24,16 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 	GenesisFetcher
 	CanonicalFetcher
+	ForkFetcher
 }
 
-// TimeFetcher retrieves the Eth2 data that's related to time.
+// TimeFetcher retrieves the Ethereum consensus data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
 	CurrentSlot() types.Slot
 }
 
-// GenesisFetcher retrieves the eth2 data related to its genesis.
+// GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
 type GenesisFetcher interface {
 	GenesisValidatorRoot() [32]byte
 }
@@ -41,7 +43,7 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (iface.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
@@ -76,7 +78,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return stateV0.CopyCheckpoint(s.finalizedCheckpt)
+	return copyutil.CopyCheckpoint(s.finalizedCheckpt)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -85,7 +87,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return stateV0.CopyCheckpoint(s.justifiedCheckpt)
+	return copyutil.CopyCheckpoint(s.justifiedCheckpt)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -94,7 +96,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return stateV0.CopyCheckpoint(s.prevJustifiedCheckpt)
+	return copyutil.CopyCheckpoint(s.prevJustifiedCheckpt)
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -123,11 +125,11 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if b == nil {
+	if b == nil || b.IsNil() {
 		return params.BeaconConfig().ZeroHash[:], nil
 	}
 
-	r, err := b.Block.HashTreeRoot()
+	r, err := b.Block().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +140,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
