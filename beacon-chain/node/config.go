@@ -4,6 +4,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/params"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/urfave/cli/v2"
@@ -71,9 +72,9 @@ func configureEth1Config(cliCtx *cli.Context) {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+	if cliCtx.IsSet(p2pcmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
+		c.BootstrapNodes = cliCtx.StringSlice(p2pcmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
 	}
 	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
