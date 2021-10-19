@@ -50,18 +50,6 @@ jobs:
           bazel build //validator:validator
           mv ./bazel-bin/cmd/validator/validator_/validator ./bazel-bin/cmd/validator/validator_/lukso-validator-Darwin-x86_64
 
-      - name: Run beacon-chain for Windows
-        if: matrix.platform == 'ubuntu-18.04'
-        run: |
-          bazel build //beacon-chain:beacon-chain --config=windows_amd64_docker
-          mv ./bazel-bin/cmd/beacon-chain/beacon-chain_/beacon-chain.exe ./bazel-bin/cmd/beacon-chain/beacon-chain_/vanguard-Windows-x86_64.exe
-
-      - name: Run validator for Windows
-        if: matrix.platform == 'ubuntu-18.04'
-        run: |
-          bazel build //validator:validator --config=windows_amd64_docker
-          mv ./bazel-bin/cmd/validator/validator_/validator.exe ./bazel-bin/cmd/validator/validator_/lukso-validator-Windows-x86_64.exe
-
       - name: Delete old tag and release
         uses: dev-drprasad/delete-tag-and-release@v0.2.0
         with:
