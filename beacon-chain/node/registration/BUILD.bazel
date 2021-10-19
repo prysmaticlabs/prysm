@@ -8,7 +8,10 @@ go_library(
         "powchain.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node/registration",
-    visibility = ["//beacon-chain/node:__subpackages__"],
+    visibility = [
+        "//beacon-chain/node:__subpackages__",
+        "//cmd/beacon-chain:__subpackages__",
+    ],
     deps = [
         "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
