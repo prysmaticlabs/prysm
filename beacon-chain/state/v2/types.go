@@ -22,6 +22,9 @@ func init() {
 	// Initialize the composite arrays.
 	fieldMap[types.Eth1DataVotes] = types.CompositeArray
 	fieldMap[types.Validators] = types.CompositeArray
+
+	// Initialize Compressed Arrays
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
