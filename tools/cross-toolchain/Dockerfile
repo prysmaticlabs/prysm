@@ -31,7 +31,10 @@ RUN /tmp/install_clang_cross.sh
 
 # install osxcross
 ADD install_osxcross.sh /tmp/install_osxcross.sh
+ADD common_osxcross.sh /tmp/common_osxcross.sh
 RUN /tmp/install_osxcross.sh
+ADD link_osxcross.sh /tmp/link_osxcross.sh
+RUN /tmp/link_osxcross.sh
 
 # containerized development environment
 FROM build as devel
