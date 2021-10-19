@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/urfave/cli/v2"
@@ -47,11 +48,11 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MinimalConfigFlag,
 			cmd.E2EConfigFlag,
 			cmd.RPCMaxPageSizeFlag,
-			cmd.NoDiscovery,
-			cmd.BootstrapNode,
-			cmd.RelayNode,
-			cmd.P2PUDPPort,
-			cmd.P2PTCPPort,
+			p2pcmd.NoDiscovery,
+			p2pcmd.BootstrapNode,
+			p2pcmd.RelayNode,
+			p2pcmd.P2PUDPPort,
+			p2pcmd.P2PTCPPort,
 			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
 			cmd.EnableTracingFlag,
@@ -127,16 +128,16 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "p2p",
 		Flags: []cli.Flag{
-			cmd.P2PIP,
-			cmd.P2PHost,
-			cmd.P2PHostDNS,
-			cmd.P2PMaxPeers,
-			cmd.P2PPrivKey,
-			cmd.P2PMetadata,
-			cmd.P2PAllowList,
-			cmd.P2PDenyList,
-			cmd.StaticPeers,
-			cmd.EnableUPnPFlag,
+			p2pcmd.P2PIP,
+			p2pcmd.P2PHost,
+			p2pcmd.P2PHostDNS,
+			flags.P2PMaxPeers,
+			p2pcmd.P2PPrivKey,
+			p2pcmd.P2PMetadata,
+			p2pcmd.P2PAllowList,
+			p2pcmd.P2PDenyList,
+			p2pcmd.StaticPeers,
+			p2pcmd.EnableUPnPFlag,
 			flags.MinSyncPeers,
 		},
 	},
