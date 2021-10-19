@@ -26,6 +26,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -457,6 +458,54 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "Epoch is too far in the future", err)
+	})
+
+	t.Run("correct sync committee is fetched", func(t *testing.T) {
+		// in this test we swap validators in the current and next sync committee inside the new state
+
+		newSyncPeriodStartSlot := types.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
+		newSyncPeriodSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
+		require.NoError(t, newSyncPeriodSt.SetSlot(newSyncPeriodStartSlot))
+		require.NoError(t, newSyncPeriodSt.SetGenesisTime(uint64(genesisTime.Unix())))
+		vals := newSyncPeriodSt.Validators()
+		currCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 5; i < 10; i++ {
+			currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+		}
+		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
+		nextCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 0; i < 5; i++ {
+			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+		}
+		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
+
+		stateFetchFn := func(slot types.Slot) beaconState.BeaconState {
+			if slot < newSyncPeriodStartSlot {
+				return st
+			} else {
+				return newSyncPeriodSt
+			}
+		}
+		vs := &Server{
+			StateFetcher: &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:  &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot},
+		}
+
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+			Index: []types.ValidatorIndex{8},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[8].PublicKey, duty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(8), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(3), duty.ValidatorSyncCommitteeIndices[0])
 	})
 }
 
