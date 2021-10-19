@@ -1361,13 +1361,27 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		assert.ErrorContains(t, "Epoch for subscription at index 0 is in the past", err)
 	})
 
+	t.Run("First epoch after the next sync committee is valid", func(t *testing.T) {
+		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
+			Data: []*ethpbv2.SyncCommitteeSubscription{
+				{
+					ValidatorIndex:       0,
+					SyncCommitteeIndices: []uint64{},
+					UntilEpoch:           2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+				},
+			},
+		}
+		_, err = vs.SubmitSyncCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+	})
+
 	t.Run("Epoch too far in the future", func(t *testing.T) {
 		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
 			Data: []*ethpbv2.SyncCommitteeSubscription{
 				{
 					ValidatorIndex:       0,
 					SyncCommitteeIndices: []uint64{},
-					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 2,
+					UntilEpoch:           2*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1,
 				},
 			},
 		}
