@@ -1,7 +1,10 @@
 package apimiddleware
 
 import (
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
@@ -656,6 +659,7 @@ type syncCommitteeContributionJson struct {
 
 // sszResponseJson is a common abstraction over all SSZ responses.
 type sszResponseJson interface {
+	SSZVersion() string
 	SSZData() string
 }
 
@@ -668,6 +672,10 @@ func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+func (*blockSSZResponseJson) SSZVersion() string {
+	return strings.ToLower(ethpbv2.Version_PHASE0.String())
+}
+
 // blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
 type blockSSZResponseV2Json struct {
 	Version string `json:"version"`
@@ -676,6 +684,10 @@ type blockSSZResponseV2Json struct {
 
 func (ssz *blockSSZResponseV2Json) SSZData() string {
 	return ssz.Data
+}
+
+func (ssz *blockSSZResponseV2Json) SSZVersion() string {
+	return ssz.Version
 }
 
 // beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
@@ -687,6 +699,10 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+func (*beaconStateSSZResponseJson) SSZVersion() string {
+	return strings.ToLower(ethpbv2.Version_PHASE0.String())
+}
+
 // beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
 type beaconStateSSZResponseV2Json struct {
 	Version string `json:"version"`
@@ -695,6 +711,10 @@ type beaconStateSSZResponseV2Json struct {
 
 func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
 	return ssz.Data
+}
+
+func (ssz *beaconStateSSZResponseV2Json) SSZVersion() string {
+	return ssz.Version
 }
 
 // ---------------

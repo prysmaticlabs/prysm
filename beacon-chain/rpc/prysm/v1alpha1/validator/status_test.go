@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d4l3k/messagediff"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -944,14 +946,14 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				// Older Epoch State
 				for i := 0; i < 3; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				vs := &Server{
 					StateGen: mockGen,
@@ -990,24 +992,24 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				bal, err := ps.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				// Older Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				bal, err = os.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				vs := &Server{
 					StateGen: mockGen,
@@ -1057,24 +1059,24 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				bal, err := ps.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				// Older Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				bal, err = os.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 200 gwei, to mock an active validator.
-				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-200))
+				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-2000000000))
 
 				vs := &Server{
 					StateGen: mockGen,
@@ -1124,7 +1126,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-1000000000))
 				}
 
 				// Older Epoch State
@@ -1132,7 +1134,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-2000000000))
 				}
 
 				vs := &Server{
@@ -1146,17 +1148,6 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 10; i++ {
-					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
-						PublicKey:  keys[i].PublicKey().Marshal(),
-						Epoch:      1,
-						SignedRoot: []byte{'A'},
-					})
-					response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
-						PublicKey:       keys[i].PublicKey().Marshal(),
-						DuplicateExists: false,
-					})
-				}
 				for i := 10; i < 15; i++ {
 					// Add in for duplicate validator
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
@@ -1185,7 +1176,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an active validator
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-1000000000))
 				}
 
 				// Older Epoch State
@@ -1193,7 +1184,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an active validator
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-2000000000))
 				}
 
 				vs := &Server{
@@ -1232,7 +1223,8 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, resp) {
-				t.Errorf("CheckDoppelGanger() got = %v, want %v", got.String(), resp.String())
+				diff, _ := messagediff.PrettyDiff(resp, got)
+				t.Errorf("CheckDoppelGanger() difference = %v", diff)
 			}
 		})
 	}
@@ -1246,20 +1238,98 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 	headEpoch := head
 	headSlot := types.Slot(headEpoch) * params.BeaconConfig().SlotsPerEpoch
 	assert.NoError(t, hs.SetSlot(headSlot))
+	assingments, _, err := helpers.CommitteeAssignments(context.Background(), hs, headEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            ctr.AttesterSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, 32),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, 32),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, hs.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[headSlot] = hs
 
 	// Previous Epoch State
 	prevEpoch := headEpoch - 1
 	ps := gs.Copy()
-	prevSlot := types.Slot(prevEpoch) * params.BeaconConfig().SlotsPerEpoch
+	prevSlot, err := slots.EpochEnd(prevEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, ps.SetSlot(prevSlot))
+	assingments, _, err = helpers.CommitteeAssignments(context.Background(), ps, prevEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            ctr.AttesterSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, 32),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, 32),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, ps.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[prevSlot] = ps
 
 	// Older Epoch State
 	olderEpoch := prevEpoch - 1
 	os := gs.Copy()
-	olderSlot := types.Slot(olderEpoch) * params.BeaconConfig().SlotsPerEpoch
+	olderSlot, err := slots.EpochEnd(olderEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, os.SetSlot(olderSlot))
+	assingments, _, err = helpers.CommitteeAssignments(context.Background(), os, olderEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		attSlot := ctr.AttesterSlot
+		if attSlot == olderSlot {
+			continue
+		}
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            attSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, 32),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, 32),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, os.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[olderSlot] = os
 	return hs, ps, os, keys
 }
