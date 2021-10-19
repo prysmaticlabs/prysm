@@ -25,7 +25,7 @@ func TestService_TreeHandler(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetBalances([]uint64{params.BeaconConfig().GweiPerEth}))
-	cfg := &Config{
+	cfg := &config{
 		BeaconDB: beaconDB,
 		ForkChoiceStore: protoarray.New(
 			0, // justifiedEpoch
@@ -34,8 +34,9 @@ func TestService_TreeHandler(t *testing.T) {
 		),
 		StateGen: stategen.New(beaconDB),
 	}
-	s, err := NewService(ctx, cfg)
+	s, err := NewService(ctx)
 	require.NoError(t, err)
+	s.cfg = cfg
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
 	s.setHead([32]byte{'a'}, wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()), headState)
