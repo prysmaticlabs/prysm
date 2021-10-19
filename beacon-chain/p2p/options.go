@@ -19,7 +19,7 @@ import (
 // Option for p2p configurations.
 type Option func(s *Service) error
 
-// WithDatabase --
+// WithDatabase for beacon chain db access.
 func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 	return func(s *Service) error {
 		s.db = beaconDB
@@ -27,7 +27,7 @@ func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 	}
 }
 
-// WithStateNotifier --
+// WithStateNotifier for subscribing to beacon state events.
 func WithStateNotifier(notifier statefeed.Notifier) Option {
 	return func(s *Service) error {
 		s.stateNotifier = notifier
@@ -35,7 +35,7 @@ func WithStateNotifier(notifier statefeed.Notifier) Option {
 	}
 }
 
-// WithEnableUPnP --
+// WithEnableUPnP for p2p.
 func WithEnableUPnP() Option {
 	return func(s *Service) error {
 		s.cfg.EnableUPnP = true
@@ -43,7 +43,7 @@ func WithEnableUPnP() Option {
 	}
 }
 
-// WithNoDiscovery --
+// WithNoDiscovery for p2p.
 func WithNoDiscovery() Option {
 	return func(s *Service) error {
 		s.cfg.NoDiscovery = true
@@ -51,7 +51,7 @@ func WithNoDiscovery() Option {
 	}
 }
 
-// WithStaticPeers --
+// WithStaticPeers for p2p.
 func WithStaticPeers(peers []string) Option {
 	return func(s *Service) error {
 		s.cfg.StaticPeers = peers
@@ -59,7 +59,7 @@ func WithStaticPeers(peers []string) Option {
 	}
 }
 
-// WithBootstrapNodeAddr --
+// WithBootstrapNodeAddr for p2p.
 func WithBootstrapNodeAddr(addresses []string) Option {
 	return func(s *Service) error {
 		s.cfg.BootstrapNodeAddr = addresses
@@ -67,7 +67,7 @@ func WithBootstrapNodeAddr(addresses []string) Option {
 	}
 }
 
-// WithRelayNodeAddr --
+// WithRelayNodeAddr for p2p.
 func WithRelayNodeAddr(addr string) Option {
 	return func(s *Service) error {
 		s.cfg.RelayNodeAddr = addr
@@ -75,7 +75,7 @@ func WithRelayNodeAddr(addr string) Option {
 	}
 }
 
-// WithDataDir --
+// WithDataDir for the beacon node data directory.
 func WithDataDir(dir string) Option {
 	return func(s *Service) error {
 		s.cfg.DataDir = dir
@@ -83,7 +83,7 @@ func WithDataDir(dir string) Option {
 	}
 }
 
-// WithLocalIP --
+// WithLocalIP for p2p.
 func WithLocalIP(ip string) Option {
 	return func(s *Service) error {
 		s.cfg.LocalIP = ip
@@ -91,7 +91,7 @@ func WithLocalIP(ip string) Option {
 	}
 }
 
-// WithHostAddr --
+// WithHostAddr for p2p.
 func WithHostAddr(addr string) Option {
 	return func(s *Service) error {
 		s.cfg.HostAddress = addr
@@ -99,7 +99,7 @@ func WithHostAddr(addr string) Option {
 	}
 }
 
-// WithHostDNS --
+// WithHostDNS for p2p.
 func WithHostDNS(host string) Option {
 	return func(s *Service) error {
 		s.cfg.HostDNS = host
@@ -107,7 +107,7 @@ func WithHostDNS(host string) Option {
 	}
 }
 
-// WithPrivateKey --
+// WithPrivateKey for p2p.
 func WithPrivateKey(privKey string) Option {
 	return func(s *Service) error {
 		s.cfg.PrivateKey = privKey
@@ -115,7 +115,7 @@ func WithPrivateKey(privKey string) Option {
 	}
 }
 
-// WithMetadataDir --
+// WithMetadataDir for p2p.
 func WithMetadataDir(dir string) Option {
 	return func(s *Service) error {
 		s.cfg.MetaDataDir = dir
@@ -123,7 +123,7 @@ func WithMetadataDir(dir string) Option {
 	}
 }
 
-// WithTCPPort --
+// WithTCPPort for p2p.
 func WithTCPPort(port uint) Option {
 	return func(s *Service) error {
 		s.cfg.TCPPort = port
@@ -131,7 +131,7 @@ func WithTCPPort(port uint) Option {
 	}
 }
 
-// WithUDPPort --
+// WithUDPPort for p2p.
 func WithUDPPort(port uint) Option {
 	return func(s *Service) error {
 		s.cfg.UDPPort = port
@@ -139,7 +139,7 @@ func WithUDPPort(port uint) Option {
 	}
 }
 
-// WithMaxPeers --
+// WithMaxPeers for p2p.
 func WithMaxPeers(maxPeers uint) Option {
 	return func(s *Service) error {
 		s.cfg.MaxPeers = maxPeers
@@ -147,7 +147,7 @@ func WithMaxPeers(maxPeers uint) Option {
 	}
 }
 
-// WithAllowListCIDR --
+// WithAllowListCIDR for p2p.
 func WithAllowListCIDR(allowList string) Option {
 	return func(s *Service) error {
 		s.cfg.AllowListCIDR = allowList
@@ -155,7 +155,7 @@ func WithAllowListCIDR(allowList string) Option {
 	}
 }
 
-// WithDenyListCIDR --
+// WithDenyListCIDR for p2p.
 func WithDenyListCIDR(denyList []string) Option {
 	return func(s *Service) error {
 		s.cfg.DenyListCIDR = denyList
@@ -163,7 +163,7 @@ func WithDenyListCIDR(denyList []string) Option {
 	}
 }
 
-// WithDisableDiscv5 --
+// WithDisableDiscv5 for p2p.
 func WithDisableDiscv5() Option {
 	return func(s *Service) error {
 		s.cfg.DisableDiscv5 = true
