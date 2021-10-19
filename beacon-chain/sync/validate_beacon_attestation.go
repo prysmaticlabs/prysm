@@ -224,7 +224,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
 		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set), nil
+		return s.validateWithBatchVerifier(ctx, "attestation", set)
 	}
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
 		tracing.AnnotateError(span, err)

@@ -14,7 +14,6 @@ go_library(
     deps = [
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
-        "//cmd/beacon-chain/flags:go_default_library",
         "//config/features:go_default_library",
         "//crypto/rand:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

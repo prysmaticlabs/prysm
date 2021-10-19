@@ -13,6 +13,7 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/cmd"
+	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
@@ -225,14 +226,19 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	p2pOpts, err := p2pcmd.Options(ctx)
+	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return err
+		return nil
 	}
-	beacon, err := node.New(
-		ctx,
-		node.WithP2POptions(p2pOpts),
-	)
+	p2pFlagOpts, err := p2pcmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
+	opts := []node.Option{
+		node.WithBlockchainFlagOptions(blockchainFlagOpts),
+		node.WithP2PFlagOptions(p2pFlagOpts),
+	}
+	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
@@ -61,8 +60,6 @@ const testSkipPowFlag = "test-skip-pow"
 // 128MB max message size when enabling debug endpoints.
 const debugGrpcMaxMsgSize = 1 << 27
 
-type Option func(*BeaconNode) error
-
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
@@ -88,7 +85,8 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	p2pOpts                 []p2p.Option
+	p2pFlagOpts             []p2p.Option
+	blockchainFlagOpts      []blockchain.Option
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -151,7 +149,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	beacon.startStateGen()
 
-	if err := beacon.registerP2P(cliCtx); err != nil {
+	if err := beacon.registerP2P(); err != nil {
 		return nil, err
 	}
 
@@ -426,9 +424,9 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db)
 }
 
-func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerP2P() error {
 	opts := append(
-		b.p2pOpts,
+		b.p2pFlagOpts,
 		p2p.WithDatabase(b.db),
 		p2p.WithStateNotifier(b),
 	)
@@ -468,29 +466,23 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
-	if err != nil {
-		return err
-	}
-
-	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
-	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:                b.db,
-		DepositCache:            b.depositCache,
-		ChainStartFetcher:       web3Service,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		P2p:                     b.fetchP2P(),
-		MaxRoutines:             maxRoutines,
-		StateNotifier:           b,
-		ForkChoiceStore:         b.forkChoiceStore,
-		AttService:              attService,
-		StateGen:                b.stateGen,
-		SlasherAttestationsFeed: b.slasherAttestationsFeed,
-		WeakSubjectivityCheckpt: wsCheckpt,
-	})
+	// skipcq: CRT-D0001
+	opts := append(
+		b.blockchainFlagOpts,
+		blockchain.WithDatabase(b.db),
+		blockchain.WithDepositCache(b.depositCache),
+		blockchain.WithChainStartFetcher(web3Service),
+		blockchain.WithAttestationPool(b.attestationPool),
+		blockchain.WithExitPool(b.exitPool),
+		blockchain.WithSlashingPool(b.slashingsPool),
+		blockchain.WithP2PBroadcaster(b.fetchP2P()),
+		blockchain.WithStateNotifier(b),
+		blockchain.WithForkChoiceStore(b.forkChoiceStore),
+		blockchain.WithAttestationService(attService),
+		blockchain.WithStateGen(b.stateGen),
+		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
+	)
+	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}

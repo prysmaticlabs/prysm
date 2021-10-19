@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Options for peer-to-peer networking configurations.
-func Options(c *cli.Context) ([]p2p.Option, error) {
+// FlagOptions for peer-to-peer networking configurations.
+func FlagOptions(c *cli.Context) ([]p2p.Option, error) {
 	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(c)
 	if err != nil {
 		return nil, err
