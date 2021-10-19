@@ -37,6 +37,7 @@ const disabledFeatureFlag = "Disabled feature flag"
 type Flags struct {
 	// Testnet Flags.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
+	MergeTestnet bool // MergeTestnet defines the flag through which we can enable node to run on the merge testnet.
 
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
@@ -227,6 +228,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logEnabled(enableBatchGossipVerification)
 		cfg.EnableBatchVerification = true
 	}
+	if ctx.Bool(MergeTestnet.Name) {
+		cfg.MergeTestnet = true
+	}
+
 	Init(cfg)
 }
 

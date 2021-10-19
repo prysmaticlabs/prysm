@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 )
 
@@ -31,10 +32,6 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 	if st == nil || st.IsNil() {
 		return ErrNilValueProvided
 	}
-	_, ok := st.(*stateAltair.BeaconState)
-	if !ok {
-		return ErrIncorrectType
-	}
 	c.cache.Add(slot, st)
 	return nil
 }
@@ -47,9 +44,13 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	if !exists {
 		return nil, ErrNotFound
 	}
+	var st state.BeaconState
 	st, ok := val.(*stateAltair.BeaconState)
 	if !ok {
-		return nil, ErrIncorrectType
+		st, ok = val.(*v3.BeaconState)
+		if !ok {
+			return nil, ErrIncorrectType
+		}
 	}
 	return st, nil
 }

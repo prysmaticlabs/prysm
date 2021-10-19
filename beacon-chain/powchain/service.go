@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -771,12 +772,14 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
-
-			if err := s.processPastLogs(ctx); err != nil {
-				log.Errorf("Unable to process past logs %v", err)
-				s.retryETH1Node(err)
-				continue
+			if !features.Get().MergeTestnet {
+				if err := s.processPastLogs(ctx); err != nil {
+					log.Errorf("Unable to process past logs %v", err)
+					s.retryETH1Node(err)
+					continue
+				}
 			}
+
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				log.Errorf("Unable to process past headers %v", err)
