@@ -45,7 +45,7 @@ const headSyncMinEpochsAfterCheckpoint = 128
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *Config
+	cfg                   *config
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	genesisTime           time.Time
@@ -67,8 +67,8 @@ type Service struct {
 	wsVerified            bool
 }
 
-// Config options for the service.
-type Config struct {
+// config options for the service.
+type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       powchain.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
@@ -88,17 +88,23 @@ type Config struct {
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
-		cfg:                  cfg,
+	srv := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
 		justifiedBalances:    make([]uint64, 0),
-	}, nil
+		cfg:                  &config{},
+	}
+	for _, opt := range opts {
+		if err := opt(srv); err != nil {
+			return nil, err
+		}
+	}
+	return srv, nil
 }
 
 // Start a blockchain service's main event loop.
