@@ -130,6 +130,10 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
+	} else if ctx.Bool(MergeTestnet.Name){
+		log.Warn("Running on the Merge Testnet")
+		params.UseMergeTestConfig()
+		params.UseMergeTestNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()
