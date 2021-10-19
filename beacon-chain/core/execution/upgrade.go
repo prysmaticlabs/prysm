@@ -22,8 +22,19 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 	if err != nil {
 		return nil, err
 	}
+	prevEpochParticipation, err := state.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	currentEpochParticipation, err := state.CurrentEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
 
-	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateMerge{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
@@ -44,13 +55,13 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		Balances:                    state.Balances(),
 		RandaoMixes:                 state.RandaoMixes(),
 		Slashings:                   state.Slashings(),
-		PreviousEpochParticipation:  make([]byte, numValidators),
-		CurrentEpochParticipation:   make([]byte, numValidators),
+		PreviousEpochParticipation:  prevEpochParticipation,
+		CurrentEpochParticipation:   currentEpochParticipation,
 		JustificationBits:           state.JustificationBits(),
 		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
-		InactivityScores:            make([]uint64, numValidators),
+		InactivityScores:            inactivityScores,
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
 		LatestExecutionPayloadHeader: &ethpb.ExecutionPayloadHeader{

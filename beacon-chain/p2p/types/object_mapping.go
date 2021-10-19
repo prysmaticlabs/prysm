@@ -39,6 +39,9 @@ func InitializeDataMaps() {
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
 			return wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().MergeForkVersion): func() (block.SignedBeaconBlock, error) {
+			return wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
+		},
 	}
 
 	// Reset our metadata map.
@@ -47,6 +50,9 @@ func InitializeDataMaps() {
 			return wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metadata.Metadata {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().MergeForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}
