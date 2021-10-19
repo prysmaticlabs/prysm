@@ -16,6 +16,7 @@ go_library(
     deps = [
         "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//cmd/beacon-chain/p2p:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
