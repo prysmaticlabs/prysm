@@ -69,7 +69,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
-	duties := make([]*ethpbv1.AttesterDuty, 0)
+	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
 	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
 		zeroPubkey := [48]byte{}
