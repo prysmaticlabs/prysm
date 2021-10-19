@@ -14,6 +14,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -110,14 +111,14 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.BeaconNodeRPCPort+index),
 		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, e2e.TestParams.BeaconNodeCount-1),
-		fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+10),
-		fmt.Sprintf("--%s=%d", cmdshared.P2PTCPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+20),
+		fmt.Sprintf("--%s=%d", p2pcmd.P2PUDPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+10),
+		fmt.Sprintf("--%s=%d", p2pcmd.P2PTCPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+20),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.BeaconNodeMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+40),
 		fmt.Sprintf("--%s=%d", flags.ContractDeploymentBlock.Name, 0),
 		fmt.Sprintf("--%s=%d", flags.MinPeersPerSubnet.Name, 0),
 		fmt.Sprintf("--%s=%d", cmdshared.RPCMaxPageSizeFlag.Name, params.BeaconConfig().MinGenesisActiveValidatorCount),
-		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
+		fmt.Sprintf("--%s=%s", p2pcmd.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
