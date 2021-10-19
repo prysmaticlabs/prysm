@@ -395,10 +395,6 @@ load(
 
 _cc_image_repos()
 
-load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
-
-geth_dependencies()
-
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
 
 go_embed_data_dependencies()
