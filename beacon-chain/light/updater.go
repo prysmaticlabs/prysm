@@ -2,8 +2,15 @@ package light
 
 import (
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Precomputed values for generalized indices.
@@ -26,12 +33,22 @@ type update struct {
 	nextSyncCommitteeBranch *ssz.Proof
 }
 
-func (s *Service) onHead(head *ethpb.BeaconBlock, postState *ethpb.BeaconStateAltair) error {
-	tr, err := postState.GetTree()
+type signatureData struct {
+	slot          types.Slot
+	forkVersion   []byte
+	syncAggregate *ethpb.SyncAggregate
+}
+
+func (s *Service) onHead(head block.BeaconBlock, postState state.BeaconStateAltair) error {
+	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+	if !ok {
+		return errors.New("not altair")
+	}
+	tr, err := innerState.GetTree()
 	if err != nil {
 		return err
 	}
-	header, err := block.BeaconBlockHeaderFromBlock(head)
+	header, err := block.BeaconBlockHeaderFromBlockInterface(head)
 	if err != nil {
 		return err
 	}
@@ -49,10 +66,47 @@ func (s *Service) onHead(head *ethpb.BeaconBlock, postState *ethpb.BeaconStateAl
 	}
 	s.prevHeadData[blkRoot] = &update{
 		header:                  header,
-		finalityCheckpoint:      postState.FinalizedCheckpoint,
+		finalityCheckpoint:      innerState.FinalizedCheckpoint,
 		finalityBranch:          finalityBranch,
-		nextSyncCommittee:       postState.NextSyncCommittee,
+		nextSyncCommittee:       innerState.NextSyncCommittee,
 		nextSyncCommitteeBranch: nextSyncCommitteeBranch,
 	}
+	syncAttestedBlockRoot, err := helpers.BlockRootAtSlot(postState, innerState.Slot-1)
+	if err != nil {
+		return err
+	}
+	// Recover attested data from prevData cache. If not found, this SyncAggregate is useless
+	syncAttestedData, ok := s.prevHeadData[bytesutil.ToBytes32(syncAttestedBlockRoot)]
+	if !ok {
+		return errors.New("useless")
+	}
+	fork, err := forks.Fork(slots.ToEpoch(head.Slot()))
+	if err != nil {
+		return err
+	}
+	syncAggregate, err := head.Body().SyncAggregate()
+	if err != nil {
+		return err
+	}
+	sigData := &signatureData{
+		slot:          head.Slot(),
+		forkVersion:   fork.CurrentVersion,
+		syncAggregate: syncAggregate,
+	}
+
+	//// Store the best finalized update per period
+	//const committeePeriodWithFinalized = await this.persistBestFinalizedUpdate(syncAttestedData, signatureData);
+	//// Then, store the best non finalized update per period
+	//await this.persistBestNonFinalizedUpdate(syncAttestedData, signatureData, committeePeriodWithFinalized);
+	//
+	//// Prune old prevHeadData
+	//if (this.prevHeadData.size > PREV_DATA_MAX_SIZE) {
+	//	for (const key of this.prevHeadData.keys()) {
+	//		this.prevHeadData.delete(key);
+	//		if (this.prevHeadData.size <= PREV_DATA_MAX_SIZE) {
+	//			break;
+	//		}
+	//	}
+	//}
 	return nil
 }
