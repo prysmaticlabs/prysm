@@ -103,6 +103,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
+	b.rebuildTrie[balances] = true
 	return nil
 }
 
@@ -128,6 +129,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 	bals[idx] = val
 	b.state.Balances = bals
 	b.markFieldAsDirty(balances)
+	b.addDirtyIndices(validators, []uint64{uint64(idx)})
 	return nil
 }
 
