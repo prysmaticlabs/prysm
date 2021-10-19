@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -109,9 +111,12 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
+	mnemonicRandomness := make([]byte, 32)
+	_, err = rand.NewGenerator().Read(mnemonicRandomness)
 	require.NoError(t, err)
-	req.Mnemonic = mnemonicResp.Mnemonic
+	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
+	require.NoError(t, err)
+	req.Mnemonic = mnemonic
 
 	req.Mnemonic25ThWord = " "
 	_, err = s.RecoverWallet(ctx, req)
@@ -129,7 +134,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
-		Mnemonic:       mnemonicResp.Mnemonic,
+		Mnemonic:       mnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
