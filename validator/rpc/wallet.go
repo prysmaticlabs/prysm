@@ -235,8 +235,8 @@ func (s *Server) ValidateKeystores(
 			if doesNotDecrypt {
 				return nil, status.Errorf(
 					codes.InvalidArgument,
-					"Password for keystore with public key %s is incorrect, make sure all keystores "+
-						"have the same password",
+					"Password for keystore with public key %s is incorrect. "+
+						"Prysm web only supports importing batches of keystores with the same password for all of them",
 					keystore.Pubkey,
 				)
 			} else {
