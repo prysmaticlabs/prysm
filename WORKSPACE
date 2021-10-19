@@ -225,7 +225,7 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.2"
+consensus_spec_version = "v1.1.3"
 
 bls_test_version = "v0.1.1"
 
@@ -241,7 +241,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "45f6bd1688a57fd40ab1272dac75de33d9777c84f9ea545815bfd9dc0e841a82",
+    sha256 = "e572f8c57e2dbbaeee056a600dc9d08396010dd5134a3a95e43c540470acf6f5",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -257,7 +257,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "e203d4378a59d9b82b1a4e948bef7281be8bb5b59264c7d1a6a394b669cf800b",
+    sha256 = "7e2f62eaae9fd541690cc61d252556d0c5deb585ca1873aacbeb5b02d06f1362",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -273,7 +273,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "dd9e01bb871673af49a6b4efad291505e0bdb607df3dd29d1b0b319c1fba2d60",
+    sha256 = "05cbb89810c8acd6c57c4773ddfd167305cd4539960e9b4d7b69e1a988b35ad2",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -288,7 +288,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "55fa6fa9823781195cb5362b734b4b6e2a6940a7411530b9bcdab02d845106ca",
+    sha256 = "0cef67b08448f7eb43bf66c464451c9e7a4852df8ef90555cca6d440e3436882",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -394,10 +394,6 @@ load(
 )
 
 _cc_image_repos()
-
-load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
-
-geth_dependencies()
 
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
 

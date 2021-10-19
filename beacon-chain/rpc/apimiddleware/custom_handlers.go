@@ -96,12 +96,12 @@ func handleGetSSZ(
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	responseSsz, errJson := serializeMiddlewareResponseIntoSSZ(config.responseJson.SSZData())
+	respVersion, responseSsz, errJson := serializeMiddlewareResponseIntoSSZ(config.responseJson)
 	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	if errJson := writeSSZResponseHeaderAndBody(grpcResponse, w, responseSsz, config.fileName); errJson != nil {
+	if errJson := writeSSZResponseHeaderAndBody(grpcResponse, w, responseSsz, respVersion, config.fileName); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
@@ -143,16 +143,16 @@ func prepareSSZRequestForProxying(
 	return nil
 }
 
-func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson apimiddleware.ErrorJson) {
+func serializeMiddlewareResponseIntoSSZ(respJson sszResponseJson) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
-	b, err := base64.StdEncoding.DecodeString(data)
+	data, err := base64.StdEncoding.DecodeString(respJson.SSZData())
 	if err != nil {
-		return nil, apimiddleware.InternalServerErrorWithMessage(err, "could not decode response body into base64")
+		return "", nil, apimiddleware.InternalServerErrorWithMessage(err, "could not decode response body into base64")
 	}
-	return b, nil
+	return strings.ToLower(respJson.SSZVersion()), data, nil
 }
 
-func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWriter, responseSsz []byte, fileName string) apimiddleware.ErrorJson {
+func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWriter, respSsz []byte, respVersion, fileName string) apimiddleware.ErrorJson {
 	var statusCodeHeader string
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
@@ -166,6 +166,10 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 			}
 		}
 	}
+	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
+	w.Header().Set("Eth-Consensus-Version", respVersion)
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
@@ -175,10 +179,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	} else {
 		w.WriteHeader(grpcResp.StatusCode)
 	}
-	w.Header().Set("Content-Length", strconv.Itoa(len(responseSsz)))
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
+	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(respSsz))); err != nil {
 		return apimiddleware.InternalServerErrorWithMessage(err, "could not write response message")
 	}
 	return nil

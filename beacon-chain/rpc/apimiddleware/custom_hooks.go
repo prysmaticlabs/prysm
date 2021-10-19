@@ -3,6 +3,7 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -227,6 +228,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
+		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
@@ -235,8 +237,9 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
+		return nil
 	}
-	return nil
+	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
 type tempSyncCommitteesResponseJson struct {
@@ -301,7 +304,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockAltairContainerJson{
@@ -309,6 +312,8 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)
@@ -340,11 +345,13 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0State,
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairState,
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)
@@ -376,11 +383,13 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0Block,
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairBlock,
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)
