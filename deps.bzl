@@ -818,8 +818,8 @@ def prysm_deps():
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
         patches = ["//third_party:com_github_ethereum_go_ethereum_secp256k1.patch"],
-        sum = "h1:Ft2GcLQrr2M89l49g9NoqgNtJZ9AahzMb7N6VXKZy5U=",
-        version = "v1.10.10",
+        sum = "h1:Mi7op8Vnhq9L2jpczrDzPm6c9XZbvHu0h4hoDq9u7QM=",
+        version = "v1.10.11-0.20211018203420-b97f57882c14",
     )
 
     go_repository(
