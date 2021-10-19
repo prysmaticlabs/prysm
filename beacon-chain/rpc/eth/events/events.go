@@ -122,7 +122,7 @@ func (s *Server) handleBlockEvents(
 			Slot:  v1Data.Message.Slot,
 			Block: item[:],
 		}
-		return s.streamData(stream, BlockTopic, eventBlock)
+		return streamData(stream, BlockTopic, eventBlock)
 	default:
 		return nil
 	}
@@ -141,7 +141,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
-		return s.streamData(stream, AttestationTopic, v1Data)
+		return streamData(stream, AttestationTopic, v1Data)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
 			return nil
@@ -151,7 +151,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
-		return s.streamData(stream, AttestationTopic, v1Data)
+		return streamData(stream, AttestationTopic, v1Data)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
 			return nil
@@ -161,7 +161,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
-		return s.streamData(stream, VoluntaryExitTopic, v1Data)
+		return streamData(stream, VoluntaryExitTopic, v1Data)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
 			return nil
@@ -171,7 +171,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
-		return s.streamData(stream, SyncCommitteeContributionTopic, v2Data)
+		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
 	default:
 		return nil
 	}
@@ -189,7 +189,7 @@ func (s *Server) handleStateEvents(
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, HeadTopic, head)
+		return streamData(stream, HeadTopic, head)
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
@@ -198,7 +198,7 @@ func (s *Server) handleStateEvents(
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
@@ -207,13 +207,13 @@ func (s *Server) handleStateEvents(
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, ChainReorgTopic, reorg)
+		return streamData(stream, ChainReorgTopic, reorg)
 	default:
 		return nil
 	}
 }
 
-func (s *Server) streamData(stream ethpbservice.Events_StreamEventsServer, name string, data proto.Message) error {
+func streamData(stream ethpbservice.Events_StreamEventsServer, name string, data proto.Message) error {
 	returnData, err := anypb.New(data)
 	if err != nil {
 		return err
