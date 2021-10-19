@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -76,10 +76,10 @@ func TestConfigureNetwork(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	bootstrapNodes := cli.StringSlice{}
-	set.Var(&bootstrapNodes, cmd.BootstrapNode.Name, "")
+	set.Var(&bootstrapNodes, p2pcmd.BootstrapNode.Name, "")
 	set.Int(flags.ContractDeploymentBlock.Name, 0, "")
-	require.NoError(t, set.Set(cmd.BootstrapNode.Name, "node1"))
-	require.NoError(t, set.Set(cmd.BootstrapNode.Name, "node2"))
+	require.NoError(t, set.Set(p2pcmd.BootstrapNode.Name, "node1"))
+	require.NoError(t, set.Set(p2pcmd.BootstrapNode.Name, "node2"))
 	require.NoError(t, set.Set(flags.ContractDeploymentBlock.Name, strconv.Itoa(100)))
 	cliCtx := cli.NewContext(&app, set, nil)
 

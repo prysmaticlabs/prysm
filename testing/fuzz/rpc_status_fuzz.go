@@ -24,9 +24,7 @@ func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
 	var err error
-	p, err = p2p.NewService(context.Background(), &p2p.Config{
-		NoDiscovery: true,
-	})
+	p, err = p2p.NewService(context.Background(), p2p.WithNoDiscovery())
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new p2p service"))
 	}
