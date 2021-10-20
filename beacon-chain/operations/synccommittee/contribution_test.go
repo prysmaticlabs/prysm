@@ -34,13 +34,11 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 		require.NoError(t, store.SaveSyncCommitteeContribution(sig))
 	}
 
-	conts, err := store.SyncCommitteeContributions(1)
-	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	_, err := store.SyncCommitteeContributions(1)
+	require.ErrorContains(t, "nil item", err)
 
-	conts, err = store.SyncCommitteeContributions(2)
-	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	_, err = store.SyncCommitteeContributions(2)
+	require.ErrorContains(t, "nil item", err)
 
 	conts, err = store.SyncCommitteeContributions(3)
 	require.NoError(t, err)
@@ -71,12 +69,10 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 	}, conts)
 
 	// All the contributions should persist after get.
-	conts, err = store.SyncCommitteeContributions(1)
-	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
-	conts, err = store.SyncCommitteeContributions(2)
-	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	_, err = store.SyncCommitteeContributions(1)
+	require.ErrorContains(t, "nil item", err)
+	_, err = store.SyncCommitteeContributions(2)
+	require.ErrorContains(t, "nil item", err)
 
 	conts, err = store.SyncCommitteeContributions(3)
 	require.NoError(t, err)
