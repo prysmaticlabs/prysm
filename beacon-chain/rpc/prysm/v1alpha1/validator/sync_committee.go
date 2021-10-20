@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -122,14 +120,6 @@ func (vs *Server) SubmitSignedContributionAndProof(
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
-
-	// Send the contribution to the operation feed.
-	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-		Type: opfeed.SyncCommitteeContributionReceived,
-		Data: &opfeed.SyncCommitteeContributionReceivedData{
-			Contribution: s,
-		},
-	})
 
 	return &emptypb.Empty{}, err
 }

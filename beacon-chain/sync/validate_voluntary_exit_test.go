@@ -81,7 +81,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 				State:   s,
 				Genesis: time.Now(),
 			},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+			InitialSync:       &mockSync.Sync{IsSyncing: false},
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenExitCache: lruwrpr.New(10),
 	}

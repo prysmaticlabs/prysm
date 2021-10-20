@@ -2,7 +2,6 @@ package validator
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -23,5 +22,4 @@ type Server struct {
 	StateFetcher      statefetcher.Fetcher
 	SyncCommitteePool synccommittee.Pool
 	V1Alpha1Server    *v1alpha1validator.Server
-	OperationNotifier opfeed.Notifier
 }

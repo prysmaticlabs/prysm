@@ -70,7 +70,6 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	server := &Server{
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
-		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 	contribution := &ethpb.SignedContributionAndProof{
 		Message: &ethpb.ContributionAndProof{
