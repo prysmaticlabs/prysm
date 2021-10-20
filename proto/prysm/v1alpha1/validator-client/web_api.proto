@@ -26,14 +26,15 @@ service Wallet {
             get: "/v2/validator/wallet"
         };
     }
-    rpc GenerateMnemonic(google.protobuf.Empty) returns (GenerateMnemonicResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/mnemonic/generate"
-        };
-    }
     rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/import",
+            body: "*"
+        };
+    }
+    rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/keystores/validate",
             body: "*"
         };
     }
@@ -60,12 +61,6 @@ service Accounts {
     rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/accounts/delete",
-            body: "*"
-        };
-    }
-    rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/password/edit",
             body: "*"
         };
     }
@@ -167,27 +162,9 @@ service Health {
 }
 
 service Auth {
-    rpc HasUsedWeb(google.protobuf.Empty) returns (HasUsedWebResponse) {
+    rpc Initialize(google.protobuf.Empty) returns (InitializeAuthResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/initialized",
-        };
-    }
-    rpc Login(AuthRequest) returns (AuthResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/login",
-            body: "*"
-        };
-    }
-    rpc Signup(AuthRequest) returns (AuthResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/signup",
-            body: "*"
-        };
-    }
-    rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/v2/validator/logout",
-            body: "*"
+            get: "/v2/validator/initialize",
         };
     }
 }
@@ -248,6 +225,14 @@ message RecoverWalletRequest {
     string mnemonic25th_word = 5;
 }
 
+message ValidateKeystoresRequest {
+    // JSON-encoded keystore files to validate.
+    repeated string keystores = 1;
+
+    // Password for the keystore files.
+    string keystores_password = 2;
+}
+
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
@@ -295,17 +280,6 @@ message AccountRequest {
     repeated uint64 indices = 2;
 }
 
-message AuthRequest {
-    string password = 1;
-    string password_confirmation = 2;
-}
-
-message AuthResponse {
-    string token = 1;
-
-    uint64 token_expiration = 2;
-}
-
 message NodeConnectionResponse {
     // The host address of the beacon node the validator
     // client is connected to.
@@ -330,12 +304,6 @@ message VersionResponse {
 	string validator = 2;
 }
 
-message ChangePasswordRequest {
-    string current_password = 1;
-    string password = 2;
-    string password_confirmation = 3;
-}
-
 message HasWalletResponse {
     // Whether or not the user has a wallet on disk.
     bool wallet_exists = 1;
@@ -353,7 +321,11 @@ message ImportKeystoresResponse {
     repeated bytes imported_public_keys = 1;
 }
 
-message HasUsedWebResponse {
+message InitializeAuthRequest {
+    string token = 1;
+}
+
+message InitializeAuthResponse {
     bool has_signed_up = 1;
     bool has_wallet = 2;
 }
