@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -35,11 +37,6 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
 	}
-	_, err := s.Signup(ctx, &pb.AuthRequest{
-		Password:             strongPass,
-		PasswordConfirmation: strongPass,
-	})
-	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
@@ -47,7 +44,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err = s.CreateWallet(ctx, req)
+	_, err := s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
 	importReq := &pb.ImportKeystoresRequest{
@@ -109,9 +106,12 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
+	mnemonicRandomness := make([]byte, 32)
+	_, err = rand.NewGenerator().Read(mnemonicRandomness)
 	require.NoError(t, err)
-	req.Mnemonic = mnemonicResp.Mnemonic
+	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
+	require.NoError(t, err)
+	req.Mnemonic = mnemonic
 
 	req.Mnemonic25ThWord = " "
 	_, err = s.RecoverWallet(ctx, req)
@@ -129,7 +129,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
-		Mnemonic:       mnemonicResp.Mnemonic,
+		Mnemonic:       mnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
@@ -157,6 +157,94 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
 	require.ErrorContains(t, "cannot write wallet password file as it already exists", err)
 
+}
+
+func TestServer_ValidateKeystores_FailedPreconditions(t *testing.T) {
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{})
+	assert.ErrorContains(t, "Password required for keystores", err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+	})
+	assert.ErrorContains(t, "No keystores included in request", err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         []string{"badjson"},
+	})
+	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+}
+
+func TestServer_ValidateKeystores_OK(t *testing.T) {
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	ss := &Server{}
+
+	// Create 3 keystores with the strong password.
+	encryptor := keystorev4.New()
+	keystores := make([]string, 3)
+	pubKeys := make([][]byte, 3)
+	for i := 0; i < len(keystores); i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+
+	// Validate the keystores and ensure no error.
+	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         keystores,
+	})
+	require.NoError(t, err)
+
+	// Check that using a different password will return an error.
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: "badpassword",
+		Keystores:         keystores,
+	})
+	require.ErrorContains(t, "is incorrect", err)
+
+	// Add a new keystore that was encrypted with a different password and expect
+	// a failure from the function.
+	differentPassword := "differentkeystorepass"
+	privKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := "somepubkey"
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), differentPassword)
+	require.NoError(t, err)
+	item := &keymanager.Keystore{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Pubkey:  pubKey,
+		Name:    encryptor.Name(),
+	}
+	encodedFile, err := json.MarshalIndent(item, "", "\t")
+	keystores = append(keystores, string(encodedFile))
+	require.NoError(t, err)
+	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+		KeystoresPassword: strongPass,
+		Keystores:         keystores,
+	})
+	require.ErrorContains(t, "Password for keystore with public key somepubkey is incorrect", err)
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
