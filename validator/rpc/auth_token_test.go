@@ -78,7 +78,7 @@ func Test_initializeAuthToken(t *testing.T) {
 	require.NoError(t, os.RemoveAll(walletDir))
 	srv3 := &Server{}
 	walletDir = setupWalletDir(t)
-	token3, expr3, err := srv3.initializeAuthToken(walletDir)
+	token3, _, err := srv3.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtKey) > 0)
 	require.NotEqual(t, token, token3)
