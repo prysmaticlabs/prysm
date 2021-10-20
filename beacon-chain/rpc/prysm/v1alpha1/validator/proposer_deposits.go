@@ -117,7 +117,7 @@ func (vs *Server) deposits(
 	// If there are no pending deposits, exit early.
 	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
 	if len(allPendingContainers) == 0 {
-		log.Debug("deposits(): no pending deposits")
+		log.Trace("no pending deposits for inclusion in block")
 		return []*ethpb.Deposit{}, nil
 	}
 
