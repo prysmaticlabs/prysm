@@ -79,15 +79,15 @@ func (s *Server) StreamEvents(
 	for {
 		select {
 		case event := <-blockChan:
-			if err := s.handleBlockEvents(stream, requestedTopics, event); err != nil {
+			if err := handleBlockEvents(stream, requestedTopics, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle block event: %v", err)
 			}
 		case event := <-opsChan:
-			if err := s.handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
+			if err := handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
 			}
 		case event := <-stateChan:
-			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
+			if err := handleStateEvents(stream, requestedTopics, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
 			}
 		case <-s.Ctx.Done():
@@ -98,7 +98,7 @@ func (s *Server) StreamEvents(
 	}
 }
 
-func (s *Server) handleBlockEvents(
+func handleBlockEvents(
 	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
@@ -128,7 +128,7 @@ func (s *Server) handleBlockEvents(
 	}
 }
 
-func (s *Server) handleBlockOperationEvents(
+func handleBlockOperationEvents(
 	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
@@ -177,7 +177,7 @@ func (s *Server) handleBlockOperationEvents(
 	}
 }
 
-func (s *Server) handleStateEvents(
+func handleStateEvents(
 	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
