@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
+	github.com/MariusVanDerWijden/go-ethereum v1.8.22 // indirect
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
@@ -126,7 +127,7 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/terencechain/go-ethereum v1.8.22-0.20211007004120-6cf5a4c0ff12
+replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20211009100437-ac736f93f769
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 

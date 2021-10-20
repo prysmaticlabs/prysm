@@ -6,12 +6,15 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/eth/catalyst"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -84,11 +87,44 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	if err != nil {
 		return nil, err
 	}
+
 	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, parentHash, uint64(t.Unix()), random, params.BeaconConfig().FeeRecipient.Bytes())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
+	data, err := vs.ExecutionEngineCaller.GetPayload(ctx, id)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload")
+	}
+
+	return executableDataToExecutionPayload(data), nil
+}
+
+
+func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.ExecutionPayload {
+	txs := make([]*ethpb.Transaction, len(ed.Transactions))
+	for i, t := range ed.Transactions {
+		txs[i] = &ethpb.Transaction{
+			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{OpaqueTransaction: t},
+		}
+	}
+
+	return &ethpb.ExecutionPayload{
+		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
+		Coinbase:      bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
+		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
+		ReceiptRoot:   bytesutil.PadTo(ed.ReceiptRoot.Bytes(), 32),
+		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),
+		Random:        bytesutil.PadTo(ed.Random.Bytes(), 32),
+		BlockNumber:   ed.Number,
+		GasLimit:      ed.GasLimit,
+		GasUsed:       ed.GasUsed,
+		Timestamp:     ed.Timestamp,
+		ExtraData:     ed.ExtraData,
+		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
+		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
+		Transactions:  txs,
+	}
 }
 
 // This returns the valid terminal block hash with an existence bool value.
@@ -137,11 +173,11 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
 	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock()
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "could not get latest execution block")
 	}
 	parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "could not get parent execution block")
 	}
 	if parentBlk == nil {
 		return nil, false, nil
