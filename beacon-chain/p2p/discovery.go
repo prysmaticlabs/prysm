@@ -453,14 +453,7 @@ func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 }
 
 func multiAddrFromString(address string) (ma.Multiaddr, error) {
-	addr, err := peer.AddrInfoFromString(address)
-	if err != nil {
-		return nil, err
-	}
-	if len(addr.Addrs) == 0 {
-		return nil, nil
-	}
-	return addr.Addrs[0], nil
+	return ma.NewMultiaddr(address)
 }
 
 func udpVersionFromIP(ipAddr net.IP) string {
