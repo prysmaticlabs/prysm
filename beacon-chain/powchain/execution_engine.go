@@ -46,9 +46,9 @@ type PayloadIDRespond struct {
 }
 
 type PreparePayloadRespond struct {
-	JsonRPC   string `json:"jsonrpc"`
-	Result PayloadIDRespond `json:"result"`
-	Id        int    `json:"id"`
+	JsonRPC string           `json:"jsonrpc"`
+	Result  PayloadIDRespond `json:"result"`
+	Id      int              `json:"id"`
 }
 
 func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
@@ -340,8 +340,8 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash [
 		JsonRPC: "2.0",
 		Method:  "engine_forkchoiceUpdated",
 		Params: []interface{}{catalyst.ForkChoiceParams{
-			HeadBlockHash:      common.HexToHash(string(headBlockHash)),
-			FinalizedBlockHash: common.HexToHash(string(finalizedBlockHash)),
+			HeadBlockHash:      common.BytesToHash(headBlockHash),
+			FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
 		}},
 	}
 	enc, err := json.Marshal(reqBody)
