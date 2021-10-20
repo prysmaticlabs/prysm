@@ -2,6 +2,7 @@ package altair
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -60,6 +61,21 @@ func TestInitializeEpochValidators_Ok(t *testing.T) {
 		ActivePrevEpoch:    200,
 	}
 	assert.DeepEqual(t, wantedBalances, b, "Incorrect wanted balance")
+}
+
+func TestInitializeEpochValidators_Overflow(t *testing.T) {
+	ffe := params.BeaconConfig().FarFutureEpoch
+	s, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Validators: []*ethpb.Validator{
+			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: math.MaxUint64},
+			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: math.MaxUint64},
+		},
+		InactivityScores: []uint64{0, 1},
+	})
+	require.NoError(t, err)
+	_, _, err = InitializePrecomputeValidators(context.Background(), s)
+	require.ErrorContains(t, "could not read every validator: addition overflows", err)
 }
 
 func TestInitializeEpochValidators_BadState(t *testing.T) {
