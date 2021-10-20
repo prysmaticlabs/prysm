@@ -99,7 +99,7 @@ func (vs *Server) deposits(
 	}
 
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		log.Warn("not connected to execution, no pending deposits to report")
+		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
 	}
 	// Need to fetch if the deposits up to the state's latest eth1 data matches
