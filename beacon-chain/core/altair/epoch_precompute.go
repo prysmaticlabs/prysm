@@ -42,12 +42,18 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 		// Set validator's active status for current epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			v.IsActiveCurrentEpoch = true
-			bal.ActiveCurrentEpoch += val.EffectiveBalance()
+			bal.ActiveCurrentEpoch, err = math.Add64(bal.ActiveCurrentEpoch, val.EffectiveBalance())
+			if err != nil {
+				return err
+			}
 		}
 		// Set validator's active status for preivous epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			v.IsActivePrevEpoch = true
-			bal.ActivePrevEpoch += val.EffectiveBalance()
+			bal.ActivePrevEpoch, err = math.Add64(bal.ActivePrevEpoch, val.EffectiveBalance())
+			if err != nil {
+				return err
+			}
 		}
 		vals[idx] = v
 		return nil
