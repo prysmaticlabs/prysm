@@ -11,7 +11,6 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -22,8 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -208,23 +209,43 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}, nil
 }
 
-// GenerateMnemonic creates a new, random bip39 mnemonic phrase.
-func (s *Server) GenerateMnemonic(_ context.Context, _ *empty.Empty) (*pb.GenerateMnemonicResponse, error) {
-	mnemonicRandomness := make([]byte, 32)
-	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
-		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"Could not initialize mnemonic source of randomness: %v",
-			err,
-		)
+// ValidateKeystores checks whether a set of EIP-2335 keystores in the request
+// can indeed be decrypted using a password in the request. If there is no issue,
+// we return an empty response with no error. If the password is incorrect for a single keystore,
+// we return an appropriate error.
+func (s *Server) ValidateKeystores(
+	ctx context.Context, req *pb.ValidateKeystoresRequest,
+) (*emptypb.Empty, error) {
+	if req.KeystoresPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}
-	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not generate wallet seed: %v", err)
+	// Needs to unmarshal the keystores from the requests.
+	if req.Keystores == nil || len(req.Keystores) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores included in request")
 	}
-	return &pb.GenerateMnemonicResponse{
-		Mnemonic: mnemonic,
-	}, nil
+	decryptor := keystorev4.New()
+	for i := 0; i < len(req.Keystores); i++ {
+		encoded := req.Keystores[i]
+		keystore := &keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+		}
+		if _, err := decryptor.Decrypt(keystore.Crypto, req.KeystoresPassword); err != nil {
+			doesNotDecrypt := strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
+			if doesNotDecrypt {
+				return nil, status.Errorf(
+					codes.InvalidArgument,
+					"Password for keystore with public key %s is incorrect. "+
+						"Prysm web only supports importing batches of keystores with the same password for all of them",
+					keystore.Pubkey,
+				)
+			} else {
+				return nil, status.Errorf(codes.Internal, "Unexpected error decrypting keystore: %v", err)
+			}
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // ImportKeystores allows importing new keystores via RPC into the wallet

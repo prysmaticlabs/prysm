@@ -26,14 +26,15 @@ service Wallet {
             get: "/v2/validator/wallet"
         };
     }
-    rpc GenerateMnemonic(google.protobuf.Empty) returns (GenerateMnemonicResponse) {
-        option (google.api.http) = {
-            get: "/v2/validator/mnemonic/generate"
-        };
-    }
     rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/import",
+            body: "*"
+        };
+    }
+    rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/keystores/validate",
             body: "*"
         };
     }
@@ -246,6 +247,14 @@ message RecoverWalletRequest {
     string wallet_password = 3;
     string language = 4;
     string mnemonic25th_word = 5;
+}
+
+message ValidateKeystoresRequest {
+    // JSON-encoded keystore files to validate.
+    repeated string keystores = 1;
+
+    // Password for the keystore files.
+    string keystores_password = 2;
 }
 
 message ListAccountsRequest {
