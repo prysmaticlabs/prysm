@@ -286,7 +286,7 @@ func (v *validator) preparePandoraShardingInfo(
 func sealHash(header *eth1Types.Header) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 
-	enc := []interface{}{
+	if err := rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
 		header.Coinbase,
@@ -300,11 +300,7 @@ func sealHash(header *eth1Types.Header) (hash common.Hash) {
 		header.GasUsed,
 		header.Time,
 		header.Extra,
-	}
-	if header.BaseFee != nil {
-		enc = append(enc, header.BaseFee)
-	}
-	if err := rlp.Encode(hasher, enc); err != nil {
+	}); err != nil {
 		return eth1Types.EmptyRootHash
 	}
 	hasher.Sum(hash[:0])
