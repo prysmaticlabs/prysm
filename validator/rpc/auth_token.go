@@ -180,7 +180,7 @@ func createRandomJWTSecret() ([]byte, error) {
 		return nil, err
 	}
 	if n != len(jwtKey) {
-		return nil, errors.New("could not create appropriately sized random JWT key")
+		return nil, errors.New("could not create appropriately sized random JWT secret")
 	}
 	return jwtKey, nil
 }
