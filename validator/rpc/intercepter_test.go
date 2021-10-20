@@ -23,7 +23,7 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	}
-	token, _, err := s.createTokenString()
+	token, _, err := createTokenString(s.jwtKey)
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {"Bearer " + token},
@@ -50,7 +50,7 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	badServer := Server{
 		jwtKey: []byte("badTestKey"),
 	}
-	token, _, err := badServer.createTokenString()
+	token, _, err := createTokenString(badServer.jwtKey)
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {"Bearer " + token},

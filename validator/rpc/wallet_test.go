@@ -37,11 +37,6 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
 	}
-	_, err := s.Signup(ctx, &pb.AuthRequest{
-		Password:             strongPass,
-		PasswordConfirmation: strongPass,
-	})
-	require.NoError(t, err)
 	req := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
@@ -49,7 +44,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err = s.CreateWallet(ctx, req)
+	_, err := s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
 	importReq := &pb.ImportKeystoresRequest{
