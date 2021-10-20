@@ -62,6 +62,11 @@ func TestGetAttesterDuties(t *testing.T) {
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
+	// Deactivate last validator.
+	vals := bs.Validators()
+	vals[len(vals)-1].ExitEpoch = 0
+	require.NoError(t, bs.SetValidators(vals))
+
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
@@ -87,13 +92,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(2), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(7), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(0), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(123), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(171), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Multiple validators", func(t *testing.T) {
@@ -116,13 +121,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(38), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(0), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(62), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(27), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(170), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -193,6 +198,16 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "Invalid validator index", err)
 	})
+
+	t.Run("Inactive validator - no duties", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys) - 1)},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(resp.Data))
+	})
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
@@ -255,8 +270,8 @@ func TestGetProposerDuties(t *testing.T) {
 			}
 		}
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -1137,7 +1152,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		require.NoError(t, err)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(4), subnets[0])
 	})
 
 	t.Run("Multiple subscriptions", func(t *testing.T) {
@@ -1346,13 +1361,27 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		assert.ErrorContains(t, "Epoch for subscription at index 0 is in the past", err)
 	})
 
+	t.Run("First epoch after the next sync committee is valid", func(t *testing.T) {
+		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
+			Data: []*ethpbv2.SyncCommitteeSubscription{
+				{
+					ValidatorIndex:       0,
+					SyncCommitteeIndices: []uint64{},
+					UntilEpoch:           2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+				},
+			},
+		}
+		_, err = vs.SubmitSyncCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+	})
+
 	t.Run("Epoch too far in the future", func(t *testing.T) {
 		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
 			Data: []*ethpbv2.SyncCommitteeSubscription{
 				{
 					ValidatorIndex:       0,
 					SyncCommitteeIndices: []uint64{},
-					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 2,
+					UntilEpoch:           2*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1,
 				},
 			},
 		}
