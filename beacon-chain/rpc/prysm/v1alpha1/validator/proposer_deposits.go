@@ -127,21 +127,21 @@ func (vs *Server) deposits(
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
+		// Don't try to pack more than the max allowed in a block
+		if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
+			break
+		}
 	}
 
 	for i := range pendingDeps {
-		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
-		if uint64(i) == params.BeaconConfig().MaxDeposits {
-			break
-		}
 		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
 		if err != nil {
 			return nil, err
 		}
 	}
-	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+
 	var pendingDeposits []*ethpb.Deposit
-	for i := uint64(0); i < uint64(len(pendingDeps)) && i < params.BeaconConfig().MaxDeposits; i++ {
+	for i := uint64(0); i < uint64(len(pendingDeps)); i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
