@@ -810,9 +810,9 @@ def prysm_deps():
             "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
         ],
         importpath = "github.com/ethereum/go-ethereum",
-        replace = "github.com/terencechain/go-ethereum",
-        sum = "h1:dMZDT697agXO+u/HGXqwgG5SahINXzlmdipyFlVhmOY=",
-        version = "v1.8.22-0.20211007004120-6cf5a4c0ff12",
+        replace = "github.com/MariusVanDerWijden/go-ethereum",
+        sum = "h1:g03gYn8+D7jdkfHV9McRuaZgsaS3c0aFY1TZU9NzbKk=",
+        version = "v1.8.22-0.20211009100437-ac736f93f769",
     )
 
     go_repository(
@@ -2345,6 +2345,13 @@ def prysm_deps():
         sum = "h1:3l11YT8tm9MnwGFQ4kETwkzpAwY2Jt9lCrumCUW4+z4=",
         version = "v0.7.0",
     )
+    go_repository(
+        name = "com_github_mariusvanderwijden_go_ethereum",
+        importpath = "github.com/MariusVanDerWijden/go-ethereum",
+        sum = "h1:j2R6y0tNv7FuFx+dVM85+FXcRKgUILd7z8q/X20eNBE=",
+        version = "v1.8.22",
+    )
+
     go_repository(
         name = "com_github_marten_seemann_qpack",
         importpath = "github.com/marten-seemann/qpack",

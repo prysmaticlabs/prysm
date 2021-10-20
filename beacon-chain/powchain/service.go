@@ -153,7 +153,6 @@ type Service struct {
 	runError                error
 	preGenesisState         state.BeaconState
 	bsUpdater               BeaconNodeStatsUpdater
-	catalystClient          CatalystClient
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -474,7 +473,6 @@ func (s *Service) initializeConnection(
 ) {
 	s.httpLogger = httpClient
 	s.eth1DataFetcher = httpClient
-	s.catalystClient = httpClient
 	s.depositContractCaller = contractCaller
 	s.rpcClient = rpcClient
 }

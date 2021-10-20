@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth/catalyst"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -122,9 +124,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return errors.Wrap(err, "could not get body execution payload")
 			}
-
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, payload); err != nil {
+			if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload)); err != nil {
 				return errors.Wrap(err, "could not execute payload")
 			}
 			// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
@@ -141,11 +142,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				if err != nil {
 					return errors.Wrap(err, "could not get body execution payload")
 				}
-				transitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, common.BytesToHash(payload.ParentHash))
+				transitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(common.BytesToHash(payload.ParentHash))
 				if err != nil {
 					return errors.Wrap(err, "could not get transition block")
 				}
-				parentTransitionBlk, err := s.cfg.BlockFetcher.BlockByHash(ctx, transitionBlk.ParentHash())
+				parentTransitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(transitionBlk.ParentHash))
 				if err != nil {
 					return errors.Wrap(err, "could not get transition parent block")
 				}
@@ -576,14 +577,50 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 //    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
 //    return is_total_difficulty_reached and is_parent_total_difficulty_valid
-func validateTerminalBlock(transitionBlock *gethTypes.Block, transitionParentBlock *gethTypes.Block) bool {
-	if transitionBlock.Hash() == params.BeaconConfig().TerminalBlockHash {
+func validateTerminalBlock(transitionBlock *powchain.ExecutionBlock, transitionParentBlock *powchain.ExecutionBlock) bool {
+
+	if transitionBlock.Hash == params.BeaconConfig().TerminalBlockHash.String() {
 		return true
 	}
-	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetUint64(params.BeaconConfig().TerminalTotalDifficulty)
+	terminalTotalDifficulty := uint256.NewInt(params.BeaconConfig().TerminalTotalDifficulty)
 
-	totalDifficultyReached := transitionBlock.TotalDifficulty().Cmp(terminalTotalDifficulty) >= 0
-	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlock.TotalDifficulty()) >= 0
+	transitionBlkTTD, err := uint256.FromHex(transitionBlock.TotalDifficulty)
+	if err != nil {
+		return false
+	}
+	transitionParentBlkTTD, err := uint256.FromHex(transitionParentBlock.TotalDifficulty)
+	if err != nil {
+		return false
+	}
+
+	totalDifficultyReached := transitionBlkTTD.Cmp(terminalTotalDifficulty) >= 0
+	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlkTTD) >= 0
 	return totalDifficultyReached && parentTotalDifficultyValid
+}
+
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableData {
+	txs := make([][]byte, len(payload.Transactions))
+	for i, t := range payload.Transactions {
+		txs[i] = t.GetOpaqueTransaction()
+	}
+	baseFeePerGas := new(big.Int)
+	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
+	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
+
+	return &catalyst.ExecutableData{
+		BlockHash:     common.BytesToHash(payload.BlockHash),
+		ParentHash:    common.BytesToHash(payload.ParentHash),
+		Coinbase:      common.BytesToAddress(payload.Coinbase),
+		StateRoot:     common.BytesToHash(payload.StateRoot),
+		ReceiptRoot:   common.BytesToHash(payload.ReceiptRoot),
+		LogsBloom:     payload.LogsBloom,
+		Random:        common.BytesToHash(payload.Random),
+		Number:        payload.BlockNumber,
+		GasLimit:      payload.GasLimit,
+		GasUsed:       payload.GasUsed,
+		Timestamp:     payload.Timestamp,
+		ExtraData:     payload.ExtraData,
+		BaseFeePerGas: baseFeePerGas,
+		Transactions:  txs,
+	}
 }
