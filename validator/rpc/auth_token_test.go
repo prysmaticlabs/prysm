@@ -62,17 +62,16 @@ func Test_initializeAuthToken(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir))
 	})
-	token, expr, err := srv.initializeAuthToken(walletDir)
+	token, _, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtKey) > 0)
 
 	// Initializing second time, we generate something from the initial file.
 	srv2 := &Server{}
-	token2, expr2, err := srv2.initializeAuthToken(walletDir)
+	token2, _, err := srv2.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(srv.jwtKey, srv2.jwtKey))
 	require.Equal(t, token, token2)
-	require.Equal(t, expr, expr2)
 
 	// Deleting the auth token and re-initializing means we create a jwt token
 	// and secret from scratch again.
@@ -83,5 +82,4 @@ func Test_initializeAuthToken(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtKey) > 0)
 	require.NotEqual(t, token, token3)
-	require.NotEqual(t, expr, expr3)
 }
