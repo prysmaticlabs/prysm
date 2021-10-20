@@ -94,7 +94,12 @@ func (vs *Server) deposits(
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
 	defer span.End()
 
-	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if vs.MockEth1Votes {
+		return []*ethpb.Deposit{}, nil
+	}
+
+	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		log.Warn("not connected to execution, no pending deposits to report")
 		return []*ethpb.Deposit{}, nil
 	}
 	// Need to fetch if the deposits up to the state's latest eth1 data matches
@@ -112,6 +117,7 @@ func (vs *Server) deposits(
 	// If there are no pending deposits, exit early.
 	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
 	if len(allPendingContainers) == 0 {
+		log.Debug("deposits(): no pending deposits")
 		return []*ethpb.Deposit{}, nil
 	}
 
