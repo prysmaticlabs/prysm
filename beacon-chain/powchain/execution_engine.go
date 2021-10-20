@@ -51,92 +51,10 @@ type PreparePayloadRespond struct {
 	Id      int              `json:"id"`
 }
 
-func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
-	reqBody := &EngineRequest{
-		JsonRPC: "2.0",
-		Method:  "engine_preparePayload",
-		Params: []interface{}{catalyst.AssembleBlockParams{
-			ParentHash:   common.BytesToHash(parentHash),
-			Timestamp:    timeStamp,
-			Random:       common.BytesToHash(random),
-			FeeRecipient: common.BytesToAddress(feeRecipient),
-		}},
-	}
-	enc, err := json.Marshal(reqBody)
-	if err != nil {
-		return 0, err
-	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer func() {
-		if err := res.Body.Close(); err != nil {
-			panic(err)
-		}
-	}()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return 0, err
-	}
-	var respond PreparePayloadRespond
-	if err := json.Unmarshal(body, &respond); err != nil {
-		return 0, err
-	}
-	id, ok := math.ParseUint64(respond.Result.PayloadID)
-	if !ok {
-		return 0, errors.New("could not parse hex to uint64")
-	}
-	return id, nil
-}
-
 type GetPayloadRespond struct {
 	JsonRPC        string                   `json:"jsonrpc"`
 	ExecutableData *catalyst.ExecutableData `json:"result"`
 	Id             int                      `json:"id"`
-}
-
-func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableData, error) {
-	reqBody := &EngineRequest{
-		JsonRPC: "2.0",
-		Method:  "engine_getPayload",
-		Params:  []interface{}{hexutil.EncodeUint64(payloadID)},
-	}
-	enc, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := res.Body.Close(); err != nil {
-			panic(err)
-		}
-	}()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	var respond GetPayloadRespond
-	if err := json.Unmarshal(body, &respond); err != nil {
-		return nil, err
-	}
-
-	return respond.ExecutableData, nil
 }
 
 type ExecutePayloadRespond struct {
@@ -183,6 +101,96 @@ type ExecutionBlock struct {
 	Hash             string   `json:"hash"`
 	Transactions     []string `json:"transactions"`
 	Uncles           []string `json:"uncles"`
+}
+
+// PreparePayload initiates a process of building an execution payload on top of the execution chain tip by parent hash.
+// it returns an uint64 payload id that is used to obtain the execution payload in a subsequent `GetPayload` call.
+// Engine API definition:
+//  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_preparepayload
+func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error) {
+	reqBody := &EngineRequest{
+		JsonRPC: "2.0",
+		Method:  "engine_preparePayload",
+		Params: []interface{}{catalyst.AssembleBlockParams{
+			ParentHash:   common.BytesToHash(parentHash),
+			Timestamp:    timeStamp,
+			Random:       common.BytesToHash(random),
+			FeeRecipient: common.BytesToAddress(feeRecipient),
+		}},
+	}
+	enc, err := json.Marshal(reqBody)
+	if err != nil {
+		return 0, err
+	}
+	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, err
+	}
+	var respond PreparePayloadRespond
+	if err := json.Unmarshal(body, &respond); err != nil {
+		return 0, err
+	}
+	id, ok := math.ParseUint64(respond.Result.PayloadID)
+	if !ok {
+		return 0, errors.New("could not parse hex to uint64")
+	}
+	return id, nil
+}
+
+// GetPayload returns the most recent version of the execution payload that has been built since the corresponding
+// call to `PreparePayload` method. It returns the `ExecutionPayload` object.
+// Engine API definition:
+//  https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_getpayload
+func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableData, error) {
+	reqBody := &EngineRequest{
+		JsonRPC: "2.0",
+		Method:  "engine_getPayload",
+		Params:  []interface{}{hexutil.EncodeUint64(payloadID)},
+	}
+	enc, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var respond GetPayloadRespond
+	if err := json.Unmarshal(body, &respond); err != nil {
+		return nil, err
+	}
+
+	return respond.ExecutableData, nil
 }
 
 func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
@@ -257,6 +265,9 @@ func (s *Service) ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, 
 	return data.Result, nil
 }
 
+// ExecutePayload executes execution payload by calling execution engine.
+// Engine API definition:
+// 	https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_executepayload
 func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableData) error {
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
@@ -300,6 +311,13 @@ func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableD
 	return nil
 }
 
+// NotifyConsensusValidated notifies execution engine on the result of beacon state transition.
+// Per definition, consensus engine must notify execution engine after `state_transition` function finishes.
+// The value of valid parameters must be set as follows:
+// -True if state_transition function call succeeds
+// -False if state_transition function call fails
+// Engine API definition:
+// 	https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#notify_consensus_validated
 func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error {
 	validString := "INVALID"
 	if valid {
@@ -335,6 +353,9 @@ func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte
 	return nil
 }
 
+// NotifyForkChoiceValidated notifies execution engine on fork choice updates.
+// Engine API definition:
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_forkchoiceupdated
 func (s *Service) NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error {
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
