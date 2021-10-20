@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -12,7 +11,6 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -213,17 +211,4 @@ func (s *Server) Stop() error {
 // Status returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
-}
-
-func createRandomJWTKey() ([]byte, error) {
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	n, err := r.Read(jwtKey)
-	if err != nil {
-		return nil, err
-	}
-	if n != len(jwtKey) {
-		return nil, errors.New("could not create appropriately sized random JWT key")
-	}
-	return jwtKey, nil
 }

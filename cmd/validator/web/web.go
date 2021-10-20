@@ -8,11 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "web")
 
 // Commands for managing Prysm validator accounts.
 var Commands = &cli.Command{
@@ -21,7 +18,7 @@ var Commands = &cli.Command{
 	Usage:    "defines commands for interacting with the Prysm web interface",
 	Subcommands: []*cli.Command{
 		{
-			Name:        "auth-token",
+			Name:        "generate-auth-token",
 			Description: `Generate an authentication token for the Prysm web interface`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,

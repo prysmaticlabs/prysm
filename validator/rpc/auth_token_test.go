@@ -83,5 +83,5 @@ func Test_initializeAuthToken(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtKey) > 0)
 	require.NotEqual(t, token, token3)
-	require.NotEqual(t, token, expr3)
+	require.NotEqual(t, expr, expr3)
 }

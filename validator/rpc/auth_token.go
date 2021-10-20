@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -35,7 +37,7 @@ const (
 // to a file in the specified directory. Also, it logs out a prepared URL
 // for the user to navigate to and authenticate with the Prysm web interface.
 func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
-	jwtKey, err := createRandomJWTKey()
+	jwtKey, err := createRandomJWTSecret()
 	if err != nil {
 		return err
 	}
@@ -45,8 +47,11 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	}
 	authTokenPath := filepath.Join(walletDirPath, authTokenFileName)
 	log.Infof("Generating auth token and saving it to %s", authTokenPath)
+	if err := saveAuthToken(walletDirPath, jwtKey, token, expr); err != nil {
+		return err
+	}
 	logValidatorWebAuth(validatorWebAddr, token, expr)
-	return saveAuthToken(walletDirPath, jwtKey, token, expr)
+	return nil
 }
 
 // Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
@@ -100,7 +105,7 @@ func (s *Server) initializeAuthToken(walletDir string) (string, uint64, error) {
 		s.jwtKey = jwtKey
 		return strings.TrimSpace(token), expiration, nil
 	}
-	jwtKey, err := createRandomJWTKey()
+	jwtKey, err := createRandomJWTSecret()
 	if err != nil {
 		return "", 0, err
 	}
@@ -165,4 +170,17 @@ func createTokenString(jwtKey []byte) (string, uint64, error) {
 		return "", 0, err
 	}
 	return tokenString, uint64(expirationTime.Unix()), nil
+}
+
+func createRandomJWTSecret() ([]byte, error) {
+	r := rand.NewGenerator()
+	jwtKey := make([]byte, 32)
+	n, err := r.Read(jwtKey)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(jwtKey) {
+		return nil, errors.New("could not create appropriately sized random JWT key")
+	}
+	return jwtKey, nil
 }
