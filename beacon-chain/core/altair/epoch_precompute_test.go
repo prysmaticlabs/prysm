@@ -136,8 +136,10 @@ func TestProcessEpochParticipation(t *testing.T) {
 func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
+		var err error
 		for _, flag := range flags {
-			b = AddValidatorFlag(b, flag)
+			b, err = AddValidatorFlag(b, flag)
+			require.NoError(t, err)
 		}
 		return b
 	}
@@ -411,8 +413,12 @@ func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
 func testState() (state.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
+		var err error
 		for _, flag := range flags {
-			b = AddValidatorFlag(b, flag)
+			b, err = AddValidatorFlag(b, flag)
+			if err != nil {
+				return 0
+			}
 		}
 		return b
 	}
