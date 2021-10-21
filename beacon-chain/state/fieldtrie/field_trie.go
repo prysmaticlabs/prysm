@@ -106,13 +106,21 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
+		// We remove the duplicates here in order to prevent
+		// duplicated insertions into the trie.
 		newIndices := []uint64{}
-		for _, idx := range indices {
+		indexExists := make(map[uint64]bool)
+		newRoots := make([][32]byte, 0, len(fieldRoots)/int(numOfElems))
+		for i, idx := range indices {
 			startIdx := idx / numOfElems
+			if indexExists[startIdx] {
+				continue
+			}
 			newIndices = append(newIndices, startIdx)
+			indexExists[startIdx] = true
+			newRoots = append(newRoots, fieldRoots[i])
 		}
-		// TODO:Remove duplicate indexes.
-		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, newIndices, f.fieldLayers)
+		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(newRoots, newIndices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}

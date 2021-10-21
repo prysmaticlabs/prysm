@@ -166,17 +166,27 @@ func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]
 		return balancesChunks, nil
 	}
 	if len(val) > 0 {
+		numOfElems, err := types.Balances.CompressedLength()
+		if err != nil {
+			return nil, err
+		}
 		roots := [][32]byte{}
 		for _, idx := range indices {
-			startIdx := idx / 4
-			startGroup := startIdx * 4
+			// We split the indexes into their relevant groups. Balances
+			// are compressed according to 4 values -> 1 chunk.
+			startIdx := idx / numOfElems
+			startGroup := startIdx * numOfElems
 			chunk := [32]byte{}
-			for i, j := 0, startGroup; j < startGroup+4; i, j = i+8, j+1 {
+			sizeOfElem := len(chunk) / int(numOfElems)
+			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
 				wantedVal := uint64(0)
+				// We only select from a field value, if the
+				// index exists in our element list. If it doesn't
+				// we assume a zero value.
 				if int(j) < len(val) {
 					wantedVal = val[j]
 				}
-				binary.LittleEndian.PutUint64(chunk[i:i+8], wantedVal)
+				binary.LittleEndian.PutUint64(chunk[i:i+sizeOfElem], wantedVal)
 			}
 			roots = append(roots, chunk)
 		}
