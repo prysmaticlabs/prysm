@@ -169,9 +169,14 @@ func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]
 		roots := [][32]byte{}
 		for _, idx := range indices {
 			startIdx := idx / 4
+			startGroup := startIdx * 4
 			chunk := [32]byte{}
-			for i, j := 0, startIdx; j < startIdx+4; i, j = i+1, j+1 {
-				binary.LittleEndian.PutUint64(chunk[i:i+8], val[j])
+			for i, j := 0, startGroup; j < startGroup+4; i, j = i+8, j+1 {
+				wantedVal := uint64(0)
+				if int(j) < len(val) {
+					wantedVal = val[j]
+				}
+				binary.LittleEndian.PutUint64(chunk[i:i+8], wantedVal)
 			}
 			roots = append(roots, chunk)
 		}
