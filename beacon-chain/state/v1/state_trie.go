@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -319,26 +320,28 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		if b.rebuildTrie[field] {
-			// This chunk of code is ugly,ngmi
-			maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
-			elemSize := uint64(8)
-			balLimit := (maxBalCap*elemSize + 31) / 32
-			if balLimit == 0 {
-				if len(b.state.Balances) == 0 {
-					balLimit = 1
-				} else {
-					balLimit = uint64(len(b.state.Balances))
+		if features.Get().EnableBalanceTrieComputation {
+			if b.rebuildTrie[field] {
+				maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+				elemSize := uint64(8)
+				balLimit := (maxBalCap*elemSize + 31) / 32
+				if balLimit == 0 {
+					if len(b.state.Balances) == 0 {
+						balLimit = 1
+					} else {
+						balLimit = uint64(len(b.state.Balances))
+					}
 				}
+				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
 			}
-			err := b.resetFieldTrie(field, b.state.Balances, balLimit)
-			if err != nil {
-				return [32]byte{}, err
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
+			return b.recomputeFieldTrie(balances, b.state.Balances)
 		}
-		return b.recomputeFieldTrie(balances, b.state.Balances)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))

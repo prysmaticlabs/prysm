@@ -52,6 +52,7 @@ type Flags struct {
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
 	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
+	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -222,6 +223,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableBatchGossipVerification.Name) {
 		logEnabled(enableBatchGossipVerification)
 		cfg.EnableBatchVerification = true
+	}
+	if ctx.Bool(enableBalanceTrieComputation.Name) {
+		logEnabled(enableBalanceTrieComputation)
+		cfg.EnableBalanceTrieComputation = true
 	}
 	Init(cfg)
 }
