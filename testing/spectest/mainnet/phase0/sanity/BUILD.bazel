@@ -5,11 +5,15 @@ go_test(
     size = "medium",
     srcs = [
         "blocks_test.go",
+        "sanity_test.go",
         "slots_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],
-    deps = ["//testing/spectest/shared/phase0/sanity:go_default_library"],
+    deps = [
+        "//config/features:go_default_library",
+        "//testing/spectest/shared/phase0/sanity:go_default_library",
+    ],
 )
