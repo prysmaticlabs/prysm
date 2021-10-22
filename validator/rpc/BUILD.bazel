@@ -44,6 +44,7 @@ go_library(
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format:go_default_library",
+        "@com_github_fsnotify_fsnotify//:go_default_library",
         "@com_github_golang_jwt_jwt//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
