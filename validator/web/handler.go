@@ -11,6 +11,7 @@ const prefix = "external/prysm_web_ui/prysm-web-ui"
 
 // Handler serves web requests from the bundled site data.
 var Handler = func(res http.ResponseWriter, req *http.Request) {
+	addSecurityHeaders(res)
 	u, err := url.ParseRequestURI(req.RequestURI)
 	if err != nil {
 		log.WithError(err).Error("Cannot parse request URI")

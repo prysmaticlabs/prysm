@@ -30,14 +30,14 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
 	atts := []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, 96)},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(atts))
 	require.Equal(t, 2, s.cfg.Pool.UnaggregatedAttestationCount(), "Unexpected number of attestations")
 	atts = []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, 96)},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(atts))
 	assert.Equal(t, 2, s.cfg.Pool.AggregatedAttestationCount())

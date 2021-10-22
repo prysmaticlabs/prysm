@@ -11,26 +11,26 @@ import (
 
 // MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
 type MuxConfig struct {
-	Handler       gateway.MuxHandler
-	EthPbMux      *gateway.PbMux
-	V1Alpha1PbMux *gateway.PbMux
+	Handler      gateway.MuxHandler
+	EthPbMux     *gateway.PbMux
+	V1AlphaPbMux *gateway.PbMux
 }
 
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
 func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
-	var v1Alpha1PbHandler, ethPbHandler *gateway.PbMux
+	var v1AlphaPbHandler, ethPbHandler *gateway.PbMux
 	if flags.EnableHTTPPrysmAPI(httpModules) {
-		v1Alpha1Registrations := []gateway.PbHandlerRegistration{
+		v1AlphaRegistrations := []gateway.PbHandlerRegistration{
 			ethpbalpha.RegisterNodeHandler,
 			ethpbalpha.RegisterBeaconChainHandler,
 			ethpbalpha.RegisterBeaconNodeValidatorHandler,
 			ethpbalpha.RegisterHealthHandler,
 		}
 		if enableDebugRPCEndpoints {
-			v1Alpha1Registrations = append(v1Alpha1Registrations, ethpbalpha.RegisterDebugHandler)
+			v1AlphaRegistrations = append(v1AlphaRegistrations, ethpbalpha.RegisterDebugHandler)
 
 		}
-		v1Alpha1Mux := gwruntime.NewServeMux(
+		v1AlphaMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 				Marshaler: &gwruntime.JSONPb{
 					MarshalOptions: protojson.MarshalOptions{
@@ -45,10 +45,10 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 				"text/event-stream", &gwruntime.EventSourceJSONPb{},
 			),
 		)
-		v1Alpha1PbHandler = &gateway.PbMux{
-			Registrations: v1Alpha1Registrations,
-			Patterns:      []string{"/eth/v1alpha1/"},
-			Mux:           v1Alpha1Mux,
+		v1AlphaPbHandler = &gateway.PbMux{
+			Registrations: v1AlphaRegistrations,
+			Patterns:      []string{"/eth/v1alpha1/", "/eth/v1alpha2/"},
+			Mux:           v1AlphaMux,
 		}
 	}
 	if flags.EnableHTTPEthAPI(httpModules) {
@@ -83,7 +83,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 	}
 
 	return MuxConfig{
-		EthPbMux:      ethPbHandler,
-		V1Alpha1PbMux: v1Alpha1PbHandler,
+		EthPbMux:     ethPbHandler,
+		V1AlphaPbMux: v1AlphaPbHandler,
 	}
 }

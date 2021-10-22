@@ -71,8 +71,12 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 			for _, st := range tt.preFilledSets {
 				svc.signatureChan <- &signatureVerifier{set: st, resChan: make(chan error, 10)}
 			}
-			if got := svc.validateWithBatchVerifier(context.Background(), tt.message, tt.set); got != tt.want {
+			got, err := svc.validateWithBatchVerifier(context.Background(), tt.message, tt.set)
+			if got != tt.want {
 				t.Errorf("validateWithBatchVerifier() = %v, want %v", got, tt.want)
+			}
+			if err != nil && tt.want == pubsub.ValidationAccept {
+				t.Errorf("Wanted no error but received: %v", err)
 			}
 			cancel()
 		})

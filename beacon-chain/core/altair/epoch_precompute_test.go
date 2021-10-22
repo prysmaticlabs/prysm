@@ -2,6 +2,7 @@ package altair
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -62,6 +63,21 @@ func TestInitializeEpochValidators_Ok(t *testing.T) {
 	assert.DeepEqual(t, wantedBalances, b, "Incorrect wanted balance")
 }
 
+func TestInitializeEpochValidators_Overflow(t *testing.T) {
+	ffe := params.BeaconConfig().FarFutureEpoch
+	s, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Validators: []*ethpb.Validator{
+			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: math.MaxUint64},
+			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: math.MaxUint64},
+		},
+		InactivityScores: []uint64{0, 1},
+	})
+	require.NoError(t, err)
+	_, _, err = InitializePrecomputeValidators(context.Background(), s)
+	require.ErrorContains(t, "could not read every validator: addition overflows", err)
+}
+
 func TestInitializeEpochValidators_BadState(t *testing.T) {
 	s, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Validators:       []*ethpb.Validator{{}},
@@ -120,8 +136,10 @@ func TestProcessEpochParticipation(t *testing.T) {
 func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
+		var err error
 		for _, flag := range flags {
-			b = AddValidatorFlag(b, flag)
+			b, err = AddValidatorFlag(b, flag)
+			require.NoError(t, err)
 		}
 		return b
 	}
@@ -395,8 +413,12 @@ func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
 func testState() (state.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
+		var err error
 		for _, flag := range flags {
-			b = AddValidatorFlag(b, flag)
+			b, err = AddValidatorFlag(b, flag)
+			if err != nil {
+				return 0
+			}
 		}
 		return b
 	}
