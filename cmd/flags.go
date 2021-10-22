@@ -36,7 +36,7 @@ var (
 	// DataDirFlag defines a path on disk.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases",
 		Value: DefaultDataDir(),
 	}
 	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
