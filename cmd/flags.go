@@ -33,7 +33,7 @@ var (
 		Usage: "Logging verbosity (trace, debug, info=default, warn, error, fatal, panic)",
 		Value: "info",
 	}
-	// DataDirFlag defines a path on disk.
+	// DataDirFlag defines a path on disk where Prysm databases are stored.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases",
