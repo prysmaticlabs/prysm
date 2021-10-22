@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -196,6 +197,8 @@ func (s *Server) Start() {
 	}
 	validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
 	logValidatorWebAuth(validatorWebAddr, token, expr)
+	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+	go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 }
 
 // Stop the gRPC server.
