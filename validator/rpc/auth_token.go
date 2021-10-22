@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -80,28 +81,6 @@ func (s *Server) initializeAuthToken(walletDir string) (string, uint64, error) {
 		if err != nil {
 			return "", 0, err
 		}
-		r := bufio.NewReader(f)
-		jwtKeyHex, err := r.ReadString('\n')
-		if err != nil {
-			return "", 0, err
-		}
-		jwtKey, err := hex.DecodeString(strings.TrimSpace(jwtKeyHex))
-		if err != nil {
-			return "", 0, err
-		}
-		token, err := r.ReadString('\n')
-		if err != nil {
-			return "", 0, err
-		}
-		exprBytes, _, err := r.ReadLine()
-		if err != nil {
-			return "", 0, err
-		}
-		exprIntStr := strings.TrimSpace(string(exprBytes))
-		expiration, err := strconv.ParseUint(exprIntStr, 10, 64)
-		if err != nil {
-			return "", 0, err
-		}
 		s.jwtKey = jwtKey
 		return strings.TrimSpace(token), expiration, nil
 	}
@@ -156,6 +135,38 @@ func saveAuthToken(walletDirPath string, jwtKey []byte, token string, expiration
 	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
 }
 
+func readAuthToken(r io.ReadCloser) (string, uint64, error) {
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Error(err)
+		}
+	}()
+	br := bufio.NewReader(r)
+	jwtKeyHex, err := br.ReadString('\n')
+	if err != nil {
+		return "", 0, err
+	}
+	jwtKey, err := hex.DecodeString(strings.TrimSpace(jwtKeyHex))
+	if err != nil {
+		return "", 0, err
+	}
+	token, err := br.ReadString('\n')
+	if err != nil {
+		return "", 0, err
+	}
+	exprBytes, _, err := br.ReadLine()
+	if err != nil {
+		return "", 0, err
+	}
+	exprIntStr := strings.TrimSpace(string(exprBytes))
+	expiration, err := strconv.ParseUint(exprIntStr, 10, 64)
+	if err != nil {
+		return "", 0, err
+	}
+	s.jwtKey = jwtKey
+	return strings.TrimSpace(token), expiration, nil
+}
+
 // Creates a JWT token string using the JWT key with an expiration timestamp.
 func createTokenString(jwtKey []byte) (string, uint64, error) {
 	// Create a new token object, specifying signing method and the claims
@@ -184,3 +195,82 @@ func createRandomJWTSecret() ([]byte, error) {
 	}
 	return jwtKey, nil
 }
+
+func (s *Server) refreshAuthTokenFromFileChanges() {
+	//
+	//accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
+	//if !file.FileExists(accountsFilePath) {
+	//	return
+	//}
+	//watcher, err := fsnotify.NewWatcher()
+	//if err != nil {
+	//	log.WithError(err).Error("Could not initialize file watcher")
+	//	return
+	//}
+	//defer func() {
+	//	if err := watcher.Close(); err != nil {
+	//		log.WithError(err).Error("Could not close file watcher")
+	//	}
+	//}()
+	//if err := watcher.Add(accountsFilePath); err != nil {
+	//	log.WithError(err).Errorf("Could not add file %s to file watcher", accountsFilePath)
+	//	return
+	//}
+	//ctx, cancel := context.WithCancel(ctx)
+	//defer cancel()
+	//fileChangesChan := make(chan interface{}, 100)
+	//defer close(fileChangesChan)
+	//
+	//// We debounce events sent over the file changes channel by an interval
+	//// to ensure we are not overwhelmed by a ton of events fired over the channel in
+	//// a short span of time.
+	//go async.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
+	//	ev, ok := event.(fsnotify.Event)
+	//	if !ok {
+	//		log.Errorf("Type %T is not a valid file system event", event)
+	//		return
+	//	}
+	//	fileBytes, err := ioutil.ReadFile(ev.Name)
+	//	if err != nil {
+	//		log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
+	//		return
+	//	}
+	//	if fileBytes == nil {
+	//		log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
+	//		return
+	//	}
+	//	accoun
+}
+
+//// Replaces the accounts store struct in the imported keymanager with
+//// the contents of a keystore file by decrypting it with the accounts password.
+//func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepresentation) error {
+//	decryptor := keystorev4.New()
+//	encodedAccounts, err := decryptor.Decrypt(keystore.Crypto, km.wallet.Password())
+//	if err != nil {
+//		return errors.Wrap(err, "could not decrypt keystore file")
+//	}
+//	newAccountsStore := &accountStore{}
+//	if err := json.Unmarshal(encodedAccounts, newAccountsStore); err != nil {
+//		return err
+//	}
+//	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
+//		return errors.New("number of public and private keys in keystore do not match")
+//	}
+//	pubKeys := make([][48]byte, len(newAccountsStore.PublicKeys))
+//	for i := 0; i < len(newAccountsStore.PrivateKeys); i++ {
+//		privKey, err := bls.SecretKeyFromBytes(newAccountsStore.PrivateKeys[i])
+//		if err != nil {
+//			return errors.Wrap(err, "could not initialize private key")
+//		}
+//		pubKeyBytes := privKey.PublicKey().Marshal()
+//		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
+//	}
+//	km.accountsStore = newAccountsStore
+//	if err := km.initializeKeysCachesFromKeystore(); err != nil {
+//		return err
+//	}
+//	log.Info(keymanager.KeysReloaded)
+//	km.accountsChangedFeed.Send(pubKeys)
+//	return nil
+//}
