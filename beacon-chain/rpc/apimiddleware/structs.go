@@ -332,7 +332,7 @@ type signedBeaconBlockContainerV2Json struct {
 type beaconBlockContainerV2Json struct {
 	Phase0Block *beaconBlockJson       `json:"phase0_block"`
 	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
-	MergeBlock  *beaconBlockAltairJson `json:"merge_block"`
+	MergeBlock  *beaconBlockMergeJson `json:"merge_block"`
 }
 
 type signedBeaconBlockAltairContainerJson struct {
