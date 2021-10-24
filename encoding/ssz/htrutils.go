@@ -3,7 +3,6 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -95,16 +94,8 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 func TransactionsRoot(txs []*ethpb.Transaction) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	listMarshaling := make([][]byte, 0)
-	//for i := 0; i < len(txs); i++ {
 	for _, txn := range txs {
-		tb := txn.GetOpaqueTransaction()
-		// a Transaction is a protobuf oneof type. If the value is a different type
-		// from the OpaqueTransaction type (aka byte slice) what we're expecting,
-		// the return value will be nil.
-		if tb == nil {
-			return [32]byte{}, fmt.Errorf("can't compute root of unrecognized ExecutionPayload Transaction type")
-		}
-		rt, err := transactionRoot(tb)
+		rt, err := txn.HashTreeRoot()
 		if err != nil {
 			return [32]byte{}, err
 		}
