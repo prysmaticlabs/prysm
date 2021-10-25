@@ -110,11 +110,11 @@ func (s *Server) initializeAuthToken(walletDir string) (string, uint64, error) {
 		return "", 0, err
 	}
 	s.jwtKey = jwtKey
-	token, expiration, err := createTokenString(s.jwtKey)
+	token, err := createTokenString(s.jwtKey)
 	if err != nil {
 		return "", 0, err
 	}
-	if err := saveAuthToken(walletDir, jwtKey, token, expiration); err != nil {
+	if err := saveAuthToken(walletDir, jwtKey, token); err != nil {
 		return "", 0, err
 	}
 	return token, expiration, nil
@@ -156,20 +156,15 @@ func saveAuthToken(walletDirPath string, jwtKey []byte, token string, expiration
 	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
 }
 
-// Creates a JWT token string using the JWT key with an expiration timestamp.
-func createTokenString(jwtKey []byte) (string, uint64, error) {
-	// Create a new token object, specifying signing method and the claims
-	// you would like it to contain.
-	expirationTime := prysmTime.Now().Add(tokenExpiryLength)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		ExpiresAt: expirationTime.Unix(),
-	})
+// Creates a JWT token string using the JWT key.
+func createTokenString(jwtKey []byte) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{})
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
-	return tokenString, uint64(expirationTime.Unix()), nil
+	return tokenString, nil
 }
 
 func createRandomJWTSecret() ([]byte, error) {
