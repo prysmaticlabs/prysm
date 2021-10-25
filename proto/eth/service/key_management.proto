@@ -1,0 +1,58 @@
+// Copyright 2020 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.service;
+
+import "google/api/annotations.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/v1/validator.proto";
+import "proto/eth/v2/validator.proto";
+
+option csharp_namespace = "Ethereum.Eth.Service";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option java_multiple_files = true;
+option java_outer_classname = "KeyManagementServiceProto";
+option java_package = "org.ethereum.eth.service";
+option php_namespace = "Ethereum\\Eth\\Service";
+
+// Validator Key Management Standard API
+//
+// The validator key management API is a set of endpoints to be used for keystore management in the validator client.
+//
+// This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/keystores).
+service KeyManagement {
+  // ListKeystores.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch or index
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ListKeystores(ListKeystoresRequest) returns (ListKeystoresResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/keystores"
+    };
+  }
+}
+
+message ListKeystoresRequest {
+  string name = 1;
+}
+
+message ListKeystoresResponse {
+  string name = 1;
+}

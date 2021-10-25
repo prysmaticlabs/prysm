@@ -34,7 +34,7 @@ option php_namespace = "Ethereum\\Eth\\Service";
 // The beacon chain validator API is a set of endpoints to be used by validators for performing their roles.
 //
 // This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/validator).
-service BeaconValidator {
+service BeaconValidator   {
   // GetAttesterDuties requests the beacon node to provide a set of attestation duties, which should be performed
   // by validators, for a particular epoch.
   //
