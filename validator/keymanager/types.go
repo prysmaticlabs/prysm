@@ -41,6 +41,10 @@ const (
 	Remote
 )
 
+// IncorrectPasswordErrMsg defines a common error string representing an EIP-2335
+// keystore password was incorrect.
+const IncorrectPasswordErrMsg = "invalid checksum"
+
 // String marshals a keymanager kind to a string value.
 func (k Kind) String() string {
 	switch k {
