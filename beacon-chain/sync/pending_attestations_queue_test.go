@@ -127,7 +127,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	require.NoError(t, r.cfg.beaconDB.SaveState(context.Background(), s, root))
 
 	r.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
-	r.processPendingAttsForBlock(context.Background(), root)
+	require.NoError(t, r.processPendingAttsForBlock(context.Background(), root))
 
 	atts, err := r.cfg.attPool.UnaggregatedAttestations()
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	require.NoError(t, r.cfg.beaconDB.SaveState(context.Background(), s, r32))
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}}
-	r.processPendingAttsForBlock(context.Background(), r32)
+	require.NoError(t, r.processPendingAttsForBlock(context.Background(), r32))
 
 	assert.Equal(t, false, p1.BroadcastCalled, "Broadcasted bad aggregate")
 	// Clear pool.
@@ -233,7 +233,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
-	r.processPendingAttsForBlock(context.Background(), r32)
+	require.NoError(t, r.processPendingAttsForBlock(context.Background(), r32))
 
 	assert.Equal(t, true, p1.BroadcastCalled, "Could not broadcast the good aggregate")
 }
@@ -314,7 +314,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	require.NoError(t, r.cfg.beaconDB.SaveState(context.Background(), s, root))
 
 	r.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
-	r.processPendingAttsForBlock(context.Background(), root)
+	require.NoError(t, r.processPendingAttsForBlock(context.Background(), root))
 
 	assert.Equal(t, 1, len(r.cfg.attPool.AggregatedAttestations()), "Did not save aggregated att")
 	assert.DeepEqual(t, att, r.cfg.attPool.AggregatedAttestations()[0], "Incorrect saved att")

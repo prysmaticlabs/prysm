@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -17,25 +18,22 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// This defines how pending attestations are processed. It contains features:
-// 1. Clean up invalid pending attestations from the queue.
-// 2. process pending  attestations for the given block root
-func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte) {
+// This method processes pending attestations as a "known" block as arrived. With validations,
+// the valid attestations get saved into the operation mem pool, and the invalid attestations gets deleted
+// from the sync pending pool.
+func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingAttsForBlock")
 	defer span.End()
+
+	// Confirm that the pending attestation's missing block arrived and the node processed the block.
+	if !s.hasBlockAndState(ctx, bRoot) {
+		return fmt.Errorf("could not process unknown block root %#x", bRoot)
+	}
 
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
 	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
-
-	// Confirm that the pending attestation's missing block arrived and the node processed the block.
-	if !s.hasBlockAndState(ctx, bRoot) {
-		log.WithFields(logrus.Fields{
-			"blockRoot": hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
-		}).Debug("Could not process pending attestations: block is unknown")
-		return
-	}
 
 	s.pendingAttsLock.RLock()
 	attestations := s.blkRootToPendingAtts[bRoot]
@@ -50,10 +48,11 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 			// validation steps.
 			valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
 			if err != nil {
-				log.WithError(err).Debug("Pending aggregated attestation failed validation")
+				log.WithError(err).Debug("Could not validate pending aggregated attestation")
+				continue
 			}
 			aggValid := pubsub.ValidationAccept == valRes
-			if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
+			if aggValid && s.validateBlockInAttestation(ctx, signedAtt) {
 				if err := s.cfg.AttPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue
@@ -85,7 +84,7 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 
 			valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
 			if err != nil {
-				log.WithError(err).Debug("Pending unaggregated attestation failed validation")
+				log.WithError(err).Debug("Could not validate pending unaggregated attestation")
 				continue
 			}
 			if valid == pubsub.ValidationAccept {
@@ -117,6 +116,8 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 	s.pendingAttsLock.Lock()
 	delete(s.blkRootToPendingAtts, bRoot)
 	s.pendingAttsLock.Unlock()
+
+	return nil
 }
 
 // This defines how pending attestations is saved in the map. The key is the

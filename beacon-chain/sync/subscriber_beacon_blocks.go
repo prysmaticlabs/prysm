@@ -40,7 +40,9 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	// Process pending attestations referencing this block and clear invalid
 	// pending attestations
-	s.processPendingAttsForBlock(s.ctx, root)
+	if err := s.processPendingAttsForBlock(s.ctx, root); err != nil {
+		return err
+	}
 
 	if !features.Get().CorrectlyPruneCanonicalAtts {
 		// Delete attestations from the block in the pool to avoid inclusion in future block.
