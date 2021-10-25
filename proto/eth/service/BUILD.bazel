@@ -11,6 +11,7 @@ proto_library(
         "events_service.proto",
         "node_service.proto",
         "validator_service.proto",
+        "key_management.proto",
     ],
     visibility = ["//visibility:public"],
     deps = [
