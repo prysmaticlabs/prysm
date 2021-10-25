@@ -16,45 +16,17 @@ func TestValidatePasswordInput(t *testing.T) {
 		wantedErr string
 	}{
 		{
-			name:      "no numbers nor special characters",
-			input:     "abcdefghijklmnopqrs",
+			name:      "too short",
+			input:     "a",
 			wantedErr: errPasswordWeak.Error(),
 		},
 		{
-			name:      "number and letters but no special characters",
-			input:     "abcdefghijklmnopqrs2020",
-			wantedErr: errPasswordWeak.Error(),
+			name:  "right at min length",
+			input: "12345678",
 		},
 		{
-			name:      "numbers, letters, special characters, but too short",
-			input:     "abc2$",
-			wantedErr: errPasswordWeak.Error(),
-		},
-		{
-			name:  "proper length and strong password",
-			input: "%Str0ngpassword32kjAjsd22020$%",
-		},
-		{
-			name:      "password format correct but weak entropy score",
-			input:     "aaaaaaa1$",
-			wantedErr: "password is too easy to guess, try a stronger password",
-		},
-		{
-			name:  "allow spaces",
-			input: "x*329293@aAJSD i22903saj",
-		},
-		{
-			name:  "strong password from LastPass",
-			input: "jXl!q5pkQnXsyT6dbJ3X5plQ!9%iqJCTr&*UIoaDu#b6GYJD##^GI3qniKdr240f",
-		},
-		{
-			name:  "allow underscores",
-			input: "jXl!q5pkQn_syT6dbJ3X5plQ_9_iqJCTr_*UIoaDu#b6GYJD##^GI3qniKdr240f",
-		},
-		{
-			name:      "only numbers and symbols should fail",
-			input:     "123493489223423_23923929",
-			wantedErr: errPasswordWeak.Error(),
+			name:  "above min length",
+			input: "123456789",
 		},
 	}
 	for _, tt := range tests {
