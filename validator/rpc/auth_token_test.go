@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"google.golang.org/grpc"
@@ -52,6 +53,35 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	require.Equal(t, true, len(srv.jwtKey) > 0)
 	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
 	require.NoError(t, err)
+}
+
+func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
+	// Initializing for the first time, there is no auth token file in
+	// the wallet directory, so we generate a jwt token and secret from scratch.
+	srv := &Server{}
+	walletDir := setupWalletDir(t)
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(walletDir))
+	})
+	_, _, err := srv.initializeAuthToken(walletDir)
+	require.NoError(t, err)
+	currentSecret := srv.jwtKey
+	require.Equal(t, true, len(currentSecret) > 0)
+
+	authTokenPath := filepath.Join(walletDir, authTokenFileName)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go srv.refreshAuthTokenFromFileChanges(ctx, authTokenPath)
+
+	// Update the auth token file with a new secret.
+	require.NoError(t, CreateAuthToken(walletDir, "localhost:7500"))
+
+	// The service should have picked up the file change and set the jwt secret to the new one.
+	time.Sleep(time.Millisecond * 500)
+	newSecret := srv.jwtKey
+	require.Equal(t, true, len(newSecret) > 0)
+	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
 }
 
 func Test_initializeAuthToken(t *testing.T) {

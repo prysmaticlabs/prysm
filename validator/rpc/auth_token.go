@@ -35,6 +35,19 @@ const (
 	authTokenFileName = "auth-token"
 )
 
+// Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
+func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
+	walletExists, err := wallet.Exists(s.walletDir)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
+	}
+	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+	return &pb.InitializeAuthResponse{
+		HasSignedUp: file.FileExists(authTokenPath),
+		HasWallet:   walletExists,
+	}, nil
+}
+
 // CreateAuthToken generates a new jwt key, token, and expiration and writes them
 // to a file in the specified directory. Also, it logs out a prepared URL
 // for the user to navigate to and authenticate with the Prysm web interface.
@@ -54,19 +67,6 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	}
 	logValidatorWebAuth(validatorWebAddr, token, expr)
 	return nil
-}
-
-// Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
-func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
-	walletExists, err := wallet.Exists(s.walletDir)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
-	}
-	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
-	return &pb.InitializeAuthResponse{
-		HasSignedUp: file.FileExists(authTokenPath),
-		HasWallet:   walletExists,
-	}, nil
 }
 
 // Upon launch of the validator client, we initialize an auth token by either creating
