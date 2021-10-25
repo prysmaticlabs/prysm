@@ -80,7 +80,7 @@ type Server struct {
 	withKey                   string
 	credentialError           error
 	grpcServer                *grpc.Server
-	jwtKey                    []byte
+	jwtSecret                 []byte
 	validatorService          *client.ValidatorService
 	syncChecker               client.SyncChecker
 	genesisFetcher            client.GenesisFetcher

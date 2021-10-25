@@ -29,7 +29,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	})
 	token, _, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	require.Equal(t, true, len(srv.jwtKey) > 0)
+	require.Equal(t, true, len(srv.jwtSecret) > 0)
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
@@ -50,7 +50,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	srv = &Server{}
 	_, _, err = srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	require.Equal(t, true, len(srv.jwtKey) > 0)
+	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
 	require.NoError(t, err)
 }
@@ -65,7 +65,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	})
 	_, _, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	currentSecret := srv.jwtKey
+	currentSecret := srv.jwtSecret
 	require.Equal(t, true, len(currentSecret) > 0)
 
 	authTokenPath := filepath.Join(walletDir, authTokenFileName)
@@ -79,7 +79,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 
 	// The service should have picked up the file change and set the jwt secret to the new one.
 	time.Sleep(time.Millisecond * 500)
-	newSecret := srv.jwtKey
+	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
 }
@@ -94,13 +94,13 @@ func Test_initializeAuthToken(t *testing.T) {
 	})
 	token, _, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	require.Equal(t, true, len(srv.jwtKey) > 0)
+	require.Equal(t, true, len(srv.jwtSecret) > 0)
 
 	// Initializing second time, we generate something from the initial file.
 	srv2 := &Server{}
 	token2, _, err := srv2.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	require.Equal(t, true, bytes.Equal(srv.jwtKey, srv2.jwtKey))
+	require.Equal(t, true, bytes.Equal(srv.jwtSecret, srv2.jwtSecret))
 	require.Equal(t, token, token2)
 
 	// Deleting the auth token and re-initializing means we create a jwt token
@@ -110,6 +110,6 @@ func Test_initializeAuthToken(t *testing.T) {
 	walletDir = setupWalletDir(t)
 	token3, _, err := srv3.initializeAuthToken(walletDir)
 	require.NoError(t, err)
-	require.Equal(t, true, len(srv.jwtKey) > 0)
+	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	require.NotEqual(t, token, token3)
 }

@@ -91,15 +91,15 @@ func (s *Server) initializeAuthToken(walletDir string) (string, uint64, error) {
 		if err != nil {
 			return "", 0, err
 		}
-		s.jwtKey = secret
+		s.jwtSecret = secret
 		return strings.TrimSpace(token), expiration, nil
 	}
 	jwtKey, err := createRandomJWTSecret()
 	if err != nil {
 		return "", 0, err
 	}
-	s.jwtKey = jwtKey
-	token, expiration, err := createTokenString(s.jwtKey)
+	s.jwtSecret = jwtKey
+	token, expiration, err := createTokenString(s.jwtSecret)
 	if err != nil {
 		return "", 0, err
 	}
