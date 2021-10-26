@@ -41,8 +41,8 @@ type BeaconState struct {
 	genesisTimeInternal                 uint64
 	genesisValidatorsRootInternal       []byte
 	slotInternal                        eth2types.Slot
-	forkInternal                        types.SFork
-	latestBlockHeaderInternal           types.BeaconBlockHeader
+	forkInternal                        *types.SFork
+	latestBlockHeaderInternal           *types.BeaconBlockHeader
 	blockRootsInternal                  [][]byte
 	stateRootsInternal                  [][]byte
 	historicalRootsInternal             [][]byte
