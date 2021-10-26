@@ -46,6 +46,11 @@ type BeaconState struct {
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
 
+type syncCommittee struct {
+	pubkeys         [][]byte
+	aggregatePubkey []byte
+}
+
 // Field Aliases for values from the types package.
 const (
 	genesisTime                    = types.GenesisTime

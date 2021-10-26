@@ -1,6 +1,7 @@
 package types
 
 import (
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
@@ -123,3 +124,41 @@ const (
 	PreviousEpochParticipationBits = PreviousEpochAttestations
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )
+
+// TODO: Rename
+type SFork struct {
+	PreviousVersion []byte
+	CurrentVersion  []byte
+	Epoch           types.Epoch
+}
+
+type BaconBlockHeader struct {
+	Slot          types.Slot
+	ProposerIndex types.ValidatorIndex
+	ParentRoot    []byte
+	StateRoot     []byte
+	BodyRoot      []byte
+}
+
+// TODO: Rename
+type SEth1Data struct {
+	DepositRoot  []byte
+	DepositCount uint64
+	BlockHash    []byte
+}
+
+type Validator struct {
+	PublicKey                  []byte
+	WithdrawalCredentials      []byte
+	EffectiveBalance           uint64
+	Slashed                    bool
+	ActivationEligibilityEpoch types.Epoch
+	ActivationEpoch            types.Epoch
+	ExitEpoch                  types.Epoch
+	WithdrawableEpoch          types.Epoch
+}
+
+type Checkpoint struct {
+	Epoch types.Epoch
+	Root  []byte
+}

@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	eth2types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -50,6 +52,21 @@ type BeaconState struct {
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
+}
+
+type pendingAttestation struct {
+	aggregationBits bitfield.Bitlist
+	data            attestationData
+	inclusionDelay  eth2types.Slot
+	proposerIndex   eth2types.ValidatorIndex
+}
+
+type attestationData struct {
+	slot            eth2types.Slot
+	committeeIndex  eth2types.CommitteeIndex
+	beaconBlockRoot []byte
+	source          types.Checkpoint
+	target          types.Checkpoint
 }
 
 // Field Aliases for values from the types package.
