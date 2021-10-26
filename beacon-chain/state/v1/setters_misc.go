@@ -53,7 +53,7 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.GenesisValidatorsRoot = val
+	b.genesisValidatorsRootInternal = val
 	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
 }

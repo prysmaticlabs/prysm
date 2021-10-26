@@ -261,7 +261,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
-		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
+		return bytesutil.ToBytes32(b.genesisValidatorsRootInternal), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:

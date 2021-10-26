@@ -40,7 +40,7 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.GenesisValidatorsRoot == nil {
+	if b.genesisValidatorsRootInternal == nil {
 		return params.BeaconConfig().ZeroHash[:]
 	}
 
@@ -56,12 +56,12 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.GenesisValidatorsRoot == nil {
+	if b.genesisValidatorsRootInternal == nil {
 		return params.BeaconConfig().ZeroHash[:]
 	}
 
 	root := make([]byte, 32)
-	copy(root, b.state.GenesisValidatorsRoot)
+	copy(root, b.genesisValidatorsRootInternal)
 	return root
 }
 
