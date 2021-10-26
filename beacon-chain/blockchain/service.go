@@ -115,6 +115,12 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+	if srv.justifiedBalances == nil {
+		if srv.cfg.StateGen == nil {
+			return nil, errors.New("Can't initialize state balance cache without stategen")
+		}
+		srv.justifiedBalances = NewStateBalanceCache(srv.cfg.StateGen)
+	}
 	return srv, nil
 }
 
