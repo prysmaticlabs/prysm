@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,6 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
+
+var ErrSlotBeforeOrigin = errors.New("cannot retrieve data for slots before sync origin")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -53,6 +56,10 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
+		if s.MinimumSlot() > 0 {
+			msg := fmt.Sprintf("cannot retrieve genesis state, lowest block in db is slot %d", s.MinimumSlot())
+			return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+		}
 		return s.beaconDB.GenesisState(ctx)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
@@ -66,6 +73,9 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
+		if s.beaconDBInitType == BeaconDBInitTypeCheckpoint {
+			return nil, fmt.Errorf("node initialized through checkpoint sync received invalid (zero value) block root")
+		}
 		return s.beaconDB.GenesisState(ctx)
 	}
 
@@ -213,6 +223,11 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
 	defer span.End()
 
+	if slot < s.MinimumSlot() {
+		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
+		return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+	}
+
 	// Return genesis state if slot is 0.
 	if slot == 0 {
 		return s.beaconDB.GenesisState(ctx)
@@ -265,6 +280,12 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
+		}
+
+		// return an error if we have rewound to before the checkpoint sync slot
+		if (b.Block().Slot() - 1) < s.MinimumSlot() {
+			msg := fmt.Sprintf("no blocks in db prior to slot %d", s.MinimumSlot())
+			return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
 		}
 		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())

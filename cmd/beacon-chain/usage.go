@@ -122,7 +122,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.HistoricalSlasherNode,
 			flags.ChainID,
 			flags.NetworkID,
-			flags.WeakSubjectivityCheckpt,
+			flags.WeakSubjectivityCheckpoint,
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
 			flags.MinPeersPerSubnet,

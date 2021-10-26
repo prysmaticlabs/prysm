@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -101,6 +103,8 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
+	blockchainFlagOpts      []blockchain.Option
+	CheckpointInitializer   checkpoint.Initializer
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -237,7 +241,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	// db.DatabasePath is the path to the containing directory
 	// db.NewDBFilename expands that to the canonical full path using
-	// the same constuction as NewDB()
+	// the same construction as NewDB()
 	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
 	if err != nil {
 		return nil, err
@@ -394,6 +398,13 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
 		return err
 	}
+
+	if b.CheckpointInitializer != nil {
+		if err := b.CheckpointInitializer.Initialize(b.ctx, d); err != nil {
+			return err
+		}
+	}
+
 	knownContract, err := b.db.DepositContractAddress(b.ctx)
 	if err != nil {
 		return err
@@ -462,7 +473,29 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) startStateGen() error {
-	b.stateGen = stategen.New(b.db)
+	o := make([]stategen.StateGenOption, 0)
+	_, err := b.db.OriginCheckpointBlockRoot(b.ctx)
+	if err == nil {
+		// we'll get a db.ErrNotFound if the db was not initialized with a checkpoint
+		// so if err == nil, the node was initialized with checkpoint init.
+		o = append(o, stategen.WithInitType(stategen.BeaconDBInitTypeCheckpoint))
+		lowestSlot, err := b.db.LowestSyncedBlockSlot(b.ctx)
+		if err != nil {
+			return errors.Wrap(err, "error searching for lowest block slot on checkpoint-initialized node")
+		}
+		o = append(o, stategen.WithMinimumSlot(lowestSlot))
+	} else {
+		if errors.Is(err, db.ErrNotFound) {
+			// error is ErrNotFound, so we can assume the node was initialized with a genesis state (or via powchain)
+			o = append(o, stategen.WithInitType(stategen.BeaconDBInitTypeGenesisState))
+		} else {
+			// if the error is not an ErrNotFound, we failed to query the db for some reason,
+			// can't be confident how it was initialized.
+			return errors.Wrap(err, "could not retrieve checkpoint sync chain origin data from db")
+		}
+	}
+
+	sg := stategen.New(b.db, o...)
 
 	cp, err := b.db.FinalizedCheckpoint(b.ctx)
 	if err != nil {
@@ -472,6 +505,12 @@ func (b *BeaconNode) startStateGen() error {
 	r := bytesutil.ToBytes32(cp.Root)
 	// Consider edge case where finalized root are zeros instead of genesis root hash.
 	if r == params.BeaconConfig().ZeroHash {
+		if sg.MinimumSlot() > 0 {
+			// using checkpoint sync the minimum slot will be > 0, but the checkpoint block is marked as finalized,
+			// so if it is equal to ZeroHash, this is likely an error (and the genesis block won't be available).
+			msg := fmt.Sprintf("unable to retrieve genesis block, no slots before %d in db", sg.MinimumSlot())
+			return errors.Wrap(err, msg)
+		}
 		genesisBlock, err := b.db.GenesisBlock(b.ctx)
 		if err != nil {
 			return err
@@ -484,10 +523,12 @@ func (b *BeaconNode) startStateGen() error {
 		}
 	}
 
-	b.finalizedStateAtStartUp, err = b.stateGen.StateByRoot(b.ctx, r)
+	b.finalizedStateAtStartUp, err = sg.StateByRoot(b.ctx, r)
 	if err != nil {
 		return err
 	}
+
+	b.stateGen = sg
 	return nil
 }
 

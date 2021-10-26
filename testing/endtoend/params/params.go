@@ -35,6 +35,8 @@ type ports struct {
 	PrysmBeaconNodeTCPPort          int
 	PrysmBeaconNodeGatewayPort      int
 	PrysmBeaconNodeMetricsPort      int
+	// TODO: update conflicting code to be consistent
+	BeaconNodeMetricsPort     int
 	PrysmBeaconNodePprofPort        int
 	LighthouseBeaconNodeP2PPort     int
 	LighthouseBeaconNodeHTTPPort    int
@@ -42,6 +44,10 @@ type ports struct {
 	ValidatorMetricsPort            int
 	ValidatorGatewayPort            int
 	JaegerTracingPort               int
+	// TODO: update conflicting code to be consistent
+	BeaconNodeRPCPort         int
+	// TODO: update conflicting code to be consistent
+	BeaconNodeOAPIPort        int
 }
 
 // TestParams is the globally accessible var for getting config elements.

@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -397,11 +396,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	isGenesis := func(cp *ethpb.Checkpoint) bool {
 		return bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
 	}
-	// Retrieve genesis block in the event we have genesis checkpoints.
-	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genBlock == nil || genBlock.IsNil() || genBlock.Block().IsNil() {
-		return nil, status.Error(codes.Internal, "Could not get genesis block")
-	}
 
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	if !isGenesis(finalizedCheckpoint) {
@@ -461,42 +455,5 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-	}, nil
-}
-
-// GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
-func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
-	hs, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
-	}
-	wsSlot, err := slots.EpochStart(wsEpoch)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
-	}
-
-	wsState, err := bs.ReplayerBuilder.ForSlot(wsSlot).ReplayBlocks(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("error replaying blocks for state at slot %d: %v", wsSlot, err)
-		return nil, status.Error(codes.Internal, msg)
-	}
-
-	stateRoot, err := wsState.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")
-	}
-	blkRoot, err := wsState.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity block root")
-	}
-
-	return &ethpb.WeakSubjectivityCheckpoint{
-		BlockRoot: blkRoot[:],
-		StateRoot: stateRoot[:],
-		Epoch:     wsEpoch,
 	}, nil
 }

@@ -41,6 +41,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
+        "//beacon-chain/sync/checkpoint:go_default_library",
         "//beacon-chain/sync/initial-sync:go_default_library",
         "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
