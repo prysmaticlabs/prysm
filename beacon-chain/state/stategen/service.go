@@ -6,6 +6,7 @@ package stategen
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -49,6 +50,8 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
+	minimumSlot             types.Slot
+	beaconDBInitType        BeaconDBInitType
 }
 
 // This tracks the config in the event of long non-finality,
@@ -70,9 +73,31 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
+func WithMinimumSlot(min types.Slot) StateGenOption {
+	return func(s *State) {
+		s.minimumSlot = min
+	}
+}
+
+type BeaconDBInitType uint
+
+const (
+	BeaconDBInitTypeGenesisState = iota
+	BeaconDBInitTypeCheckpoint
+)
+
+func WithInitType(t BeaconDBInitType) StateGenOption {
+	return func(s *State) {
+		s.beaconDBInitType = t
+	}
+}
+
+// StateGenOption is a functional option for controlling the initialization of a *State value
+type StateGenOption func(*State)
+
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase) *State {
-	return &State{
+func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
@@ -81,7 +106,13 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
+		// defaults to minimumSlot of zero (genesis), overridden by checkpoint sync
+		minimumSlot: types.Slot(0),
 	}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
@@ -96,6 +127,9 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	fRoot := bytesutil.ToBytes32(c.Root)
 	// Resume as genesis state if last finalized root is zero hashes.
 	if fRoot == params.BeaconConfig().ZeroHash {
+		if s.MinimumSlot() > 0 {
+			return nil, fmt.Errorf("no finalized checkpoint, and history before slot %d not currently available", s.MinimumSlot())
+		}
 		return s.beaconDB.GenesisState(ctx)
 	}
 
@@ -137,4 +171,8 @@ func (s *State) finalizedState() state.BeaconState {
 	s.finalizedInfo.lock.RLock()
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()
+}
+
+func (s *State) MinimumSlot() types.Slot {
+	return s.minimumSlot
 }

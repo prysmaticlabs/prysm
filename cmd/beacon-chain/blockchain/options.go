@@ -10,7 +10,7 @@ import (
 
 // FlagOptions for blockchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]blockchain.Option, error) {
-	wsp := c.String(flags.WeakSubjectivityCheckpt.Name)
+	wsp := c.String(flags.WeakSubjectivityCheckpoint.Name)
 	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
 		return nil, err
