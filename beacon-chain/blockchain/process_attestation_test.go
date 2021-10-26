@@ -24,14 +24,13 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	cfg := &config{
-		BeaconDB:        beaconDB,
-		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(beaconDB),
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		WithStateGen(stategen.New(beaconDB)),
 	}
-	service, err := NewService(ctx)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg = cfg
 
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
