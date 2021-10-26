@@ -46,6 +46,24 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 	return blk, err
 }
 
+func (s *Store) OriginCheckpointRoot(ctx context.Context) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.OriginCheckpointRoot")
+	defer span.End()
+
+	var root [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		rootSlice := bkt.Get(originCheckpointBlockKey)
+		if rootSlice == nil {
+			return ErrNotFoundOriginCheckpoint
+		}
+		copy(root[:], rootSlice)
+		return nil
+	})
+
+	return root, err
+}
+
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
 func (s *Store) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
@@ -333,6 +351,17 @@ func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(genesisBlockRootKey, blockRoot[:])
+	})
+}
+
+// SaveCheckpointInitialBlockRoot saves the latest block header from the weak subjectivity
+// initial sync state.
+func (s *Store) SaveCheckpointInitialBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveCheckpointInitialBlockRoot")
+	defer span.End()
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		return bucket.Put(originCheckpointBlockKey, blockRoot[:])
 	})
 }
 

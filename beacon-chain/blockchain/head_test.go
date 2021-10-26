@@ -158,7 +158,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: [32]byte{1},
+			originRoot: [32]byte{1},
 		}
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
@@ -174,8 +174,8 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
 			EpochTransition:           false,
-			PreviousDutyDependentRoot: srv.genesisRoot[:],
-			CurrentDutyDependentRoot:  srv.genesisRoot[:],
+			PreviousDutyDependentRoot: srv.originRoot[:],
+			CurrentDutyDependentRoot:  srv.originRoot[:],
 		}
 		require.DeepSSZEqual(t, wanted, eventHead)
 	})
@@ -187,7 +187,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: genesisRoot,
+			originRoot: genesisRoot,
 		}
 		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)

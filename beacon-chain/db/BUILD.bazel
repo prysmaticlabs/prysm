@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "alias.go",
         "db.go",
+        "errors.go",
         "log.go",
         "restore.go",
     ],

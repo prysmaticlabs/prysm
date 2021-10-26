@@ -10,6 +10,7 @@ go_library(
         "checkpoint.go",
         "deposit_contract.go",
         "encoding.go",
+        "error.go",
         "finalized_block_roots.go",
         "genesis.go",
         "kv.go",
@@ -24,6 +25,7 @@ go_library(
         "state_summary.go",
         "state_summary_cache.go",
         "utils.go",
+        "wss.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
     visibility = [
@@ -79,6 +81,7 @@ go_test(
         "checkpoint_test.go",
         "deposit_contract_test.go",
         "encoding_test.go",
+        "error_test.go",
         "finalized_block_roots_test.go",
         "genesis_test.go",
         "init_test.go",

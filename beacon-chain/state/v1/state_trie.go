@@ -2,6 +2,8 @@ package v1
 
 import (
 	"context"
+	"io"
+	"io/ioutil"
 	"runtime"
 	"sort"
 
@@ -29,6 +31,22 @@ var (
 		Help: "Count the number of active beacon state objects.",
 	})
 )
+
+func InitializeFromSSZReader(r io.Reader) (*BeaconState, error) {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return InitializeFromSSZBytes(b)
+}
+
+func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
+	st := &ethpb.BeaconState{}
+	if err := st.UnmarshalSSZ(marshaled); err != nil {
+		return nil, err
+	}
+	return InitializeFromProtoUnsafe(st)
+}
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
@@ -250,6 +268,23 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // object are nil.
 func (b *BeaconState) IsNil() bool {
 	return b == nil || b.state == nil
+}
+
+// Equal does a deep equality check to another BeaconState object using HashTreeRoot
+// This method is expensive because it computes HTR for 2 beacon state values!
+func (bs *BeaconState) Equal(ctx context.Context, other state.BeaconState) (bool, error) {
+	if other == nil || other.IsNil() {
+		return false, nil
+	}
+	bsr, err := bs.HashTreeRoot(ctx)
+	if err != nil {
+		return false, err
+	}
+	osr, err := other.HashTreeRoot(ctx)
+	if err != nil {
+		return false, err
+	}
+	return osr == bsr, nil
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {

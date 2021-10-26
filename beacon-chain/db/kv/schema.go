@@ -46,6 +46,8 @@ var (
 	// Altair key used to identify object is altair compatible.
 	// Objects that are only compatible with altair should be prefixed with such key.
 	altairKey = []byte("altair")
+	// block root included in the beacon state used by weak subjectivity initial sync
+	originCheckpointBlockKey = []byte("checkpoint-initial-block-root")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	lastArchivedIndexKey = []byte("last-archived")

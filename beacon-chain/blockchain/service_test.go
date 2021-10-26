@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"reflect"
 	"testing"
 	"time"
@@ -283,9 +284,11 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
-	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
-	c.cfg.FinalizedStateAtStartUp = headState
-	require.NoError(t, c.initializeChainInfo(ctx))
+	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
+	require.NoError(t, err)
+	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	require.NoError(t, err)
+	require.NoError(t, c.startFromSavedState(headState))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, headBlock, headBlk.Proto(), "Head block incorrect")
@@ -298,7 +301,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !bytes.Equal(headRoot[:], r) {
 		t.Error("head slot incorrect")
 	}
-	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
 }
 
 func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
@@ -324,12 +327,15 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
-	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
-	require.NoError(t, c.initializeChainInfo(ctx))
+	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
+	require.NoError(t, err)
+	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}))
+	require.NoError(t, err)
+	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block.Proto())
 }
 
@@ -381,13 +387,15 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}))
 
-	c := &Service{cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)}}
-	c.cfg.FinalizedStateAtStartUp = headState
-	require.NoError(t, c.initializeChainInfo(ctx))
+	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
+	require.NoError(t, err)
+	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	require.NoError(t, err)
+	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
@@ -404,11 +412,11 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
 
 	hook.Reset()
-	require.NoError(t, c.initializeChainInfo(ctx))
+	require.NoError(t, c.initializeHeadFromDB(ctx))
 	s, err = c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
 	assert.DeepEqual(t, headBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")
@@ -478,7 +486,7 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	service.processChainStartTime(context.Background(), time.Now())
+	service.onPowchainStart(context.Background(), time.Now())
 
 	stateEvent := <-stateChannel
 	require.Equal(t, int(stateEvent.Type), statefeed.Initialized)
