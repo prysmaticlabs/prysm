@@ -74,10 +74,22 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 	return nil
 }
 
+type ClientOption func(*http.Client)
+
+func WithTimeout(t time.Duration) ClientOption {
+	return func(c *http.Client) {
+		c.Timeout = t
+	}
+}
+
 // ProxyRequest proxies the request to grpc-gateway.
-func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
+func ProxyRequest(req *http.Request, opts ...ClientOption) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
+	// TODO: think about exposing this as a flag, or based on endpoint
 	netClient := &http.Client{Timeout: time.Minute * 2}
+	for _, o := range opts {
+		o(netClient)
+	}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
