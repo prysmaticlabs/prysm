@@ -550,6 +550,22 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	}, nil
 }
 
+// GetWeakSubjectivityCheckpointEpoch only computes the epoch for the weak subjectivity checkpoint.
+func (bs *Server) GetWeakSubjectivityCheckpointEpoch(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpointEpoch, error) {
+	hs, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
+	}
+
+	return &ethpb.WeakSubjectivityCheckpointEpoch{
+		Epoch: uint64(wsEpoch),
+	}, nil
+}
+
 // GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
 func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)

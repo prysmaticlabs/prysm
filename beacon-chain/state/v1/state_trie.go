@@ -36,6 +36,16 @@ func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
 
+// InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
+// a slice of bytes containing the ssz-serialized representation of the state.
+func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
+	st := &ethpb.BeaconState{}
+	if err := st.UnmarshalSSZ(marshaled); err != nil {
+		return nil, err
+	}
+	return InitializeFromProtoUnsafe(st)
+}
+
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {

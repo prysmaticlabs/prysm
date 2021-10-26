@@ -160,6 +160,15 @@ service BeaconChain {
         };
     }
 
+    // Retrieve the epoch that the server believes should be used as a weak subjectivity checkpoint.
+    // With the epoch, an rpc/api client can then download the BeaconState for the first slot, and then
+    // also download the latest block observed in the unmarshaled state for a complete checkpoint.
+    rpc GetWeakSubjectivityCheckpointEpoch(google.protobuf.Empty) returns (WeakSubjectivityCheckpointEpoch) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint_epoch"
+        };
+    }
+
     // Retrieve the beacon chain committees for a given epoch.
     //
     // If no filter criteria is specified, the response returns
@@ -913,4 +922,9 @@ message WeakSubjectivityCheckpoint {
     bytes state_root = 2;
     // The epoch of weak subjectivity checkpoint.
     uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+message WeakSubjectivityCheckpointEpoch {
+    // The epoch of the weak subjectivity checkpoint.
+    uint64 epoch = 1;
 }

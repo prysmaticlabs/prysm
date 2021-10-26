@@ -238,6 +238,26 @@ func (mr *MockBeaconChainClientMockRecorder) GetWeakSubjectivityCheckpoint(arg0,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWeakSubjectivityCheckpoint", reflect.TypeOf((*MockBeaconChainClient)(nil).GetWeakSubjectivityCheckpoint), varargs...)
 }
 
+// GetWeakSubjectivityCheckpointEpoch mock implementation
+func (m *MockBeaconChainClient) GetWeakSubjectivityCheckpointEpoch(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.WeakSubjectivityCheckpointEpoch, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetWeakSubjectivityCheckpointEpoch", varargs...)
+	ret0, _ := ret[0].(*eth.WeakSubjectivityCheckpointEpoch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWeakSubjectivityCheckpointEpoch impersonates the GetWeakSubjectivityCheckpointEpoch and records the parameters
+func (mr *MockBeaconChainClientMockRecorder) GetWeakSubjectivityCheckpointEpoch(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWeakSubjectivityCheckpointEpoch", reflect.TypeOf((*MockBeaconChainClient)(nil).GetWeakSubjectivityCheckpointEpoch), varargs...)
+}
+
 // ListAttestations mocks base method
 func (m *MockBeaconChainClient) ListAttestations(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsResponse, error) {
 	m.ctrl.T.Helper()

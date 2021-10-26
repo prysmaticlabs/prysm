@@ -30,10 +30,7 @@ go_library(
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v3",
-    visibility = [
-        "//beacon-chain:__subpackages__",
-        "//testing/util:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
