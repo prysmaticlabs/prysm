@@ -30,7 +30,7 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "genesisValidatorRoot"
 	case Slot:
 		return "slot"
-	case Fork:
+	case ChainFork:
 		return "fork"
 	case LatestBlockHeader:
 		return "latestBlockHeader"
@@ -40,7 +40,7 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "stateRoots"
 	case HistoricalRoots:
 		return "historicalRoots"
-	case Eth1Data:
+	case LatestEth1Data:
 		return "eth1Data"
 	case Eth1DataVotes:
 		return "eth1DataVotes"
@@ -93,12 +93,12 @@ const (
 	GenesisTime FieldIndex = iota
 	GenesisValidatorRoot
 	Slot
-	Fork
+	ChainFork
 	LatestBlockHeader
 	BlockRoots
 	StateRoots
 	HistoricalRoots
-	Eth1Data
+	LatestEth1Data
 	Eth1DataVotes
 	Eth1DepositIndex
 	Validators
@@ -125,8 +125,7 @@ const (
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )
 
-// TODO: Rename
-type SFork struct {
+type Fork struct {
 	PreviousVersion []byte
 	CurrentVersion  []byte
 	Epoch           types.Epoch
@@ -140,8 +139,7 @@ type BeaconBlockHeader struct {
 	BodyRoot      []byte
 }
 
-// TODO: Rename
-type SEth1Data struct {
+type Eth1Data struct {
 	DepositRoot  []byte
 	DepositCount uint64
 	BlockHash    []byte

@@ -47,13 +47,13 @@ type BeaconState struct {
 	genesisTimeInternal                 uint64
 	genesisValidatorsRootInternal       []byte
 	slotInternal                        eth2types.Slot
-	forkInternal                        *types.SFork
+	forkInternal                        *types.Fork
 	latestBlockHeaderInternal           *types.BeaconBlockHeader
 	blockRootsInternal                  [][]byte
 	stateRootsInternal                  [][]byte
 	historicalRootsInternal             [][]byte
-	eth1DataInternal                    *types.SEth1Data
-	eth1DataVotesInternal               []*types.SEth1Data
+	eth1DataInternal                    *types.Eth1Data
+	eth1DataVotesInternal               []*types.Eth1Data
 	eth1DepositIndexInternal            uint64
 	validatorsInternal                  []*types.Validator
 	balancesInternal                    []uint64
@@ -96,12 +96,12 @@ const (
 	genesisTime                 = types.GenesisTime
 	genesisValidatorRoot        = types.GenesisValidatorRoot
 	slot                        = types.Slot
-	fork                        = types.Fork
+	fork                        = types.ChainFork
 	latestBlockHeader           = types.LatestBlockHeader
 	blockRoots                  = types.BlockRoots
 	stateRoots                  = types.StateRoots
 	historicalRoots             = types.HistoricalRoots
-	eth1Data                    = types.Eth1Data
+	eth1Data                    = types.LatestEth1Data
 	eth1DataVotes               = types.Eth1DataVotes
 	eth1DepositIndex            = types.Eth1DepositIndex
 	validators                  = types.Validators
