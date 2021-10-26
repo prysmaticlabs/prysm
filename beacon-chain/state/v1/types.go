@@ -43,7 +43,29 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	state                 *ethpb.BeaconState
+	state                               *ethpb.BeaconState
+	genesisTimeInternal                 uint64
+	genesisValidatorsRootInternal       []byte
+	slotInternal                        eth2types.Slot
+	forkInternal                        types.SFork
+	latestBlockHeaderInternal           types.BeaconBlockHeader
+	blockRootsInternal                  [][]byte
+	stateRootsInternal                  [][]byte
+	historicalRootsInternal             [][]byte
+	eth1DataInternal                    *types.SEth1Data
+	eth1DataVotesInternal               []*types.SEth1Data
+	eth1DepositIndexInternal            uint64
+	validatorsInternal                  []*types.Validator
+	balancesInternal                    []uint64
+	randaoMixesInternal                 [][]byte
+	slashingsInternal                   []uint64
+	previousEpochAttestationsInternal   []*pendingAttestation
+	currentEpochAttestationsInternal    []*pendingAttestation
+	justificationBitsInternal           bitfield.Bitvector4
+	previousJustifiedCheckpointInternal *types.Checkpoint
+	currentJustifiedCheckpointInternal  *types.Checkpoint
+	finalizedCheckpointInternal         *types.Checkpoint
+
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64

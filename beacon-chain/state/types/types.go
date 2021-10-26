@@ -132,7 +132,7 @@ type SFork struct {
 	Epoch           types.Epoch
 }
 
-type BaconBlockHeader struct {
+type BeaconBlockHeader struct {
 	Slot          types.Slot
 	ProposerIndex types.ValidatorIndex
 	ParentRoot    []byte

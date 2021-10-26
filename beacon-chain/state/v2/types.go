@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	eth2types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
@@ -35,7 +37,32 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	state                 *ethpb.BeaconStateAltair
+	state                               *ethpb.BeaconStateAltair
+	genesisTimeInternal                 uint64
+	genesisValidatorsRootInternal       []byte
+	slotInternal                        eth2types.Slot
+	forkInternal                        types.SFork
+	latestBlockHeaderInternal           types.BeaconBlockHeader
+	blockRootsInternal                  [][]byte
+	stateRootsInternal                  [][]byte
+	historicalRootsInternal             [][]byte
+	eth1DataInternal                    *types.SEth1Data
+	eth1DataVotesInternal               []*types.SEth1Data
+	eth1DepositIndexInternal            uint64
+	validatorsInternal                  []*types.Validator
+	balancesInternal                    []uint64
+	randaoMixesInternal                 [][]byte
+	slashingsInternal                   []uint64
+	previousEpochParticipationInternal  []byte
+	currentEpochParticipationInternal   []byte
+	justificationBitsInternal           bitfield.Bitvector4
+	previousJustifiedCheckpointInternal *types.Checkpoint
+	currentJustifiedCheckpointInternal  *types.Checkpoint
+	finalizedCheckpointInternal         *types.Checkpoint
+	inactivityScoresInternal            []uint64
+	currentSyncCommitteeInternal        *syncCommittee
+	nextSyncCommitteeInternal           *syncCommittee
+
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
