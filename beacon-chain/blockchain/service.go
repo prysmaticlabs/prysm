@@ -62,7 +62,8 @@ type Service struct {
 	checkpointStateCache  *cache.CheckpointStateCache
 	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances     []uint64
+	//justifiedBalances     []uint64
+	justifiedBalances       *stateBalanceCache
 	justifiedBalancesLock sync.RWMutex
 	wsVerified            bool
 }
@@ -96,7 +97,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
-		justifiedBalances:    make([]uint64, 0),
 		cfg:                  &config{},
 	}
 	for _, opt := range opts {
@@ -109,6 +109,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
+	s.justifiedBalances = NewStateBalanceCache(s.cfg.StateGen)
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
 	// state. This is because we no longer save state every slot during sync.
@@ -172,9 +173,6 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
-			log.Fatalf("Could not cache justified state balances: %v", err)
-		}
 		s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
 		s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
 		s.finalizedCheckpt = ethpb.CopyCheckpoint(finalizedCheckpoint)
@@ -359,9 +357,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
 	s.justifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
-		return err
-	}
 	s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 	s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 	s.finalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)

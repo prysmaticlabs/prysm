@@ -18,6 +18,7 @@ go_library(
         "receive_attestation.go",
         "receive_block.go",
         "service.go",
+        "state_balance_cache.go",
         "weak_subjectivity_checks.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",

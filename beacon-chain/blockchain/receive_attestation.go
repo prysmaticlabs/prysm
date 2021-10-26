@@ -131,7 +131,13 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 				continue
 			}
 			s.processAttestations(s.ctx)
-			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
+
+			balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+			if err != nil {
+				log.Errorf("Unable to get justified balances for root %v w/ error %s", s.justifiedCheckpt.Root, err)
+				continue
+			}
+			if err := s.updateHead(s.ctx, balances); err != nil {
 				log.Warnf("Resolving fork due to new attestation: %v", err)
 			}
 		}
