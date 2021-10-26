@@ -48,6 +48,9 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
+
+	// origin checkpoint sync support
+	OriginBlockRoot(ctx context.Context) ([32]byte, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -90,6 +93,9 @@ type HeadAccessDatabase interface {
 	LoadGenesis(ctx context.Context, r io.Reader) error
 	SaveGenesisData(ctx context.Context, state state.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
+
+	// initialization method needed for origin checkpoint sync
+	SaveOrigin(ctx context.Context, state io.Reader, block io.Reader) error
 }
 
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.
