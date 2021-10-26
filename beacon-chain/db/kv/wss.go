@@ -18,7 +18,6 @@ const SLOTS_PER_EPOCH = 32
 
 // SaveStateToHead sets the current head state.
 func (s *Store) SaveStateToHead(ctx context.Context, bs state.BeaconState) error {
-
 	return nil
 }
 
