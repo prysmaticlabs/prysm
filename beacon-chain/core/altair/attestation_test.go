@@ -275,9 +275,15 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyTargetFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelySourceFlagIndex))
+		has, err := altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelySourceFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyTargetFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
 	}
 }
 
@@ -331,10 +337,17 @@ func TestValidatorFlag_Has(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, f := range tt.expected {
-				require.Equal(t, true, altair.HasValidatorFlag(tt.set, f))
+				has, err := altair.HasValidatorFlag(tt.set, f)
+				require.NoError(t, err)
+				require.Equal(t, true, has)
 			}
 		})
 	}
+}
+
+func TestValidatorFlag_Has_ExceedsLength(t *testing.T) {
+	_, err := altair.HasValidatorFlag(0, 8)
+	require.ErrorContains(t, "flag position exceeds length", err)
 }
 
 func TestValidatorFlag_Add(t *testing.T) {
@@ -368,21 +381,31 @@ func TestValidatorFlag_Add(t *testing.T) {
 			expectedFalse: []uint8{},
 		},
 	}
-
+	var err error
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := uint8(0)
 			for _, f := range tt.set {
-				b = altair.AddValidatorFlag(b, f)
+				b, err = altair.AddValidatorFlag(b, f)
+				require.NoError(t, err)
 			}
 			for _, f := range tt.expectedFalse {
-				require.Equal(t, false, altair.HasValidatorFlag(b, f))
+				has, err := altair.HasValidatorFlag(b, f)
+				require.NoError(t, err)
+				require.Equal(t, false, has)
 			}
 			for _, f := range tt.expectedTrue {
-				require.Equal(t, true, altair.HasValidatorFlag(b, f))
+				has, err := altair.HasValidatorFlag(b, f)
+				require.NoError(t, err)
+				require.Equal(t, true, has)
 			}
 		})
 	}
+}
+
+func TestValidatorFlag_Add_ExceedsLength(t *testing.T) {
+	_, err := altair.AddValidatorFlag(0, 8)
+	require.ErrorContains(t, "flag position exceeds length", err)
 }
 
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
