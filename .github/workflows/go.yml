@@ -39,7 +39,7 @@ jobs:
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          args: --print-issued-lines --sort-results --no-config --timeout=10m --disable-all -E deadcode --skip-files=validator/web/site_data.go
+          args: --print-issued-lines --sort-results --no-config --timeout=10m --disable-all -E deadcode  -E errcheck -E gosimple --skip-files=validator/web/site_data.go
 
   build:
     name: Build
