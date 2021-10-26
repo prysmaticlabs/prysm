@@ -91,7 +91,7 @@ func (b *BeaconState) slot() types.Slot {
 		return 0
 	}
 
-	return b.state.Slot
+	return b.slotInternal
 }
 
 // Fork version of the beacon chain.
