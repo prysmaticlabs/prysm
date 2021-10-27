@@ -40,7 +40,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -95,7 +95,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 func TestProcessAttestations_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	opts = append(opts, WithAttestationPool(attestations.NewPool()))
 
 	service, err := NewService(ctx, opts...)

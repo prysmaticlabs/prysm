@@ -524,7 +524,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	}
 }
 
-func baseBeaconchainOpts(t *testing.T) []Option {
+func testServiceOptsWithDB(t *testing.T) []Option {
 	beaconDB := testDB.SetupDB(t)
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	return []Option{
@@ -537,7 +537,7 @@ func baseBeaconchainOpts(t *testing.T) []Option {
 // warning: only use these opts when you are certain there are no db calls
 // in your code path. this is a lightweight way to satisfy the stategen/beacondb
 // initialization requirements w/o the overhead of db init.
-func beaconchainOptsNoDB(t *testing.T) []Option {
+func testServiceOptsNoDB(t *testing.T) []Option {
 	return []Option{
 		withStateBalanceCache(satisfactoryStateBalanceCache()),
 	}

@@ -189,7 +189,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.genesisTime = time.Now()
@@ -222,7 +222,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	lastJustifiedBlk := util.NewBeaconBlock()
@@ -586,7 +586,7 @@ func TestCurrentSlot_HandlesOverflow(t *testing.T) {
 }
 func TestAncestorByDB_CtxErr(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -647,7 +647,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 
 func TestAncestor_CanUseForkchoice(t *testing.T) {
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -728,7 +728,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 
 func TestEnsureRootNotZeroHashes(t *testing.T) {
 	ctx := context.Background()
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.genesisRoot = [32]byte{'a'}
@@ -903,7 +903,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 
 func TestUpdateJustifiedInitSync(t *testing.T) {
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -931,7 +931,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	ctx := context.Background()
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -945,7 +945,7 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	ctx := context.Background()
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -1004,7 +1004,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 
 func TestInsertFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts = append(opts, WithDepositCache(depositCache))

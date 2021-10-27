@@ -266,7 +266,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -277,7 +277,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -288,7 +288,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -299,7 +299,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -310,7 +310,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -327,7 +327,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -376,7 +376,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -402,7 +402,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 

@@ -273,7 +273,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	opts := beaconchainOptsNoDB(t)
+	opts := testServiceOptsNoDB(t)
 	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
@@ -288,7 +288,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	hook := logTest.NewGlobal()
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
@@ -315,7 +315,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opts := baseBeaconchainOpts(t)
+	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
