@@ -13,9 +13,13 @@ import (
 
 type stateBalanceCache struct {
 	sync.RWMutex
-	balances []uint64
-	root [32]byte
-	stateGen                *stategen.State
+	balances	[]uint64
+	root		[32]byte
+	stateGen	stateByRooter
+}
+
+type stateByRooter interface {
+	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
 }
 
 // stateBalanceCache wants a stagegen for updating the cache in the readpath,

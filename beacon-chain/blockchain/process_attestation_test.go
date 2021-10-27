@@ -266,7 +266,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := beaconchainOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -277,7 +277,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := beaconchainOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -288,7 +288,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := baseBeaconchainOpts(t)
+	opts := beaconchainOptsNoDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 

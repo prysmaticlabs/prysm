@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -536,11 +538,24 @@ func baseBeaconchainOpts(t *testing.T) []Option {
 // in your code path. this is a lightweight way to satisfy the stategen/beacondb
 // initialization requirements w/o the overhead of db init.
 func beaconchainOptsNoDB(t *testing.T) []Option {
-	mockDB := testDB.MockDB()
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	return []Option{
-		WithDatabase(mockDB),
-		WithStateGen(stategen.New(mockDB)),
-		WithForkChoiceStore(fcs),
+		withStateBalanceCache(satisfactoryStateBalanceCache()),
 	}
+}
+
+type mockStateByRooter struct {
+	err error
+}
+var _ stateByRooter = &mockStateByRooter{}
+
+func (m mockStateByRooter) StateByRoot(ctx context.Context, i [32]byte) (state.BeaconState, error) {
+	return nil, m.err
+}
+
+// returns an instance of the state balance cache that can be used
+// to satisfy the requirement for one in NewService, but which will
+// always return an error if used.
+func satisfactoryStateBalanceCache() *stateBalanceCache {
+	err := errors.New("satisfactoryStateBalanceCache doesn't perform real caching")
+	return &stateBalanceCache{stateGen: mockStateByRooter{err}}
 }

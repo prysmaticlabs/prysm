@@ -128,3 +128,10 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 		return nil
 	}
 }
+
+func withStateBalanceCache(c *stateBalanceCache) Option {
+	return func(s *Service) error {
+		s.justifiedBalances = c
+		return nil
+	}
+}
