@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -35,6 +37,13 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if err := blocks.VerifyExitAndSignature(val, s.Slot(), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+
+	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.ExitReceived,
+		Data: &opfeed.ExitReceivedData{
+			Exit: req,
+		},
+	})
 
 	vs.ExitPool.InsertVoluntaryExit(ctx, s, req)
 
