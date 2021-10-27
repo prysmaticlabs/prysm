@@ -69,6 +69,9 @@ message SignRequest {
 
         // Altair objects.
         ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
+        ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
+        ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
+        ethereum.eth.v1alpha1.SyncMessageBlockRoot sync_message_block_root  = 110;
     }
 }
 
