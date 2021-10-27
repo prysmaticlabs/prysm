@@ -42,21 +42,23 @@ func TestSaveHead_Different(t *testing.T) {
 	// New: 0 <-- 1 <-- 2
 	baseBlk := util.NewBeaconBlock()
 	baseBlk.Block.Slot = 0
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(baseBlk)))
 	baseBlkRoot, err := baseBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(baseBlk)))
 
 	blk1 := util.NewBeaconBlock()
 	blk1.Block.Slot = 1
 	blk1.Block.ParentRoot = baseBlkRoot[:]
-	blk1Root, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk1)))
+	blk1Root, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	blk2 := util.NewBeaconBlock()
 	blk2.Block.Slot = 2
 	blk2.Block.ParentRoot = blk1Root[:]
-	blk2Root, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk2)))
+	blk2Root, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	// Old head is "1"
 	service.head = &head{
@@ -96,21 +98,23 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	// New: 0 <-- 2
 	baseBlk := util.NewBeaconBlock()
 	baseBlk.Block.Slot = 0
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(baseBlk)))
 	baseBlkRoot, err := baseBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(baseBlk)))
 
 	blk1 := util.NewBeaconBlock()
 	blk1.Block.Slot = 1
 	blk1.Block.ParentRoot = baseBlkRoot[:]
-	blk1Root, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk1)))
+	blk1Root, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	blk2 := util.NewBeaconBlock()
 	blk2.Block.Slot = 2
 	blk2.Block.ParentRoot = baseBlkRoot[:]
-	blk2Root, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk2)))
+	blk2Root, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
 
 	// Old head is "1"
 	service.head = &head{
@@ -383,6 +387,7 @@ func TestGetOrphanedBlocks_Empty(t *testing.T) {
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	blkGenesis, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
 	blkGRoot, err := blkGenesis.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkGenesis)))
@@ -406,6 +411,7 @@ func TestGetCommonBase(t *testing.T) {
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
 	blkGRoot, err := blkG.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkG)))
@@ -448,5 +454,6 @@ func TestGetCommonBase(t *testing.T) {
 	assert.NoError(t, err)
 
 	commonRoot, err := service.commonAncestorRoot(ctx, blk105Root, blk103Root)
+	assert.NoError(t, err)
 	require.Equal(t, commonRoot, blkGRoot)
 }
