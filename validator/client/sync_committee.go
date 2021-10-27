@@ -54,7 +54,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
-		Object:          &validatorpb.SignRequest_SyncMessageBlockRootResponse{SyncMessageBlockRootResponse: res},
+		Object:          &validatorpb.SignRequest_SyncMessageBlockRootResponse{SyncMessageBlockRootResponse: res.Root},
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
