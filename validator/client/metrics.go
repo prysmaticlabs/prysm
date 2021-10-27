@@ -391,34 +391,41 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	var included uint64
 	var correctSource, correctTarget, correctHead, inactivityScore int
+	var toInclude bool
 
 	for i := range resp.PublicKeys {
+		toInclude = false
 		// In phase0, we consider attestations included if the inclusion slot is not max uint64.
-		// In altair, we consider attestations included if correctlyVotedTarget is true.
+		// In altair, we consider attestations included if any flag is
+		// set correctlyVotedTarget is true.
 		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
 			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
-				included++
-				summary.includedAttestedCount++
+				toInclude = true
 				summary.totalDistance += resp.InclusionDistances[i]
 			}
 		} else if resp.CorrectlyVotedTarget[i] {
-			included++
-			summary.includedAttestedCount++
+			toInclude = true
 		}
 
 		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
+			toInclude = true
 			correctSource++
 			summary.correctSources++
 		}
 		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
+			toInclude = true
 			correctTarget++
 			summary.correctTargets++
 		}
 		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
+			toInclude = true
 			correctHead++
 			summary.correctHeads++
 		}
-
+		if toInclude {
+			included++
+			summary.includedAttestedCount++
+		}
 		// Altair metrics
 		if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && i < len(resp.InactivityScores) {
 			inactivityScore += int(resp.InactivityScores[i])
@@ -431,14 +438,16 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		return
 	}
 
-	summary.totalAttestedCount += uint64(len(resp.CorrectlyVotedTarget))
+	// This will give the wrong result for inacttive validators
+	summary.totalAttestedCount += uint64(len(resp.PublicKeys))
+
 	summary.totalSources += included
 	summary.totalTargets += included
 	summary.totalHeads += included
 
 	epochSummaryFields := logrus.Fields{
 		"epoch":                   currentEpoch - 1,
-		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.CorrectlyVotedTarget)))*100),
+		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.PublicKeys)))*100),
 		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(included))*100),
 		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(included))*100),
 		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(included))*100),
@@ -446,7 +455,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 
 	// Altair summary fields.
 	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && len(resp.CorrectlyVotedTarget) > 0 {
-		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.CorrectlyVotedTarget)))
+		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.PublicKeys)))
 	}
 
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
