@@ -475,7 +475,6 @@ func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
 					ExtraData:     make([]byte, 32),
 					BaseFeePerGas: make([]byte, 32),
 					BlockHash:     make([]byte, 32),
-					Transactions:  make([]*ethpb.Transaction, 2), // just having two transactions for testing
 				},
 			},
 		},

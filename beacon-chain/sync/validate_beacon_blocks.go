@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -231,51 +232,53 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 
 	// check if the block has execution payload.
 	// If yes, then do few more checks per spec
-	executionEnabled, err := execution.Enabled(parentState, blk.Block().Body())
-	if err != nil {
-		return err
-	}
-	if executionEnabled {
-		payload, err := blk.Block().Body().ExecutionPayload()
-		if err != nil || payload == nil {
-			return err
-		}
-
-		// [REJECT] The block's execution payload timestamp is correct with respect to the slot --
-		// i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-		t, err := slots.ToTime(genesisTime, blk.Block().Slot())
+	if parentState.Version() == version.Merge {
+		executionEnabled, err := execution.Enabled(parentState, blk.Block().Body())
 		if err != nil {
 			return err
 		}
-		if payload.Timestamp != uint64(t.Unix()) {
-			return errors.New("incorrect timestamp")
-		}
+		if executionEnabled {
+			payload, err := blk.Block().Body().ExecutionPayload()
+			if err != nil || payload == nil {
+				return err
+			}
 
-		// [REJECT] Gas used is less than the gas limit --
-		// i.e. execution_payload.gas_used <= execution_payload.gas_limit.
-		if payload.GasUsed > payload.GasLimit {
-			return errors.New("gas used is above gas limit")
-		}
+			// [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+			// i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+			t, err := slots.ToTime(genesisTime, blk.Block().Slot())
+			if err != nil {
+				return err
+			}
+			if payload.Timestamp != uint64(t.Unix()) {
+				return errors.New("incorrect timestamp")
+			}
 
-		// [REJECT] The execution payload block hash is not equal to the parent hash --
-		// i.e. execution_payload.block_hash != execution_payload.parent_hash.
-		if bytes.Equal(payload.BlockHash, payload.ParentHash) {
-			return errors.New("incorrect block hash")
-		}
+			// [REJECT] Gas used is less than the gas limit --
+			// i.e. execution_payload.gas_used <= execution_payload.gas_limit.
+			if payload.GasUsed > payload.GasLimit {
+				return errors.New("gas used is above gas limit")
+			}
 
-		// [REJECT] The execution payload transaction list data is within expected size limits,
-		// the data MUST NOT be larger than the SSZ list-limit, and a client MAY be more strict.
-		payloadSize := uint64(0)
-		transactions, err := eth.OpaqueTransactions(payload)
-		if err != nil {
-			return err
-		}
-		for i := 0; i < len(transactions); i++ {
-			payloadSize += uint64(len(transactions[i]))
-		}
-		totalAllowedSize := params.BeaconConfig().MaxExecutionTransactions * params.BeaconConfig().MaxBytesPerOpaqueTransaction
-		if payloadSize > totalAllowedSize {
-			return errors.New("invalid size")
+			// [REJECT] The execution payload block hash is not equal to the parent hash --
+			// i.e. execution_payload.block_hash != execution_payload.parent_hash.
+			if bytes.Equal(payload.BlockHash, payload.ParentHash) {
+				return errors.New("incorrect block hash")
+			}
+
+			// [REJECT] The execution payload transaction list data is within expected size limits,
+			// the data MUST NOT be larger than the SSZ list-limit, and a client MAY be more strict.
+			payloadSize := uint64(0)
+			transactions, err := eth.OpaqueTransactions(payload)
+			if err != nil {
+				return err
+			}
+			for i := 0; i < len(transactions); i++ {
+				payloadSize += uint64(len(transactions[i]))
+			}
+			totalAllowedSize := params.BeaconConfig().MaxExecutionTransactions * params.BeaconConfig().MaxBytesPerOpaqueTransaction
+			if payloadSize > totalAllowedSize {
+				return errors.New("invalid size")
+			}
 		}
 	}
 	return nil

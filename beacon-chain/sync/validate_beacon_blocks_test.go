@@ -1050,7 +1050,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	parentBlock := util.NewBeaconBlockMerge()
 	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
@@ -1074,16 +1074,16 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
-	}
-	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
-	}
+	})
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1109,14 +1109,19 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
+
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NotNil(t, err)
+	require.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
 }
@@ -1125,7 +1130,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	parentBlock := util.NewBeaconBlockMerge()
 	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
@@ -1149,16 +1154,16 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
-	}
-	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
-	}
+	})
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1184,6 +1189,10 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -1191,8 +1200,8 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NotNil(t, err)
-	result := res == pubsub.ValidationAccept
+	require.NotNil(t, err)
+	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
 }
 
@@ -1200,7 +1209,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	parentBlock := util.NewBeaconBlockMerge()
 	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
@@ -1224,16 +1233,16 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
-	}
-	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
-	}
+	})
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1259,6 +1268,10 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -1266,8 +1279,8 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NotNil(t, err)
-	result := res == pubsub.ValidationAccept
+	require.NotNil(t, err)
+	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
 }
 
@@ -1275,7 +1288,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	parentBlock := util.NewBeaconBlockMerge()
 	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
@@ -1299,16 +1312,16 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("InvalidHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions[0] = &ethpb.Transaction{
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 1"),
 		},
-	}
-	msg.Block.Body.ExecutionPayload.Transactions[1] = &ethpb.Transaction{
+	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
 		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
 			OpaqueTransaction: []byte("transaction 2"),
 		},
-	}
+	})
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 
 	stateGen := stategen.New(db)
@@ -1334,14 +1347,23 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
 			Topic: &topic,
 		},
 	}
+
+	// set the max payload size to small value to test
+	params.BeaconConfig().MaxExecutionTransactions = 1
+	params.BeaconConfig().MaxBytesPerOpaqueTransaction = 9
+
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NotNil(t, err)
-	result := res == pubsub.ValidationAccept
+	require.NotNil(t, err)
+	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
 }
