@@ -4,6 +4,9 @@ package ethereum.validator.accounts.v2;
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/beacon_state.proto";
+import "proto/prysm/v1alpha1/sync_committee.proto";
+import "proto/prysm/v1alpha1/validator.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -69,6 +72,9 @@ message SignRequest {
 
         // Altair objects.
         ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
+        ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
+        ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
+        bytes sync_message_block_root  = 110;
     }
 }
 
