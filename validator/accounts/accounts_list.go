@@ -30,7 +30,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {

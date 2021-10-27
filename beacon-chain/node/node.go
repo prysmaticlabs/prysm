@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
@@ -87,11 +86,12 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
+	blockchainFlagOpts      []blockchain.Option
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(cliCtx *cli.Context) (*BeaconNode, error) {
+func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
@@ -127,6 +127,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		syncCommitteePool:       synccommittee.NewPool(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
+	}
+
+	for _, opt := range opts {
+		if err := opt(beacon); err != nil {
+			return nil, err
+		}
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -480,29 +486,23 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
-	if err != nil {
-		return err
-	}
-
-	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
-	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:                b.db,
-		DepositCache:            b.depositCache,
-		ChainStartFetcher:       web3Service,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		P2p:                     b.fetchP2P(),
-		MaxRoutines:             maxRoutines,
-		StateNotifier:           b,
-		ForkChoiceStore:         b.forkChoiceStore,
-		AttService:              attService,
-		StateGen:                b.stateGen,
-		SlasherAttestationsFeed: b.slasherAttestationsFeed,
-		WeakSubjectivityCheckpt: wsCheckpt,
-	})
+	// skipcq: CRT-D0001
+	opts := append(
+		b.blockchainFlagOpts,
+		blockchain.WithDatabase(b.db),
+		blockchain.WithDepositCache(b.depositCache),
+		blockchain.WithChainStartFetcher(web3Service),
+		blockchain.WithAttestationPool(b.attestationPool),
+		blockchain.WithExitPool(b.exitPool),
+		blockchain.WithSlashingPool(b.slashingsPool),
+		blockchain.WithP2PBroadcaster(b.fetchP2P()),
+		blockchain.WithStateNotifier(b),
+		blockchain.WithForkChoiceStore(b.forkChoiceStore),
+		blockchain.WithAttestationService(attService),
+		blockchain.WithStateGen(b.stateGen),
+		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
+	)
+	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}

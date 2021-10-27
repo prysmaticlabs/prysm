@@ -10,6 +10,7 @@ go_library(
         "init_sync_process_block.go",
         "log.go",
         "metrics.go",
+        "options.go",
         "process_attestation.go",
         "process_attestation_helpers.go",
         "process_block.go",
@@ -22,6 +23,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd/beacon-chain:__subpackages__",
         "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
     ],

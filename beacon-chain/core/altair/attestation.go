@@ -142,13 +142,19 @@ func SetParticipationAndRewardProposer(
 }
 
 // HasValidatorFlag returns true if the flag at position has set.
-func HasValidatorFlag(flag, flagPosition uint8) bool {
-	return ((flag >> flagPosition) & 1) == 1
+func HasValidatorFlag(flag, flagPosition uint8) (bool, error) {
+	if flagPosition > 7 {
+		return false, errors.New("flag position exceeds length")
+	}
+	return ((flag >> flagPosition) & 1) == 1, nil
 }
 
 // AddValidatorFlag adds new validator flag to existing one.
-func AddValidatorFlag(flag, flagPosition uint8) uint8 {
-	return flag | (1 << flagPosition)
+func AddValidatorFlag(flag, flagPosition uint8) (uint8, error) {
+	if flagPosition > 7 {
+		return flag, errors.New("flag position exceeds length")
+	}
+	return flag | (1 << flagPosition), nil
 }
 
 // EpochParticipation sets and returns the proposer reward numerator and epoch participation.
@@ -174,16 +180,37 @@ func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochPa
 		if err != nil {
 			return 0, nil, err
 		}
-		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+		has, err := HasValidatorFlag(epochParticipation[index], sourceFlagIndex)
+		if err != nil {
+			return 0, nil, err
+		}
+		if participatedFlags[sourceFlagIndex] && !has {
+			epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			if err != nil {
+				return 0, nil, err
+			}
 			proposerRewardNumerator += br * cfg.TimelySourceWeight
 		}
-		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+		has, err = HasValidatorFlag(epochParticipation[index], targetFlagIndex)
+		if err != nil {
+			return 0, nil, err
+		}
+		if participatedFlags[targetFlagIndex] && !has {
+			epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if err != nil {
+				return 0, nil, err
+			}
 			proposerRewardNumerator += br * cfg.TimelyTargetWeight
 		}
-		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+		has, err = HasValidatorFlag(epochParticipation[index], headFlagIndex)
+		if err != nil {
+			return 0, nil, err
+		}
+		if participatedFlags[headFlagIndex] && !has {
+			epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			if err != nil {
+				return 0, nil, err
+			}
 			proposerRewardNumerator += br * cfg.TimelyHeadWeight
 		}
 	}
