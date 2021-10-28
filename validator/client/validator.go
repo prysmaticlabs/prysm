@@ -848,14 +848,11 @@ func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [6
 
 // This tracks all validators' voting status.
 type voteStats struct {
-	startEpoch            types.Epoch
-	includedAttestedCount uint64
-	totalAttestedCount    uint64
-	totalDistance         types.Slot
-	correctSources        uint64
-	totalSources          uint64
-	correctTargets        uint64
-	totalTargets          uint64
-	correctHeads          uint64
-	totalHeads            uint64
+	startEpoch          types.Epoch
+	totalAttestedCount  uint64
+	totalRequestedCount uint64
+	totalDistance       types.Slot
+	totalCorrectSource  uint64
+	totalCorrectTarget  uint64
+	totalCorrectHead    uint64
 }
