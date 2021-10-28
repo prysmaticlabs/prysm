@@ -396,8 +396,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	for i := range resp.PublicKeys {
 		toInclude = false
 		// In phase0, we consider attestations included if the inclusion slot is not max uint64.
-		// In altair, we consider attestations included if any flag is
-		// set correctlyVotedTarget is true.
+		// In altair, we consider attestations included if any flag is set
 		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
 			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
 				toInclude = true
