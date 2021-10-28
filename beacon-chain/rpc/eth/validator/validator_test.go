@@ -1728,7 +1728,8 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	aggBits := bitfield.NewBitvector128()
 	aggBits.SetBitAt(0, true)
 	v1Server := &v1alpha1validator.Server{
-		P2P: &p2pmock.MockBroadcaster{},
+		P2P:               &p2pmock.MockBroadcaster{},
+		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 	server := &Server{
 		V1Alpha1Server: v1Server,

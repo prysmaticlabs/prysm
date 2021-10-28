@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -180,6 +181,49 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Type: operation.ExitReceived,
 				Data: &operation.ExitReceivedData{
 					Exit: wantedExitV1alpha1,
+				},
+			},
+			feed: srv.OperationNotifier.OperationFeed(),
+		})
+	})
+	t.Run(SyncCommitteeContributionTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedContributionV1alpha1 := &eth.SignedContributionAndProof{
+			Message: &eth.ContributionAndProof{
+				AggregatorIndex: 1,
+				Contribution: &eth.SyncCommitteeContribution{
+					Slot:              1,
+					BlockRoot:         []byte("root"),
+					SubcommitteeIndex: 1,
+					AggregationBits:   bitfield.NewBitvector128(),
+					Signature:         []byte("sig"),
+				},
+				SelectionProof: []byte("proof"),
+			},
+			Signature: []byte("sig"),
+		}
+		wantedContribution := migration.V1Alpha1SignedContributionAndProofToV2(wantedContributionV1alpha1)
+		genericResponse, err := anypb.New(wantedContribution)
+		require.NoError(t, err)
+
+		wantedMessage := &gateway.EventSource{
+			Event: SyncCommitteeContributionTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{SyncCommitteeContributionTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: operation.SyncCommitteeContributionReceived,
+				Data: &operation.SyncCommitteeContributionReceivedData{
+					Contribution: wantedContributionV1alpha1,
 				},
 			},
 			feed: srv.OperationNotifier.OperationFeed(),
