@@ -99,7 +99,7 @@ message ListKeystoresResponse {
 
 message ImportKeystoresRequest {
   repeated string keystores = 1;
-  string keystores_password = 2;
+  repeated string passwords  = 2;
   string slashing_protection = 3;
 }
 
