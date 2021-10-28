@@ -84,8 +84,7 @@ service KeyManagement {
   rpc DeleteKeystores(ImportKeystoresRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/internal/eth/v1/keystores",
-//      allow_delete_body: "true",
-//      body: "*"
+      body: "*"
     };
   }
 }
