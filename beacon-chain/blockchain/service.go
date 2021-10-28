@@ -65,6 +65,7 @@ type Service struct {
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
 	wsVerified            bool
+	wsVerifier            *WeakSubjectivityVerifier
 }
 
 // config options for the service.
@@ -103,6 +104,11 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		if err := opt(srv); err != nil {
 			return nil, err
 		}
+	}
+	var err error
+	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
+	if err != nil {
+		return nil, err
 	}
 	return srv, nil
 }
@@ -196,7 +202,7 @@ func (s *Service) Start() {
 			}
 		}
 
-		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 		}

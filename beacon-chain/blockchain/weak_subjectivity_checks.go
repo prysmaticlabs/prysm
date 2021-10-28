@@ -4,57 +4,83 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// VerifyWeakSubjectivityRoot verifies the weak subjectivity root in the service struct.
-// Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
-func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
+var errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
+var errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
+
+type weakSubjectivityDB interface {
+	HasBlock(ctx context.Context, blockRoot [32]byte) bool
+	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
+}
+
+type WeakSubjectivityVerifier struct {
+	enabled  bool
+	verified bool
+	root     [32]byte
+	epoch    types.Epoch
+	slot     types.Slot
+	db       weakSubjectivityDB
+}
+
+// validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
+func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
-	if s.cfg.WeakSubjectivityCheckpt == nil || len(s.cfg.WeakSubjectivityCheckpt.Root) == 0 || s.cfg.WeakSubjectivityCheckpt.Epoch == 0 {
-		return nil
+	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
+		return &WeakSubjectivityVerifier{
+			enabled: false,
+		}, nil
 	}
-
-	// Do nothing if the weak subjectivity has previously been verified,
-	// or weak subjectivity epoch is higher than last finalized epoch.
-	if s.wsVerified {
-		return nil
-	}
-	if s.cfg.WeakSubjectivityCheckpt.Epoch > s.finalizedCheckpt.Epoch {
-		return nil
-	}
-
-	r := bytesutil.ToBytes32(s.cfg.WeakSubjectivityCheckpt.Root)
-	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.cfg.WeakSubjectivityCheckpt.Epoch)
-	// Save initial sync cached blocks to DB.
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-	// A node should have the weak subjectivity block in the DB.
-	if !s.cfg.BeaconDB.HasBlock(ctx, r) {
-		return fmt.Errorf("node does not have root in DB: %#x", r)
-	}
-
-	startSlot, err := slots.EpochStart(s.cfg.WeakSubjectivityCheckpt.Epoch)
+	startSlot, err := slots.EpochStart(wsc.Epoch)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	return &WeakSubjectivityVerifier{
+		enabled: true,
+		root:    bytesutil.ToBytes32(wsc.Root),
+		epoch:   wsc.Epoch,
+		db:      db,
+		slot:    startSlot,
+	}, nil
+}
+
+// VerifyWeakSubjectivity verifies the weak subjectivity root in the service struct.
+// Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
+func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, finalizedEpoch types.Epoch) error {
+	if v.verified || !v.enabled {
+		return nil
+	}
+	if v.epoch > finalizedEpoch {
+		return nil
+	}
+	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", v.root, v.epoch)
+
+	// TODO the original code is forcing a sync of init blocks, can we avoid doing that?
+	// if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+
+	if !v.db.HasBlock(ctx, v.root) {
+		return errors.Wrap(errWSBlockNotFound, fmt.Sprintf("missing root %#x", v.root))
+	}
+	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(v.slot + params.BeaconConfig().SlotsPerEpoch)
 	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(startSlot + params.BeaconConfig().SlotsPerEpoch)
-	roots, err := s.cfg.BeaconDB.BlockRoots(ctx, filter)
+	roots, err := v.db.BlockRoots(ctx, filter)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error while retrieving block roots to verify weak subjectivity")
 	}
 	for _, root := range roots {
-		if r == root {
+		if v.root == root {
 			log.Info("Weak subjectivity check has passed")
-			s.wsVerified = true
+			v.verified = true
 			return nil
 		}
 	}
 
-	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.cfg.WeakSubjectivityCheckpt.Epoch)
+	return errors.Wrap(errWSBlockNotFoundInEpoch, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
 }
