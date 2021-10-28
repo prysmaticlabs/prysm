@@ -27,7 +27,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir))
 	})
-	token, _, err := srv.initializeAuthToken(walletDir)
+	token, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 
@@ -48,7 +48,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	// Next up, we make the same request but reinitialize the server and we should still
 	// pass with the same auth token.
 	srv = &Server{}
-	_, _, err = srv.initializeAuthToken(walletDir)
+	_, err = srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
@@ -92,13 +92,13 @@ func Test_initializeAuthToken(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir))
 	})
-	token, _, err := srv.initializeAuthToken(walletDir)
+	token, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 
 	// Initializing second time, we generate something from the initial file.
 	srv2 := &Server{}
-	token2, _, err := srv2.initializeAuthToken(walletDir)
+	token2, err := srv2.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(srv.jwtSecret, srv2.jwtSecret))
 	require.Equal(t, token, token2)
@@ -108,7 +108,7 @@ func Test_initializeAuthToken(t *testing.T) {
 	require.NoError(t, os.RemoveAll(walletDir))
 	srv3 := &Server{}
 	walletDir = setupWalletDir(t)
-	token3, _, err := srv3.initializeAuthToken(walletDir)
+	token3, err := srv3.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	require.NotEqual(t, token, token3)
