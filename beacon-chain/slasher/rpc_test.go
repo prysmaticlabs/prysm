@@ -125,7 +125,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 		{
 			name:         "should detect multiple surround if multiple same indices",
 			attToCheck:   createAttestationWrapper(t, 1, 4, []uint64{0, 1}, []byte{2}),
-			amtSlashable: 2,
+			amtSlashable: 4,
 		},
 	}
 	for _, tt := range tests {
