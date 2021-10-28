@@ -55,6 +55,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "benchmark_test.go",
         "chunks_test.go",
         "detect_attestations_test.go",
         "detect_blocks_test.go",
@@ -81,7 +82,9 @@ go_test(
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//io/file:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",

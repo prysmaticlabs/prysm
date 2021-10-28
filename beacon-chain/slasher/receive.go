@@ -72,7 +72,7 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 	}
 }
 
-// Process queued attestations every time an epoch ticker fires. We retrieve
+// Process queued attestations every time a slot ticker fires. We retrieve
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
@@ -110,7 +110,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			slashings, err := s.checkSlashableAttestations(ctx, validAtts)
+			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
 			if err != nil {
 				log.WithError(err).Error("Could not check slashable attestations")
 				continue

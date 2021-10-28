@@ -93,7 +93,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 	}
 	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
-	attesterSlashings, err := s.checkSlashableAttestations(ctx, prevAtts)
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, currentEpoch, prevAtts)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(attesterSlashings))
 

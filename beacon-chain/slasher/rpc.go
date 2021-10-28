@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -59,7 +60,8 @@ func (s *Service) IsSlashableAttestation(
 		SigningRoot:        dataRoot,
 	}
 
-	attesterSlashings, err := s.checkSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
+	currentEpoch := slots.EpochsSinceGenesis(s.genesisTime)
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, currentEpoch, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if attestation is slashable: %v", err)
 	}
