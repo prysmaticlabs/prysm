@@ -16,6 +16,9 @@ import (
 func setupWalletDir(t testing.TB) string {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
 	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(walletDir))
+	})
 	return walletDir
 }
 
@@ -24,9 +27,6 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	// the wallet directory, so we generate a jwt token and secret from scratch.
 	srv := &Server{}
 	walletDir := setupWalletDir(t)
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir))
-	})
 	token, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
@@ -60,9 +60,6 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	// the wallet directory, so we generate a jwt token and secret from scratch.
 	srv := &Server{}
 	walletDir := setupWalletDir(t)
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir))
-	})
 	_, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	currentSecret := srv.jwtSecret
@@ -89,9 +86,6 @@ func Test_initializeAuthToken(t *testing.T) {
 	// the wallet directory, so we generate a jwt token and secret from scratch.
 	srv := &Server{}
 	walletDir := setupWalletDir(t)
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir))
-	})
 	token, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
