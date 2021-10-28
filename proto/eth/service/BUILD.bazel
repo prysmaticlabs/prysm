@@ -45,10 +45,16 @@ go_proto_library(
     ],
 )
 
+go_proto_compiler(
+    name = "allow_delete_body_gateway_compiler",
+    plugin = "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    options = "allow_delete_body"
+)
+
 go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "allow_delete_body_gateway_compiler",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
