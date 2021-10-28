@@ -190,15 +190,17 @@ func (s *Server) Start() {
 		}
 	}()
 	log.WithField("address", address).Info("gRPC server listening on address")
-	token, err := s.initializeAuthToken(s.walletDir)
-	if err != nil {
-		log.Errorf("Could not initialize web auth token: %v", err)
-		return
+	if s.walletDir != "" {
+		token, err := s.initializeAuthToken(s.walletDir)
+		if err != nil {
+			log.Errorf("Could not initialize web auth token: %v", err)
+			return
+		}
+		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
+		logValidatorWebAuth(validatorWebAddr, token)
+		authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
-	validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-	logValidatorWebAuth(validatorWebAddr, token)
-	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
-	go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 }
 
 // Stop the gRPC server.

@@ -63,7 +63,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(walletDir))
 	})
-	_, _, err := srv.initializeAuthToken(walletDir)
+	_, err := srv.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	currentSecret := srv.jwtSecret
 	require.Equal(t, true, len(currentSecret) > 0)
