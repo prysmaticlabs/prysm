@@ -195,6 +195,11 @@ func (s *Service) checkDoubleVotesOnDisk(
 	return doubleVoteSlashings, nil
 }
 
+// This function updates the slashing spans for a given validator for a change in epoch
+// since the last epoch we have recorded for the validator. For example, if the last epoch a validator
+// has written is N, and the current epoch is N+5, we update entries in the slashing spans
+// with their neutral element for epochs N+1 to N+4. This also puts any loaded chunks in a
+// map used as a cache for further processing and minimizing database reads later on.
 func (s *Service) epochUpdateForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
