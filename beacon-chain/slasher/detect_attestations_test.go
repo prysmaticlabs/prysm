@@ -471,7 +471,6 @@ func Test_epochUpdateForValidators(t *testing.T) {
 	})
 }
 
-
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
