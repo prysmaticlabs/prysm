@@ -392,6 +392,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	var attested, correctSource, correctTarget, correctHead, inactivityScore int
 
 	for i := range resp.PublicKeys {
+		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
+			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
+				summary.totalDistance += resp.InclusionDistances[i]
+			}
+		}
+
 		included := false
 		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
 			included = true
