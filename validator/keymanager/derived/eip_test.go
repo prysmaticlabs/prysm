@@ -3,8 +3,10 @@ package derived
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -30,9 +32,9 @@ func TestDerivationFromMnemonic(t *testing.T) {
 	validatingKey, err := util.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", childIndex))
 	require.NoError(t, err)
 
-	expectedMasterSK, err := bls.SecretKeyFromBigNum(masterSK)
+	expectedMasterSK, err := secretKeyFromBigNum(masterSK)
 	require.NoError(t, err)
-	expectedChildSK, err := bls.SecretKeyFromBigNum(childSK)
+	expectedChildSK, err := secretKeyFromBigNum(childSK)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedMasterSK.Marshal(), withdrawalKey.Marshal())
 	assert.DeepEqual(t, expectedChildSK.Marshal(), validatingKey.Marshal())
@@ -97,12 +99,25 @@ func TestDerivationFromSeed(t *testing.T) {
 			childSK, err := util.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", tt.fields.childIndex))
 			require.NoError(t, err)
 
-			expectedMasterSK, err := bls.SecretKeyFromBigNum(tt.want.masterSK)
+			expectedMasterSK, err := secretKeyFromBigNum(tt.want.masterSK)
 			require.NoError(t, err)
-			expectedChildSK, err := bls.SecretKeyFromBigNum(tt.want.childSK)
+			expectedChildSK, err := secretKeyFromBigNum(tt.want.childSK)
 			require.NoError(t, err)
 			assert.DeepEqual(t, expectedMasterSK.Marshal(), masterSK.Marshal())
 			assert.DeepEqual(t, expectedChildSK.Marshal(), childSK.Marshal())
 		})
 	}
+}
+
+func secretKeyFromBigNum(s string) (bls.SecretKey, error) {
+	num := new(big.Int)
+	num, ok := num.SetString(s, 10)
+	if !ok {
+		return nil, errors.New("could not set big int from string")
+	}
+	bts := num.Bytes()
+	if len(bts) != 32 {
+		return nil, errors.Errorf("provided big number string sets to a key unequal to 32 bytes: %d != 32", len(bts))
+	}
+	return bls.SecretKeyFromBytes(bts)
 }
