@@ -37,12 +37,9 @@ func (s *Service) checkSlashableAttestations(
 		}
 		slashings = append(slashings, attSlashings...)
 		indices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-		//fmt.Println("Writing last epoch written for validators", len(indices))
-		//startInner := time.Now()
 		if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
 			return nil, err
 		}
-		//fmt.Printf("Saved last epoch written for vals %v\n", time.Since(startInner))
 	}
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
