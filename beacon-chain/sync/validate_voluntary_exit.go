@@ -8,6 +8,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -65,6 +67,15 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	msg.ValidatorData = exit // Used in downstream subscriber
+
+	// Broadcast the voluntary exit on a feed to notify other services in the beacon node
+	// of a received voluntary exit.
+	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.ExitReceived,
+		Data: &opfeed.ExitReceivedData{
+			Exit: exit,
+		},
+	})
 
 	return pubsub.ValidationAccept, nil
 }
