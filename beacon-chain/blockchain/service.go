@@ -201,6 +201,8 @@ func (s *Service) Start() {
 			}
 		}
 
+		// not attempting to save initial sync blocks here, because there shouldn't be until
+		// after the statefeed.Initialized event is fired (below)
 		if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)

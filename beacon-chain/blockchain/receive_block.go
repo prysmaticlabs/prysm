@@ -101,6 +101,9 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
+	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
 	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 		// log.Fatalf will prevent defer from being called
 		span.End()
