@@ -6,11 +6,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -25,6 +27,19 @@ import (
 const (
 	authTokenFileName = "auth-token"
 )
+
+// Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
+func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
+	walletExists, err := wallet.Exists(s.walletDir)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
+	}
+	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+	return &pb.InitializeAuthResponse{
+		HasSignedUp: file.FileExists(authTokenPath),
+		HasWallet:   walletExists,
+	}, nil
+}
 
 // CreateAuthToken generates a new jwt key, token and writes them
 // to a file in the specified directory. Also, it logs out a prepared URL
@@ -47,19 +62,6 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	return nil
 }
 
-// Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
-func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
-	walletExists, err := wallet.Exists(s.walletDir)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
-	}
-	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
-	return &pb.InitializeAuthResponse{
-		HasSignedUp: file.FileExists(authTokenPath),
-		HasWallet:   walletExists,
-	}, nil
-}
-
 // Upon launch of the validator client, we initialize an auth token by either creating
 // one from scratch or reading it from a file. This token can then be shown to the
 // user via stdout and the validator client should then attempt to open the default
@@ -73,28 +75,24 @@ func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		r := bufio.NewReader(f)
-		jwtKeyHex, err := r.ReadString('\n')
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Error(err)
+			}
+		}()
+		secret, token, err := readAuthTokenFile(f)
 		if err != nil {
 			return "", err
 		}
-		jwtKey, err := hex.DecodeString(strings.TrimSpace(jwtKeyHex))
-		if err != nil {
-			return "", err
-		}
-		token, _, err := r.ReadLine()
-		if err != nil {
-			return "", err
-		}
-		s.jwtKey = jwtKey
-		return strings.TrimSpace(string(token)), nil
+		s.jwtSecret = secret
+		return token, nil
 	}
 	jwtKey, err := createRandomJWTSecret()
 	if err != nil {
 		return "", err
 	}
-	s.jwtKey = jwtKey
-	token, err := createTokenString(s.jwtKey)
+	s.jwtSecret = jwtKey
+	token, err := createTokenString(s.jwtSecret)
 	if err != nil {
 		return "", err
 	}
@@ -102,6 +100,41 @@ func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenPath string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.WithError(err).Error("Could not initialize file watcher")
+		return
+	}
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.WithError(err).Error("Could not close file watcher")
+		}
+	}()
+	if err := watcher.Add(authTokenPath); err != nil {
+		log.WithError(err).Errorf("Could not add file %s to file watcher", authTokenPath)
+		return
+	}
+	for {
+		select {
+		case <-watcher.Events:
+			// If a file was modified, we attempt to read that file
+			// and parse it into our accounts store.
+			token, err := s.initializeAuthToken(s.walletDir)
+			if err != nil {
+				log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
+				continue
+			}
+			validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
+			logValidatorWebAuth(validatorWebAddr, token)
+		case err := <-watcher.Errors:
+			log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func logValidatorWebAuth(validatorWebAddr, token string) {
@@ -134,6 +167,25 @@ func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 		return err
 	}
 	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
+}
+
+func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
+	br := bufio.NewReader(r)
+	var jwtKeyHex string
+	jwtKeyHex, err = br.ReadString('\n')
+	if err != nil {
+		return
+	}
+	secret, err = hex.DecodeString(strings.TrimSpace(jwtKeyHex))
+	if err != nil {
+		return
+	}
+	tokenBytes, _, err := br.ReadLine()
+	if err != nil {
+		return
+	}
+	token = strings.TrimSpace(string(tokenBytes))
+	return
 }
 
 // Creates a JWT token string using the JWT key.
