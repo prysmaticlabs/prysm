@@ -389,36 +389,35 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot types.Slot) {
 	summary := &v.voteStats
 	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	var included uint64
-	var correctSource, correctTarget, correctHead, inactivityScore int
+	var attested, correctSource, correctTarget, correctHead, inactivityScore int
 
 	for i := range resp.PublicKeys {
-		// In phase0, we consider attestations included if the inclusion slot is not max uint64.
-		// In altair, we consider attestations included if correctlyVotedTarget is true.
 		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
 			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
-				included++
-				summary.includedAttestedCount++
 				summary.totalDistance += resp.InclusionDistances[i]
 			}
-		} else if resp.CorrectlyVotedTarget[i] {
-			included++
-			summary.includedAttestedCount++
 		}
 
+		included := false
 		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
+			included = true
 			correctSource++
-			summary.correctSources++
+			summary.totalCorrectSource++
 		}
 		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
+			included = true
 			correctTarget++
-			summary.correctTargets++
+			summary.totalCorrectTarget++
 		}
 		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
+			included = true
 			correctHead++
-			summary.correctHeads++
+			summary.totalCorrectHead++
 		}
-
+		if included {
+			attested++
+			summary.totalAttestedCount++
+		}
 		// Altair metrics
 		if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && i < len(resp.InactivityScores) {
 			inactivityScore += int(resp.InactivityScores[i])
@@ -426,27 +425,22 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	// Return early if no attestation got included from previous epoch.
-	// This happens when validators joined half way through epoch and already passed its assigned slot.
-	if included == 0 {
+	// This happens when validators joined halfway through epoch and already passed its assigned slot.
+	if attested == 0 {
 		return
 	}
 
-	summary.totalAttestedCount += uint64(len(resp.CorrectlyVotedTarget))
-	summary.totalSources += included
-	summary.totalTargets += included
-	summary.totalHeads += included
-
 	epochSummaryFields := logrus.Fields{
 		"epoch":                   currentEpoch - 1,
-		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.CorrectlyVotedTarget)))*100),
-		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(included))*100),
-		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(included))*100),
-		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(included))*100),
+		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(attested)/float64(len(resp.PublicKeys)))*100),
+		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(correctSource)/float64(attested))*100),
+		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(correctTarget)/float64(attested))*100),
+		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(correctHead)/float64(attested))*100),
 	}
 
 	// Altair summary fields.
-	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && len(resp.CorrectlyVotedTarget) > 0 {
-		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.CorrectlyVotedTarget)))
+	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && attested > 0 {
+		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.PublicKeys)))
 	}
 
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
@@ -457,27 +451,25 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		totalPrevBal += v.prevBalance[i]
 	}
 
-	if totalStartBal == 0 ||
-		summary.includedAttestedCount == 0 ||
-		summary.totalSources == 0 ||
-		summary.totalTargets == 0 ||
-		summary.totalHeads == 0 {
+	if totalStartBal == 0 || summary.totalAttestedCount == 0 {
 		log.Error("Failed to print launch summary: one or more divisors is 0")
 		return
 	}
 
+	summary.totalRequestedCount += uint64(len(resp.PublicKeys))
+
 	launchSummaryFields := logrus.Fields{
 		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch),
-		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttestedCount)/float64(summary.totalAttestedCount))*100),
-		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
-		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
-		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
+		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.totalAttestedCount)/float64(summary.totalRequestedCount))*100),
+		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.totalCorrectSource)/float64(summary.totalAttestedCount))*100),
+		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.totalCorrectTarget)/float64(summary.totalAttestedCount))*100),
+		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.totalCorrectHead)/float64(summary.totalAttestedCount))*100),
 		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", (float64(totalPrevBal)-float64(totalStartBal))/float64(totalStartBal)*100),
 	}
 
 	// Add phase0 specific fields
 	if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-		launchSummaryFields["averageInclusionDistance"] = fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttestedCount))
+		launchSummaryFields["averageInclusionDistance"] = fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.totalAttestedCount))
 	}
 
 	log.WithFields(launchSummaryFields).Info("Vote summary since launch")

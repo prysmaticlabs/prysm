@@ -55,5 +55,5 @@ func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
 	}
-	return s.jwtKey, nil
+	return s.jwtSecret, nil
 }

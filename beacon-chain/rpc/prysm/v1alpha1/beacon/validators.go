@@ -862,14 +862,31 @@ func (bs *Server) GetIndividualVotes(
 		return filteredIndices[i] < filteredIndices[j]
 	})
 
-	v, bal, err := precompute.New(ctx, requestedState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
+	var v []*precompute.Validator
+	var bal *precompute.Balance
+	switch requestedState.Version() {
+	case version.Phase0:
+		v, bal, err = precompute.New(ctx, requestedState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
+		}
+		v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
+		}
+	case version.Altair:
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, requestedState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
+		}
+		v, _, err = altair.ProcessEpochParticipation(ctx, requestedState, bal, v)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
+		}
+	default:
+		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", requestedState.Version())
 	}
-	v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-	}
+
 	for _, index := range filteredIndices {
 		if uint64(index) >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
