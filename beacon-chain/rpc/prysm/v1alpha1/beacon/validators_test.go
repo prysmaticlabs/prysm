@@ -2324,6 +2324,92 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
 }
 
+func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
+	helpers.ClearCache()
+	params.UseMainnetConfig()
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	validators := uint64(32)
+	beaconState, _ := util.DeterministicGenesisStateAltair(t, validators)
+	startSlot, err := slots.EpochStart(1)
+	assert.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(startSlot))
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = startSlot
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	gen := stategen.New(beaconDB)
+	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+	// Save State at the end of the epoch:
+	endSlot, err := slots.EpochEnd(1)
+	assert.NoError(t, err)
+
+	beaconState, _ = util.DeterministicGenesisStateAltair(t, validators)
+	require.NoError(t, beaconState.SetSlot(endSlot))
+
+	pb, err := beaconState.CurrentEpochParticipation()
+	require.NoError(t, err)
+	for i := range pb {
+		pb[i] = 0xff
+	}
+	require.NoError(t, beaconState.SetCurrentParticipationBits(pb))
+	require.NoError(t, beaconState.SetPreviousParticipationBits(pb))
+
+	b.Block.Slot = endSlot
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	gRoot, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, gen.SaveState(ctx, gRoot, beaconState))
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	bs := &Server{
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
+	}
+
+	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+		Indices: []types.ValidatorIndex{0, 1},
+		Epoch:   1,
+	})
+	require.NoError(t, err)
+	wanted := &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
+			{
+				ValidatorIndex:                   0,
+				PublicKey:                        beaconState.Validators()[0].PublicKey,
+				IsActiveInCurrentEpoch:           true,
+				IsActiveInPreviousEpoch:          true,
+				IsCurrentEpochTargetAttester:     true,
+				IsCurrentEpochAttester:           true,
+				IsPreviousEpochAttester:          true,
+				IsPreviousEpochHeadAttester:      true,
+				IsPreviousEpochTargetAttester:    true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				Epoch:                            1,
+			},
+			{
+				ValidatorIndex:                   1,
+				PublicKey:                        beaconState.Validators()[1].PublicKey,
+				IsActiveInCurrentEpoch:           true,
+				IsActiveInPreviousEpoch:          true,
+				IsCurrentEpochTargetAttester:     true,
+				IsCurrentEpochAttester:           true,
+				IsPreviousEpochAttester:          true,
+				IsPreviousEpochHeadAttester:      true,
+				IsPreviousEpochTargetAttester:    true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
+				Epoch:                            1,
+			},
+		},
+	}
+	assert.DeepEqual(t, wanted, res, "Unexpected response")
+}
+
 func Test_validatorStatus(t *testing.T) {
 	tests := []struct {
 		name      string

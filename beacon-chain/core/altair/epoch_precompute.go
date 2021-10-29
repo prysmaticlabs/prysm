@@ -168,6 +168,7 @@ func ProcessEpochParticipation(
 			return nil, nil, err
 		}
 		if has && vals[i].IsActiveCurrentEpoch {
+			vals[i].IsCurrentEpochAttester = true
 			vals[i].IsCurrentEpochTargetAttester = true
 		}
 	}
