@@ -109,6 +109,7 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/state/custom-types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",

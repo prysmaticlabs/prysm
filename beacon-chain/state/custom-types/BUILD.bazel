@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["state_arrays.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = ["@com_github_ferranbt_fastssz//:go_default_library"],
 )
 
