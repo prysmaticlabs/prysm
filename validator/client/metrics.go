@@ -410,7 +410,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 			summary.totalCorrectTarget++
 		}
 		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
-			included = true
+			// in altair, head == true also means source == true, hence no need to mark included true
 			correctHead++
 			summary.totalCorrectHead++
 		}
