@@ -57,7 +57,7 @@ func TestByte32_MarshalSSZ(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	actual := [32]byte(d)
-	if !reflect.DeepEqual(b[:], actual[:]) {
+	if !reflect.DeepEqual(b, actual[:]) {
 		t.Errorf("Unequal: %v = %v", b, [32]byte(d))
 	}
 }
