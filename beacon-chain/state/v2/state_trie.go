@@ -330,13 +330,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 				maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
 				elemSize := uint64(8)
 				balLimit := (maxBalCap*elemSize + 31) / 32
-				if balLimit == 0 {
-					if len(b.state.Balances) == 0 {
-						balLimit = 1
-					} else {
-						balLimit = uint64(len(b.state.Balances))
-					}
-				}
 				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
 				if err != nil {
 					return [32]byte{}, err

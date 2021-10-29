@@ -180,9 +180,10 @@ func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]
 			sizeOfElem := len(chunk) / int(numOfElems)
 			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
 				wantedVal := uint64(0)
-				// We only select from a field value, if the
-				// index exists in our element list. If it doesn't
-				// we assume a zero value.
+				// We are adding chunks in sets of 4, if the set is at the edge of the array
+				// then you will need to zero out the rest of the chunk. Ex : 41 indexes,
+				// so 41 % 4 = 1 . There are 3 indexes, which do not exist yet but we
+				// have to add in as a root. These 3 indexes are then given a 'zero' value.
 				if int(j) < len(val) {
 					wantedVal = val[j]
 				}
