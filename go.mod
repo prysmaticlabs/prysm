@@ -42,7 +42,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.9.0
 	github.com/libp2p/go-libp2p-noise v0.2.2
 	github.com/libp2p/go-libp2p-peerstore v0.2.8
-	github.com/libp2p/go-libp2p-pubsub v0.5.5
+	github.com/libp2p/go-libp2p-pubsub v0.5.6
 	github.com/libp2p/go-libp2p-swarm v0.5.3
 	github.com/libp2p/go-tcp-transport v0.2.8
 	github.com/logrusorgru/aurora v2.0.3+incompatible
