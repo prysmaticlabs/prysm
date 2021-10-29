@@ -23,6 +23,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var errNoCommonAncestorRoot = errors.New("could not find common ancestor root")
+
 // This defines the current chain service's view of head.
 type head struct {
 	slot  types.Slot              // current head slot.
@@ -383,7 +385,11 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot, newHeadRoo
 	}
 
 	commonAncestorRoot, err := s.commonAncestorRoot(ctx, orphanedRoot, newHeadRoot)
-	if err != nil {
+	switch {
+	// Exit early if there's no common ancestor as there would be nothing to save.
+	case errors.Is(err, errNoCommonAncestorRoot):
+		return nil
+	case err != nil:
 		return err
 	}
 
@@ -450,22 +456,22 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte)
 		return [32]byte{}, errors.New("nil blocks")
 	}
 
-	// Bound the traversal to be within one epoch away either of the root.
-	var boundaryEpoch types.Epoch
-	blk1Epoch := slots.ToEpoch(blk1.Block().Slot())
-	blk2Epoch := slots.ToEpoch(blk2.Block().Slot())
-	if blk1Epoch <= blk2Epoch {
-		boundaryEpoch = blk1Epoch
-	} else {
-		boundaryEpoch = blk2Epoch
-	}
-	if boundaryEpoch > 1 { // Safety check for the first epoch
-		boundaryEpoch = boundaryEpoch - 1
-	}
-	boundarySlot, err := slots.EpochStart(boundaryEpoch)
+	// Bound the traversal to be within one epoch from either parent state.
+	blks1ParentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk1.Block().ParentRoot()))
 	if err != nil {
 		return [32]byte{}, err
 	}
+	blks1ParentStateSlot := blks1ParentState.Slot()
+	blks2ParentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk2.Block().ParentRoot()))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	blks2ParentStateSlot := blks2ParentState.Slot()
+	boundarySlot := blks1ParentStateSlot
+	if blks1ParentStateSlot > blks2ParentStateSlot {
+		boundarySlot = blks2ParentStateSlot
+	}
+	boundarySlot -= params.BeaconConfig().SlotsPerEpoch
 
 	// Keep walking back both of the branches until both heads are the same
 	for root1 != root2 {
@@ -483,10 +489,10 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte)
 			return [32]byte{}, err
 		}
 
-		// A safety check to prevent a deep traversal
-		// The number of traversal is at most "2 * SLOTS_PER_EPOCH" per root.
+		// Exit when block is one epoch older first block's parent state. The attestations
+		// in those block would have been expired anyway.
 		if blk1.Block().Slot() < boundarySlot || blk2.Block().Slot() < boundarySlot {
-			return [32]byte{}, errors.New("cannot find common ancestor from the immediately preceding epoch")
+			return [32]byte{}, errNoCommonAncestorRoot
 		}
 	}
 
