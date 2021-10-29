@@ -2177,10 +2177,6 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
         importpath = "github.com/libp2p/go-libp2p-tls",
-        patch_args = ["-p1"],
-        patches = [
-            "@prysm//third_party:libp2p_tls.patch",  # See: https://github.com/libp2p/go-libp2p-tls/issues/66
-        ],
         sum = "h1:N8i5wPiHudA+02sfW85R2nUbybPm7agjAywZc6pd3xA=",
         version = "v0.2.0",
     )
