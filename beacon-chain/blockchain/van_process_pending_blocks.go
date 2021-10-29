@@ -324,8 +324,8 @@ func (s *Service) verifyPandoraShardInfo(signedBlk interfaces.SignedBeaconBlock)
 		curShardingBlockNumber := curPandoraShards[0].BlockNumber
 
 		if curShardingParentHash != canonicalShardingHash && curShardingBlockNumber != canonicalShardingBlkNum+1 {
-			log.WithField("slot", signedBlk.Block().Slot()).WithField("canonicalHash", canonicalShardingHash).
-				WithField("canonicalBlkNum", canonicalShardingBlkNum).WithField("curShardingParentHash", curShardingParentHash).
+			log.WithField("slot", signedBlk.Block().Slot()).WithField("canonicalShardingHash", canonicalShardingHash).
+				WithField("canonicalShardingBlkNum", canonicalShardingBlkNum).WithField("curShardingParentHash", curShardingParentHash).
 				WithField("curShardingBlockNumber", curShardingBlockNumber).WithError(errInvalidPandoraShardInfo).
 				Error("Failed to verify pandora sharding info")
 			return errInvalidPandoraShardInfo
