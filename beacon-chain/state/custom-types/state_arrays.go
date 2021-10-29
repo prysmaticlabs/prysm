@@ -7,6 +7,7 @@ import (
 )
 
 const stateRootsSize = 8192
+const randaoMixesSize = 65536
 
 var _ fssz.HashRoot = (Byte32)([32]byte{})
 var _ fssz.Marshaler = (*Byte32)(nil)
@@ -118,12 +119,12 @@ func (r *StateRoots) SizeSSZ() int {
 	return stateRootsSize * 32
 }
 
-var _ fssz.HashRoot = (RandaoMixes)([][32]byte{})
+var _ fssz.HashRoot = (RandaoMixes)([randaoMixesSize][32]byte{})
 var _ fssz.Marshaler = (*RandaoMixes)(nil)
 var _ fssz.Unmarshaler = (*RandaoMixes)(nil)
 
 // Byte32 represents a 32 bytes RandaoMixes object in Ethereum beacon chain consensus.
-type RandaoMixes [][32]byte
+type RandaoMixes [randaoMixesSize][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r RandaoMixes) HashTreeRoot() ([32]byte, error) {
@@ -146,11 +147,11 @@ func (r *RandaoMixes) UnmarshalSSZ(buf []byte) error {
 		return fmt.Errorf("expected buffer of length %d received %d", r.SizeSSZ(), len(buf))
 	}
 
-	mixes := make([][32]byte, len(buf)/32)
-	for i, _ := range mixes {
-		copy(mixes[i][:], buf[i*32:(i+1)*32])
+	var roots RandaoMixes
+	for i, _ := range roots {
+		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
-	*r = mixes
+	*r = roots
 	return nil
 }
 
@@ -165,6 +166,67 @@ func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals RandaoMixes into a serialized object.
 func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
+	marshalled := make([]byte, randaoMixesSize*32)
+	for i, r32 := range r {
+		for j, rr := range r32 {
+			marshalled[i*32+j] = rr
+		}
+	}
+	return marshalled, nil
+}
+
+// SizeSSZ returns the size of the serialized object.
+func (r *RandaoMixes) SizeSSZ() int {
+	return randaoMixesSize * 32
+}
+
+var _ fssz.HashRoot = (HistoricalRoots)([][32]byte{})
+var _ fssz.Marshaler = (*HistoricalRoots)(nil)
+var _ fssz.Unmarshaler = (*HistoricalRoots)(nil)
+
+// Byte32 represents a 32 bytes HistoricalRoots object in Ethereum beacon chain consensus.
+type HistoricalRoots [][32]byte
+
+// HashTreeRoot returns calculated hash root.
+func (r HistoricalRoots) HashTreeRoot() ([32]byte, error) {
+	return fssz.HashWithDefaultHasher(r)
+}
+
+// HashTreeRootWith hashes a HistoricalRoots object with a Hasher from the default HasherPool.
+func (r HistoricalRoots) HashTreeRootWith(hh *fssz.Hasher) error {
+	index := hh.Index()
+	for _, sRoot := range r {
+		hh.Append(sRoot[:])
+	}
+	hh.Merkleize(index)
+	return nil
+}
+
+// UnmarshalSSZ deserializes the provided bytes buffer into the HistoricalRoots object.
+func (r *HistoricalRoots) UnmarshalSSZ(buf []byte) error {
+	if len(buf) != r.SizeSSZ() {
+		return fmt.Errorf("expected buffer of length %d received %d", r.SizeSSZ(), len(buf))
+	}
+
+	mixes := make([][32]byte, len(buf)/32)
+	for i, _ := range mixes {
+		copy(mixes[i][:], buf[i*32:(i+1)*32])
+	}
+	*r = mixes
+	return nil
+}
+
+// MarshalSSZTo marshals HistoricalRoots with the provided byte slice.
+func (r *HistoricalRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalled, err := r.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalled...), nil
+}
+
+// MarshalSSZ marshals HistoricalRoots into a serialized object.
+func (r *HistoricalRoots) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, len(*r)*32)
 	for i, r32 := range *r {
 		for j, rr := range r32 {
@@ -175,6 +237,6 @@ func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (r *RandaoMixes) SizeSSZ() int {
+func (r *HistoricalRoots) SizeSSZ() int {
 	return len(*r) * 32
 }
