@@ -471,7 +471,11 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte)
 	if blks1ParentStateSlot > blks2ParentStateSlot {
 		boundarySlot = blks2ParentStateSlot
 	}
-	boundarySlot -= params.BeaconConfig().SlotsPerEpoch
+	if boundarySlot > params.BeaconConfig().SlotsPerEpoch { // Avoid wrap around
+		boundarySlot -= params.BeaconConfig().SlotsPerEpoch
+	} else {
+		boundarySlot = 0
+	}
 
 	// Keep walking back both of the branches until both heads are the same
 	for root1 != root2 {
