@@ -5,21 +5,16 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	strongPasswords "github.com/nbutton23/zxcvbn-go"
 )
 
 const (
 	// Constants for passwords.
 	minPasswordLength = 8
-	// Min password score of 2 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
-	// library for strong-entropy password computation.
-	minPasswordScore = 2
 )
 
 var (
 	errIncorrectPhrase = errors.New("input does not match wanted phrase")
-	errPasswordWeak    = errors.New("password must have at least 8 characters, at least 1 alphabetical character, 1 unicode symbol, and 1 number")
+	errPasswordWeak    = errors.New("password must have at least 8 characters")
 )
 
 // NotEmpty is a validation function to make sure the input given isn't empty and is valid unicode.
@@ -78,39 +73,8 @@ func IsValidUnicode(input string) bool {
 // including a min length, at least 1 number and at least
 // 1 special character.
 func ValidatePasswordInput(input string) error {
-	var (
-		hasMinLen  = false
-		hasLetter  = false
-		hasNumber  = false
-		hasSpecial = false
-	)
-	if len(input) >= minPasswordLength {
-		hasMinLen = true
-	}
-	for _, char := range input {
-		switch {
-		case !(unicode.IsSpace(char) ||
-			unicode.IsLetter(char) ||
-			unicode.IsNumber(char) ||
-			unicode.IsPunct(char) ||
-			unicode.IsSymbol(char)):
-			return errors.New("password must only contain unicode alphanumeric characters, numbers, or unicode symbols")
-		case unicode.IsLetter(char):
-			hasLetter = true
-		case unicode.IsNumber(char):
-			hasNumber = true
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			hasSpecial = true
-		}
-	}
-	if !(hasMinLen && hasLetter && hasNumber && hasSpecial) {
+	if len(input) < minPasswordLength {
 		return errPasswordWeak
-	}
-	strength := strongPasswords.PasswordStrength(input, nil)
-	if strength.Score < minPasswordScore {
-		return errors.New(
-			"password is too easy to guess, try a stronger password",
-		)
 	}
 	return nil
 }

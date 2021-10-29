@@ -11,6 +11,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -81,7 +83,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 				State:   s,
 				Genesis: time.Now(),
 			},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+			InitialSync:       &mockSync.Sync{IsSyncing: false},
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
@@ -99,11 +102,33 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			Topic: &topic,
 		},
 	}
+
+	// Subscribe to operation notifications.
+	opChannel := make(chan *feed.Event, 1)
+	opSub := r.cfg.OperationNotifier.OperationFeed().Subscribe(opChannel)
+	defer opSub.Unsubscribe()
+
 	res, err := r.validateVoluntaryExit(ctx, "", m)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
+
+	// Ensure the state notification was broadcast.
+	notificationFound := false
+	for !notificationFound {
+		select {
+		case event := <-opChannel:
+			if event.Type == opfeed.ExitReceived {
+				notificationFound = true
+				_, ok := event.Data.(*opfeed.ExitReceivedData)
+				assert.Equal(t, true, ok, "Entity is not of type *opfeed.ExitReceivedData")
+			}
+		case <-opSub.Err():
+			t.Error("Subscription to state notifier failed")
+			return
+		}
+	}
 }
 
 func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
