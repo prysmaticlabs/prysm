@@ -53,6 +53,7 @@ ssz_gen_marshal(
     go_proto = ":go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "//beacon-chain/state/custom-types:go_default_library",
     ],
     objs = [
         "BeaconBlockAltair",
