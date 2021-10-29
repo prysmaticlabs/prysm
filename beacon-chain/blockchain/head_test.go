@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
