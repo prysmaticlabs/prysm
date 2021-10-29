@@ -398,7 +398,7 @@ func TestGetOrphanedBlocks_Empty(t *testing.T) {
 	require.Equal(t, 0, len(orphanedBlks))
 }
 
-func TestGetCommonBase(t *testing.T) {
+func TestCommonAncestorRoot(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
 		CorrectlyInsertOrphanedAtts: true,
 	})
@@ -416,31 +416,31 @@ func TestGetCommonBase(t *testing.T) {
 	assert.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkG)))
 
-	blk100 := util.NewBeaconBlock()
-	blk100.Block.Slot = 100
-	blk101 := util.NewBeaconBlock()
-	blk101.Block.Slot = 101
-	blk102 := util.NewBeaconBlock()
-	blk102.Block.Slot = 102
-	blk103 := util.NewBeaconBlock()
-	blk103.Block.Slot = 103
-	blk104 := util.NewBeaconBlock()
-	blk104.Block.Slot = 104
-	blk105 := util.NewBeaconBlock()
-	blk105.Block.Slot = 105
+	blk10 := util.NewBeaconBlock()
+	blk10.Block.Slot = 10
+	blk11 := util.NewBeaconBlock()
+	blk11.Block.Slot = 11
+	blk12 := util.NewBeaconBlock()
+	blk12.Block.Slot = 12
+	blk13 := util.NewBeaconBlock()
+	blk13.Block.Slot = 13
+	blk14 := util.NewBeaconBlock()
+	blk14.Block.Slot = 14
+	blk15 := util.NewBeaconBlock()
+	blk15.Block.Slot = 15
 
-	// Setup simple chain: 1 <-- 100 <-- 101 <-- 103
+	// Setup simple chain: 1 <-- 10 <-- 11 <-- 13
 	headBlk := blkG
-	for _, nextBlk := range []*ethpb.SignedBeaconBlock{blk100, blk101, blk103} {
+	for _, nextBlk := range []*ethpb.SignedBeaconBlock{blk10, blk11, blk13} {
 		headBlkRoot, err := headBlk.Block.HashTreeRoot()
 		nextBlk.Block.ParentRoot = headBlkRoot[:]
 		assert.NoError(t, err)
 		headBlk = nextBlk
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlk)))
 	}
-	// Setup simple chain: 1 <-- 102 <-- 104 <-- 105
+	// Setup simple chain: 1 <-- 12 <-- 14 <-- 15
 	headBlk = blkG
-	for _, nextBlk := range []*ethpb.SignedBeaconBlock{blk102, blk104, blk105} {
+	for _, nextBlk := range []*ethpb.SignedBeaconBlock{blk12, blk14, blk15} {
 		headBlkRoot, err := headBlk.Block.HashTreeRoot()
 		nextBlk.Block.ParentRoot = headBlkRoot[:]
 		assert.NoError(t, err)
@@ -448,12 +448,60 @@ func TestGetCommonBase(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlk)))
 	}
 
-	blk103Root, err := blk103.Block.HashTreeRoot()
+	blk103Root, err := blk13.Block.HashTreeRoot()
 	assert.NoError(t, err)
-	blk105Root, err := blk105.Block.HashTreeRoot()
+	blk105Root, err := blk15.Block.HashTreeRoot()
 	assert.NoError(t, err)
 
 	commonRoot, err := service.commonAncestorRoot(ctx, blk105Root, blk103Root)
 	assert.NoError(t, err)
 	require.Equal(t, commonRoot, blkGRoot)
+}
+
+func TestCommonAncestorRoot_OutOfBound(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		CorrectlyInsertOrphanedAtts: true,
+	})
+	defer resetCfg()
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	service.genesisTime = time.Now()
+
+	genesis, keys := util.DeterministicGenesisState(t, 64)
+	blkG, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blkG)))
+
+	// Setup branch: 1 <-- 3 <-- 5 <-- ... < -- 63
+	headBlkBranch1 := blkG
+	for i := 3; i < int(params.BeaconConfig().SlotsPerEpoch)*2; i += 2 {
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = types.Slot(i)
+		headBlkRoot, err := headBlkBranch1.Block.HashTreeRoot()
+		blk.Block.ParentRoot = headBlkRoot[:]
+		assert.NoError(t, err)
+		headBlkBranch1 = blk
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlkBranch1)))
+	}
+
+	// Setup branch: 1 <-- 2 <-- 4 <-- ... < -- 62
+	headBlkBranch2 := blkG
+	for i := 2; i < int(params.BeaconConfig().SlotsPerEpoch)*2; i += 2 {
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = types.Slot(i)
+		headBlkRoot, err := headBlkBranch2.Block.HashTreeRoot()
+		blk.Block.ParentRoot = headBlkRoot[:]
+		assert.NoError(t, err)
+		headBlkBranch2 = blk
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlkBranch2)))
+	}
+
+	headBlkRootBranch1, err := headBlkBranch1.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	headBlkRootBranch2, err := headBlkBranch2.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	_, err = service.commonAncestorRoot(ctx, headBlkRootBranch1, headBlkRootBranch2)
+	assert.ErrorContains(t, "cannot find common ancestor", err)
 }

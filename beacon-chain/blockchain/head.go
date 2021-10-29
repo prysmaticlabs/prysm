@@ -436,7 +436,7 @@ func (s *Service) getOrphanedBlocks(ctx context.Context, head, base [32]byte) ([
 	return blocks, nil
 }
 
-// Get the latest common ancestor root that both branches are base off.
+// Get the latest common ancestor root that both branches are based off.
 func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte) ([32]byte, error) {
 	blk1, err := s.cfg.BeaconDB.Block(ctx, root1)
 	if err != nil {
@@ -448,6 +448,23 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte)
 	}
 	if blk1 == nil || blk2 == nil {
 		return [32]byte{}, errors.New("nil blocks")
+	}
+
+	// Bound the traversal to be within one epoch away either of the root.
+	var boundaryEpoch types.Epoch
+	blk1Epoch := slots.ToEpoch(blk1.Block().Slot())
+	blk2Epoch := slots.ToEpoch(blk2.Block().Slot())
+	if blk1Epoch <= blk2Epoch {
+		boundaryEpoch = blk1Epoch
+	} else {
+		boundaryEpoch = blk2Epoch
+	}
+	if boundaryEpoch > 1 { // Safety check for the first epoch
+		boundaryEpoch = boundaryEpoch - 1
+	}
+	boundarySlot, err := slots.EpochStart(boundaryEpoch)
+	if err != nil {
+		return [32]byte{}, err
 	}
 
 	// Keep walking back both of the branches until both heads are the same
@@ -464,6 +481,12 @@ func (s *Service) commonAncestorRoot(ctx context.Context, root1, root2 [32]byte)
 		}
 		if err != nil {
 			return [32]byte{}, err
+		}
+
+		// A safety check to prevent a deep traversal
+		// The number of traversal is at most "2 * SLOTS_PER_EPOCH" per root.
+		if blk1.Block().Slot() < boundarySlot || blk2.Block().Slot() < boundarySlot {
+			return [32]byte{}, errors.New("cannot find common ancestor from the immediately preceding epoch")
 		}
 	}
 
