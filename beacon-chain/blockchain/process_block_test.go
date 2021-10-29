@@ -229,6 +229,8 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	service, err := NewService(ctx)
 	require.NoError(t, err)
 	service.cfg = cfg
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
+
 	lastJustifiedBlk := util.NewBeaconBlock()
 	lastJustifiedBlk.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	lastJustifiedRoot, err := lastJustifiedBlk.Block.HashTreeRoot()
