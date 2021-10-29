@@ -57,6 +57,7 @@ func (s *Service) checkSlashableAttestations(
 	}
 	avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
 	log.WithFields(logrus.Fields{
+		"numAttestations": len(atts),
 		"elapsed": time.Since(start),
 		"avgBatchProcessingTime":	avgProcessingTimePerBatch,
 	}).Info("Done checking slashable attestations")
