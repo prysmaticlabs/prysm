@@ -60,6 +60,7 @@ func (s *Service) checkSlashableAttestations(
 	}
 	log.WithFields(logrus.Fields{
 		"numAttestations": len(atts),
+		"numBatchesByValidatorChunkIndex": len(groupedAtts),
 		"elapsed": time.Since(start),
 		"avgBatchProcessingTime":	avgProcessingTimePerBatch,
 	}).Info("Done checking slashable attestations")

@@ -98,7 +98,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				"numValidAtts":    len(validAtts),
 				"numDeferredAtts": len(validInFuture),
 				"numDroppedAtts":  numDropped,
-			}).Info("New slot, processing queued atts for slashing detection")
+			}).Info("Processing queued attestations for slashing detection")
 
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
@@ -144,7 +144,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"currentSlot":  currentSlot,
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
-			}).Info("New slot, processing queued blocks for slashing detection")
+			}).Info("Processing queued blocks for slashing detection")
 
 			start := time.Now()
 			// Check for slashings.
