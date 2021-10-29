@@ -86,5 +86,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
