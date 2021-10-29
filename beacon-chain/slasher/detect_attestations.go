@@ -55,7 +55,9 @@ func (s *Service) checkSlashableAttestations(
 	for _, dur := range batchTimes {
 		avgProcessingTimePerBatch += dur
 	}
-	avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
+	if avgProcessingTimePerBatch != time.Duration(0) {
+		avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
+	}
 	log.WithFields(logrus.Fields{
 		"numAttestations": len(atts),
 		"elapsed": time.Since(start),
