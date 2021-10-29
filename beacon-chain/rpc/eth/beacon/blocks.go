@@ -373,7 +373,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if err := helpers.VerifyNilBeaconBlock(blk); err != nil {
+		if err := helpers.BeaconBlockIsNil(blk); err != nil {
 			return nil, status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
@@ -387,7 +387,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if err := helpers.VerifyNilBeaconBlock(blk); err != nil {
+			if err := helpers.BeaconBlockIsNil(blk); err != nil {
 				return nil, status.Errorf(codes.NotFound, "Could not find block: %v", err)
 			}
 			root = req.BlockId
@@ -550,7 +550,7 @@ func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if err := helpers.VerifyNilBeaconBlock(blk); err != nil {
+	if err := helpers.BeaconBlockIsNil(blk); err != nil {
 		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
 	}
 	return nil

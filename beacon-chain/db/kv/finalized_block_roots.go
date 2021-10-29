@@ -84,7 +84,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if err := helpers.VerifyNilBeaconBlock(signedBlock); err != nil {
+		if err := helpers.BeaconBlockIsNil(signedBlock); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}

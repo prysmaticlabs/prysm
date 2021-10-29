@@ -54,7 +54,7 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if err := coreHelper.VerifyNilBeaconBlock(blk); err != nil {
+	if err := coreHelper.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {

@@ -249,7 +249,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 

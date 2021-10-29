@@ -34,7 +34,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	if err != nil {
 		return err
 	}
-	if err := helpers.VerifyNilBeaconBlock(head); err != nil {
+	if err := helpers.BeaconBlockIsNil(head); err != nil {
 		return err
 	}
 	// Ensure the backups directory exists.

@@ -329,7 +329,7 @@ func (bs *Server) ListBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 	}
-	if err := helpers.VerifyNilBeaconBlock(genBlk); err != nil {
+	if err := helpers.BeaconBlockIsNil(genBlk); err != nil {
 		return []blockContainer{}, 0, strconv.Itoa(0), status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 	}
 	root, err := genBlk.Block().HashTreeRoot()
@@ -472,7 +472,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if err := helpers.VerifyNilBeaconBlock(headBlock); err != nil {
+	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
 		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
@@ -495,7 +495,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
 		}
 	}
@@ -506,7 +506,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get justified block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
 		}
 	}
@@ -517,7 +517,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get prev justified block: %v", err)
 		}
 	}

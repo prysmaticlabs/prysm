@@ -88,7 +88,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
 		return err
 	}
 	b := signed.Block()
@@ -236,7 +236,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if len(blks) == 0 || len(blockRoots) == 0 {
 		return nil, nil, errors.New("no blocks provided")
 	}
-	if err := helpers.VerifyNilBeaconBlock(blks[0]); err != nil {
+	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
 		return nil, nil, err
 	}
 	b := blks[0].Block()
