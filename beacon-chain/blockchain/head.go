@@ -107,8 +107,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if newHeadBlock == nil || newHeadBlock.IsNil() || newHeadBlock.Block().IsNil() {
-		return errors.New("cannot save nil head block")
+	if err := helpers.VerifyNilBeaconBlock(newHeadBlock); err != nil {
+		return err
 	}
 
 	// Get the new head state from cached state or DB.

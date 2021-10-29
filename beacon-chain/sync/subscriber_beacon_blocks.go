@@ -19,9 +19,8 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	if err != nil {
 		return err
 	}
-
-	if signed.IsNil() || signed.Block().IsNil() {
-		return errors.New("nil block")
+	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return err
 	}
 
 	s.setSeenBlockIndexSlot(signed.Block().Slot(), signed.Block().ProposerIndex())

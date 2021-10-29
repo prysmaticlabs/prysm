@@ -387,8 +387,8 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")
 	}
-	if genesisBlock == nil || genesisBlock.IsNil() {
-		return errors.New("no genesis block in db")
+	if err := helpers.VerifyNilBeaconBlock(genesisBlock); err != nil {
+		return err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
 	if err != nil {
