@@ -12,7 +12,7 @@ import (
 
 func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	s := Server{
-		jwtKey: []byte("testKey"),
+		jwtSecret: []byte("testKey"),
 	}
 	interceptor := s.JWTInterceptor()
 
@@ -22,7 +22,7 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	}
-	token, err := createTokenString(s.jwtKey)
+	token, err := createTokenString(s.jwtSecret)
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {"Bearer " + token},
@@ -35,7 +35,7 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 
 func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	s := Server{
-		jwtKey: []byte("testKey"),
+		jwtSecret: []byte("testKey"),
 	}
 	interceptor := s.JWTInterceptor()
 
@@ -47,9 +47,9 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	}
 
 	badServer := Server{
-		jwtKey: []byte("badTestKey"),
+		jwtSecret: []byte("badTestKey"),
 	}
-	token, err := createTokenString(badServer.jwtKey)
+	token, err := createTokenString(badServer.jwtSecret)
 	require.NoError(t, err)
 	ctxMD := map[string][]string{
 		"authorization": {"Bearer " + token},
@@ -61,7 +61,7 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 }
 
 func TestServer_JWTInterceptor_InvalidSigningType(t *testing.T) {
-	ss := &Server{jwtKey: make([]byte, 32)}
+	ss := &Server{jwtSecret: make([]byte, 32)}
 	// Use a different signing type than the expected, HMAC.
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{})
 	_, err := ss.validateJWT(token)
