@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -31,9 +32,11 @@ func (s *Service) checkSlashableAttestations(
 
 	// Group by chunk index and check for surround vote slashings.
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
-	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
+	log.WithField("numBatches", len(groupedAtts)).Info("Batching attestations by validator chunk index")
 	start = time.Now()
+	batchTimes := make([]time.Duration, 0, len(groupedAtts))
 	for validatorChunkIdx, batch := range groupedAtts {
+		innerStart := time.Now()
 		attSlashings, err := s.detectAllAttesterSlashings(ctx, &chunkUpdateArgs{
 			validatorChunkIndex: validatorChunkIdx,
 			currentEpoch:        currentEpoch,
@@ -46,8 +49,17 @@ func (s *Service) checkSlashableAttestations(
 		if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
 			return nil, err
 		}
+		batchTimes = append(batchTimes, time.Since(innerStart))
 	}
-	log.WithField("elapsed", time.Since(start)).Info("Done checking slashable attestations")
+	var avgProcessingTimePerBatch time.Duration
+	for _, dur := range batchTimes {
+		avgProcessingTimePerBatch += dur
+	}
+	avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
+	log.WithFields(logrus.Fields{
+		"elapsed": time.Since(start),
+		"avgBatchProcessingTime":	avgProcessingTimePerBatch,
+	}).Info("Done checking slashable attestations")
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
 	}
