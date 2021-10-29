@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -19,14 +20,19 @@ func (s *Service) checkSlashableAttestations(
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
 	// Check for double votes.
+	log.Debug("Checking for double votes")
+	start := time.Now()
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check slashable double votes")
 	}
+	log.WithField("elapsed", time.Since(start)).Info("Done checking double votes")
 	slashings = append(slashings, doubleVoteSlashings...)
 
 	// Group by chunk index and check for surround vote slashings.
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
+	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
+	start = time.Now()
 	for validatorChunkIdx, batch := range groupedAtts {
 		attSlashings, err := s.detectAllAttesterSlashings(ctx, &chunkUpdateArgs{
 			validatorChunkIndex: validatorChunkIdx,
@@ -41,6 +47,7 @@ func (s *Service) checkSlashableAttestations(
 			return nil, err
 		}
 	}
+	log.WithField("elapsed", time.Since(start)).Info("Done checking slashable attestations")
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
 	}

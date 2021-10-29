@@ -100,7 +100,6 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				"numDroppedAtts":  numDropped,
 			}).Info("New slot, processing queued atts for slashing detection")
 
-			start := time.Now()
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
@@ -122,8 +121,6 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				log.WithError(err).Error("Could not process attester slashings")
 				continue
 			}
-
-			log.WithField("elapsed", time.Since(start)).Debug("Done checking slashable attestations")
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
