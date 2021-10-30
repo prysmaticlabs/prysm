@@ -83,3 +83,9 @@ message SyncAttestedData {
   ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 4;
   repeated bytes next_sync_committee_branch = 5 [(ethereum.eth.ext.ssz_size) = "5,32"];
 }
+
+message LightClientFinalizedCheckpoint {
+  ethereum.eth.v1alpha1.BeaconBlockHeader header = 1;
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 2;
+  repeated bytes next_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "5,32"];
+}

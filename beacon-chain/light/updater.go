@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -15,17 +14,10 @@ import (
 
 // Precomputed values for generalized indices.
 const (
-	FinalizedRootIndex              = 105
-	FinalizedRootIndexFloorLog2     = 6
-	NextSyncCommitteeIndex          = 55
-	NextSyncCommitteeIndexFloorLog2 = 5
-	PREV_DATA_MAX_SIZE              = 64
+	FinalizedRootIndex     = 105
+	NextSyncCommitteeIndex = 55
+	PREV_DATA_MAX_SIZE     = 64
 )
-
-type Server struct {
-	Database     iface.LightClientDatabase
-	prevHeadData map[[32]byte]*ethpb.SyncAttestedData
-}
 
 type clientStore struct {
 	Snapshot     *ethpb.ClientSnapshot
@@ -38,7 +30,7 @@ type signatureData struct {
 	syncAggregate *ethpb.SyncAggregate
 }
 
-func (s *Server) onHead(head block.BeaconBlock, postState state.BeaconStateAltair) error {
+func (s *Service) onHead(postState state.BeaconStateAltair, head block.BeaconBlock) error {
 	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	if !ok {
 		return errors.New("not altair")
@@ -114,6 +106,10 @@ func (s *Server) onHead(head block.BeaconBlock, postState state.BeaconStateAltai
 	return nil
 }
 
+func (s *Service) onFinalized(postState state.BeaconStateAltair, cpt *ethpb.Checkpoint) error {
+	return nil
+}
+
 /**
 // * Must subcribe to BeaconChain event `finalizedCheckpoint`.
 // * Expects the block from `checkpoint.root` and the post state of the block, `block.stateRoot`
@@ -137,7 +133,7 @@ func (s *Server) onHead(head block.BeaconBlock, postState state.BeaconStateAltai
 //// No block will reference the previous finalized checkpoint anymore
 //}
 
-func (s *Server) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
+func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
 	finalizedEpoch := syncAttestedData.FinalityCheckpoint.Epoch
 	_ = finalizedEpoch
 	// const finalizedData = await this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
@@ -173,7 +169,7 @@ func (s *Server) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttested
 	return committeePeriod, nil
 }
 
-func (s Server) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
+func (s Service) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
 	// TODO: Period can be nil, perhaps.
 	committeePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(syncAttestedData.Header.Slot))
 	signaturePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(sigData.slot))
