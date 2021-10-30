@@ -17,8 +17,10 @@ package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 
 import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_state.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/sync_committee.proto";
 
@@ -64,7 +66,7 @@ message LightClientUpdate {
   ethereum.eth.v1alpha1.BeaconBlockHeader finality_header = 4;
   repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "6,32"];
   bytes sync_committee_bits = 6 [(ethereum.eth.ext.ssz_size) = "sync_committee_aggregate_bytes.size", (ethereum.eth.ext.cast_type) = "sync_committee_aggregate_bits.type"];
-  bytes sync_committee_signature = 6 [(ethereum.eth.ext.ssz_size) = "96"];
+  bytes sync_committee_signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
   bytes fork_version = 8 [(ethereum.eth.ext.ssz_size) = "4"];
 }
 
