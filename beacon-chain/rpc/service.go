@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/light"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -279,6 +280,10 @@ func (s *Service) Start() {
 		VoluntaryExitsPool:      s.cfg.ExitPool,
 		V1Alpha1ValidatorServer: validatorServer,
 	}
+	lightClientServer := &light.Service{
+		Database: s.cfg.BeaconDB,
+	}
+	ethpbv1alpha1.RegisterLightClientServer(s.grpcServer, lightClientServer)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)

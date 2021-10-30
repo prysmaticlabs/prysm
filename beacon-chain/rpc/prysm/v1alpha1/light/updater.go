@@ -21,42 +21,15 @@ const (
 	PREV_DATA_MAX_SIZE              = 64
 )
 
-type ClientStore struct {
+type clientStore struct {
 	Snapshot     *ethpb.ClientSnapshot
 	ValidUpdates []*ethpb.LightClientUpdate
-}
-
-type Service struct {
-	prevHeadData map[[32]byte]*ethpb.SyncAttestedData
 }
 
 type signatureData struct {
 	slot          types.Slot
 	forkVersion   []byte
 	syncAggregate *ethpb.SyncAggregate
-}
-
-// BestUpdates is called as GET /eth/v1/lightclient/best_update/:periods.
-func (s *Service) BestUpdates(period []uint64) ([]*ethpb.LightClientUpdate, error) {
-	//const updates: altair.LightClientUpdate[] = [];
-	//for (const period of periods) {
-	//const update = await this.db.bestUpdatePerCommitteePeriod.get(period);
-	//if (update) updates.push(update);
-	//}
-	//return updates;
-	return nil, nil
-}
-
-// LatestUpdateFinalized is called as GET /eth/v1/lightclient/latest_update_finalized/
-func (s *Service) LatestUpdateFinalized() (*ethpb.LightClientUpdate, error) {
-	//return this.db.latestFinalizedUpdate.get();
-	return nil, nil
-}
-
-// LatestUpdateNonFinalized is called as GET /eth/v1/lightclient/latest_update_nonfinalized/
-func (s *Service) LatestUpdateNonFinalized() (*ethpb.LightClientUpdate, error) {
-	//return this.db.latestNonFinalizedUpdate.get();
-	return nil, nil
 }
 
 func (s *Service) onHead(head block.BeaconBlock, postState state.BeaconStateAltair) error {
@@ -134,6 +107,29 @@ func (s *Service) onHead(head block.BeaconBlock, postState state.BeaconStateAlta
 	}
 	return nil
 }
+
+/**
+// * Must subcribe to BeaconChain event `finalizedCheckpoint`.
+// * Expects the block from `checkpoint.root` and the post state of the block, `block.stateRoot`
+// *
+// * NOTE: Must be called also on start with the current finalized checkpoint (may be genesis)
+// */
+//async onFinalized(
+//checkpoint: phase0.Checkpoint,
+//blockHeader: phase0.BeaconBlockHeader,
+//postState: TreeBacked<altair.BeaconState>
+//): Promise<void> {
+//// Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
+//await this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
+//header: blockHeader,
+//nextSyncCommittee: postState.nextSyncCommittee,
+//// Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
+//nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),
+//});
+//
+//// TODO: Prune `db.lightclientFinalizedCheckpoint` for epoch < checkpoint.epoch
+//// No block will reference the previous finalized checkpoint anymore
+//}
 
 func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
 	finalizedEpoch := syncAttestedData.FinalityCheckpoint.Epoch

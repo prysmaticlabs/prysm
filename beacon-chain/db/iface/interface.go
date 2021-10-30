@@ -62,6 +62,7 @@ type ReadOnlyDatabase interface {
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
 type NoHeadAccessDatabase interface {
+	LightClientDatabase
 	ReadOnlyDatabase
 
 	// Block related methods.
@@ -153,6 +154,22 @@ type SlasherDatabase interface {
 	) ([]*ethpb.HighestAttestation, error)
 	DatabasePath() string
 	ClearDB() error
+}
+
+// LightClientDatabase --
+type LightClientDatabase interface {
+	LightClientBestUpdateForPeriod(
+		ctx context.Context, period uint64,
+	) (*ethpb.LightClientUpdate, error)
+	SaveLightClientBestUpdateForPeriod(
+		ctx context.Context, period uint64, update *ethpb.LightClientUpdate,
+	) error
+	LightClientLatestNonFinalizedUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error)
+	SaveLightClientLatestNonFinalizedUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
+	LightClientLatestFinalizedUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error)
+	SaveLightClientLatestFinalizedUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
+	LightClientFinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	SaveLightClientFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 }
 
 // Database interface with full access.
