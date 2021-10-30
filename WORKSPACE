@@ -403,14 +403,7 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
-
-go_repository(
-    name = "com_github_segmentio_kafka_go",
-    importpath = "github.com/segmentio/kafka-go",
-    sum = "h1:HtCSf6B4gN/87yc5qTl7WsxPKQIIGXLPPM1bMCPOsoY=",
-    version = "v0.2.0",
-)
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
