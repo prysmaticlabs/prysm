@@ -8,6 +8,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -79,6 +81,15 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 
 	msg.ValidatorData = m
+
+	// Broadcast the contribution on a feed to notify other services in the beacon node
+	// of a received contribution.
+	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.SyncCommitteeContributionReceived,
+		Data: &opfeed.SyncCommitteeContributionReceivedData{
+			Contribution: m,
+		},
+	})
 
 	return pubsub.ValidationAccept, nil
 }
@@ -218,7 +229,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				PublicKeys: []bls.PublicKey{publicKey},
 				Signatures: [][]byte{m.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 		}
 
 		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
@@ -282,7 +293,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				PublicKeys: []bls.PublicKey{aggKey},
 				Signatures: [][]byte{m.Message.Contribution.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 		}
 		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
 		if err != nil {
@@ -343,7 +354,10 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 			PublicKeys: []bls.PublicKey{publicKey},
 			Signatures: [][]byte{m.SelectionProof},
 		}
-		valid := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		if err != nil {
+			return err
+		}
 		if valid != pubsub.ValidationAccept {
 			return errors.New("invalid sync selection proof provided")
 		}

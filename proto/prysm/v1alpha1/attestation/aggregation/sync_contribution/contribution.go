@@ -20,10 +20,6 @@ type SyncContributionAggregationStrategy string
 
 var _ = logrus.WithField("prefix", "aggregation.sync_contribution")
 
-// ErrInvalidSyncContributionCount is returned when insufficient number
-// of sync contributions is provided for aggregation.
-var ErrInvalidSyncContributionCount = errors.New("invalid number of sync contributions")
-
 // Aggregate aggregates sync contributions. The minimal number of sync contributions is returned.
 // Aggregation occurs in-place i.e. contents of input array will be modified. Should you need to
 // preserve input sync contributions, clone them before aggregating.

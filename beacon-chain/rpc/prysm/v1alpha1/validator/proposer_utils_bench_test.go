@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	aggtesting "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
@@ -49,7 +50,8 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 		for i, att := range atts {
 			attsCopy[i] = ethpb.CopyAttestation(att)
 		}
-		attsCopy.sortByProfitability()
+		_, err := attsCopy.sortByProfitability()
+		require.NoError(b, err, "Could not sort attestations by profitability")
 	}
 
 	for _, tt := range tests {

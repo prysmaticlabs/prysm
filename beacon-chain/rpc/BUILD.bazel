@@ -30,7 +30,6 @@ go_library(
         "//beacon-chain/rpc/prysm/v1alpha1/beacon:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/debug:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/node:go_default_library",
-        "//beacon-chain/rpc/prysm/v1alpha1/slasher:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/slasher:go_default_library",

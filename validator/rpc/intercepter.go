@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/golang-jwt/jwt"
 	"google.golang.org/grpc"
@@ -13,29 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// noAuthPaths keeps track of the paths which do not require
-// authentication from our API.
-var (
-	noAuthPaths = map[string]bool{
-		"/ethereum.validator.accounts.v2.Auth/Signup":                      true,
-		"/ethereum.validator.accounts.v2.Auth/Login":                       true,
-		"/ethereum.validator.accounts.v2.Auth/Logout":                      true,
-		"/ethereum.validator.accounts.v2.Auth/HasUsedWeb":                  true,
-		"/ethereum.validator.accounts.v2.Wallet/HasWallet":                 true,
-		"/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus":           true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation": true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance":   true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances":      true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
-		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
-		"/ethereum.validator.accounts.v2.Beacon/StreamValidatorLogs":       true,
-	}
-	authLock sync.RWMutex
-)
-
-// JWTInterceptor is a gRPC unary interceptor to authorize incoming requests
-// for methods that are NOT in the noAuthPaths configuration map.
+// JWTInterceptor is a gRPC unary interceptor to authorize incoming requests.
 func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -43,16 +20,9 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Skip authorize when the path doesn't require auth.
-		authLock.RLock()
-		shouldAuthenticate := !noAuthPaths[info.FullMethod]
-		authLock.RUnlock()
-		if shouldAuthenticate {
-			if err := s.authorize(ctx); err != nil {
-				return nil, err
-			}
+		if err := s.authorize(ctx); err != nil {
+			return nil, err
 		}
-
 		h, err := handler(ctx, req)
 		log.Debugf("Request - Method: %s, Error: %v\n", info.FullMethod, err)
 		return h, err
@@ -85,5 +55,5 @@ func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
 	}
-	return s.jwtKey, nil
+	return s.jwtSecret, nil
 }

@@ -161,14 +161,35 @@ func TranslateParticipation(ctx context.Context, state *statealtair.BeaconState,
 		targetFlagIndex := cfg.TimelyTargetFlagIndex
 		headFlagIndex := cfg.TimelyHeadFlagIndex
 		for _, index := range indices {
-			if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			has, err := HasValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			if err != nil {
+				return nil, err
 			}
-			if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if participatedFlags[sourceFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
-			if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			has, err = HasValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[targetFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+				if err != nil {
+					return nil, err
+				}
+			}
+			has, err = HasValidatorFlag(epochParticipation[index], headFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[headFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

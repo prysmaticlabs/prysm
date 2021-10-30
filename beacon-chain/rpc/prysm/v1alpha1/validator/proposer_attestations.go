@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -14,10 +15,68 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"go.opencensus.io/trace"
 )
 
 type proposerAtts []*ethpb.Attestation
+
+func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
+	defer span.End()
+
+	atts := vs.AttPool.AggregatedAttestations()
+	atts, err := vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+
+	uAtts, err := vs.AttPool.UnaggregatedAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get unaggregated attestations")
+	}
+	uAtts, err = vs.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+	atts = append(atts, uAtts...)
+
+	// Remove duplicates from both aggregated/unaggregated attestations. This
+	// prevents inefficient aggregates being created.
+	atts, err = proposerAtts(atts).dedup()
+	if err != nil {
+		return nil, err
+	}
+
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+	for _, att := range atts {
+		attDataRoot, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	for _, as := range attsByDataRoot {
+		as, err := attaggregation.Aggregate(as)
+		if err != nil {
+			return nil, err
+		}
+		attsForInclusion = append(attsForInclusion, as...)
+	}
+	deduped, err := attsForInclusion.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	atts = sorted.limitToMaxAttestations()
+	return atts, nil
+}
 
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
@@ -191,4 +250,39 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 	}
 
 	return uniqAtts, nil
+}
+
+// This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
+func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
+	defer span.End()
+
+	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
+	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
+		return nil, err
+	}
+	return validAtts, nil
+}
+
+// The input attestations are processed and seen by the node, this deletes them from pool
+// so proposers don't include them in a block for the future.
+func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
+	defer span.End()
+
+	for _, att := range atts {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if helpers.IsAggregated(att) {
+			if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

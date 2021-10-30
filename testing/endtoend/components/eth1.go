@@ -67,12 +67,12 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
-		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+1),
-		"--rpc",
-		"--rpcaddr=127.0.0.1",
-		"--rpccorsdomain=\"*\"",
-		"--rpcvhosts=\"*\"",
+		"--http",
+		"--http.addr=127.0.0.1",
+		"--http.corsdomain=\"*\"",
+		"--http.vhosts=\"*\"",
 		"--rpc.allow-unprotected-txs",
 		"--ws",
 		"--ws.addr=127.0.0.1",

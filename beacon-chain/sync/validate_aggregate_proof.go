@@ -93,15 +93,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
-	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := s.cfg.AttPool.HasAggregatedAttestation(m.Message.Aggregate)
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		return pubsub.ValidationIgnore, err
-	}
-	if seen {
-		return pubsub.ValidationIgnore, nil
-	}
 	if !s.validateBlockInAttestation(ctx, m) {
 		return pubsub.ValidationIgnore, nil
 	}
@@ -190,7 +181,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 
 	if features.Get().EnableBatchVerification {
-		return s.validateWithBatchVerifier(ctx, "aggregate", set), nil
+		return s.validateWithBatchVerifier(ctx, "aggregate", set)
 	}
 	valid, err := set.Verify()
 	if err != nil {

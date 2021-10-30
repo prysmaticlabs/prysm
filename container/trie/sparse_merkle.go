@@ -93,7 +93,10 @@ func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 }
 
 // Insert an item into the trie.
-func (m *SparseMerkleTrie) Insert(item []byte, index int) {
+func (m *SparseMerkleTrie) Insert(item []byte, index int) error {
+	if index < 0 {
+		return fmt.Errorf("negative index provided: %d", index)
+	}
 	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], ZeroHashes[0][:])
 	}
@@ -132,10 +135,14 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 		}
 		currentIndex = parentIdx
 	}
+	return nil
 }
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
 func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
+	if index < 0 {
+		return nil, fmt.Errorf("merkle index is negative: %d", index)
+	}
 	merkleIndex := uint(index)
 	leaves := m.branches[0]
 	if index >= len(leaves) {
