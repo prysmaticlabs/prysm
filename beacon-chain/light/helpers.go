@@ -4,9 +4,10 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-func isBetterUpdate(prevUpdate *ClientUpdate, newUpdate *ClientUpdate) bool {
+func isBetterUpdate(prevUpdate *ethpb.LightClientUpdate, newUpdate *ethpb.LightClientUpdate) bool {
 	prevIsFinalized := isFinalizedUpdate(prevUpdate)
 	newIsFinalized := isFinalizedUpdate(newUpdate)
 	// newUpdate becomes finalized, it's better.
@@ -20,7 +21,7 @@ func isBetterUpdate(prevUpdate *ClientUpdate, newUpdate *ClientUpdate) bool {
 	return hasMoreBits(newUpdate, prevUpdate)
 }
 
-func isLatestBestFinalizedUpdate(prevUpdate *ClientUpdate, newUpdate *ClientUpdate) bool {
+func isLatestBestFinalizedUpdate(prevUpdate *ethpb.LightClientUpdate, newUpdate *ethpb.LightClientUpdate) bool {
 	if newUpdate.FinalityHeader.Slot > prevUpdate.FinalityHeader.Slot {
 		return true
 	}
@@ -30,7 +31,7 @@ func isLatestBestFinalizedUpdate(prevUpdate *ClientUpdate, newUpdate *ClientUpda
 	return hasMoreBits(newUpdate, prevUpdate)
 }
 
-func isLatestBestNonFinalizedUpdate(prevUpdate *ClientUpdate, newUpdate *ClientUpdate) bool {
+func isLatestBestNonFinalizedUpdate(prevUpdate *ethpb.LightClientUpdate, newUpdate *ethpb.LightClientUpdate) bool {
 	if newUpdate.Header.Slot > prevUpdate.Header.Slot {
 		return true
 	}
@@ -40,10 +41,10 @@ func isLatestBestNonFinalizedUpdate(prevUpdate *ClientUpdate, newUpdate *ClientU
 	return hasMoreBits(newUpdate, prevUpdate)
 }
 
-func isFinalizedUpdate(update *ClientUpdate) bool {
+func isFinalizedUpdate(update *ethpb.LightClientUpdate) bool {
 	return !bytes.Equal(params.BeaconConfig().ZeroHash[:], update.FinalityHeader.StateRoot)
 }
 
-func hasMoreBits(a *ClientUpdate, b *ClientUpdate) bool {
+func hasMoreBits(a *ethpb.LightClientUpdate, b *ethpb.LightClientUpdate) bool {
 	return a.SyncCommitteeBits.Count() > b.SyncCommitteeBits.Count()
 }

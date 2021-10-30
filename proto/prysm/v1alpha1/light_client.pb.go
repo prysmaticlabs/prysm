@@ -10,8 +10,8 @@ import (
 	context "context"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
+	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -137,7 +137,7 @@ type LightClientUpdate struct {
 	NextSyncCommitteeBranch [][]byte                                          `protobuf:"bytes,3,rep,name=next_sync_committee_branch,json=nextSyncCommitteeBranch,proto3" json:"next_sync_committee_branch,omitempty" ssz-size:"5,32"`
 	FinalityHeader          *BeaconBlockHeader                                `protobuf:"bytes,4,opt,name=finality_header,json=finalityHeader,proto3" json:"finality_header,omitempty"`
 	FinalityBranch          [][]byte                                          `protobuf:"bytes,5,rep,name=finality_branch,json=finalityBranch,proto3" json:"finality_branch,omitempty" ssz-size:"6,32"`
-	SyncCommitteeBits       github_com_prysmaticlabs_go_bitfield.Bitvector128 `protobuf:"bytes,6,opt,name=sync_committee_bits,json=syncCommitteeBits,proto3" json:"sync_committee_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector128" ssz-size:"16"`
+	SyncCommitteeBits       github_com_prysmaticlabs_go_bitfield.Bitvector512 `protobuf:"bytes,6,opt,name=sync_committee_bits,json=syncCommitteeBits,proto3" json:"sync_committee_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector512" ssz-size:"64"`
 	SyncCommitteeSignature  []byte                                            `protobuf:"bytes,7,opt,name=sync_committee_signature,json=syncCommitteeSignature,proto3" json:"sync_committee_signature,omitempty" ssz-size:"96"`
 	ForkVersion             []byte                                            `protobuf:"bytes,8,opt,name=fork_version,json=forkVersion,proto3" json:"fork_version,omitempty" ssz-size:"4"`
 }
@@ -209,11 +209,11 @@ func (x *LightClientUpdate) GetFinalityBranch() [][]byte {
 	return nil
 }
 
-func (x *LightClientUpdate) GetSyncCommitteeBits() github_com_prysmaticlabs_go_bitfield.Bitvector128 {
+func (x *LightClientUpdate) GetSyncCommitteeBits() github_com_prysmaticlabs_go_bitfield.Bitvector512 {
 	if x != nil {
 		return x.SyncCommitteeBits
 	}
-	return github_com_prysmaticlabs_go_bitfield.Bitvector128(nil)
+	return github_com_prysmaticlabs_go_bitfield.Bitvector512(nil)
 }
 
 func (x *LightClientUpdate) GetSyncCommitteeSignature() []byte {
