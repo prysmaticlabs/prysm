@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -21,6 +22,11 @@ const (
 	PREV_DATA_MAX_SIZE              = 64
 )
 
+type Server struct {
+	Database     iface.LightClientDatabase
+	prevHeadData map[[32]byte]*ethpb.SyncAttestedData
+}
+
 type clientStore struct {
 	Snapshot     *ethpb.ClientSnapshot
 	ValidUpdates []*ethpb.LightClientUpdate
@@ -32,7 +38,7 @@ type signatureData struct {
 	syncAggregate *ethpb.SyncAggregate
 }
 
-func (s *Service) onHead(head block.BeaconBlock, postState state.BeaconStateAltair) error {
+func (s *Server) onHead(head block.BeaconBlock, postState state.BeaconStateAltair) error {
 	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	if !ok {
 		return errors.New("not altair")
@@ -131,7 +137,7 @@ func (s *Service) onHead(head block.BeaconBlock, postState state.BeaconStateAlta
 //// No block will reference the previous finalized checkpoint anymore
 //}
 
-func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
+func (s *Server) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
 	finalizedEpoch := syncAttestedData.FinalityCheckpoint.Epoch
 	_ = finalizedEpoch
 	// const finalizedData = await this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
@@ -167,7 +173,7 @@ func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAtteste
 	return committeePeriod, nil
 }
 
-func (s Service) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
+func (s Server) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
 	// TODO: Period can be nil, perhaps.
 	committeePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(syncAttestedData.Header.Slot))
 	signaturePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(sigData.slot))

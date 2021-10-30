@@ -280,7 +280,7 @@ func (s *Service) Start() {
 		VoluntaryExitsPool:      s.cfg.ExitPool,
 		V1Alpha1ValidatorServer: validatorServer,
 	}
-	lightClientServer := &light.Service{
+	lightClientServer := &light.Server{
 		Database: s.cfg.BeaconDB,
 	}
 	ethpbv1alpha1.RegisterLightClientServer(s.grpcServer, lightClientServer)
