@@ -177,6 +177,7 @@ type Database interface {
 	io.Closer
 	backup.BackupExporter
 	HeadAccessDatabase
+	LightClientDatabase
 
 	DatabasePath() string
 	ClearDB() error

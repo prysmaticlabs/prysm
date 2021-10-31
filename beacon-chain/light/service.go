@@ -18,7 +18,7 @@ import (
 )
 
 type Config struct {
-	Database            iface.NoHeadAccessDatabase
+	Database            iface.Database
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
 	StateNotifier       statefeed.Notifier
@@ -91,9 +91,17 @@ func (s *Service) Start() {
 		log.Error(err)
 		return
 	}
+	if block == nil || block.IsNil() {
+		log.Error("No finalized block")
+		return
+	}
 	st, err := s.cfg.Database.State(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
+		return
+	}
+	if st == nil || st.IsNil() {
+		log.Error("No finalized state")
 		return
 	}
 	// Call with finalized checkpoint data.
