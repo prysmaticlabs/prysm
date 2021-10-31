@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["server.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/light",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
