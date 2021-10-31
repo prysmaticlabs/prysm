@@ -1,7 +1,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
-
+# gazelle:ignore
 proto_library(
     name = "eth_proto",
     srcs = [
@@ -17,7 +17,6 @@ proto_library(
         "p2p_messages.proto",
         "powchain.proto",
         "slasher.proto",
-        "swagger.proto",
         "sync_committee.proto",
         "validator.proto",
     ],
@@ -64,6 +63,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//encoding/bytesutil:go_default_library",
+        "//proto/eth/ext:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
