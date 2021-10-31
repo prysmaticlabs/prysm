@@ -14,6 +14,7 @@ go_library(
         "genesis.go",
         "kv.go",
         "log.go",
+        "light.go",
         "migration.go",
         "migration_archived_index.go",
         "migration_block_slot_index.go",
