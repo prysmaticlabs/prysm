@@ -44,7 +44,42 @@ func New(ctx context.Context, cfg *Config) *Service {
 func (s *Service) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
-	s.waitForSync(ctx, s.cfg.TimeFetcher.GenesisTime())
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	stateEvent := <-stateChannel
+
+	var genesisTime time.Time
+	// Wait for us to receive the genesis time via a chain started notification.
+	if stateEvent.Type == statefeed.ChainStarted {
+		data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
+		if !ok {
+			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
+			stateSub.Unsubscribe()
+			return
+		}
+		genesisTime = data.StartTime
+		log.WithField("genesisTime", genesisTime).Info("Starting, received chain start event")
+	} else if stateEvent.Type == statefeed.Initialized {
+		// Alternatively, if the chain has already started, we then read the genesis
+		// time value from this data.
+		data, ok := stateEvent.Data.(*statefeed.InitializedData)
+		if !ok {
+			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
+			stateSub.Unsubscribe()
+			return
+		}
+		genesisTime = data.StartTime
+		log.WithField("genesisTime", genesisTime).Info("Starting, chain already initialized")
+	} else {
+		// This should not happen.
+		log.Error("Could start slasher, could not receive chain start event")
+		stateSub.Unsubscribe()
+		return
+	}
+	stateSub.Unsubscribe()
+
+	s.waitForSync(ctx, genesisTime)
 	checkpointRoot := bytesutil.ToBytes32(s.cfg.FinalizationFetcher.FinalizedCheckpt().Root)
 	block, err := s.cfg.Database.Block(ctx, checkpointRoot)
 	if err != nil {
