@@ -613,7 +613,19 @@ func (v *Validator) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 		err = ssz.ErrBytesLength
 		return
 	}
-	w.AddBytes(v.PublicKey)
+	buf := make([]byte, 48)
+	copy(buf, v.PublicKey)
+	zeroBytes := make([]byte, 32)
+	if rest := len(buf) % 32; rest != 0 {
+		// pad zero bytes to the left
+		buf = append(buf, zeroBytes[:32-rest]...)
+	}
+	items := make([][]byte, 2)
+	items[0] = zeroBytes
+	items[1] = zeroBytes
+	copy(items[0], buf[0:32])
+	copy(items[1], buf[32:64])
+	ssz.LeavesFromBytes(items)
 
 	// Field (1) 'WithdrawalCredentials'
 	if len(v.WithdrawalCredentials) != 32 {
