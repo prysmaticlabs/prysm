@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
