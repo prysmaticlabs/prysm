@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
@@ -35,7 +34,6 @@ var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 var _ = github_com_prysmaticlabs_eth2_types.Epoch(0)
 var _ = emptypb.Empty{}
-var _ = empty.Empty{}
 
 var (
 	filter_Debug_GetBeaconState_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
