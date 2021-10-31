@@ -80,7 +80,12 @@ func (s *Service) Start() {
 	stateSub.Unsubscribe()
 
 	s.waitForSync(ctx, genesisTime)
-	checkpointRoot := bytesutil.ToBytes32(s.cfg.FinalizationFetcher.FinalizedCheckpt().Root)
+	cpt, err := s.cfg.Database.FinalizedCheckpoint(ctx)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	checkpointRoot := bytesutil.ToBytes32(cpt.Root)
 	block, err := s.cfg.Database.Block(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
@@ -91,7 +96,6 @@ func (s *Service) Start() {
 		log.Error(err)
 		return
 	}
-	s.cfg.FinalizationFetcher.FinalizedCheckpt()
 	// Call with finalized checkpoint data.
 	if err := s.onFinalized(ctx, st, block.Block()); err != nil {
 		log.Fatal(err)
