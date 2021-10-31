@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//codes:go_default_library",

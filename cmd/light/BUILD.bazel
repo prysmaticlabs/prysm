@@ -22,6 +22,7 @@ go_library(
         "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -42,5 +43,8 @@ go_test(
     name = "go_default_test",
     srcs = ["client_test.go"],
     embed = [":go_default_library"],
-    deps = ["//testing/require:go_default_library"],
+    deps = [
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/require:go_default_library",
+    ],
 )
