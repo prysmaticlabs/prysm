@@ -17,34 +17,46 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-type Service struct {
+type Config struct {
 	Database            iface.NoHeadAccessDatabase
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
 	StateNotifier       statefeed.Notifier
 	TimeFetcher         blockchain.TimeFetcher
 	SyncChecker         syncSrv.Checker
-	cancelFunc          context.CancelFunc
-	prevHeadData        map[[32]byte]*ethpb.SyncAttestedData
-	lock                sync.RWMutex
+}
+
+type Service struct {
+	cfg          *Config
+	cancelFunc   context.CancelFunc
+	prevHeadData map[[32]byte]*ethpb.SyncAttestedData
+	lock         sync.RWMutex
+}
+
+// New --
+func New(ctx context.Context, cfg *Config) *Service {
+	return &Service{
+		cfg:          cfg,
+		prevHeadData: make(map[[32]byte]*ethpb.SyncAttestedData),
+	}
 }
 
 func (s *Service) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
-	s.waitForSync(ctx, s.TimeFetcher.GenesisTime())
-	checkpointRoot := bytesutil.ToBytes32(s.FinalizationFetcher.FinalizedCheckpt().Root)
-	block, err := s.Database.Block(ctx, checkpointRoot)
+	s.waitForSync(ctx, s.cfg.TimeFetcher.GenesisTime())
+	checkpointRoot := bytesutil.ToBytes32(s.cfg.FinalizationFetcher.FinalizedCheckpt().Root)
+	block, err := s.cfg.Database.Block(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	st, err := s.Database.State(ctx, checkpointRoot)
+	st, err := s.cfg.Database.State(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	s.FinalizationFetcher.FinalizedCheckpt()
+	s.cfg.FinalizationFetcher.FinalizedCheckpt()
 	// Call with finalized checkpoint data.
 	if err := s.onFinalized(ctx, st, block.Block()); err != nil {
 		log.Fatal(err)
@@ -63,18 +75,18 @@ func (s *Service) Status() error {
 
 func (s *Service) listenForNewHead(ctx context.Context) {
 	stateChan := make(chan *feed.Event, 1)
-	sub := s.StateNotifier.StateFeed().Subscribe(stateChan)
+	sub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case ev := <-stateChan:
 			if ev.Type == statefeed.NewHead {
-				head, err := s.HeadFetcher.HeadBlock(ctx)
+				head, err := s.cfg.HeadFetcher.HeadBlock(ctx)
 				if err != nil {
 					log.Error(err)
 					continue
 				}
-				st, err := s.HeadFetcher.HeadState(ctx)
+				st, err := s.cfg.HeadFetcher.HeadState(ctx)
 				if err != nil {
 					log.Error(err)
 					continue
@@ -89,12 +101,12 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 					continue
 				}
 				checkpointRoot := bytesutil.ToBytes32(finalizedCheckpoint.Block)
-				block, err := s.Database.Block(ctx, checkpointRoot)
+				block, err := s.cfg.Database.Block(ctx, checkpointRoot)
 				if err != nil {
 					log.Error(err)
 					continue
 				}
-				st, err := s.Database.State(ctx, checkpointRoot)
+				st, err := s.cfg.Database.State(ctx, checkpointRoot)
 				if err != nil {
 					log.Error(err)
 					continue
@@ -113,7 +125,7 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 }
 
 func (s *Service) waitForSync(ctx context.Context, genesisTime time.Time) {
-	if slots.SinceGenesis(genesisTime) == 0 || !s.SyncChecker.Syncing() {
+	if slots.SinceGenesis(genesisTime) == 0 || !s.cfg.SyncChecker.Syncing() {
 		return
 	}
 	slotTicker := slots.NewSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
@@ -122,7 +134,7 @@ func (s *Service) waitForSync(ctx context.Context, genesisTime time.Time) {
 		select {
 		case <-slotTicker.C():
 			// If node is still syncing, do not operate.
-			if s.SyncChecker.Syncing() {
+			if s.cfg.SyncChecker.Syncing() {
 				continue
 			}
 			return

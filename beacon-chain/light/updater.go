@@ -136,7 +136,7 @@ func (s *Service) onFinalized(ctx context.Context, postState state.BeaconStateAl
 	if err != nil {
 		return err
 	}
-	return s.Database.SaveLightClientFinalizedCheckpoint(ctx, 0, &ethpb.LightClientFinalizedCheckpoint{
+	return s.cfg.Database.SaveLightClientFinalizedCheckpoint(ctx, 0, &ethpb.LightClientFinalizedCheckpoint{
 		Header:                  header,
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: nextSyncCommitteeBranch.Hashes,
@@ -146,7 +146,7 @@ func (s *Service) onFinalized(ctx context.Context, postState state.BeaconStateAl
 func (s *Service) persistBestFinalizedUpdate(ctx context.Context, syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
 	finalizedEpoch := syncAttestedData.FinalityCheckpoint.Epoch
 	_ = finalizedEpoch
-	finalizedData, err := s.Database.LightClientFinalizedCheckpoint(ctx, finalizedEpoch)
+	finalizedData, err := s.cfg.Database.LightClientFinalizedCheckpoint(ctx, finalizedEpoch)
 	if err != nil {
 		return 0, err
 	}
@@ -168,21 +168,21 @@ func (s *Service) persistBestFinalizedUpdate(ctx context.Context, syncAttestedDa
 		SyncCommitteeSignature:  sigData.syncAggregate.SyncCommitteeSignature,
 		ForkVersion:             sigData.forkVersion,
 	}
-	prevBestUpdate, err := s.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
+	prevBestUpdate, err := s.cfg.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
 	if err != nil {
 		return 0, err
 	}
 	if prevBestUpdate == nil || isBetterUpdate(prevBestUpdate, newUpdate) {
-		if err := s.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
+		if err := s.cfg.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
 			return 0, err
 		}
 	}
-	prevLatestUpdate, err := s.Database.LightClientLatestFinalizedUpdate(ctx)
+	prevLatestUpdate, err := s.cfg.Database.LightClientLatestFinalizedUpdate(ctx)
 	if err != nil {
 		return 0, err
 	}
 	if prevLatestUpdate == nil || isLatestBestFinalizedUpdate(prevLatestUpdate, newUpdate) {
-		if err := s.Database.SaveLightClientLatestFinalizedUpdate(ctx, newUpdate); err != nil {
+		if err := s.cfg.Database.SaveLightClientLatestFinalizedUpdate(ctx, newUpdate); err != nil {
 			return 0, err
 		}
 	}
@@ -210,25 +210,25 @@ func (s *Service) persistBestNonFinalizedUpdate(ctx context.Context, syncAtteste
 	// Optimization: If there's already a finalized update for this committee period, no need to
 	// create a non-finalized update>
 	if committeePeriod != period {
-		prevBestUpdate, err := s.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
+		prevBestUpdate, err := s.cfg.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
 		if err != nil {
 			return err
 		}
 		if prevBestUpdate == nil || isBetterUpdate(prevBestUpdate, newUpdate) {
-			if err := s.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
+			if err := s.cfg.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Store the latest update here overall. Not checking it's the best
-	prevLatestUpdate, err := s.Database.LightClientLatestNonFinalizedUpdate(ctx)
+	prevLatestUpdate, err := s.cfg.Database.LightClientLatestNonFinalizedUpdate(ctx)
 	if err != nil {
 		return err
 	}
 	if prevLatestUpdate == nil || isLatestBestNonFinalizedUpdate(prevLatestUpdate, newUpdate) {
 		// TODO: Don't store nextCommittee, that can be fetched through getBestUpdates()
-		if err := s.Database.SaveLightClientLatestNonFinalizedUpdate(ctx, newUpdate); err != nil {
+		if err := s.cfg.Database.SaveLightClientLatestNonFinalizedUpdate(ctx, newUpdate); err != nil {
 			return err
 		}
 	}
