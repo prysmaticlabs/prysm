@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -15,7 +16,6 @@ var (
 	lightClientBucket                      = []byte("light")
 	lightClientLatestNonFinalizedUpdateKey = []byte("latest-non-finalized")
 	lightClientLatestFinalizedUpdateKey    = []byte("latest-finalized")
-	lightClientFinalizedCheckpointKey      = []byte("finalized-checkpoint")
 )
 
 var (
@@ -117,13 +117,13 @@ func (s *Store) SaveLightClientLatestFinalizedUpdate(ctx context.Context, update
 	})
 }
 
-func (s *Store) LightClientFinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+func (s *Store) LightClientFinalizedCheckpoint(ctx context.Context, epoch types.Epoch) (*ethpb.LightClientFinalizedCheckpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLightClientFinalizedCheckpoint")
 	defer span.End()
-	checkpoint := &ethpb.Checkpoint{}
+	checkpoint := &ethpb.LightClientFinalizedCheckpoint{}
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		lightBkt := tx.Bucket(lightClientBucket)
-		checkpointBytes := lightBkt.Get(lightClientFinalizedCheckpointKey)
+		checkpointBytes := lightBkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(epoch)))
 		if checkpointBytes == nil {
 			return ErrNotFound
 		}
@@ -134,7 +134,7 @@ func (s *Store) LightClientFinalizedCheckpoint(ctx context.Context) (*ethpb.Chec
 	return checkpoint, nil
 }
 
-func (s *Store) SaveLightClientFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+func (s *Store) SaveLightClientFinalizedCheckpoint(ctx context.Context, epoch types.Epoch, checkpoint *ethpb.LightClientFinalizedCheckpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLightClientFinalizedCheckpoint")
 	defer span.End()
 	enc, err := proto.Marshal(checkpoint)
@@ -143,6 +143,6 @@ func (s *Store) SaveLightClientFinalizedCheckpoint(ctx context.Context, checkpoi
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		lightBkt := tx.Bucket(lightClientBucket)
-		return lightBkt.Put(lightClientFinalizedCheckpointKey, enc)
+		return lightBkt.Put(bytesutil.Uint64ToBytesBigEndian(uint64(epoch)), enc)
 	})
 }

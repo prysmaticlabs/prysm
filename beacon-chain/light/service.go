@@ -2,34 +2,53 @@ package light
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	syncSrv "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 type Service struct {
-	Database            iface.LightClientDatabase
+	Database            iface.NoHeadAccessDatabase
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
 	StateNotifier       statefeed.Notifier
 	TimeFetcher         blockchain.TimeFetcher
-	SyncChecker         sync.Checker
+	SyncChecker         syncSrv.Checker
 	cancelFunc          context.CancelFunc
 	prevHeadData        map[[32]byte]*ethpb.SyncAttestedData
+	lock                sync.RWMutex
 }
 
 func (s *Service) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
 	s.waitForSync(ctx, s.TimeFetcher.GenesisTime())
+	checkpointRoot := bytesutil.ToBytes32(s.FinalizationFetcher.FinalizedCheckpt().Root)
+	block, err := s.Database.Block(ctx, checkpointRoot)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	st, err := s.Database.State(ctx, checkpointRoot)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	s.FinalizationFetcher.FinalizedCheckpt()
+	// Call with finalized checkpoint data.
+	if err := s.onFinalized(ctx, st, block.Block()); err != nil {
+		log.Fatal(err)
+	}
 	go s.listenForNewHead(ctx)
 }
 
@@ -46,39 +65,50 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 	stateChan := make(chan *feed.Event, 1)
 	sub := s.StateNotifier.StateFeed().Subscribe(stateChan)
 	defer sub.Unsubscribe()
-	select {
-	case ev := <-stateChan:
-		if ev.Type == statefeed.NewHead {
-			head, err := s.HeadFetcher.HeadBlock(ctx)
-			if err != nil {
-				log.Error(err)
-				return
+	for {
+		select {
+		case ev := <-stateChan:
+			if ev.Type == statefeed.NewHead {
+				head, err := s.HeadFetcher.HeadBlock(ctx)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				st, err := s.HeadFetcher.HeadState(ctx)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if err := s.onHead(ctx, st, head.Block()); err != nil {
+					log.Error(err)
+					continue
+				}
+			} else if ev.Type == statefeed.FinalizedCheckpoint {
+				finalizedCheckpoint, ok := ev.Data.(*v1.EventFinalizedCheckpoint)
+				if !ok {
+					continue
+				}
+				checkpointRoot := bytesutil.ToBytes32(finalizedCheckpoint.Block)
+				block, err := s.Database.Block(ctx, checkpointRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				st, err := s.Database.State(ctx, checkpointRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if err := s.onFinalized(ctx, st, block.Block()); err != nil {
+					log.Error(err)
+					continue
+				}
 			}
-			st, err := s.HeadFetcher.HeadState(ctx)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			if err := s.onHead(st, head.Block()); err != nil {
-				log.Error(err)
-				return
-			}
-		} else if ev.Type == statefeed.FinalizedCheckpoint {
-			st, err := s.HeadFetcher.HeadState(ctx)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			cpt := s.FinalizationFetcher.FinalizedCheckpt()
-			if err := s.onFinalized(st, cpt); err != nil {
-				log.Error(err)
-				return
-			}
+		case <-sub.Err():
+			return
+		case <-ctx.Done():
+			return
 		}
-	case <-sub.Err():
-		return
-	case <-ctx.Done():
-		return
 	}
 }
 

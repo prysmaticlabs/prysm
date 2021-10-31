@@ -1,6 +1,8 @@
 package light
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -10,19 +12,17 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // Precomputed values for generalized indices.
 const (
 	FinalizedRootIndex     = 105
 	NextSyncCommitteeIndex = 55
-	PREV_DATA_MAX_SIZE     = 64
+	PrevDataMaxSize        = 64
 )
 
-type clientStore struct {
-	Snapshot     *ethpb.ClientSnapshot
-	ValidUpdates []*ethpb.LightClientUpdate
-}
+var log = logrus.WithField("prefix", "light")
 
 type signatureData struct {
 	slot          types.Slot
@@ -30,7 +30,8 @@ type signatureData struct {
 	syncAggregate *ethpb.SyncAggregate
 }
 
-func (s *Service) onHead(postState state.BeaconStateAltair, head block.BeaconBlock) error {
+func (s *Service) onHead(ctx context.Context, postState state.BeaconStateAltair, head block.BeaconBlock) error {
+	log.Info("Head updated, persisting best updates")
 	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	if !ok {
 		return errors.New("not altair")
@@ -55,6 +56,7 @@ func (s *Service) onHead(postState state.BeaconStateAltair, head block.BeaconBlo
 	if err != nil {
 		return err
 	}
+	s.lock.Lock()
 	s.prevHeadData[blkRoot] = &ethpb.SyncAttestedData{
 		Header:                  header,
 		FinalityCheckpoint:      innerState.FinalizedCheckpoint,
@@ -62,6 +64,7 @@ func (s *Service) onHead(postState state.BeaconStateAltair, head block.BeaconBlo
 		NextSyncCommittee:       innerState.NextSyncCommittee,
 		NextSyncCommitteeBranch: nextSyncCommitteeBranch.Hashes,
 	}
+	s.lock.Unlock()
 	syncAttestedBlockRoot, err := helpers.BlockRootAtSlot(postState, innerState.Slot-1)
 	if err != nil {
 		return err
@@ -81,63 +84,72 @@ func (s *Service) onHead(postState state.BeaconStateAltair, head block.BeaconBlo
 		syncAggregate: syncAggregate,
 	}
 	// Recover attested data from prevData cache. If not found, this SyncAggregate is useless
+	s.lock.Lock()
 	syncAttestedData, ok := s.prevHeadData[bytesutil.ToBytes32(syncAttestedBlockRoot)]
 	if !ok {
+		s.lock.Unlock()
 		return errors.New("useless")
 	}
-	commmitteePeriodWithFinalized, err := s.persistBestFinalizedUpdate(syncAttestedData, sigData)
+	s.lock.Unlock()
+	commmitteePeriodWithFinalized, err := s.persistBestFinalizedUpdate(ctx, syncAttestedData, sigData)
 	if err != nil {
 		return err
 	}
 
 	// Then, store the best non finalized update per period
-	if err := s.persistBestNonFinalizedUpdate(syncAttestedData, sigData, commmitteePeriodWithFinalized); err != nil {
+	if err := s.persistBestNonFinalizedUpdate(ctx, syncAttestedData, sigData, commmitteePeriodWithFinalized); err != nil {
 		return err
 	}
 	// Prune old prevHeadData
-	if len(s.prevHeadData) > PREV_DATA_MAX_SIZE {
+	s.lock.Lock()
+	if len(s.prevHeadData) > PrevDataMaxSize {
 		for k := range s.prevHeadData {
 			delete(s.prevHeadData, k)
-			if len(s.prevHeadData) <= PREV_DATA_MAX_SIZE {
+			if len(s.prevHeadData) <= PrevDataMaxSize {
 				break
 			}
 		}
 	}
+	s.lock.Unlock()
 	return nil
 }
 
-func (s *Service) onFinalized(postState state.BeaconStateAltair, cpt *ethpb.Checkpoint) error {
-	return nil
+func (s *Service) onFinalized(ctx context.Context, postState state.BeaconStateAltair, head block.BeaconBlock) error {
+	log.Info("State finalized, persisting light client finalized checkpoint")
+	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+	if !ok {
+		return errors.New("not altair")
+	}
+	header, err := block.BeaconBlockHeaderFromBlockInterface(head)
+	if err != nil {
+		return err
+	}
+	tr, err := innerState.GetTree()
+	if err != nil {
+		return err
+	}
+	nextSyncCommitteeBranch, err := tr.Prove(NextSyncCommitteeIndex)
+	if err != nil {
+		return err
+	}
+	nextSyncCommittee, err := postState.NextSyncCommittee()
+	if err != nil {
+		return err
+	}
+	return s.Database.SaveLightClientFinalizedCheckpoint(ctx, 0, &ethpb.LightClientFinalizedCheckpoint{
+		Header:                  header,
+		NextSyncCommittee:       nextSyncCommittee,
+		NextSyncCommitteeBranch: nextSyncCommitteeBranch.Hashes,
+	})
 }
 
-/**
-// * Must subcribe to BeaconChain event `finalizedCheckpoint`.
-// * Expects the block from `checkpoint.root` and the post state of the block, `block.stateRoot`
-// *
-// * NOTE: Must be called also on start with the current finalized checkpoint (may be genesis)
-// */
-//async onFinalized(
-//checkpoint: phase0.Checkpoint,
-//blockHeader: phase0.BeaconBlockHeader,
-//postState: TreeBacked<altair.BeaconState>
-//): Promise<void> {
-//// Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
-//await this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
-//header: blockHeader,
-//nextSyncCommittee: postState.nextSyncCommittee,
-//// Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
-//nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),
-//});
-//
-//// TODO: Prune `db.lightclientFinalizedCheckpoint` for epoch < checkpoint.epoch
-//// No block will reference the previous finalized checkpoint anymore
-//}
-
-func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
+func (s *Service) persistBestFinalizedUpdate(ctx context.Context, syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData) (uint64, error) {
 	finalizedEpoch := syncAttestedData.FinalityCheckpoint.Epoch
 	_ = finalizedEpoch
-	// const finalizedData = await this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
-	var finalizedData *ethpb.LightClientUpdate
+	finalizedData, err := s.Database.LightClientFinalizedCheckpoint(ctx, finalizedEpoch)
+	if err != nil {
+		return 0, err
+	}
 	if finalizedData == nil {
 		return 0, nil
 	}
@@ -156,21 +168,28 @@ func (s *Service) persistBestFinalizedUpdate(syncAttestedData *ethpb.SyncAtteste
 		SyncCommitteeSignature:  sigData.syncAggregate.SyncCommitteeSignature,
 		ForkVersion:             sigData.forkVersion,
 	}
-	//const prevBestUpdate = await this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
-	var prevBestUpdate *ethpb.LightClientUpdate
-	if prevBestUpdate == nil || isBetterUpdate(prevBestUpdate, newUpdate) {
-		//	this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
+	prevBestUpdate, err := s.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
+	if err != nil {
+		return 0, err
 	}
-	//const prevLatestUpdate = await this.db.latestFinalizedUpdate.get();
-	var prevLatestUpdate *ethpb.LightClientUpdate
+	if prevBestUpdate == nil || isBetterUpdate(prevBestUpdate, newUpdate) {
+		if err := s.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
+			return 0, err
+		}
+	}
+	prevLatestUpdate, err := s.Database.LightClientLatestFinalizedUpdate(ctx)
+	if err != nil {
+		return 0, err
+	}
 	if prevLatestUpdate == nil || isLatestBestFinalizedUpdate(prevLatestUpdate, newUpdate) {
-		//	this.db.latestFinalizedUpdate.put(newUpdate);
+		if err := s.Database.SaveLightClientLatestFinalizedUpdate(ctx, newUpdate); err != nil {
+			return 0, err
+		}
 	}
 	return committeePeriod, nil
 }
 
-func (s Service) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
-	// TODO: Period can be nil, perhaps.
+func (s *Service) persistBestNonFinalizedUpdate(ctx context.Context, syncAttestedData *ethpb.SyncAttestedData, sigData *signatureData, period uint64) error {
 	committeePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(syncAttestedData.Header.Slot))
 	signaturePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(sigData.slot))
 	if committeePeriod != signaturePeriod {
@@ -191,19 +210,27 @@ func (s Service) persistBestNonFinalizedUpdate(syncAttestedData *ethpb.SyncAttes
 	// Optimization: If there's already a finalized update for this committee period, no need to
 	// create a non-finalized update>
 	if committeePeriod != period {
-		//const prevBestUpdate = await this.db.bestUpdatePerCommitteePeriod.get(committeePeriod);
-		var prevBestUpdate *ethpb.LightClientUpdate
+		prevBestUpdate, err := s.Database.LightClientBestUpdateForPeriod(ctx, committeePeriod)
+		if err != nil {
+			return err
+		}
 		if prevBestUpdate == nil || isBetterUpdate(prevBestUpdate, newUpdate) {
-			// this.db.bestUpdatePerCommitteePeriod.put(committeePeriod, newUpdate);
+			if err := s.Database.SaveLightClientBestUpdateForPeriod(ctx, committeePeriod, newUpdate); err != nil {
+				return err
+			}
 		}
 	}
 
 	// Store the latest update here overall. Not checking it's the best
-	var prevLatestUpdate *ethpb.LightClientUpdate
-	//const prevLatestUpdate = await this.db.latestNonFinalizedUpdate.get();
+	prevLatestUpdate, err := s.Database.LightClientLatestNonFinalizedUpdate(ctx)
+	if err != nil {
+		return err
+	}
 	if prevLatestUpdate == nil || isLatestBestNonFinalizedUpdate(prevLatestUpdate, newUpdate) {
 		// TODO: Don't store nextCommittee, that can be fetched through getBestUpdates()
-		// await this.db.latestNonFinalizedUpdate.put(newUpdate);
+		if err := s.Database.SaveLightClientLatestNonFinalizedUpdate(ctx, newUpdate); err != nil {
+			return err
+		}
 	}
 	return nil
 }

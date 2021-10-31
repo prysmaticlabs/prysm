@@ -168,8 +168,8 @@ type LightClientDatabase interface {
 	SaveLightClientLatestNonFinalizedUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
 	LightClientLatestFinalizedUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error)
 	SaveLightClientLatestFinalizedUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
-	LightClientFinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
-	SaveLightClientFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	LightClientFinalizedCheckpoint(ctx context.Context, epoch types.Epoch) (*ethpb.LightClientFinalizedCheckpoint, error)
+	SaveLightClientFinalizedCheckpoint(ctx context.Context, epoch types.Epoch, checkpoint *ethpb.LightClientFinalizedCheckpoint) error
 }
 
 // Database interface with full access.
