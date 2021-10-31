@@ -125,9 +125,17 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 					log.Error(err)
 					continue
 				}
+				if head == nil || head.IsNil() {
+					log.Error("No head")
+					continue
+				}
 				st, err := s.cfg.HeadFetcher.HeadState(ctx)
 				if err != nil {
 					log.Error(err)
+					continue
+				}
+				if st == nil || st.IsNil() {
+					log.Error("No state")
 					continue
 				}
 				if err := s.onHead(ctx, st, head.Block()); err != nil {
@@ -145,9 +153,17 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 					log.Error(err)
 					continue
 				}
+				if block == nil || block.IsNil() {
+					log.Error("No head")
+					continue
+				}
 				st, err := s.cfg.Database.State(ctx, checkpointRoot)
 				if err != nil {
 					log.Error(err)
+					continue
+				}
+				if st == nil || st.IsNil() {
+					log.Error("No state")
 					continue
 				}
 				if err := s.onFinalized(ctx, st, block.Block()); err != nil {
