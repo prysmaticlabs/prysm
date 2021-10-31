@@ -625,7 +625,12 @@ func (v *Validator) GetTreeWithWrapper(w *ssz.Wrapper) (err error) {
 	items[1] = zeroBytes
 	copy(items[0], buf[0:32])
 	copy(items[1], buf[32:64])
-	ssz.LeavesFromBytes(items)
+	var leaf *ssz.Node
+	leaf, err = ssz.TreeFromChunks(items)
+	if err != nil {
+		return
+	}
+	w.AddNode(leaf)
 
 	// Field (1) 'WithdrawalCredentials'
 	if len(v.WithdrawalCredentials) != 32 {
