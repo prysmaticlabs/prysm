@@ -836,6 +836,7 @@ func (b *BeaconNode) registerLightClientServer() error {
 	}
 	svc := light.New(b.ctx, &light.Config{
 		Database:            b.db,
+		StateGen:            b.stateGen,
 		HeadFetcher:         chainService,
 		FinalizationFetcher: chainService,
 		StateNotifier:       b,

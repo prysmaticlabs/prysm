@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	syncSrv "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -18,6 +19,7 @@ import (
 )
 
 type Config struct {
+	StateGen            stategen.StateManager
 	Database            iface.Database
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
@@ -95,7 +97,7 @@ func (s *Service) Start() {
 		log.Error("No finalized block")
 		return
 	}
-	st, err := s.cfg.Database.State(ctx, checkpointRoot)
+	st, err := s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
 		return
@@ -165,7 +167,7 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 					log.Error("No head")
 					continue
 				}
-				st, err := s.cfg.Database.State(ctx, checkpointRoot)
+				st, err := s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
 				if err != nil {
 					log.Error(err)
 					continue
