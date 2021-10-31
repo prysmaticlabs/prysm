@@ -9,12 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	syncSrv "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -44,6 +46,19 @@ func New(ctx context.Context, cfg *Config) *Service {
 }
 
 func (s *Service) Start() {
+	go s.run()
+}
+
+func (s *Service) Stop() error {
+	s.cancelFunc()
+	return nil
+}
+
+func (s *Service) Status() error {
+	return nil
+}
+
+func (s *Service) run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
 
@@ -88,38 +103,38 @@ func (s *Service) Start() {
 		return
 	}
 	checkpointRoot := bytesutil.ToBytes32(cpt.Root)
-	block, err := s.cfg.Database.Block(ctx, checkpointRoot)
+	log.Infof("%#x", checkpointRoot)
+	var block block2.SignedBeaconBlock
+	block, err = s.cfg.Database.Block(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	if block == nil || block.IsNil() {
-		log.Error("No finalized block")
-		return
+		block, err = s.cfg.Database.GenesisBlock(ctx)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
-	st, err := s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
+	var st state.BeaconState
+	st, err = s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	if st == nil || st.IsNil() {
-		log.Error("No finalized state")
-		return
+		st, err = s.cfg.Database.GenesisState(ctx)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 	// Call with finalized checkpoint data.
 	if err := s.onFinalized(ctx, st, block.Block()); err != nil {
 		log.Fatal(err)
 	}
 	go s.listenForNewHead(ctx)
-}
-
-func (s *Service) Stop() error {
-	s.cancelFunc()
-	return nil
-}
-
-func (s *Service) Status() error {
-	return nil
 }
 
 func (s *Service) listenForNewHead(ctx context.Context) {
