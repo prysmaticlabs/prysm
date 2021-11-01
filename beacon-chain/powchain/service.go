@@ -610,7 +610,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if rt != [32]byte{} {
 		fState := s.cfg.FinalizedStateAtStartUp
 		if fState == nil || fState.IsNil() {
-			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
+			return errors.Errorf("finalized state with root %#x is nil", rt)
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()

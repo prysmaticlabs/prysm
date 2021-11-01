@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -531,10 +530,8 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	require.NoError(t, emptyState.SetEth1DepositIndex(2))
 
 	ctx := context.Background()
-	require.NoError(t, stateGen.SaveState(ctx, headRoot, emptyState))
-	require.NoError(t, beaconDB.SaveState(ctx, emptyState, headRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(0), Root: headRoot[:]}))
+	s.cfg.FinalizedStateAtStartUp = emptyState
 
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
