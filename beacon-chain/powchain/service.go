@@ -152,14 +152,14 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HttpEndpoints          []string
-	DepositContract        common.Address
-	BeaconDB               db.HeadAccessDatabase
-	DepositCache           *depositcache.DepositCache
-	StateNotifier          statefeed.Notifier
-	StateGen               *stategen.State
-	Eth1HeaderReqLimit     uint64
-	BeaconNodeStatsUpdater BeaconNodeStatsUpdater
+	HttpEndpoints           []string
+	DepositContract         common.Address
+	BeaconDB                db.HeadAccessDatabase
+	DepositCache            *depositcache.DepositCache
+	StateNotifier           statefeed.Notifier
+	StateGen                *stategen.State
+	Eth1HeaderReqLimit      uint64
+	BeaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	FinalizedStateAtStartUp state.BeaconState
 }
 

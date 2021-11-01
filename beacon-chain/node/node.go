@@ -557,14 +557,14 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HttpEndpoints:          endpoints,
-		DepositContract:        common.HexToAddress(depAddress),
-		BeaconDB:               b.db,
-		DepositCache:           b.depositCache,
-		StateNotifier:          b,
-		StateGen:               b.stateGen,
-		Eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
-		BeaconNodeStatsUpdater: bs,
+		HttpEndpoints:           endpoints,
+		DepositContract:         common.HexToAddress(depAddress),
+		BeaconDB:                b.db,
+		DepositCache:            b.depositCache,
+		StateNotifier:           b,
+		StateGen:                b.stateGen,
+		Eth1HeaderReqLimit:      b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+		BeaconNodeStatsUpdater:  bs,
 		FinalizedStateAtStartUp: b.finalizedStateAtStartUp,
 	}
 

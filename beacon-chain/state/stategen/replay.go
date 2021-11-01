@@ -34,8 +34,8 @@ func (s *State) ReplayBlocks(
 	start := time.Now()
 	log.WithFields(logrus.Fields{
 		"startSlot": state.Slot(),
-		"endSlot": targetSlot,
-		"diff": targetSlot-state.Slot(),
+		"endSlot":   targetSlot,
+		"diff":      targetSlot - state.Slot(),
 	}).Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
