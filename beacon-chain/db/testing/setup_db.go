@@ -39,9 +39,3 @@ func SetupSlasherDB(t testing.TB) iface.SlasherDatabase {
 	})
 	return s
 }
-
-// MockDB should only be use in places where we need to satisfy the DB interface but you are
-// absolutely sure you don't actually need to call any db methods (you will get nil pointer exceptions)
-func MockDB() db.Database {
-	return &kv.Store{}
-}
