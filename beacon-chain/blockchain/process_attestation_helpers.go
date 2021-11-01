@@ -87,7 +87,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	if b.Block().Slot() > data.Slot {
