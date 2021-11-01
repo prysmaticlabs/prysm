@@ -107,7 +107,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
-		IsPrevEpochSourceAttester:          true,
+		IsPrevEpochSourceAttester:    true,
 	}, validators[1])
 	require.DeepEqual(t, &precompute.Validator{
 		IsActiveCurrentEpoch:         true,
@@ -115,7 +115,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
-		IsPrevEpochSourceAttester:          true,
+		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
 	}, validators[2])
@@ -125,7 +125,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
-		IsPrevEpochSourceAttester:          true,
+		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
 		IsPrevEpochHeadAttester:      true,
@@ -179,7 +179,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	require.DeepEqual(t, &precompute.Validator{
 		IsActiveCurrentEpoch:         false,
 		IsActivePrevEpoch:            true,
-		IsPrevEpochSourceAttester:          true,
+		IsPrevEpochSourceAttester:    true,
 		IsPrevEpochTargetAttester:    true,
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
@@ -190,7 +190,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
-		IsPrevEpochSourceAttester:          true,
+		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
 		IsPrevEpochHeadAttester:      true,
