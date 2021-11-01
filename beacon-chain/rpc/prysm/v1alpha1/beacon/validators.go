@@ -830,7 +830,7 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	s, err := slots.EpochStart(req.Epoch)
+	s, err := slots.EpochEnd(req.Epoch)
 	if err != nil {
 		return nil, err
 	}
