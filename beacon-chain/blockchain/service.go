@@ -201,11 +201,12 @@ func (s *Service) Start() {
 			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
 		}
 
+		genesisValidatorRoot := beaconState.GenesisValidatorRoot()
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
 				StartTime:             s.genesisTime,
-				GenesisValidatorsRoot: beaconState.GenesisValidatorRoot(),
+				GenesisValidatorsRoot: genesisValidatorRoot[:],
 			},
 		})
 	} else {
@@ -263,11 +264,12 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.
+	genesisValidatorRoot := initializedState.GenesisValidatorRoot()
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: genesisValidatorRoot[:],
 		},
 	})
 }

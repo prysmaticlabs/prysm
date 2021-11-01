@@ -82,7 +82,7 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 func addForkEntry(
 	node *enode.LocalNode,
 	genesisTime time.Time,
-	genesisValidatorsRoot []byte,
+	genesisValidatorsRoot [32]byte,
 ) (*enode.LocalNode, error) {
 	digest, err := forks.CreateForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {

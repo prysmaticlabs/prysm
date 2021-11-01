@@ -162,7 +162,7 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 	if err != nil {
 		return nil, err
 	}
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, params.BeaconConfig().ZeroHash)
 	if err != nil {
 		return nil, err
 	}

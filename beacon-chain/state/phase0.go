@@ -34,7 +34,7 @@ type ReadOnlyBeaconState interface {
 	InnerStateUnsafe() interface{}
 	CloneInnerState() interface{}
 	GenesisTime() uint64
-	GenesisValidatorRoot() []byte
+	GenesisValidatorRoot() [32]byte
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
@@ -56,7 +56,7 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyCheckpoint
 	WriteOnlyAttestations
 	SetGenesisTime(val uint64) error
-	SetGenesisValidatorRoot(val []byte) error
+	SetGenesisValidatorRoot(val [32]byte) error
 	SetSlot(val types.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error

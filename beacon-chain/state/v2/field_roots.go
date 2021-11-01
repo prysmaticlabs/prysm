@@ -71,9 +71,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
-	r := [32]byte{}
-	copy(r[:], state.GenesisValidatorsRoot)
-	fieldRoots[1] = r[:]
+	fieldRoots[1] = state.GenesisValidatorsRoot[:]
 
 	// Slot root.
 	slotRoot := ssz.Uint64Root(uint64(state.Slot))

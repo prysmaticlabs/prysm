@@ -129,7 +129,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 		return nil, err
 	}
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
+	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -162,10 +162,11 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if head != nil && !head.IsNil() {
+		genesisValidatorRoot := head.GenesisValidatorRoot()
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: genesisValidatorRoot[:],
 		}
 		return stream.Send(res)
 	}

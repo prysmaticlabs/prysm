@@ -93,7 +93,7 @@ func VerifyExitAndSignature(
 	currentSlot types.Slot,
 	fork *ethpb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
-	genesisRoot []byte,
+	genesisRoot [32]byte,
 ) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")

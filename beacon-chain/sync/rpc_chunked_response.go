@@ -33,14 +33,14 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 	switch blk.Version() {
 	case version.Phase0:
 		valRoot := chain.GenesisValidatorRoot()
-		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot)
 		if err != nil {
 			return err
 		}
 		obtainedCtx = digest[:]
 	case version.Altair:
 		valRoot := chain.GenesisValidatorRoot()
-		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, blkFunc := range types.BlockMap {
-		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot)
 		if err != nil {
 			return nil, err
 		}

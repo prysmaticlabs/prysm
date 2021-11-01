@@ -133,7 +133,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
-		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+		GenesisValidatorsRoot: genesisValidatorsRoot,
 
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,

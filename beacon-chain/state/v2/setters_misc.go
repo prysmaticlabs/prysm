@@ -48,7 +48,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 }
 
 // SetGenesisValidatorRoot for the beacon state.
-func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
+func (b *BeaconState) SetGenesisValidatorRoot(val [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

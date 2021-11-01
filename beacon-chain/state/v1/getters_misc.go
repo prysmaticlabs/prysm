@@ -36,12 +36,10 @@ func (b *BeaconState) genesisTime() uint64 {
 }
 
 // GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.GenesisValidatorsRoot == nil {
-		return params.BeaconConfig().ZeroHash[:]
+		// TODO: Safe?
+		return params.BeaconConfig().ZeroHash
 	}
 
 	b.lock.RLock()
@@ -52,17 +50,13 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 
 // genesisValidatorRoot of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRoot() []byte {
+func (b *BeaconState) genesisValidatorRoot() [32]byte {
 	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.GenesisValidatorsRoot == nil {
-		return params.BeaconConfig().ZeroHash[:]
+		// TODO: Safe?
+		return params.BeaconConfig().ZeroHash
 	}
 
-	root := make([]byte, 32)
-	copy(root, b.state.GenesisValidatorsRoot)
-	return root
+	return b.state.GenesisValidatorsRoot
 }
 
 // Version of the beacon state. This method

@@ -100,7 +100,7 @@ func ProcessDeposits(
 // BatchVerifyDepositsSignatures batch verifies deposit signatures.
 func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
 	var err error
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, params.BeaconConfig().ZeroHash)
 	if err != nil {
 		return false, err
 	}
@@ -170,7 +170,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		if verifySignature {
-			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, params.BeaconConfig().ZeroHash)
 			if err != nil {
 				return nil, newValidator, err
 			}
