@@ -162,6 +162,12 @@ func (s *Service) Resync() error {
 	defer func() { s.synced.Set() }() // Reset it at the end of the method.
 	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
+	// Vanguard: Deactivating verification from orchestrator client
+	if s.cfg.EnableVanguardNode {
+		log.Info("Deactivating orchestrator verification in re-sync mode")
+		s.cfg.Chain.DeactivateOrcVerification()
+	}
+
 	s.waitForMinimumPeers()
 	if err = s.roundRobinSync(genesis); err != nil {
 		log = log.WithError(err)

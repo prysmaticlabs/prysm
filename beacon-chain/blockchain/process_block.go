@@ -115,10 +115,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			s.publishEpochInfo(signed.Block().Slot(), proposerIndices, pubKeys)
 			s.latestSentEpoch = nextEpoch
 		}
-		if b.Slot() > 5280 {
-			if err := s.verifyPandoraShardInfo(signed); err != nil {
-				return errors.Wrap(err, "could not verify pandora shard info onBlock")
-			}
+		if err := s.verifyPandoraShardInfo(signed); err != nil {
+			return errors.Wrap(err, "could not verify pandora shard info onBlock")
 		}
 		// publish block to orchestrator and rpc service for sending minimal consensus info
 		s.publishBlock(signed)
