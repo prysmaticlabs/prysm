@@ -107,6 +107,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
+		IsPrevEpochAttester:          true,
 		IsPrevEpochSourceAttester:    true,
 	}, validators[1])
 	require.DeepEqual(t, &precompute.Validator{
@@ -115,6 +116,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
+		IsPrevEpochAttester:          true,
 		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
@@ -125,6 +127,7 @@ func TestProcessEpochParticipation(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
+		IsPrevEpochAttester:          true,
 		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
@@ -179,6 +182,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 	require.DeepEqual(t, &precompute.Validator{
 		IsActiveCurrentEpoch:         false,
 		IsActivePrevEpoch:            true,
+		IsPrevEpochAttester:          true,
 		IsPrevEpochSourceAttester:    true,
 		IsPrevEpochTargetAttester:    true,
 		IsWithdrawableCurrentEpoch:   true,
@@ -190,6 +194,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 		IsCurrentEpochAttester:       true,
+		IsPrevEpochAttester:          true,
 		IsPrevEpochSourceAttester:    true,
 		IsCurrentEpochTargetAttester: true,
 		IsPrevEpochTargetAttester:    true,
