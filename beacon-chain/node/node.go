@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -46,6 +47,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -87,6 +89,7 @@ type BeaconNode struct {
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
 	blockchainFlagOpts      []blockchain.Option
+	finalizedStateAtStartUp state.BeaconState
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -147,7 +150,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	beacon.startStateGen()
+	if err := beacon.startStateGen(); err != nil {
+		return nil, err
+	}
 
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
@@ -420,8 +425,34 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen() {
+func (b *BeaconNode) startStateGen() error {
 	b.stateGen = stategen.New(b.db)
+
+	cp, err := b.db.FinalizedCheckpoint(b.ctx)
+	if err != nil {
+		return err
+	}
+
+	r := bytesutil.ToBytes32(cp.Root)
+	// Consider edge case where finalized root are zeros instead of genesis root hash.
+	if r == params.BeaconConfig().ZeroHash {
+		genesisBlock, err := b.db.GenesisBlock(b.ctx)
+		if err != nil {
+			return err
+		}
+		if genesisBlock != nil && !genesisBlock.IsNil() {
+			r, err = genesisBlock.Block().HashTreeRoot()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	b.finalizedStateAtStartUp, err = b.stateGen.StateByRoot(b.ctx, r)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
@@ -501,6 +532,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithAttestationService(attService),
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
+		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 	)
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
@@ -533,6 +565,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		StateGen:               b.stateGen,
 		Eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
 		BeaconNodeStatsUpdater: bs,
+		FinalizedStateAtStartUp: b.finalizedStateAtStartUp,
 	}
 
 	web3Service, err := powchain.NewService(b.ctx, cfg)

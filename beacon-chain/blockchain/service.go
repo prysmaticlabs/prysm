@@ -84,6 +84,7 @@ type config struct {
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	FinalizedStateAtStartUp state.BeaconState
 }
 
 // NewService instantiates a new block service instance that will
@@ -109,34 +110,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
-	// For running initial sync with state cache, in an event of restart, we use
-	// last finalized check point as start point to sync instead of head
-	// state. This is because we no longer save state every slot during sync.
-	cp, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
-	if err != nil {
-		log.Fatalf("Could not fetch finalized cp: %v", err)
-	}
-
-	r := bytesutil.ToBytes32(cp.Root)
-	// Before the first finalized epoch, in the current epoch,
-	// the finalized root is defined as zero hashes instead of genesis root hash.
-	// We want to use genesis root to retrieve for state.
-	if r == params.BeaconConfig().ZeroHash {
-		genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(s.ctx)
-		if err != nil {
-			log.Fatalf("Could not fetch finalized cp: %v", err)
-		}
-		if genesisBlock != nil && !genesisBlock.IsNil() {
-			r, err = genesisBlock.Block().HashTreeRoot()
-			if err != nil {
-				log.Fatalf("Could not tree hash genesis block: %v", err)
-			}
-		}
-	}
-	beaconState, err := s.cfg.StateGen.StateByRoot(s.ctx, r)
-	if err != nil {
-		log.Fatalf("Could not fetch beacon state by root: %v", err)
-	}
+	beaconState := s.cfg.FinalizedStateAtStartUp
 
 	// Make sure that attestation processor is subscribed and ready for state initializing event.
 	attestationProcessorSubscribed := make(chan struct{}, 1)
@@ -408,7 +382,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState state.BeaconState
 
-	finalizedState, err = s.cfg.StateGen.Resume(ctx)
+	finalizedState, err = s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
@@ -430,7 +404,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not hash head block")
 			}
-			finalizedState, err := s.cfg.StateGen.Resume(ctx)
+			finalizedState, err := s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 			if err != nil {
 				return errors.Wrap(err, "could not get finalized state from db")
 			}

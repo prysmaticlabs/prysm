@@ -160,6 +160,7 @@ type Web3ServiceConfig struct {
 	StateGen               *stategen.State
 	Eth1HeaderReqLimit     uint64
 	BeaconNodeStatsUpdater BeaconNodeStatsUpdater
+	FinalizedStateAtStartUp state.BeaconState
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -607,10 +608,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		fState, err := s.cfg.StateGen.StateByRoot(ctx, rt)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state")
-		}
+		fState := s.cfg.FinalizedStateAtStartUp
 		if fState == nil || fState.IsNil() {
 			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
 		}
