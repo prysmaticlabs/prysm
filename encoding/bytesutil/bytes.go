@@ -216,7 +216,6 @@ func SafeCopyBytes(cp []byte) []byte {
 	return nil
 }
 
-// TODO: Test
 func SafeCopy32Bytes(cp [32]byte) [32]byte {
 	var copied [32]byte
 	for i := 0; i < 32; i++ {

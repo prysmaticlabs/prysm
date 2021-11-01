@@ -35,7 +35,6 @@ func (b *BeaconState) genesisTime() uint64 {
 // GenesisValidatorRoot of the beacon state.
 func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 	if !b.hasInnerState() {
-		// TODO: Safe?
 		return params.BeaconConfig().ZeroHash
 	}
 
@@ -49,7 +48,6 @@ func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) genesisValidatorRoot() [32]byte {
 	if !b.hasInnerState() {
-		// TODO: Safe?
 		return params.BeaconConfig().ZeroHash
 	}
 
