@@ -909,6 +909,16 @@ message MinimalConsensusInfo {
     uint64 epoch_time_start = 3;
     // The slot time duration of the requested epoch.
     google.protobuf.Duration slot_time_duration = 4;
+    // reorg contains info of the reorg event
+    Reorg reorg_info = 5;
+
+}
+
+message Reorg {
+    // VanguardParentHash is the parent hash of re-org new block
+    bytes van_parent_hash = 1;
+    // pan_parent_hash is the hash of pandora sharding block of the parent block re-org new block
+    bytes pan_parent_hash = 2;
 }
 
 message StreamPendingBlocksRequest {

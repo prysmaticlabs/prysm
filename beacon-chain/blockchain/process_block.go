@@ -105,7 +105,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
 		curEpoch := helpers.CurrentEpoch(postState)
-		nextEpoch := curEpoch+1
+		nextEpoch := curEpoch + 1
 		if s.latestSentEpoch < nextEpoch {
 			proposerIndices, pubKeys, err := helpers.ProposerIndicesInCache(postState.Copy(), nextEpoch)
 			if err != nil {
@@ -114,6 +114,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			log.WithField("nextEpoch", nextEpoch).WithField("latestSentEpoch", s.latestSentEpoch).Debug("publishing latest epoch info")
 			s.publishEpochInfo(signed.Block().Slot(), proposerIndices, pubKeys)
 			s.latestSentEpoch = nextEpoch
+		}
+		if err := s.verifyPandoraShardInfo(signed); err != nil {
+			return errors.Wrap(err, "could not verify pandora shard info onBlock")
 		}
 		// publish block to orchestrator and rpc service for sending minimal consensus info
 		s.publishBlock(signed)
@@ -270,7 +273,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		}
 		if s.enableVanguardNode {
 			curEpoch := helpers.CurrentEpoch(preState)
-			nextEpoch := curEpoch+1
+			nextEpoch := curEpoch + 1
 			if s.latestSentEpoch < nextEpoch {
 				proposerIndices, pubKeys, err := helpers.ProposerIndicesInCache(preState.Copy(), nextEpoch)
 				if err != nil {
