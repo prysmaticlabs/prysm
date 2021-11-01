@@ -3,18 +3,20 @@ package stategen
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	prysmTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -28,7 +30,13 @@ func (s *State) ReplayBlocks(
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 	var err error
-	log.Debugf("Replaying state from slot %d till slot %d", state.Slot(), targetSlot)
+
+	start := time.Now()
+	log.WithFields(logrus.Fields{
+		"startSlot": state.Slot(),
+		"endSlot": targetSlot,
+		"diff": targetSlot-state.Slot(),
+	}).Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -56,6 +64,11 @@ func (s *State) ReplayBlocks(
 			return nil, err
 		}
 	}
+
+	duration := time.Since(start)
+	log.WithFields(logrus.Fields{
+		"duration": duration,
+	}).Debug("Replayed state")
 
 	return state, nil
 }
@@ -188,7 +201,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if time.CanProcessEpoch(state) {
+		if prysmTime.CanProcessEpoch(state) {
 			switch state.Version() {
 			case version.Phase0:
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
@@ -208,7 +221,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 			return nil, err
 		}
 
-		if time.CanUpgradeToAltair(state.Slot()) {
+		if prysmTime.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				return nil, err
