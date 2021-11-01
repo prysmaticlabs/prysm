@@ -20,7 +20,7 @@ type Validator struct {
 	IsCurrentEpochTargetAttester bool
 	// IsPrevEpochAttester is true if the validator attested previous epoch.
 	IsPrevEpochAttester bool
-	// IsPrevEpochSourceAttester is true if the validator attested to source previous epoch.
+	// IsPrevEpochSourceAttester is true if the validator attested to source previous epoch. [Only for Altair]
 	IsPrevEpochSourceAttester bool
 	// IsPrevEpochTargetAttester is true if the validator attested previous epoch target.
 	IsPrevEpochTargetAttester bool
