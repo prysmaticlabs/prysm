@@ -35,7 +35,7 @@ type Kind int
 const (
 	// Imported keymanager defines an on-disk, encrypted keystore-capable store.
 	Imported Kind = iota
-	// Derived keymanager using a hierarchical-deterministic-genesis algorithm.
+	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived
 	// Remote keymanager capable of remote-signing data.
 	Remote

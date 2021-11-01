@@ -4,27 +4,27 @@ Package rand defines methods of obtaining cryptographically secure random number
 One is expected to use randomness from this package only, without introducing any other packages.
 This limits the scope of code that needs to be hardened.
 
-There are two modes, one for deterministic-genesis and another non-deterministic-genesis randomness:
-1. If deterministic-genesis pseudo-random generator is enough, use:
+There are two modes, one for deterministic and another non-deterministic randomness:
+1. If deterministic pseudo-random generator is enough, use:
 
 	import "github.com/prysmaticlabs/prysm/crypto/rand"
 	randGen := rand.NewDeterministicGenerator()
 	randGen.Intn(32) // or any other func defined in math.rand API
 
    In this mode, only seed is generated using cryptographically secure source (crypto/rand). So,
-   once seed is obtained, and generator is seeded, the next generations are deterministic-genesis, thus fast.
+   once seed is obtained, and generator is seeded, the next generations are deterministic, thus fast.
    This method is still better than using unix time for source of randomness - since time is not a
    good source of seed randomness, when you have many concurrent servers using it (and they have
    coinciding random generators' start times).
 
-2. For cryptographically secure non-deterministic-genesis mode (CSPRNG), use:
+2. For cryptographically secure non-deterministic mode (CSPRNG), use:
 
 	import "github.com/prysmaticlabs/prysm/crypto/rand"
 	randGen := rand.NewGenerator()
 	randGen.Intn(32) // or any other func defined in math.rand API
 
    Again, any of the functions from `math/rand` can be used, however, they all use custom source
-   of randomness (crypto/rand), on every step. This makes randomness non-deterministic-genesis. However,
+   of randomness (crypto/rand), on every step. This makes randomness non-deterministic. However,
    you take a performance hit -- as it is an order of magnitude slower.
 */
 package rand
@@ -67,16 +67,16 @@ type Rand = mrand.Rand /* #nosec G404 */
 // NewGenerator returns a new generator that uses random values from crypto/rand as a source
 // (cryptographically secure random number generator).
 // Panics if crypto/rand input cannot be read.
-// Use it for everything where crypto secure non-deterministic-genesis randomness is required. Performance
+// Use it for everything where crypto secure non-deterministic randomness is required. Performance
 // takes a hit, so use sparingly.
 func NewGenerator() *Rand {
 	return mrand.New(&source{}) /* #nosec G404 */
 }
 
 // NewDeterministicGenerator returns a random generator which is only seeded with crypto/rand,
-// but is deterministic-genesis otherwise (given seed, produces given results, deterministically).
+// but is deterministic otherwise (given seed, produces given results, deterministically).
 // Panics if crypto/rand input cannot be read.
-// Use this method for performance, where deterministic-genesis pseudo-random behaviour is enough.
+// Use this method for performance, where deterministic pseudo-random behaviour is enough.
 // Otherwise, rely on NewGenerator().
 func NewDeterministicGenerator() *Rand {
 	randGen := NewGenerator()

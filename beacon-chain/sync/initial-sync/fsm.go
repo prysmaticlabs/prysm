@@ -40,7 +40,7 @@ type stateMachineManager struct {
 }
 
 // stateMachine holds a state of a single block processing FSM.
-// Each FSM allows deterministic-genesis state transitions: State(S) x Event(E) -> Actions (A), State(S').
+// Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
 	smm     *stateMachineManager
 	start   types.Slot

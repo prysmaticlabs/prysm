@@ -55,7 +55,7 @@ func BlockSignature(
 		return nil, err
 	}
 	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic-genesis on beacon state slot.
+	// function deterministic on beacon state slot.
 	currentSlot := bState.Slot()
 	if err := bState.SetSlot(block.Slot); err != nil {
 		return nil, err

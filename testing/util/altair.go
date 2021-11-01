@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
-// DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic-genesis deposits.
+// DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic deposits.
 func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.BeaconStateAltair, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
@@ -295,7 +295,7 @@ func BlockSignatureAltair(
 		return nil, err
 	}
 	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic-genesis on beacon state slot.
+	// function deterministic on beacon state slot.
 	currentSlot := bState.Slot()
 	if err := bState.SetSlot(block.Slot); err != nil {
 		return nil, err
@@ -397,7 +397,7 @@ func GenerateFullBlockAltair(
 	}
 
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic-genesis on beacon state slot.
+	// function deterministic on beacon state slot.
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}

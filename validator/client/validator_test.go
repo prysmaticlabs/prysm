@@ -1201,7 +1201,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			name: "no history exists",
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-				// Use only 1 key for deterministic-genesis order.
+				// Use only 1 key for deterministic order.
 				km := genMockKeymanager(1)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)

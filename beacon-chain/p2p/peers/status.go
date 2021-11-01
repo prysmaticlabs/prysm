@@ -103,7 +103,7 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
 		// Random generator used to calculate dial backoff period.
-		// It is ok to use deterministic-genesis generator, no need for true entropy.
+		// It is ok to use deterministic generator, no need for true entropy.
 		rand: rand.NewDeterministicGenerator(),
 	}
 }
