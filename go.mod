@@ -82,7 +82,7 @@ require (
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
-	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20211029152443-a17a2c381519
+	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20211101134346-c95c7c62ade1
 	github.com/r3labs/sse v0.0.0-20210224172625-26fe804710bc
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
