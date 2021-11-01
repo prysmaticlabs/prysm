@@ -134,7 +134,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.StateRoot = s[:]
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
+	// function deterministic-genesis on beacon state slot.
 	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
 		return err
 	}

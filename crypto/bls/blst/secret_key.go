@@ -1,3 +1,4 @@
+//go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
 // +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
@@ -69,7 +70,7 @@ func IsZero(sKey []byte) bool {
 //
 // In IETF draft BLS specification:
 // Sign(SK, message) -> signature: a signing algorithm that generates
-//      a deterministic signature given a secret key SK and a message.
+//      a deterministic-genesis signature given a secret key SK and a message.
 //
 // In Ethereum proof of stake specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature

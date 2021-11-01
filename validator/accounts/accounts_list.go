@@ -143,7 +143,7 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic-genesis").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
 	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {

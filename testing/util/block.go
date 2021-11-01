@@ -147,7 +147,7 @@ func GenerateFullBlock(
 	}
 
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
+	// function deterministic-genesis on beacon state slot.
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}

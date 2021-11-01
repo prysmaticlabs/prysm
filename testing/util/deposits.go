@@ -51,7 +51,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 		// Fetch the required number of keys.
 		secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+			return nil, nil, errors.Wrap(err, "could not create deterministic-genesis keys: ")
 		}
 		privKeys = append(privKeys, secretKeys[:len(secretKeys)-1]...)
 
@@ -116,7 +116,7 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 		// Fetch enough keys for all deposits, since this function is uncached.
 		newSecretKeys, newPublicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+			return nil, nil, errors.Wrap(err, "could not create deterministic-genesis keys: ")
 		}
 		secretKeys = append(secretKeys, newSecretKeys...)
 		publicKeys = append(publicKeys, newPublicKeys...)
@@ -201,7 +201,7 @@ func signedDeposit(
 }
 
 // DeterministicDepositTrie returns a merkle trie of the requested size from the
-// deterministic deposits.
+// deterministic-genesis deposits.
 func DeterministicDepositTrie(size int) (*trie.SparseMerkleTrie, [][32]byte, error) {
 	if t == nil {
 		return nil, [][32]byte{}, errors.New("trie cache is empty, generate deposits at an earlier point")
@@ -249,7 +249,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	return eth1Data, nil
 }
 
-// DeterministicGenesisState returns a genesis state made using the deterministic deposits.
+// DeterministicGenesisState returns a genesis state made using the deterministic-genesis deposits.
 func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
@@ -324,7 +324,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 		// Fetch the required number of keys.
 		secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+			return nil, nil, errors.Wrap(err, "could not create deterministic-genesis keys: ")
 		}
 		privKeys = append(privKeys, secretKeys[:len(secretKeys)-1]...)
 

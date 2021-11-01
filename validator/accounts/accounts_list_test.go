@@ -268,7 +268,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) derived, (HD) hierarchical-deterministic
+		(keymanager kind) derived, (HD) hierarchical-deterministic-genesis
 		(derivation format) m / purpose / coin_type / account_index / withdrawal_key / validating_key
 		Showing 2 validator accounts
 

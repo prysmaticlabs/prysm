@@ -1,4 +1,4 @@
-// Package interop contains deterministic utilities for generating
+// Package interop contains deterministic-genesis utilities for generating
 // genesis states and keys.
 package interop
 
