@@ -26,6 +26,10 @@ proto_library(
     ],
 )
 
+# We create a custom proto library for key_management.proto as it requires a different
+# compiler plugin for grpc gateway than the others. Namely, it requires adding the option
+# --allow_delete_body=true to allow grpc gateway endpoints to take in DELETE HTTP requests
+# with a request body properly.
 proto_library(
     name = "custom_proto",
     srcs = [
