@@ -110,11 +110,12 @@ func (s *Simulator) generateAttestationsForSlot(
 func (s *Simulator) aggregateSigForAttestation(
 	beaconState state.BeaconState, att *ethpb.IndexedAttestation,
 ) (bls.Signature, error) {
+	gvRoot := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		att.Data.Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorRoot(),
+		gvRoot[:],
 	)
 	if err != nil {
 		return nil, err

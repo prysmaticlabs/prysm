@@ -466,7 +466,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorRoot()),
+		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
@@ -569,7 +569,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorRoot()),
+		GenesisValidatorsRoot: altairState.GenesisValidatorRoot(),
 		Slot:                  altairState.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),

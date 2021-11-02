@@ -114,7 +114,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
-		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+		GenesisValidatorsRoot: genesisValidatorsRoot,
 
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,

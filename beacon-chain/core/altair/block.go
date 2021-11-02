@@ -102,7 +102,8 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
 func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
 	ps := slots.PrevSlot(s.Slot())
-	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	gvRoot := s.GenesisValidatorRoot()
+	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, gvRoot[:])
 	if err != nil {
 		return err
 	}
