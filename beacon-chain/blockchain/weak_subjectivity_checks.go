@@ -44,6 +44,7 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 	}
 	return &WeakSubjectivityVerifier{
 		enabled: true,
+		verified: false,
 		root:    bytesutil.ToBytes32(wsc.Root),
 		epoch:   wsc.Epoch,
 		db:      db,
