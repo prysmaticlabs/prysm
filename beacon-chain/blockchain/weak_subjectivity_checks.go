@@ -58,6 +58,17 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if v.verified || !v.enabled {
 		return nil
 	}
+
+	// Two conditions are described in the specs:
+	// IF epoch_number > store.finalized_checkpoint.epoch,
+	// then ASSERT during block sync that block with root block_root
+	// is in the sync path at epoch epoch_number. Emit descriptive critical error if this assert fails,
+	// then exit client process.
+	// we do not handle this case ^, because we can only blocks that have been processed / are currently
+	// in line for finalization, we don't have the ability to look ahead. so we only satisfy the following:
+	// IF epoch_number <= store.finalized_checkpoint.epoch,
+	// then ASSERT that the block in the canonical chain at epoch epoch_number has root block_root.
+	// Emit descriptive critical error if this assert fails, then exit client process.
 	if v.epoch > finalizedEpoch {
 		return nil
 	}
