@@ -30,7 +30,7 @@ type WeakSubjectivityVerifier struct {
 	db       weakSubjectivityDB
 }
 
-// validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
+// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
