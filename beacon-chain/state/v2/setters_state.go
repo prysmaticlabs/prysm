@@ -7,7 +7,7 @@ import (
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val [][]byte) error {
+func (b *BeaconState) SetStateRoots(val [8192][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -43,14 +43,11 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.Refs() > 1 {
-		// Copy elements in underlying array by reference.
-		r = make([][]byte, len(b.state.StateRoots))
-		copy(r, b.state.StateRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = stateRoot[:]
+	r[idx] = stateRoot
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)

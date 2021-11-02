@@ -106,9 +106,9 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		blockRoots[i] = zeroHash32
 	}
 
-	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := [8192][32]byte{}
 	for i := 0; i < len(stateRoots); i++ {
-		stateRoots[i] = zeroHash
+		stateRoots[i] = zeroHash32
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)

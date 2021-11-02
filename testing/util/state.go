@@ -30,7 +30,11 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 		}
 		roots[j] = h
 	}
-	state.StateRoots = roots
+	var stateRoots [8192][32]byte
+	for i := range stateRoots {
+		stateRoots[i] = bytesutil.ToBytes32(roots[i])
+	}
+	state.StateRoots = stateRoots
 	var blockRoots [8192][32]byte
 	for i := range blockRoots {
 		blockRoots[i] = bytesutil.ToBytes32(roots[i])
@@ -43,7 +47,7 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
 	seed := &ethpb.BeaconState{
 		BlockRoots:                 [8192][32]byte{},
-		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 [8192][32]byte{},
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),

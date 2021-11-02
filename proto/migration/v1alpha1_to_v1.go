@@ -481,7 +481,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
 		BlockRoots:      state.BlockRoots(),
-		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		StateRoots:      state.StateRoots(),
 		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
@@ -584,7 +584,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
 		BlockRoots:      altairState.BlockRoots(),
-		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
+		StateRoots:      altairState.StateRoots(),
 		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),

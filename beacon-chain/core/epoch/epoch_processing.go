@@ -382,13 +382,18 @@ func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, e
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
 		blockRoots := state.BlockRoots()
-		roots := make([][]byte, len(blockRoots))
-		for i := range roots {
-			roots[i] = blockRoots[i][:]
+		bRoots := make([][]byte, len(blockRoots))
+		for i := range bRoots {
+			bRoots[i] = blockRoots[i][:]
+		}
+		stateRoots := state.StateRoots()
+		sRoots := make([][]byte, len(stateRoots))
+		for i := range sRoots {
+			sRoots[i] = stateRoots[i][:]
 		}
 		historicalBatch := &ethpb.HistoricalBatch{
-			BlockRoots: roots,
-			StateRoots: state.StateRoots(),
+			BlockRoots: bRoots,
+			StateRoots: sRoots,
 		}
 		batchRoot, err := historicalBatch.HashTreeRoot()
 		if err != nil {

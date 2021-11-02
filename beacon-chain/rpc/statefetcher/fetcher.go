@@ -177,7 +177,7 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateId) {
+		if bytes.Equal(root[:], stateId) {
 			blockRoot := headState.BlockRoots()[i]
 			return p.StateGenService.StateByRoot(ctx, blockRoot)
 		}
@@ -259,7 +259,7 @@ func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]b
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for _, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot[:]) {
+		if root == stateRoot {
 			return stateRoot[:], nil
 		}
 	}

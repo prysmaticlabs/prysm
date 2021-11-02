@@ -103,7 +103,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	sRoots := make([][]byte, len(state.StateRoots))
+	for i := range sRoots {
+		sRoots[i] = state.StateRoots[i][:]
+	}
+	stateRootsRoot, err := h.arraysRoot(sRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}

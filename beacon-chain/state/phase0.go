@@ -116,7 +116,7 @@ type ReadOnlyBlockRoots interface {
 
 // ReadOnlyStateRoots defines a struct which only has read access to state roots methods.
 type ReadOnlyStateRoots interface {
-	StateRoots() [][]byte
+	StateRoots() [8192][32]byte
 	StateRootAtIndex(idx uint64) ([]byte, error)
 }
 
@@ -148,7 +148,7 @@ type WriteOnlyBlockRoots interface {
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
-	SetStateRoots(val [][]byte) error
+	SetStateRoots(val [8192][32]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 
