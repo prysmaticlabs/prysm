@@ -95,9 +95,9 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	input := make([][]byte, len(b.state.BlockRoots))
-	for i := range input {
-		input[i] = b.state.BlockRoots[i][:]
+	bRoots := make([][]byte, len(b.state.BlockRoots))
+	for i := range bRoots {
+		bRoots[i] = b.state.BlockRoots[i][:]
 	}
-	return bytesutil.SafeCopyRootAtIndex(input, idx)
+	return bytesutil.SafeCopyRootAtIndex(bRoots, idx)
 }
