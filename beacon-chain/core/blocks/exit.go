@@ -57,7 +57,8 @@ func ProcessVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
+		gvRoot := beaconState.GenesisValidatorRoot()
+		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, gvRoot[:]); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex)
@@ -93,7 +94,7 @@ func VerifyExitAndSignature(
 	currentSlot types.Slot,
 	fork *ethpb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
-	genesisRoot [32]byte,
+	genesisRoot []byte,
 ) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")

@@ -46,7 +46,8 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	gvRoot := bState.GenesisValidatorRoot()
+	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, gvRoot[:])
 	if err != nil {
 		return nil, err
 	}

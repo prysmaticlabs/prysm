@@ -129,7 +129,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 		return nil, err
 	}
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot)
+	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
 		return nil, err
 	}

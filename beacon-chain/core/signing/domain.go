@@ -17,7 +17,7 @@ import (
 //    epoch = get_current_epoch(state) if epoch is None else epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version, state.genesis_validators_root)
-func Domain(fork *eth.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot [32]byte) ([]byte, error) {
+func Domain(fork *eth.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
 	if fork == nil {
 		return []byte{}, errors.New("nil fork or domain type")
 	}
@@ -32,5 +32,5 @@ func Domain(fork *eth.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]
 	}
 	var forkVersionArray [4]byte
 	copy(forkVersionArray[:], forkVersion[:4])
-	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot[:])
+	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot)
 }
