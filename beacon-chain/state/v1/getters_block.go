@@ -49,12 +49,12 @@ func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() [][]byte {
+func (b *BeaconState) BlockRoots() [8192][32]byte {
 	if !b.hasInnerState() {
-		return nil
+		return [8192][32]byte{}
 	}
-	if b.state.BlockRoots == nil {
-		return nil
+	if b.state.BlockRoots == [8192][32]byte{} {
+		return [8192][32]byte{}
 	}
 
 	b.lock.RLock()
@@ -65,11 +65,11 @@ func (b *BeaconState) BlockRoots() [][]byte {
 
 // blockRoots kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRoots() [][]byte {
+func (b *BeaconState) blockRoots() [8192][32]byte {
 	if !b.hasInnerState() {
-		return nil
+		return [8192][32]byte{}
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
+	return b.state.BlockRoots
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -78,7 +78,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.BlockRoots == nil {
+	if b.state.BlockRoots == [8192][32]byte{} {
 		return nil, nil
 	}
 
@@ -95,5 +95,9 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
+	input := make([][]byte, len(b.state.BlockRoots))
+	for i := range input {
+		input[i] = b.state.BlockRoots[i][:]
+	}
+	return bytesutil.SafeCopyRootAtIndex(input, idx)
 }

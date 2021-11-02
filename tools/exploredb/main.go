@@ -331,7 +331,12 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("slot                          : %d", st.Slot())
 		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
 		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
-		size, count := sizeAndCountOfByteList(st.BlockRoots())
+		blockRoots := st.BlockRoots()
+		list := make([][]byte, len(blockRoots))
+		for i := range list {
+			list[i] = blockRoots[i][:]
+		}
+		size, count := sizeAndCountOfByteList(list)
 		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.StateRoots())
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)

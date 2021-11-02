@@ -22,7 +22,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+func (b *BeaconState) SetBlockRoots(val [8192][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -52,14 +52,11 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
-		// Copy elements in underlying array by reference.
-		r = make([][]byte, len(b.state.BlockRoots))
-		copy(r, b.state.BlockRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = blockRoot[:]
+	r[idx] = blockRoot
 	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)

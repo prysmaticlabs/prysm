@@ -86,16 +86,17 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		randaoMixes[i] = h
 	}
 
-	zeroHash := params.BeaconConfig().ZeroHash[:]
+	zeroHash32 := params.BeaconConfig().ZeroHash
+	zeroHash := zeroHash32[:]
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	blockRoots := [8192][32]byte{}
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = zeroHash
+		blockRoots[i] = zeroHash32
 	}
 
 	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)

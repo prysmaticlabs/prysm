@@ -110,7 +110,7 @@ type ReadOnlyCheckpoint interface {
 
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.
 type ReadOnlyBlockRoots interface {
-	BlockRoots() [][]byte
+	BlockRoots() [8192][32]byte
 	BlockRootAtIndex(idx uint64) ([]byte, error)
 }
 
@@ -142,7 +142,7 @@ type ReadOnlyAttestations interface {
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
 type WriteOnlyBlockRoots interface {
-	SetBlockRoots(val [][]byte) error
+	SetBlockRoots(val [8192][32]byte) error
 	UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error
 }
 

@@ -179,7 +179,7 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 	for i, root := range headState.StateRoots() {
 		if bytes.Equal(root, stateId) {
 			blockRoot := headState.BlockRoots()[i]
-			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
+			return p.StateGenService.StateByRoot(ctx, blockRoot)
 		}
 	}
 

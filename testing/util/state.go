@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -30,14 +31,18 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 		roots[j] = h
 	}
 	state.StateRoots = roots
-	state.BlockRoots = roots
+	var blockRoots [8192][32]byte
+	for i := range blockRoots {
+		blockRoots[i] = bytesutil.ToBytes32(roots[i])
+	}
+	state.BlockRoots = blockRoots
 	return nil
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
 	seed := &ethpb.BeaconState{
-		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		BlockRoots:                 [8192][32]byte{},
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
