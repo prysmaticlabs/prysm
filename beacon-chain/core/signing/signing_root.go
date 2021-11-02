@@ -23,7 +23,8 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
+	gvRoot := st.GenesisValidatorRoot()
+	d, err := Domain(st.Fork(), epoch, domain, gvRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,8 @@ func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index types.Va
 	if err != nil {
 		return err
 	}
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
+	gvRoot := st.GenesisValidatorRoot()
+	d, err := Domain(st.Fork(), epoch, domain, gvRoot[:])
 	if err != nil {
 		return err
 	}
@@ -169,7 +171,7 @@ func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte,
 //        genesis_validators_root = Root()  # all bytes zero by default
 //    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
 //    return Domain(domain_type + fork_data_root[:28])
-func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesisValidatorsRoot [32]byte) ([]byte, error) {
+func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesisValidatorsRoot []byte) ([]byte, error) {
 	if forkVersion == nil {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}
