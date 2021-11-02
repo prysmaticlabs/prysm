@@ -207,7 +207,7 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        current_version=current_version,
 //        genesis_validators_root=genesis_validators_root,
 //    ))
-func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
+func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
