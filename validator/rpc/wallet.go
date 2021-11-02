@@ -62,6 +62,9 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			},
 		}, nil
 	}
+	if err := prompt.ValidatePasswordInput(req.WalletPassword); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
+	}
 	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
 		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
