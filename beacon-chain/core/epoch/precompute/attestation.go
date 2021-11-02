@@ -21,7 +21,7 @@ import (
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
 	ctx context.Context,
-	state state.BeaconState,
+	state state.ReadOnlyBeaconState,
 	vp []*Validator,
 	pBal *Balance,
 ) ([]*Validator, *Balance, error) {
