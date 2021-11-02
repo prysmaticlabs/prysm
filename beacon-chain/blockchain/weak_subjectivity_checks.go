@@ -62,9 +62,6 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	}
 	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", v.root, v.epoch)
 
-	// TODO the original code is forcing a sync of init blocks, can we avoid doing that?
-	// if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-
 	if !v.db.HasBlock(ctx, v.root) {
 		return errors.Wrap(errWSBlockNotFound, fmt.Sprintf("missing root %#x", v.root))
 	}
