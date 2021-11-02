@@ -269,8 +269,8 @@ func (vs *Server) validatorStatus(
 		}
 		domain, err := signing.ComputeDomain(
 			params.BeaconConfig().DomainDeposit,
-			nil,                            /*forkVersion*/
-			params.BeaconConfig().ZeroHash, /*genesisValidatorsRoot*/
+			nil, /*forkVersion*/
+			nil, /*genesisValidatorsRoot*/
 		)
 		if err != nil {
 			log.Warn("Could not compute domain")

@@ -40,8 +40,8 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 
 	domain, err := signing.ComputeDomain(
 		params.BeaconConfig().DomainDeposit,
-		nil,                            /*forkVersion*/
-		params.BeaconConfig().ZeroHash, /*genesisValidatorsRoot*/
+		nil, /*forkVersion*/
+		nil, /*genesisValidatorsRoot*/
 	)
 	if err != nil {
 		return nil, [32]byte{}, err

@@ -48,7 +48,7 @@ func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte)
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return signing.ComputeForkDigest(forkData.CurrentVersion, bytesutil.ToBytes32(genesisValidatorsRoot))
+	return signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 }
 
 // CreateForkDigest creates a fork digest from a genesis time and genesis
@@ -72,7 +72,7 @@ func CreateForkDigest(
 		return [4]byte{}, err
 	}
 
-	digest, err := signing.ComputeForkDigest(forkData.CurrentVersion, bytesutil.ToBytes32(genesisValidatorsRoot))
+	digest, err := signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err
 	}
@@ -112,7 +112,7 @@ func Fork(
 func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
-		rDigest, err := signing.ComputeForkDigest(v[:], bytesutil.ToBytes32(genesisValidatorsRoot))
+		rDigest, err := signing.ComputeForkDigest(v[:], genesisValidatorsRoot)
 		if err != nil {
 			return [4]byte{}, 0, err
 		}

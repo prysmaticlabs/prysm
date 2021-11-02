@@ -145,7 +145,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, mdFunc := range types.MetaDataMap {
-		rDigest, err := signing.ComputeForkDigest(k[:], vRoot)
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}

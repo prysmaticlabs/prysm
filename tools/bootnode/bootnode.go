@@ -212,7 +212,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		}
 		genRoot = bytesutil.ToBytes32(retRoot)
 	}
-	digest, err := signing.ComputeForkDigest(fVersion, genRoot)
+	digest, err := signing.ComputeForkDigest(fVersion, genRoot[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not compute fork digest")
 	}

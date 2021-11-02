@@ -32,5 +32,5 @@ func Domain(fork *eth.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]
 	}
 	var forkVersionArray [4]byte
 	copy(forkVersionArray[:], forkVersion[:4])
-	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot)
+	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot[:])
 }

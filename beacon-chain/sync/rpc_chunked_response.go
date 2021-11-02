@@ -124,7 +124,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, blkFunc := range types.BlockMap {
-		rDigest, err := signing.ComputeForkDigest(k[:], vRoot)
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}

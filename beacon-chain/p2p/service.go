@@ -143,7 +143,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot, pmsg)
+			return MsgID(s.genesisValidatorsRoot[:], pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),

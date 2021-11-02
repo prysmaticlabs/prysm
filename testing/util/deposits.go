@@ -174,7 +174,7 @@ func signedDeposit(
 		WithdrawalCredentials: withdrawalCreds[:],
 	}
 
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, params.BeaconConfig().ZeroHash)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute domain")
 	}
@@ -339,7 +339,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, params.BeaconConfig().ZeroHash)
+			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not compute domain")
 			}
