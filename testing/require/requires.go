@@ -71,3 +71,7 @@ func LogsDoNotContain(tb assertions.AssertionTestingTB, hook *test.Hook, want st
 func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
 	assertions.NotEmpty(tb.Fatalf, obj, msg...)
 }
+
+func ErrorIs(tb assertions.AssertionTestingTB, err error, target error, msg ...interface{}) {
+	assertions.ErrorIs(tb.Fatalf, err, target, msg)
+}

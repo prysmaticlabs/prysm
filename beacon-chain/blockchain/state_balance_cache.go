@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 )
 
+var errNilStateFromStategen = errors.New("justified state can't be nil")
+
 type stateBalanceCache struct {
 	sync.Mutex
 	balances	[]uint64
@@ -40,7 +42,7 @@ func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) 
 		return nil, err
 	}
 	if justifiedState == nil || justifiedState.IsNil() {
-		return nil, errors.New("justified state can't be nil")
+		return nil, errNilStateFromStategen
 	}
 	epoch := time.CurrentEpoch(justifiedState)
 

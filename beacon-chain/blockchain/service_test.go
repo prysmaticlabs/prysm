@@ -544,12 +544,13 @@ func testServiceOptsNoDB(t *testing.T) []Option {
 }
 
 type mockStateByRooter struct {
+	state state.BeaconState
 	err error
 }
 var _ stateByRooter = &mockStateByRooter{}
 
 func (m mockStateByRooter) StateByRoot(ctx context.Context, i [32]byte) (state.BeaconState, error) {
-	return nil, m.err
+	return m.state, m.err
 }
 
 // returns an instance of the state balance cache that can be used
@@ -557,5 +558,5 @@ func (m mockStateByRooter) StateByRoot(ctx context.Context, i [32]byte) (state.B
 // always return an error if used.
 func satisfactoryStateBalanceCache() *stateBalanceCache {
 	err := errors.New("satisfactoryStateBalanceCache doesn't perform real caching")
-	return &stateBalanceCache{stateGen: mockStateByRooter{err}}
+	return &stateBalanceCache{stateGen: mockStateByRooter{err: err}}
 }
