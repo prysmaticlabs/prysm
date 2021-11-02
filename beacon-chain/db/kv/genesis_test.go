@@ -27,9 +27,7 @@ func TestStore_SaveGenesisData(t *testing.T) {
 	st, err := db.State(ctx, zeroRoot)
 	assert.NoError(t, err)
 	assert.NotNil(t, st)
-	/*
 	assert.Equal(t, false, st.IsNil())
-	*/
 }
 
 func testGenesisDataSaved(t *testing.T, db iface.Database) {
