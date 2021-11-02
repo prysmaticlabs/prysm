@@ -32,7 +32,9 @@ type WeakSubjectivityVerifier struct {
 
 // NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
-	// TODO(7342): Remove the following to fully use weak subjectivity in production.
+	// TODO(7342): Weak subjectivity checks are currently optional. When we require the flag to be specified
+	// per 7342, a nil checkpoint, zero-root or zero-epoch should all fail validation
+	// and return an error instead of creating a WeakSubjectivityVerifier that permits any chain history.
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
 		return &WeakSubjectivityVerifier{
 			enabled: false,
