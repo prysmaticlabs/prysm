@@ -205,7 +205,7 @@ func (s *Service) Start() {
 		// after the statefeed.Initialized event is fired (below)
 		if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
-			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+			log.Fatalf("could not verify initial checkpoint provided for chain sync, with err=: %v", err)
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
