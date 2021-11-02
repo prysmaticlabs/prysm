@@ -210,7 +210,7 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
-		GenesisValidatorsRoot: root[:],
+		GenesisValidatorsRoot: root,
 	}).HashTreeRoot()
 	if err != nil {
 		return [32]byte{}, err
