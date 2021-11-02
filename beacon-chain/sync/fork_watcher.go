@@ -50,7 +50,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 	if isNextForkEpoch {
 		nextEpoch := currEpoch + 1
 		if nextEpoch == params.BeaconConfig().AltairForkEpoch {
-			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot)
+			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
 			if err != nil {
 				return errors.Wrap(err, "Could not retrieve fork digest")
 			}
@@ -85,7 +85,7 @@ func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
 	if epochAfterFork == currEpoch {
 		// Look at the previous fork's digest.
 		epochBeforeFork := currFork.Epoch - 1
-		prevDigest, err := forks.ForkDigestFromEpoch(epochBeforeFork, genRoot)
+		prevDigest, err := forks.ForkDigestFromEpoch(epochBeforeFork, genRoot[:])
 		if err != nil {
 			return errors.Wrap(err, "Failed to determine previous epoch fork digest")
 		}

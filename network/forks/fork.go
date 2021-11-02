@@ -40,12 +40,15 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 
 // ForkDigestFromEpoch retrieves the fork digest from the current schedule determined
 // by the provided epoch.
-func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot [32]byte) ([4]byte, error) {
+func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
+	if len(genesisValidatorsRoot) == 0 {
+		return [4]byte{}, errors.New("genesis validators root is not set")
+	}
 	forkData, err := Fork(currentEpoch)
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	return signing.ComputeForkDigest(forkData.CurrentVersion, bytesutil.ToBytes32(genesisValidatorsRoot))
 }
 
 // CreateForkDigest creates a fork digest from a genesis time and genesis
