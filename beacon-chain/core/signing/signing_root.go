@@ -207,7 +207,7 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //        current_version=current_version,
 //        genesis_validators_root=genesis_validators_root,
 //    ))
-func computeForkDataRoot(version []byte, root [32]byte) ([32]byte, error) {
+func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root[:],
@@ -228,7 +228,7 @@ func computeForkDataRoot(version []byte, root [32]byte) ([32]byte, error) {
 //    4-bytes suffices for practical separation of forks/chains.
 //    """
 //    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
-func ComputeForkDigest(version []byte, genesisValidatorsRoot [32]byte) ([4]byte, error) {
+func ComputeForkDigest(version, genesisValidatorsRoot []byte) ([4]byte, error) {
 	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err

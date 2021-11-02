@@ -107,7 +107,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		return nil, errors.New(errMsg)
 	}
 	valRoot := s.cfg.Chain.GenesisValidatorRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.Chain.CurrentSlot()), valRoot)
+	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, mdFunc := range types.MetaDataMap {
-		rDigest, err := signing.ComputeForkDigest(k[:], vRoot)
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}
