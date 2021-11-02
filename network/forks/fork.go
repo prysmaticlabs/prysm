@@ -56,10 +56,13 @@ func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte)
 // the active fork version in the node.
 func CreateForkDigest(
 	genesisTime time.Time,
-	genesisValidatorsRoot [32]byte,
+	genesisValidatorsRoot []byte,
 ) ([4]byte, error) {
 	if genesisTime.IsZero() {
 		return [4]byte{}, errors.New("genesis time is not set")
+	}
+	if len(genesisValidatorsRoot) == 0 {
+		return [4]byte{}, errors.New("genesis validators root is not set")
 	}
 	currentSlot := slots.Since(genesisTime)
 	currentEpoch := slots.ToEpoch(currentSlot)
@@ -69,7 +72,7 @@ func CreateForkDigest(
 		return [4]byte{}, err
 	}
 
-	digest, err := signing.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+	digest, err := signing.ComputeForkDigest(forkData.CurrentVersion, bytesutil.ToBytes32(genesisValidatorsRoot))
 	if err != nil {
 		return [4]byte{}, err
 	}
@@ -106,10 +109,10 @@ func Fork(
 
 // RetrieveForkDataFromDigest performs the inverse, where it tries to determine the fork version
 // and epoch from a provided digest by looping through our current fork schedule.
-func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot [32]byte) ([4]byte, types.Epoch, error) {
+func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
-		rDigest, err := signing.ComputeForkDigest(v[:], genesisValidatorsRoot)
+		rDigest, err := signing.ComputeForkDigest(v[:], bytesutil.ToBytes32(genesisValidatorsRoot))
 		if err != nil {
 			return [4]byte{}, 0, err
 		}

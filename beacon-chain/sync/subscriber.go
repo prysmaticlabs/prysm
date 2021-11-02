@@ -125,7 +125,7 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator wrappedVal, handle subHandler, digest [4]byte) *pubsub.Subscription {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot)
+	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
 		panic(err)
@@ -287,7 +287,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot)
+	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
 		panic(err)
@@ -360,7 +360,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	digest [4]byte,
 ) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot)
+	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
 		panic(err)
@@ -489,7 +489,7 @@ func (s *Service) subscribeSyncSubnet(
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot)
+	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
 	}
@@ -560,7 +560,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	digest [4]byte,
 ) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot)
+	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
 	}
@@ -726,12 +726,12 @@ func (s *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uin
 
 func (s *Service) currentForkDigest() ([4]byte, error) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	return forks.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot)
+	return forks.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
 }
 
 // Checks if the provided digest matches up with the current supposed digest.
 func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool, error) {
-	retDigest, err := forks.CreateForkDigest(genesis, genValRoot)
+	retDigest, err := forks.CreateForkDigest(genesis, genValRoot[:])
 	if err != nil {
 		return false, err
 	}
