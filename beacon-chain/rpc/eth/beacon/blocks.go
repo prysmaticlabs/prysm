@@ -9,7 +9,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -373,8 +372,8 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if err := helpers.BeaconBlockIsNil(blk); err != nil {
-			return nil, status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
+		if blk == nil || blk.IsNil() {
+			return nil, status.Error(codes.NotFound, "Could not find genesis block")
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
@@ -387,9 +386,10 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if err := helpers.BeaconBlockIsNil(blk); err != nil {
-				return nil, status.Errorf(codes.NotFound, "Could not find block: %v", err)
+			if blk == nil || blk.IsNil() {
+				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
+
 			root = req.BlockId
 		} else {
 			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
@@ -550,8 +550,8 @@ func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
-		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
+	if blk == nil || blk.IsNil() {
+		return status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 	return nil
 }

@@ -31,7 +31,7 @@ func ProcessRandao(
 	beaconState state.BeaconState,
 	b block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
