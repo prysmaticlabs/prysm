@@ -12,6 +12,21 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
 
+func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
+	ctx := context.Background()
+	pubKeys := [][48]byte{
+		{1},
+	}
+	validatorDB := dbtest.SetupDB(t, pubKeys)
+	_, err := ExportStandardProtectionJSON(ctx, validatorDB)
+	require.ErrorContains(t, "genesis validators root is empty", err)
+	genesisValidatorsRoot := [32]byte{1}
+	err = validatorDB.SaveGenesisValidatorsRoot(ctx, genesisValidatorsRoot[:])
+	require.NoError(t, err)
+	_, err = ExportStandardProtectionJSON(ctx, validatorDB)
+	require.NoError(t, err)
+}
+
 func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		pubKeys := [][48]byte{
