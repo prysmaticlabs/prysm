@@ -788,14 +788,15 @@ func (bs *Server) GetValidatorPerformance(
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
-		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 
 		if headState.Version() == version.Phase0 {
+			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 			inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
 			inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
 		} else {
+			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochSourceAttester)
 			inactivityScores = append(inactivityScores, summary.InactivityScore)
 		}
 	}
