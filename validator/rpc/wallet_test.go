@@ -80,6 +80,32 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestServer_CreateWallet_Imported_PasswordTooWeak(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	s := &Server{
+		walletInitializedFeed: new(event.Feed),
+		walletDir:             defaultWalletPath,
+	}
+	req := &pb.CreateWalletRequest{
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		WalletPassword: "", // Weak password, empty string
+	}
+	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// where a directory already exists
+	require.NoError(t, os.RemoveAll(defaultWalletPath))
+	_, err := s.CreateWallet(ctx, req)
+	require.ErrorContains(t, "Password too weak", err)
+
+	req = &pb.CreateWalletRequest{
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		WalletPassword: "a", // Weak password, too short
+	}
+	_, err = s.CreateWallet(ctx, req)
+	require.ErrorContains(t, "Password too weak", err)
+}
+
 func TestServer_RecoverWallet_Derived(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	ctx := context.Background()
