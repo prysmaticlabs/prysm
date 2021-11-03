@@ -16,15 +16,30 @@ import (
 )
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
+	length := f.length
+	if f.dataType == types.CompressedArray {
+		comLength, err := f.field.CompressedLength()
+		if err != nil {
+			return err
+		}
+		length *= comLength
+	}
 	for _, idx := range idxs {
-		if idx >= f.length {
-			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, f.length)
+		if idx >= length {
+			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, length)
 		}
 	}
 	return nil
 }
 
-func validateElements(field types.FieldIndex, elements interface{}, length uint64) error {
+func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
+	if dataType == types.CompressedArray {
+		comLength, err := field.CompressedLength()
+		if err != nil {
+			return err
+		}
+		length *= comLength
+	}
 	val := reflect.ValueOf(elements)
 	if val.Len() > int(length) {
 		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)

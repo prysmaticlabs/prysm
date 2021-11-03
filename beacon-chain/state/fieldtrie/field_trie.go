@@ -39,7 +39,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 	if err != nil {
 		return nil, err
 	}
-	if err := validateElements(field, elements, length); err != nil {
+	if err := validateElements(field, dataType, elements, length); err != nil {
 		return nil, err
 	}
 	switch dataType {
