@@ -229,7 +229,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	InactivityScoreRecoveryRate:  16,
 	EpochsPerSyncCommitteePeriod: 256,
 
-	// Updated penalty values.
+	// Updated Altair penalty values.
 	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
 	MinSlashingPenaltyQuotientAltair:     64,
 	ProportionalSlashingMultiplierAltair: 2,
@@ -238,6 +238,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxExecutionTransactions:     16384,
 	MaxBytesPerOpaqueTransaction: 1048576,
 	TerminalBlockHash:            [32]byte{},
+
+	// Updated Merge penalty values.
+	InactivityPenaltyQuotientMerge:      1 << 24,
+	MinSlashingPenaltyQuotientMerge:     32,
+	ProportionalSlashingMultiplierMerge: 3,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,

@@ -167,11 +167,11 @@ type BeaconChainConfig struct {
 	InactivityScoreRecoveryRate  uint64      `yaml:"INACTIVITY_SCORE_RECOVERY_RATE" spec:"true"`   // InactivityScoreRecoveryRate for recovering score bias penalties during inactivity.
 	EpochsPerSyncCommitteePeriod types.Epoch `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD" spec:"true"` // EpochsPerSyncCommitteePeriod defines how many epochs per sync committee period.
 
-	// Updated penalty values. This moves penalty parameters toward their final, maximum security values.
+	// Updated Altair penalty values. This moves penalty parameters toward their final, maximum security values.
 	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
 	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
-	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
+	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
 
 	// Merge.
 	EnabledMerge                 bool           // EnabledMerge is true if merge feature is enabled.
@@ -180,6 +180,12 @@ type BeaconChainConfig struct {
 	TerminalBlockHash            common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
 	TerminalTotalDifficulty      uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
 	FeeRecipient                 common.Address // FeeRecipient where the transaction fee goes to.
+
+	// Updated Merge penalty values. This moves penalty parameters toward their final, maximum security values.
+	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
+	InactivityPenaltyQuotientMerge      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`      // InactivityPenaltyQuotientMerge for penalties during inactivity post Merge hard fork.
+	MinSlashingPenaltyQuotientMerge     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`    // MinSlashingPenaltyQuotientMerge for slashing penalties post Merge hard fork.
+	ProportionalSlashingMultiplierMerge uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"` // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Merge hard fork.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.

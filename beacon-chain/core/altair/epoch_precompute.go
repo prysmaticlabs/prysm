@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -264,6 +265,9 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 	inactivityDenominator := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
+	if beaconState.Version() == version.Merge {
+		inactivityDenominator = cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientMerge
+	}
 
 	for i, v := range vals {
 		rewards[i], penalties[i], err = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
