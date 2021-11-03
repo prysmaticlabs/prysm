@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -40,21 +41,21 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return stateutil.HandleByteArrays(val, indices, convertAll)
+		return handleByteArrays(val, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return HandleEth1DataSlice(val, indices, convertAll)
+		return handleEth1DataSlice(val, indices, convertAll)
 	case types.Validators:
 		val, ok := elements.([]*ethpb.Validator)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return stateutil.HandleValidatorSlice(val, indices, convertAll)
+		return handleValidatorSlice(val, indices, convertAll)
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		val, ok := elements.([]*ethpb.PendingAttestation)
 		if !ok {
@@ -74,8 +75,75 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 	}
 }
 
-// HandleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
-func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleByteArrays computes and returns byte arrays in a slice of root format.
+func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
+	rootCreator := func(input []byte) {
+		newRoot := bytesutil.ToBytes32(input)
+		roots = append(roots, newRoot)
+	}
+	if convertAll {
+		for i := range val {
+			rootCreator(val[i])
+		}
+		return roots, nil
+	}
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
+			}
+			rootCreator(val[idx])
+		}
+	}
+	return roots, nil
+}
+
+// handleValidatorSlice returns the validator indices in a slice of root format.
+func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
+	hasher := hash.CustomSHA256Hasher()
+	rootCreator := func(input *ethpb.Validator) error {
+		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
+		if err != nil {
+			return err
+		}
+		roots = append(roots, newRoot)
+		return nil
+	}
+	if convertAll {
+		for i := range val {
+			err := rootCreator(val[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		return roots, nil
+	}
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return roots, nil
+}
+
+// handleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
+func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -154,9 +222,9 @@ func handlePendingAttestation(val []*ethpb.PendingAttestation, indices []uint64,
 func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
 		balancesMarshaling := make([][]byte, 0)
-		for i := 0; i < len(val); i++ {
+		for _, b := range val {
 			balanceBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(balanceBuf, val[i])
+			binary.LittleEndian.PutUint64(balanceBuf, b)
 			balancesMarshaling = append(balancesMarshaling, balanceBuf)
 		}
 		balancesChunks, err := ssz.PackByChunk(balancesMarshaling)

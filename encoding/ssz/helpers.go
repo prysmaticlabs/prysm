@@ -116,16 +116,9 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.
 func PackByChunk(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
-	areAllEmpty := true
-	for _, item := range serializedItems {
-		if !bytes.Equal(item, []byte{}) {
-			areAllEmpty = false
-			break
-		}
-	}
+	emptyChunk := [bytesPerChunk]byte{}
 	// If there are no items, we return an empty chunk.
-	if len(serializedItems) == 0 || areAllEmpty {
-		emptyChunk := [bytesPerChunk]byte{}
+	if len(serializedItems) == 0 {
 		return [][bytesPerChunk]byte{emptyChunk}, nil
 	} else if len(serializedItems[0]) == bytesPerChunk {
 		// If each item has exactly BYTES_PER_CHUNK length, we return the list of serialized items.
@@ -140,6 +133,11 @@ func PackByChunk(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
 	for _, item := range serializedItems {
 		orderedItems = append(orderedItems, item...)
 	}
+	// If all our serialized item slices are length zero, we
+	// exit early.
+	if len(orderedItems) == 0 {
+		return [][bytesPerChunk]byte{emptyChunk}, nil
+	}
 	numItems := len(orderedItems)
 	var chunks [][bytesPerChunk]byte
 	for i := 0; i < numItems; i += bytesPerChunk {
@@ -153,6 +151,10 @@ func PackByChunk(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
 		// indices determined above.
 		// Right-pad the last chunk with zero bytes if it does not
 		// have length bytesPerChunk from the helper.
+		// The ToBytes32 helper allocates a 32-byte array, before
+		// copying the ordered items in. This ensures that even if
+		// the last chunk is != 32 in length, we will right-pad it with
+		// zero bytes.
 		chunks = append(chunks, bytesutil.ToBytes32(orderedItems[i:j]))
 	}
 
