@@ -86,7 +86,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 			GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 		}{
 			InterchangeFormatVersion: format.InterchangeFormatVersion,
-			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{}),
+			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{1}),
 		},
 		Data: []*format.ProtectionData{
 			{
