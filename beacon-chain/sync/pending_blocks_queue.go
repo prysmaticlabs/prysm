@@ -309,7 +309,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
@@ -367,7 +367,7 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []block.SignedBeaconBloc
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b block.SignedBeaconBlock) error {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 

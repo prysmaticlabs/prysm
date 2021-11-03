@@ -8,6 +8,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -79,6 +81,15 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 
 	msg.ValidatorData = m
+
+	// Broadcast the contribution on a feed to notify other services in the beacon node
+	// of a received contribution.
+	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.SyncCommitteeContributionReceived,
+		Data: &opfeed.SyncCommitteeContributionReceivedData{
+			Contribution: m,
+		},
+	})
 
 	return pubsub.ValidationAccept, nil
 }

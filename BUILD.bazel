@@ -144,12 +144,6 @@ common_files = {
     "//:README.md": "README.md",
 }
 
-toolchain(
-    name = "built_cmake_toolchain",
-    toolchain = "@rules_foreign_cc//tools/build_defs/native_tools:built_cmake",
-    toolchain_type = "@rules_foreign_cc//tools/build_defs:cmake_toolchain",
-)
-
 string_setting(
     name = "gotags",
     build_setting_default = "",

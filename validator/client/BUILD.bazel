@@ -53,7 +53,6 @@ go_library(
         "//validator/keymanager/imported:go_default_library",
         "//validator/keymanager/remote:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",

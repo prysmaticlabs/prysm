@@ -14,10 +14,9 @@ require (
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
-	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v1.10.9
+	github.com/ethereum/go-ethereum v1.10.10
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210905181407-59cf6761a7d5
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
@@ -26,7 +25,6 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -50,7 +48,6 @@ require (
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.11
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
-	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/klauspost/cpuid/v2 v2.0.8 // indirect
 	github.com/koron/go-ssdp v0.0.2 // indirect
@@ -72,7 +69,6 @@ require (
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.3
-	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/pborman/uuid v1.2.1
@@ -110,9 +106,10 @@ require (
 	go.uber.org/automaxprocs v1.3.0
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20211015200801-69063c4bb744 // indirect
 	golang.org/x/tools v0.1.1
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
