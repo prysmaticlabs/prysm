@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -71,12 +70,9 @@ func Enabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
 //
 // Spec code:
 // def process_execution_payload(state: BeaconState, payload: ExecutionPayload, execution_engine: ExecutionEngine) -> None:
-//    # Verify consistency of the parent hash, block number, base fee per gas and gas limit
-//    # with respect to the previous execution payload header
+//    # Verify consistency of the parent hash with respect to the previous execution payload header
 //    if is_merge_complete(state):
 //        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
-//        assert payload.block_number == state.latest_execution_payload_header.block_number + uint64(1)
-//        assert is_valid_gas_limit(payload, state.latest_execution_payload_header)
 //    # Verify random
 //    assert payload.random == get_randao_mix(state, get_current_epoch(state))
 //    # Verify timestamp
@@ -141,12 +137,6 @@ func validatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.Exec
 	if !bytes.Equal(payload.ParentHash, header.BlockHash) {
 		return errors.New("incorrect block hash")
 	}
-	if payload.BlockNumber != header.BlockNumber+1 {
-		return errors.New("incorrect block number")
-	}
-	if !validateGasLimit(payload, header) {
-		return errors.New("incorrect gas limit")
-	}
 	return nil
 }
 
@@ -168,46 +158,6 @@ func validatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) erro
 		return errors.New("incorrect timestamp")
 	}
 	return nil
-}
-
-// This validates if gas limit and used in `payload` is valid to `parent`.
-//
-// Spec code:
-// def is_valid_gas_limit(payload: ExecutionPayload, parent: ExecutionPayloadHeader) -> bool:
-//    parent_gas_limit = parent.gas_limit
-//
-//    # Check if the payload used too much gas
-//    if payload.gas_used > payload.gas_limit:
-//        return False
-//
-//    # Check if the payload changed the gas limit too much
-//    if payload.gas_limit >= parent_gas_limit + parent_gas_limit // GAS_LIMIT_DENOMINATOR:
-//        return False
-//    if payload.gas_limit <= parent_gas_limit - parent_gas_limit // GAS_LIMIT_DENOMINATOR:
-//        return False
-//
-//    # Check if the gas limit is at least the minimum gas limit
-//    if payload.gas_limit < MIN_GAS_LIMIT:
-//        return False
-//
-//    return True
-func validateGasLimit(payload *ethpb.ExecutionPayload, parent *ethpb.ExecutionPayloadHeader) bool {
-	if payload.GasUsed > payload.GasLimit {
-		return false
-	}
-	if payload.GasLimit < params.BeaconConfig().MinGasLimit {
-		return false
-	}
-
-	parentGasLimit := parent.GasLimit
-	if payload.GasLimit >= parentGasLimit+parentGasLimit/params.BeaconConfig().GasLimitDenominator {
-		return false
-	}
-	if payload.GasLimit <= parentGasLimit-parentGasLimit/params.BeaconConfig().GasLimitDenominator {
-		return false
-	}
-
-	return true
 }
 
 // This converts `payload` into execution payload header format.

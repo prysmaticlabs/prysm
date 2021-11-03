@@ -253,12 +253,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 				return errors.New("incorrect timestamp")
 			}
 
-			// [REJECT] Gas used is less than the gas limit --
-			// i.e. execution_payload.gas_used <= execution_payload.gas_limit.
-			if payload.GasUsed > payload.GasLimit {
-				return errors.New("gas used is above gas limit")
-			}
-
 			// [REJECT] The execution payload block hash is not equal to the parent hash --
 			// i.e. execution_payload.block_hash != execution_payload.parent_hash.
 			if bytes.Equal(payload.BlockHash, payload.ParentHash) {

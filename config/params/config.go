@@ -173,10 +173,6 @@ type BeaconChainConfig struct {
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
 
-	// Gas definitions.
-	GasLimitDenominator uint64 `yaml:"GAS_LIMIT_DENOMINATOR" spec:"true"` // GasLimitDenominator for merge.
-	MinGasLimit         uint64 `yaml:"MIN_GAS_LIMIT" spec:"true"`         // MinGasLimit for merge.
-
 	// Merge.
 	EnabledMerge                 bool           // EnabledMerge is true if merge feature is enabled.
 	MaxExecutionTransactions     uint64         `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
@@ -199,5 +195,4 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Merge fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.MergeForkVersion)] = b.MergeForkEpoch
-
 }
