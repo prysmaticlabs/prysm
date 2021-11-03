@@ -57,7 +57,7 @@ service KeyManagement {
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error
-  rpc ImportKeystores(ImportKeystoresRequest) returns (google.protobuf.Empty) {
+  rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
     option (google.api.http) = {
       post: "/internal/eth/v1/keystores",
       body: "*"
@@ -81,7 +81,7 @@ service KeyManagement {
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error
-  rpc DeleteKeystores(ImportKeystoresRequest) returns (google.protobuf.Empty) {
+  rpc DeleteKeystores(ImportKeystoresRequest) returns (DeleteKeystoresResponse) {
     option (google.api.http) = {
       delete: "/internal/eth/v1/keystores",
       body: "*"
