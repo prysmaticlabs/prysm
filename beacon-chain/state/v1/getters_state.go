@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -55,25 +56,26 @@ func (b *BeaconState) hasInnerState() bool {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() [8192][32]byte {
+func (b *BeaconState) StateRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
-		return [8192][32]byte{}
+		return &[8192][32]byte{}
 	}
-	if b.state.StateRoots == [8192][32]byte{} {
-		return [8192][32]byte{}
+	if *b.state.StateRoots == [8192][32]byte{} {
+		return &[8192][32]byte{}
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.stateRoots()
+	roots := [8192][32]byte(*b.stateRoots())
+	return &roots
 }
 
 // StateRoots kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRoots() [8192][32]byte {
+func (b *BeaconState) stateRoots() *customtypes.StateRoots {
 	if !b.hasInnerState() {
-		return [8192][32]byte{}
+		return &customtypes.StateRoots{}
 	}
 	return b.state.StateRoots
 }
@@ -84,7 +86,7 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.StateRoots == [8192][32]byte{} {
+	if *b.state.StateRoots == [8192][32]byte{} {
 		return nil, nil
 	}
 

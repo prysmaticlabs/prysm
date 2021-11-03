@@ -3,6 +3,7 @@ package v2
 import (
 	"fmt"
 
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -22,7 +23,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val [8192][32]byte) error {
+func (b *BeaconState) SetBlockRoots(val *[8192][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -32,7 +33,8 @@ func (b *BeaconState) SetBlockRoots(val [8192][32]byte) error {
 	b.sharedFieldReferences[blockRoots].MinusRef()
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
-	b.state.BlockRoots = val
+	roots := customtypes.StateRoots(*val)
+	b.state.BlockRoots = &roots
 	b.markFieldAsDirty(blockRoots)
 	b.rebuildTrie[blockRoots] = true
 	return nil
@@ -52,6 +54,10 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
+		// Copy elements in underlying array by reference.
+		roots := *b.state.BlockRoots
+		rootsCopy := roots
+		r = &rootsCopy
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	}

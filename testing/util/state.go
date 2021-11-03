@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -30,24 +31,24 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 		}
 		roots[j] = h
 	}
-	var stateRoots [8192][32]byte
+	var stateRoots customtypes.StateRoots
 	for i := range stateRoots {
 		stateRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
-	state.StateRoots = stateRoots
-	var blockRoots [8192][32]byte
+	state.StateRoots = &stateRoots
+	var blockRoots customtypes.StateRoots
 	for i := range blockRoots {
 		blockRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
-	state.BlockRoots = blockRoots
+	state.BlockRoots = &blockRoots
 	return nil
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
 	seed := &ethpb.BeaconState{
-		BlockRoots:                 [8192][32]byte{},
-		StateRoots:                 [8192][32]byte{},
+		BlockRoots:                 &customtypes.StateRoots{},
+		StateRoots:                 &customtypes.StateRoots{},
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),

@@ -7,6 +7,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -94,12 +95,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := [8192][32]byte{}
+	blockRoots := customtypes.StateRoots{}
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash32
 	}
 
-	stateRoots := [8192][32]byte{}
+	stateRoots := customtypes.StateRoots{}
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash32
 	}
@@ -146,8 +147,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		},
 
 		HistoricalRoots:           [][]byte{},
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
+		BlockRoots:                &blockRoots,
+		StateRoots:                &stateRoots,
 		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},

@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -101,12 +102,12 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := [8192][32]byte{}
+	blockRoots := customtypes.StateRoots{}
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash32
 	}
 
-	stateRoots := [8192][32]byte{}
+	stateRoots := customtypes.StateRoots{}
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash32
 	}
@@ -130,6 +131,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err != nil {
 		return nil, err
 	}
+
 	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot:                  0,
@@ -168,8 +170,8 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		},
 
 		HistoricalRoots: [][]byte{},
-		BlockRoots:      blockRoots,
-		StateRoots:      stateRoots,
+		BlockRoots:      &blockRoots,
+		StateRoots:      &stateRoots,
 		Slashings:       slashings,
 
 		// Eth1 data.
