@@ -15,7 +15,7 @@ var errMissingStateForCheckpoint = errors.New("missing state summary for finaliz
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (s *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.JustifiedCheckpoint")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.JustifiedCheckpoint")
 	defer span.End()
 	var checkpoint *ethpb.Checkpoint
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -33,7 +33,7 @@ func (s *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 
 // FinalizedCheckpoint returns the latest finalized checkpoint in beacon chain.
 func (s *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.FinalizedCheckpoint")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedCheckpoint")
 	defer span.End()
 	var checkpoint *ethpb.Checkpoint
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -51,7 +51,7 @@ func (s *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 
 // SaveJustifiedCheckpoint saves justified checkpoint in beacon chain.
 func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveJustifiedCheckpoint")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
 	enc, err := encode(ctx, checkpoint)
@@ -71,7 +71,7 @@ func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 
 // SaveFinalizedCheckpoint saves finalized checkpoint in beacon chain.
 func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveFinalizedCheckpoint")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
 
 	enc, err := encode(ctx, checkpoint)

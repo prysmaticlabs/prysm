@@ -39,7 +39,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
 // maintaining only canonical and finalized blocks older than the current finalized epoch.
 func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.updateFinalizedBlockRoots")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateFinalizedBlockRoots")
 	defer span.End()
 
 	bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
@@ -160,7 +160,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
 func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.IsFinalizedBlock")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
@@ -183,7 +183,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // no finalized block or its respective child block exists we return with a nil
 // block.
 func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.FinalizedChildBlock")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
 	var blk block.SignedBeaconBlock

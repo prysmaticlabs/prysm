@@ -26,7 +26,7 @@ import (
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.State")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 
 // GenesisState returns the genesis state in beacon chain.
 func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.GenesisState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 
 	cached, err := genesis.State(params.BeaconConfig().ConfigName)
@@ -93,7 +93,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
 func (s *Store) SaveState(ctx context.Context, st state.ReadOnlyBeaconState, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
 	ok, err := s.isStateValidatorMigrationOver()
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *Store) SaveState(ctx context.Context, st state.ReadOnlyBeaconState, blo
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
 func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveStates")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
 	if states == nil {
 		return errors.New("nil state")
@@ -138,7 +138,7 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 
 // SaveStatesEfficient stores multiple states to the db (new schema) using the provided corresponding roots.
 func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveStatesEfficient")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStatesEfficient")
 	defer span.End()
 	if states == nil {
 		return errors.New("nil state")
@@ -275,7 +275,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 
 // HasState checks if a state by root exists in the db.
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.HasState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -294,7 +294,7 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 
 // DeleteState by block root.
 func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.DeleteState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -364,7 +364,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 
 // DeleteStates by block roots.
 func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.DeleteStates")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
 	for _, r := range blockRoots {
@@ -453,7 +453,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 	if !ok {
 		return make([]*ethpb.Validator, 0), nil
 	}
-	ctx, span := trace.StartSpan(ctx, "beaconDB.validatorEntries")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.validatorEntries")
 	defer span.End()
 	var validatorEntries []*ethpb.Validator
 	err = s.db.View(func(tx *bolt.Tx) error {
@@ -513,7 +513,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 
 // retrieves and assembles the state information from multiple buckets.
 func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.stateBytes")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -535,7 +535,7 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 
 // slotByBlockRoot retrieves the corresponding slot of the input block root.
 func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.Slot, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.slotByBlockRoot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
 	defer span.End()
 
 	bkt := tx.Bucket(stateSummaryBucket)
@@ -585,7 +585,7 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 // can double propose, a single slot could have multiple block roots and
 // results states. This returns a list of states.
 func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.HighestSlotStatesBelow")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
 
 	var best []byte
@@ -632,7 +632,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.createStateIndicesFromState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
@@ -659,7 +659,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 // 3.) state with current finalized root
 // 4.) unfinalized States
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB. CleanUpDirtyStates")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
 
 	f, err := s.FinalizedCheckpoint(ctx)

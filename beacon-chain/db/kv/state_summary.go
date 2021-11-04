@@ -11,7 +11,7 @@ import (
 
 // SaveStateSummary saves a state summary object to the DB.
 func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveStateSummary")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
 	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
@@ -19,7 +19,7 @@ func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummar
 
 // SaveStateSummaries saves state summary objects to the DB.
 func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveStateSummaries")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 
 	// When we reach the state summary cache prune count,
@@ -39,7 +39,7 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.State
 
 // StateSummary returns the state summary object from the db using input block root.
 func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.StateSummary")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
 
 	if s.stateSummaryCache.has(blockRoot) {
@@ -64,7 +64,7 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 
 // HasStateSummary returns true if a state summary exists in DB.
 func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "beaconDB.HasStateSummary")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 
 	var hasSummary bool
