@@ -11,7 +11,8 @@ import (
 
 type Option func(s *Service) error
 
-// WithHttpEndpoints --
+// WithHttpEndpoints deduplicates and parses http endpoints for the powchain service to use,
+// and sets the "current" endpoint that will be used first.
 func WithHttpEndpoints(endpointStrings []string) Option {
 	return func(s *Service) error {
 		stringEndpoints := dedupEndpoints(endpointStrings)
@@ -30,7 +31,7 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithDepositContractAddress for the deposit contract.
 func WithDepositContractAddress(addr common.Address) Option {
 	return func(s *Service) error {
 		s.cfg.depositContractAddr = addr
@@ -38,7 +39,7 @@ func WithDepositContractAddress(addr common.Address) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithDatabase for the beacon chain database.
 func WithDatabase(database db.HeadAccessDatabase) Option {
 	return func(s *Service) error {
 		s.cfg.beaconDB = database
@@ -46,7 +47,7 @@ func WithDatabase(database db.HeadAccessDatabase) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithDepositCache for caching deposits.
 func WithDepositCache(cache *depositcache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.depositCache = cache
@@ -54,7 +55,7 @@ func WithDepositCache(cache *depositcache.DepositCache) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithStateNotifier for subscribing to state changes.
 func WithStateNotifier(notifier statefeed.Notifier) Option {
 	return func(s *Service) error {
 		s.cfg.stateNotifier = notifier
@@ -62,7 +63,7 @@ func WithStateNotifier(notifier statefeed.Notifier) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithStateGen to regenerate beacon states from checkpoints.
 func WithStateGen(gen *stategen.State) Option {
 	return func(s *Service) error {
 		s.cfg.stateGen = gen
@@ -70,7 +71,7 @@ func WithStateGen(gen *stategen.State) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithEth1HeaderRequestLimit to set the upper limit of eth1 header requests.
 func WithEth1HeaderRequestLimit(limit uint64) Option {
 	return func(s *Service) error {
 		s.cfg.eth1HeaderReqLimit = limit
@@ -78,7 +79,7 @@ func WithEth1HeaderRequestLimit(limit uint64) Option {
 	}
 }
 
-// WithHttpEndpoints --
+// WithBeaconNodeStatsUpdater to set the beacon node stats updater.
 func WithBeaconNodeStatsUpdater(updater BeaconNodeStatsUpdater) Option {
 	return func(s *Service) error {
 		s.cfg.beaconNodeStatsUpdater = updater
