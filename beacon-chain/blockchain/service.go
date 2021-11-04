@@ -65,7 +65,7 @@ type Service struct {
 	//justifiedBalances     []uint64
 	justifiedBalances       *stateBalanceCache
 	justifiedBalancesLock sync.RWMutex
-	wsVerified            bool
+	wsVerifier            *WeakSubjectivityVerifier
 }
 
 // config options for the service.
@@ -109,6 +109,11 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, errors.New("Can't initialize state balance cache without stategen")
 		}
 		srv.justifiedBalances = NewStateBalanceCache(srv.cfg.StateGen)
+	}
+	var err error
+	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
+	if err != nil {
+		return nil, err
 	}
 	return srv, nil
 }
@@ -199,9 +204,11 @@ func (s *Service) Start() {
 			}
 		}
 
-		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		// not attempting to save initial sync blocks here, because there shouldn't be until
+		// after the statefeed.Initialized event is fired (below)
+		if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
-			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+			log.Fatalf("could not verify initial checkpoint provided for chain sync, with err=: %v", err)
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -387,8 +394,8 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")
 	}
-	if genesisBlock == nil || genesisBlock.IsNil() {
-		return errors.New("no genesis block in db")
+	if err := helpers.BeaconBlockIsNil(genesisBlock); err != nil {
+		return err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
 	if err != nil {
