@@ -58,10 +58,10 @@ func (b *BeaconState) hasInnerState() bool {
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
-		return &[8192][32]byte{}
+		return nil
 	}
 	if *b.state.StateRoots == [8192][32]byte{} {
-		return &[8192][32]byte{}
+		return nil
 	}
 
 	b.lock.RLock()

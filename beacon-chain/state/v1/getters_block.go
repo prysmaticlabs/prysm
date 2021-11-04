@@ -52,10 +52,10 @@ func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
-		return &[8192][32]byte{}
+		return nil
 	}
 	if *b.state.BlockRoots == [8192][32]byte{} {
-		return &[8192][32]byte{}
+		return nil
 	}
 
 	b.lock.RLock()
