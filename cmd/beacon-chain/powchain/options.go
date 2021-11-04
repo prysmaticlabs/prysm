@@ -18,6 +18,16 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	if err != nil {
 		return nil, err
 	}
+	endpoints := parseHttpEndpoints(c)
+	opts := []powchain.Option{
+		powchain.WithDepositContractAddress(common.HexToAddress(contractAddress)),
+		powchain.WithHttpEndpoints(endpoints),
+		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
+	}
+	return opts, nil
+}
+
+func parseHttpEndpoints(c *cli.Context) []string {
 	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
 		log.Error(
 			"No ETH1 node specified to run with the beacon node. " +
@@ -33,12 +43,7 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	}
 	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
-	opts := []powchain.Option{
-		powchain.WithDepositContractAddress(common.HexToAddress(contractAddress)),
-		powchain.WithHttpEndpoints(endpoints),
-		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
-	}
-	return opts, nil
+	return endpoints
 }
 
 func depositContractAddress() (string, error) {

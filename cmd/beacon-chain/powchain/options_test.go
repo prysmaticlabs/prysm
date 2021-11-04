@@ -24,8 +24,9 @@ func TestPowchainCmd(t *testing.T) {
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	address, endpoints, err := PowchainPreregistration(ctx)
+	address, err := depositContractAddress()
 	require.NoError(t, err)
+	endpoints := parseHttpEndpoints(ctx)
 	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
 	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
 }
@@ -39,8 +40,9 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	_, _, err := PowchainPreregistration(ctx)
+	_, err := depositContractAddress()
 	require.NoError(t, err)
+	parseHttpEndpoints(ctx)
 	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
 }
 
