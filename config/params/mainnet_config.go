@@ -235,9 +235,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplierAltair: 2,
 
 	// Merge.
-	MaxTransactionsPerPayload: 1 << 20,
-	MaxBytesPerTransaction:    1 << 30,
-	TerminalBlockHash:         [32]byte{},
+	MaxTransactionsPerPayload:        1 << 20,
+	MaxBytesPerTransaction:           1 << 30,
+	TerminalBlockHash:                [32]byte{},
+	TerminalBlockHashActivationEpoch: 1<<64 - 1,
 
 	// Updated Merge penalty values.
 	InactivityPenaltyQuotientMerge:      1 << 24,

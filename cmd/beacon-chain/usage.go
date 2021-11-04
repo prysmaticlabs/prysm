@@ -124,6 +124,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableMerge,
 			flags.TerminalTotalDifficultyOverride,
 			flags.TerminalBlockHashOverride,
+			flags.TerminalBlockHashActivationEpochOverride,
 			flags.FeeRecipient,
 		},
 	},

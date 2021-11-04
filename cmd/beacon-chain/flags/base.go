@@ -210,6 +210,13 @@ var (
 			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash." +
 			"Incorrect usage will result in your node experience consensus value.",
 	}
+	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
+	TerminalBlockHashActivationEpochOverride = &cli.StringFlag{
+		Name: "terminal-block-hash-epoch-override`",
+		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value." +
+			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch." +
+			"Incorrect usage will result in your node experience consensus value.",
+	}
 	// FeeRecipient specifies the fee recipient for the transaction fees.
 	FeeRecipient = &cli.StringFlag{
 		Name:  "fee-recipient",
