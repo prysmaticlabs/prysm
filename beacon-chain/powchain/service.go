@@ -215,7 +215,9 @@ func New(ctx context.Context, opts ...Option) (*Service, error) {
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
 	}
-
+	log.WithField(
+		"depositContract", s.cfg.depositContractAddr,
+	).Info("Initialized powchain service with deposit contract")
 	return s, nil
 }
 
