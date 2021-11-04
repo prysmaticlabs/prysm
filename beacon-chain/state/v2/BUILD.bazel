@@ -39,6 +39,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/custom-types:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
