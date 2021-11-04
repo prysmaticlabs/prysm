@@ -160,8 +160,8 @@ type Service struct {
 	preGenesisState         state.BeaconState
 }
 
-// New sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
-func New(ctx context.Context, opts ...Option) (*Service, error) {
+// NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
+func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)

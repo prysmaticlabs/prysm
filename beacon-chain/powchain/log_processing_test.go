@@ -33,7 +33,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
@@ -97,7 +97,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
@@ -153,7 +153,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
@@ -203,7 +203,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
@@ -273,7 +273,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
@@ -359,7 +359,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(kvStore),
@@ -452,7 +452,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(kvStore),
@@ -560,7 +560,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	web3Service, err := New(context.Background(),
+	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(eth1Backend.ContractAddr),
 		WithDatabase(beaconDB),

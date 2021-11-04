@@ -540,7 +540,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		powchain.WithStateGen(b.stateGen),
 		powchain.WithBeaconNodeStatsUpdater(bs),
 	)
-	web3Service, err := powchain.New(b.ctx, opts...)
+	web3Service, err := powchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
