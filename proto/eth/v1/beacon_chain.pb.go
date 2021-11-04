@@ -1823,7 +1823,7 @@ func (x *DepositContract) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use depositContractAddr.ProtoReflect.Descriptor instead.
+// Deprecated: Use DepositContract.ProtoReflect.Descriptor instead.
 func (*DepositContract) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v1_beacon_chain_proto_rawDescGZIP(), []int{35}
 }
@@ -2347,7 +2347,7 @@ var file_proto_eth_v1_beacon_chain_proto_goTypes = []interface{}{
 	(*ForkScheduleResponse)(nil),                                    // 32: ethereum.eth.v1.ForkScheduleResponse
 	(*SpecResponse)(nil),                                            // 33: ethereum.eth.v1.SpecResponse
 	(*DepositContractResponse)(nil),                                 // 34: ethereum.eth.v1.DepositContractResponse
-	(*DepositContract)(nil),                                         // 35: ethereum.eth.v1.depositContractAddr
+	(*DepositContract)(nil),                                         // 35: ethereum.eth.v1.DepositContract
 	(*GenesisResponse_Genesis)(nil),                                 // 36: ethereum.eth.v1.GenesisResponse.Genesis
 	(*StateRootResponse_StateRoot)(nil),                             // 37: ethereum.eth.v1.StateRootResponse.StateRoot
 	(*StateFinalityCheckpointResponse_StateFinalityCheckpoint)(nil), // 38: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
@@ -2390,7 +2390,7 @@ var file_proto_eth_v1_beacon_chain_proto_depIdxs = []int32{
 	49, // 21: ethereum.eth.v1.VoluntaryExitsPoolResponse.data:type_name -> ethereum.eth.v1.SignedVoluntaryExit
 	40, // 22: ethereum.eth.v1.ForkScheduleResponse.data:type_name -> ethereum.eth.v1.Fork
 	39, // 23: ethereum.eth.v1.SpecResponse.data:type_name -> ethereum.eth.v1.SpecResponse.DataEntry
-	35, // 24: ethereum.eth.v1.DepositContractResponse.data:type_name -> ethereum.eth.v1.depositContractAddr
+	35, // 24: ethereum.eth.v1.DepositContractResponse.data:type_name -> ethereum.eth.v1.DepositContract
 	50, // 25: ethereum.eth.v1.GenesisResponse.Genesis.genesis_time:type_name -> google.protobuf.Timestamp
 	51, // 26: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.previous_justified:type_name -> ethereum.eth.v1.Checkpoint
 	51, // 27: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.current_justified:type_name -> ethereum.eth.v1.Checkpoint
