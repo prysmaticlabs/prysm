@@ -60,7 +60,7 @@ func (b *BeaconState) StateRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if *b.state.StateRoots == [8192][32]byte{} {
+	if b.state.StateRoots == nil {
 		return nil
 	}
 
@@ -75,7 +75,7 @@ func (b *BeaconState) StateRoots() *[8192][32]byte {
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) stateRoots() *customtypes.StateRoots {
 	if !b.hasInnerState() {
-		return &customtypes.StateRoots{}
+		return nil
 	}
 	return b.state.StateRoots
 }
