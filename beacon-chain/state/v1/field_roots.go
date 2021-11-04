@@ -155,7 +155,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	mixes := make([][]byte, len(state.RandaoMixes))
+	for i := range mixes {
+		mixes[i] = state.RandaoMixes[i][:]
+	}
+	randaoRootsRoot, err := h.arraysRoot(mixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}

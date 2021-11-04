@@ -1,11 +1,12 @@
 package v2
 
 import (
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() [][]byte {
+func (b *BeaconState) RandaoMixes() *[65536][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -16,17 +17,18 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.randaoMixes()
+	mixes := [65536][32]byte(*b.randaoMixes())
+	return &mixes
 }
 
 // randaoMixes of block proposers on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixes() [][]byte {
+func (b *BeaconState) randaoMixes() *customtypes.RandaoMixes {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
+	return b.state.RandaoMixes
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -53,7 +55,11 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 
-	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
+	mixes := make([][]byte, len(b.state.RandaoMixes))
+	for i := range mixes {
+		mixes[i] = b.state.RandaoMixes[i][:]
+	}
+	return bytesutil.SafeCopyRootAtIndex(mixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.

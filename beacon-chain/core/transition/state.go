@@ -80,10 +80,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := customtypes.RandaoMixes{}
 	for i := 0; i < len(randaoMixes); i++ {
-		h := make([]byte, 32)
-		copy(h, eth1Data.BlockHash)
+		var h [32]byte
+		copy(h[:], eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
@@ -129,7 +129,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		Balances:   preState.Balances(),
 
 		// Randomness and committees.
-		RandaoMixes: randaoMixes,
+		RandaoMixes: &randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{

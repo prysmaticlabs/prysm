@@ -122,7 +122,7 @@ type ReadOnlyStateRoots interface {
 
 // ReadOnlyRandaoMixes defines a struct which only has read access to randao mixes methods.
 type ReadOnlyRandaoMixes interface {
-	RandaoMixes() [][]byte
+	RandaoMixes() *[65536][32]byte
 	RandaoMixAtIndex(idx uint64) ([]byte, error)
 	RandaoMixesLength() int
 }
@@ -177,8 +177,8 @@ type WriteOnlyBalances interface {
 
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
-	SetRandaoMixes(val [][]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
+	SetRandaoMixes(val *[65536][32]byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.

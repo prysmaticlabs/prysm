@@ -70,6 +70,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 
 	blockRoots := customtypes.StateRoots(*state.BlockRoots())
 	stateRoots := customtypes.StateRoots(*state.StateRoots())
+	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
 	s := &ethpb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
@@ -88,7 +89,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		Eth1DepositIndex:            state.Eth1DepositIndex(),
 		Validators:                  state.Validators(),
 		Balances:                    state.Balances(),
-		RandaoMixes:                 state.RandaoMixes(),
+		RandaoMixes:                 &mixes,
 		Slashings:                   state.Slashings(),
 		PreviousEpochParticipation:  make([]byte, numValidators),
 		CurrentEpochParticipation:   make([]byte, numValidators),
