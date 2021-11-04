@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -250,12 +249,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 			}
 			if payload.Timestamp != uint64(t.Unix()) {
 				return errors.New("incorrect timestamp")
-			}
-
-			// [REJECT] The execution payload block hash is not equal to the parent hash --
-			// i.e. execution_payload.block_hash != execution_payload.parent_hash.
-			if bytes.Equal(payload.BlockHash, payload.ParentHash) {
-				return errors.New("incorrect block hash")
 			}
 		}
 	}
