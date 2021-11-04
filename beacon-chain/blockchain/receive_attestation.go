@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"time"
 
 	"github.com/pkg/errors"
@@ -103,45 +104,46 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- struct{}) {
+func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	subscribedToStateEvents <- struct{}{}
-	<-stateChannel
-	stateSub.Unsubscribe()
+	stateSub := stateFeed.Subscribe(stateChannel)
+	go func() {
+		<-stateChannel
 
-	if s.genesisTime.IsZero() {
-		log.Warn("ProcessAttestations routine waiting for genesis time")
-		for s.genesisTime.IsZero() {
-			time.Sleep(1 * time.Second)
+		stateSub.Unsubscribe()
+		if s.genesisTime.IsZero() {
+			log.Warn("ProcessAttestations routine waiting for genesis time")
+			for s.genesisTime.IsZero() {
+				time.Sleep(1 * time.Second)
+			}
+			log.Warn("Genesis time received, now available to process attestations")
 		}
-		log.Warn("Genesis time received, now available to process attestations")
-	}
 
-	st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-st.C():
-			// Continue when there's no fork choice attestation, there's nothing to process and update head.
-			// This covers the condition when the node is still initial syncing to the head of the chain.
-			if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-				continue
-			}
-			s.processAttestations(s.ctx)
+		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case <-st.C():
+				// Continue when there's no fork choice attestation, there's nothing to process and update head.
+				// This covers the condition when the node is still initial syncing to the head of the chain.
+				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
+					continue
+				}
+				s.processAttestations(s.ctx)
 
-			balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-			if err != nil {
-				log.Errorf("Unable to get justified balances for root %v w/ error %s", s.justifiedCheckpt.Root, err)
-				continue
-			}
-			if err := s.updateHead(s.ctx, balances); err != nil {
-				log.Warnf("Resolving fork due to new attestation: %v", err)
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+				if err != nil {
+					log.Errorf("Unable to get justified balances for root %v w/ error %s", s.justifiedCheckpt.Root, err)
+					continue
+				}
+				if err := s.updateHead(s.ctx, balances); err != nil {
+					log.Warnf("Resolving fork due to new attestation: %v", err)
+				}
 			}
 		}
-	}
+	}()
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
