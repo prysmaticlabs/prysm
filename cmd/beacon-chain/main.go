@@ -66,6 +66,7 @@ var appFlags = []cli.Flag{
 	flags.EnableMerge,
 	flags.TerminalTotalDifficultyOverride,
 	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
 	flags.FeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
