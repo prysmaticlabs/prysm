@@ -146,7 +146,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           [][]byte{},
+		HistoricalRoots:           [][32]byte{},
 		BlockRoots:                &blockRoots,
 		StateRoots:                &stateRoots,
 		Slashings:                 slashings,
@@ -195,7 +195,7 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		Balances:   []uint64{},
 
 		JustificationBits:         []byte{0},
-		HistoricalRoots:           [][]byte{},
+		HistoricalRoots:           [][32]byte{},
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -166,7 +167,7 @@ func (b *BeaconState) fork() *ethpb.Fork {
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() [][]byte {
+func (b *BeaconState) HistoricalRoots() [][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -182,11 +183,11 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 
 // historicalRoots based on epochs stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRoots() [][]byte {
+func (b *BeaconState) historicalRoots() customtypes.HistoricalRoots {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2d32Bytes(b.state.HistoricalRoots)
 }
 
 // balancesLength returns the length of the balances slice.

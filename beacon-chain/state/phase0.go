@@ -38,7 +38,7 @@ type ReadOnlyBeaconState interface {
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][]byte
+	HistoricalRoots() [][32]byte
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
@@ -60,7 +60,7 @@ type WriteOnlyBeaconState interface {
 	SetSlot(val types.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
-	SetHistoricalRoots(val [][]byte) error
+	SetHistoricalRoots(val [][32]byte) error
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error

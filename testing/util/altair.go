@@ -169,7 +169,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots: [][]byte{},
+		HistoricalRoots: [][32]byte{},
 		BlockRoots:      &blockRoots,
 		StateRoots:      &stateRoots,
 		Slashings:       slashings,
@@ -233,7 +233,7 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 		InactivityScores: []uint64{},
 
 		JustificationBits:          []byte{0},
-		HistoricalRoots:            [][]byte{},
+		HistoricalRoots:            [][32]byte{},
 		CurrentEpochParticipation:  []byte{},
 		PreviousEpochParticipation: []byte{},
 

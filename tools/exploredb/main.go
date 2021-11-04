@@ -345,7 +345,12 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		}
 		size, count = sizeAndCountOfByteList(sRoots)
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
-		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
+		historicalRoots := st.HistoricalRoots()
+		hRoots := make([][]byte, len(historicalRoots))
+		for i := range hRoots {
+			hRoots[i] = historicalRoots[i][:]
+		}
+		size, count = sizeAndCountOfByteList(hRoots)
 		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
 		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)

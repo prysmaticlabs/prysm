@@ -89,7 +89,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
+func (b *BeaconState) SetHistoricalRoots(val [][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -115,13 +115,13 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		roots = make([][]byte, len(b.state.HistoricalRoots))
+		roots = make([][32]byte, len(b.state.HistoricalRoots))
 		copy(roots, b.state.HistoricalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 	}
 
-	b.state.HistoricalRoots = append(roots, root[:])
+	b.state.HistoricalRoots = append(roots, root)
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }

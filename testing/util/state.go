@@ -62,7 +62,7 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 			CurrentVersion:  make([]byte, 4),
 		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		HistoricalRoots:             make([][]byte, 0),
+		HistoricalRoots:             customtypes.HistoricalRoots{},
 		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
