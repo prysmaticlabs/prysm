@@ -25,7 +25,7 @@ message BeaconState {
   BeaconBlockHeader latest_block_header = 2001;
   bytes block_roots = 2002 [(ethereum.eth.ext.ssz_size) = "block_roots.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots"];
   bytes state_roots = 2003 [(ethereum.eth.ext.ssz_size) = "state_roots.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots"];
-  repeated bytes historical_roots = 2004 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "16777216"];
+  bytes historical_roots = 2004 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max) = "16777216", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.HistoricalRoots"];
 
   // Eth1 [3001-4000]
   Eth1Data eth1_data = 3001;
@@ -67,7 +67,7 @@ message BeaconStateAltair {
   BeaconBlockHeader latest_block_header = 2001;
   bytes block_roots = 2002 [(ethereum.eth.ext.ssz_size) = "block_roots.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots"];
   bytes state_roots = 2003 [(ethereum.eth.ext.ssz_size) = "state_roots.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots"];
-  repeated bytes historical_roots = 2004 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "16777216"];
+  bytes historical_roots = 2004 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max) = "16777216", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.HistoricalRoots"];
 
   // Eth1 [3001-4000]
   Eth1Data eth1_data = 3001;
