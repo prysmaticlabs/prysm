@@ -10,7 +10,7 @@ import (
 
 // ProposerSlashing retrieval by slashing root.
 func (s *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ProposerSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.ProposerSlashing")
 	defer span.End()
 	enc, err := s.proposerSlashingBytes(ctx, slashingRoot)
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*e
 
 // HasProposerSlashing verifies if a slashing is stored in the db.
 func (s *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasProposerSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.HasProposerSlashing")
 	defer span.End()
 	enc, err := s.proposerSlashingBytes(ctx, slashingRoot)
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) 
 
 // SaveProposerSlashing to the db by its hash tree root.
 func (s *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveProposerSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveProposerSlashing")
 	defer span.End()
 	slashingRoot, err := slashing.HashTreeRoot()
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.Propos
 }
 
 func (s *Store) proposerSlashingBytes(ctx context.Context, slashingRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.proposerSlashingBytes")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.proposerSlashingBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -69,7 +69,7 @@ func (s *Store) proposerSlashingBytes(ctx context.Context, slashingRoot [32]byte
 
 // deleteProposerSlashing clears a proposer slashing from the db by its hash tree root.
 func (s *Store) deleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteProposerSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.deleteProposerSlashing")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(proposerSlashingsBucket)
@@ -79,7 +79,7 @@ func (s *Store) deleteProposerSlashing(ctx context.Context, slashingRoot [32]byt
 
 // AttesterSlashing retrieval by hash tree root.
 func (s *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.AttesterSlashing")
 	defer span.End()
 	enc, err := s.attesterSlashingBytes(ctx, slashingRoot)
 	if err != nil {
@@ -97,7 +97,7 @@ func (s *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*e
 
 // HasAttesterSlashing verifies if a slashing is stored in the db.
 func (s *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.HasAttesterSlashing")
 	defer span.End()
 	enc, err := s.attesterSlashingBytes(ctx, slashingRoot)
 	if err != nil {
@@ -108,7 +108,7 @@ func (s *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) 
 
 // SaveAttesterSlashing to the db by its hash tree root.
 func (s *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveAttesterSlashing")
 	defer span.End()
 	slashingRoot, err := slashing.HashTreeRoot()
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attest
 }
 
 func (s *Store) attesterSlashingBytes(ctx context.Context, slashingRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.attesterSlashingBytes")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.attesterSlashingBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -138,7 +138,7 @@ func (s *Store) attesterSlashingBytes(ctx context.Context, slashingRoot [32]byte
 
 // deleteAttesterSlashing clears an attester slashing from the db by its hash tree root.
 func (s *Store) deleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteAttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.deleteAttesterSlashing")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attesterSlashingsBucket)

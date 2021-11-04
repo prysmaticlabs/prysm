@@ -10,7 +10,7 @@ import (
 
 // VoluntaryExit retrieval by signing root.
 func (s *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.VoluntaryExit, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.VoluntaryExit")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.VoluntaryExit")
 	defer span.End()
 	enc, err := s.voluntaryExitBytes(ctx, exitRoot)
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.Vo
 
 // HasVoluntaryExit verifies if a voluntary exit is stored in the db by its signing root.
 func (s *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasVoluntaryExit")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.HasVoluntaryExit")
 	defer span.End()
 	enc, err := s.voluntaryExitBytes(ctx, exitRoot)
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 
 // SaveVoluntaryExit to the db by its signing root.
 func (s *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveVoluntaryExit")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveVoluntaryExit")
 	defer span.End()
 	exitRoot, err := exit.HashTreeRoot()
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit
 }
 
 func (s *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.voluntaryExitBytes")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.voluntaryExitBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -69,7 +69,7 @@ func (s *Store) voluntaryExitBytes(ctx context.Context, exitRoot [32]byte) ([]by
 
 // deleteVoluntaryExit clears a voluntary exit from the db by its signing root.
 func (s *Store) deleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteVoluntaryExit")
+	ctx, span := trace.StartSpan(ctx, "beaconDB.deleteVoluntaryExit")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(voluntaryExitsBucket)

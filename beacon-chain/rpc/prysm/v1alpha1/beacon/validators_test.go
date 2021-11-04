@@ -458,7 +458,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 	_, err := bs.ListValidators(context.Background(), req1)
 	assert.ErrorContains(t, wanted, err)
 
-	// request uses StateGen to get reqState.
+	// request uses stateGen to get reqState.
 	req2 := &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
 		PageToken:   strconv.Itoa(1),

@@ -524,18 +524,18 @@ func (b *BeaconNode) registerPOWChainService() error {
 		return err
 	}
 
-	cfg := &powchain.Web3ServiceConfig{
+	cfg := &powchain.config{
 		HttpEndpoints:          endpoints,
-		DepositContract:        common.HexToAddress(depAddress),
-		BeaconDB:               b.db,
-		DepositCache:           b.depositCache,
-		StateNotifier:          b,
-		StateGen:               b.stateGen,
-		Eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
-		BeaconNodeStatsUpdater: bs,
+		depositContractAddr:    common.HexToAddress(depAddress),
+		beaconDB:               b.db,
+		depositCache:           b.depositCache,
+		stateNotifier:          b,
+		stateGen:               b.stateGen,
+		eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+		beaconNodeStatsUpdater: bs,
 	}
 
-	web3Service, err := powchain.NewService(b.ctx, cfg)
+	web3Service, err := powchain.New(b.ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
