@@ -22,6 +22,26 @@ import (
 
 const pubKeyErr = "could not convert bytes to public key"
 
+func TestDepositContractAddress_EmptyAddress(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DepositContractAddress = ""
+	params.OverrideBeaconConfig(config)
+
+	_, err := DepositContractAddress()
+	assert.ErrorContains(t, "valid deposit contract is required", err)
+}
+
+func TestDepositContractAddress_NotHexAddress(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DepositContractAddress = "abc?!"
+	params.OverrideBeaconConfig(config)
+
+	_, err := DepositContractAddress()
+	assert.ErrorContains(t, "invalid deposit contract address given", err)
+}
+
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := New(context.Background(),

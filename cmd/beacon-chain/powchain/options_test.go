@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -24,10 +23,7 @@ func TestPowchainCmd(t *testing.T) {
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	address, err := depositContractAddress()
-	require.NoError(t, err)
 	endpoints := parseHttpEndpoints(ctx)
-	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
 	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
 }
 
@@ -39,35 +35,6 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	fallback := cli.StringSlice{}
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
-
-	_, err := depositContractAddress()
-	require.NoError(t, err)
 	parseHttpEndpoints(ctx)
 	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
-}
-
-func TestDepositContractAddress_Ok(t *testing.T) {
-	address, err := depositContractAddress()
-	require.NoError(t, err)
-	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
-}
-
-func TestDepositContractAddress_EmptyAddress(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
-	config.DepositContractAddress = ""
-	params.OverrideBeaconConfig(config)
-
-	_, err := depositContractAddress()
-	assert.ErrorContains(t, "valid deposit contract is required", err)
-}
-
-func TestDepositContractAddress_NotHexAddress(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
-	config.DepositContractAddress = "abc?!"
-	params.OverrideBeaconConfig(config)
-
-	_, err := depositContractAddress()
-	assert.ErrorContains(t, "invalid deposit contract address given", err)
 }

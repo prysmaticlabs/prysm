@@ -2,10 +2,8 @@ package powchaincmd
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -14,7 +12,7 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
-	contractAddress, err := depositContractAddress()
+	contractAddress, err := powchain.DepositContractAddress()
 	if err != nil {
 		return nil, err
 	}
@@ -44,16 +42,4 @@ func parseHttpEndpoints(c *cli.Context) []string {
 	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return endpoints
-}
-
-func depositContractAddress() (string, error) {
-	address := params.BeaconConfig().DepositContractAddress
-	if address == "" {
-		return "", errors.New("valid deposit contract is required")
-	}
-
-	if !common.IsHexAddress(address) {
-		return "", errors.New("invalid deposit contract address given: " + address)
-	}
-	return address, nil
 }

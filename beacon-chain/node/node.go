@@ -141,7 +141,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
-	depositAddress, err := registration.DepositContractAddress()
+	depositAddress, err := powchain.DepositContractAddress()
 	if err != nil {
 		return nil, err
 	}
