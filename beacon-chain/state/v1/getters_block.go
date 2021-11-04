@@ -80,7 +80,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if *b.state.BlockRoots == [8192][32]byte{} {
+	if b.state.BlockRoots == nil {
 		return nil, nil
 	}
 
