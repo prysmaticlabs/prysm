@@ -2979,8 +2979,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:G9qnsbtWJxOuSFBfan+ZSv+Db7JBRR8pkgeQhQldlAc=",
-        version = "v0.0.0-20211103164754-b686c0751fb1",
+        sum = "h1:6xG5INLLQSYqNzUU/7GIQLim4ukeIePwNTLqCbl0hnI=",
+        version = "v0.0.0-20211104110150-80401559c886",
     )
 
     go_repository(

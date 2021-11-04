@@ -52,7 +52,7 @@ message BeaconState {
   repeated uint64 balances = 4002 [(ethereum.eth.ext.ssz_max) = "1099511627776"];
 
   // Randomness [5001-6000]
-  repeated bytes randao_mixes = 5001 [(ethereum.eth.ext.ssz_size) = "randao_mixes.size"];
+  bytes randao_mixes = 5001 [(ethereum.eth.ext.ssz_size) = "randao_mixes.size", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.RandaoMixes"];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(ethereum.eth.ext.ssz_size) = "slashings.size"];
