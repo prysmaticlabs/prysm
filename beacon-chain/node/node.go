@@ -61,6 +61,11 @@ const testSkipPowFlag = "test-skip-pow"
 // 128MB max message size when enabling debug endpoints.
 const debugGrpcMaxMsgSize = 1 << 27
 
+type serviceFlagOpts struct {
+	blockchainFlagOpts []blockchain.Option
+	powchainFlagOpts   []powchain.Option
+}
+
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
@@ -86,7 +91,7 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	blockchainFlagOpts      []blockchain.Option
+	serviceFlagOpts         *serviceFlagOpts
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -127,6 +132,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		syncCommitteePool:       synccommittee.NewPool(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
+		serviceFlagOpts:         &serviceFlagOpts{},
 	}
 
 	for _, opt := range opts {
@@ -488,7 +494,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	// skipcq: CRT-D0001
 	opts := append(
-		b.blockchainFlagOpts,
+		b.serviceFlagOpts.blockchainFlagOpts,
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
@@ -513,29 +519,20 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-
-	depAddress, endpoints, err := registration.PowchainPreregistration(b.cliCtx)
-	if err != nil {
-		return err
-	}
-
 	bs, err := powchain.NewPowchainCollector(b.ctx)
 	if err != nil {
 		return err
 	}
-
-	cfg := &powchain.config{
-		HttpEndpoints:          endpoints,
-		depositContractAddr:    common.HexToAddress(depAddress),
-		beaconDB:               b.db,
-		depositCache:           b.depositCache,
-		stateNotifier:          b,
-		stateGen:               b.stateGen,
-		eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
-		beaconNodeStatsUpdater: bs,
-	}
-
-	web3Service, err := powchain.New(b.ctx, cfg)
+	// skipcq: CRT-D0001
+	opts := append(
+		b.serviceFlagOpts.powchainFlagOpts,
+		powchain.WithDatabase(b.db),
+		powchain.WithDepositCache(b.depositCache),
+		powchain.WithStateNotifier(b),
+		powchain.WithStateGen(b.stateGen),
+		powchain.WithBeaconNodeStatsUpdater(bs),
+	)
+	web3Service, err := powchain.New(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}

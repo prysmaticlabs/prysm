@@ -1,24 +1,54 @@
-package powchain
+package powchaincmd
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
+var log = logrus.WithField("prefix", "cmd-powchain")
+
 // FlagOptions for powchain service flag configurations.
-func FlagOptions(c *cli.Context) ([]blockchain.Option, error) {
-	wsp := c.String(flags.WeakSubjectivityCheckpt.Name)
-	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
+func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
+	contractAddress, err := depositContractAddress()
 	if err != nil {
 		return nil, err
 	}
-	maxRoutines := c.Int(cmd.MaxGoroutines.Name)
-	opts := []blockchain.Option{
-		blockchain.WithMaxGoroutines(maxRoutines),
-		blockchain.WithWeakSubjectivityCheckpoint(wsCheckpt),
+	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
+		log.Error(
+			"No ETH1 node specified to run with the beacon node. " +
+				"Please consider running your own Ethereum proof-of-work node for better uptime, " +
+				"security, and decentralization of Ethereum. Visit " +
+				"https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information",
+		)
+		log.Error(
+			"You will need to specify --http-web3provider and/or --fallback-web3provider to attach " +
+				"an eth1 node to the prysm node. Without an eth1 node block proposals for your " +
+				"validator will be affected and the beacon node will not be able to initialize the genesis state",
+		)
+	}
+	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
+	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
+	opts := []powchain.Option{
+		powchain.WithDepositContractAddress(common.HexToAddress(contractAddress)),
+		powchain.WithHttpEndpoints(endpoints),
+		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}
 	return opts, nil
+}
+
+func depositContractAddress() (string, error) {
+	address := params.BeaconConfig().DepositContractAddress
+	if address == "" {
+		return "", errors.New("valid deposit contract is required")
+	}
+
+	if !common.IsHexAddress(address) {
+		return "", errors.New("invalid deposit contract address given: " + address)
+	}
+	return address, nil
 }

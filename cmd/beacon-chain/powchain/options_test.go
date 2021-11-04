@@ -1,4 +1,4 @@
-package registration
+package powchaincmd
 
 import (
 	"flag"
@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func TestPowchainPreregistration(t *testing.T) {
+func TestPowchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
@@ -45,7 +45,7 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 }
 
 func TestDepositContractAddress_Ok(t *testing.T) {
-	address, err := DepositContractAddress()
+	address, err := depositContractAddress()
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
 }
@@ -56,7 +56,7 @@ func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 	config.DepositContractAddress = ""
 	params.OverrideBeaconConfig(config)
 
-	_, err := DepositContractAddress()
+	_, err := depositContractAddress()
 	assert.ErrorContains(t, "valid deposit contract is required", err)
 }
 
@@ -66,6 +66,6 @@ func TestDepositContractAddress_NotHexAddress(t *testing.T) {
 	config.DepositContractAddress = "abc?!"
 	params.OverrideBeaconConfig(config)
 
-	_, err := DepositContractAddress()
+	_, err := depositContractAddress()
 	assert.ErrorContains(t, "invalid deposit contract address given", err)
 }

@@ -73,11 +73,7 @@ func WithStateGen(gen *stategen.State) Option {
 // WithHttpEndpoints --
 func WithEth1HeaderRequestLimit(limit uint64) Option {
 	return func(s *Service) error {
-		if limit == 0 {
-			s.cfg.eth1HeaderReqLimit = defaultEth1HeaderReqLimit
-		} else {
-			s.cfg.eth1HeaderReqLimit = limit
-		}
+		s.cfg.eth1HeaderReqLimit = limit
 		return nil
 	}
 }
@@ -85,11 +81,7 @@ func WithEth1HeaderRequestLimit(limit uint64) Option {
 // WithHttpEndpoints --
 func WithBeaconNodeStatsUpdater(updater BeaconNodeStatsUpdater) Option {
 	return func(s *Service) error {
-		if updater == nil {
-			s.bsUpdater = &NopBeaconNodeStatsUpdater{}
-		} else {
-			s.cfg.beaconNodeStatsUpdater = updater
-		}
+		s.cfg.beaconNodeStatsUpdater = updater
 		return nil
 	}
 }

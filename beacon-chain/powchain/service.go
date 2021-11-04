@@ -177,7 +177,10 @@ func New(ctx context.Context, opts ...Option) (*Service, error) {
 	s := &Service{
 		ctx:    ctx,
 		cancel: cancel,
-		cfg:    &config{},
+		cfg: &config{
+			beaconNodeStatsUpdater: &NopBeaconNodeStatsUpdater{},
+			eth1HeaderReqLimit:     defaultEth1HeaderReqLimit,
+		},
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,

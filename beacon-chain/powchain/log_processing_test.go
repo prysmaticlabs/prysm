@@ -33,12 +33,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            beaconDB,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -97,12 +97,12 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            beaconDB,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -153,11 +153,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		beaconDB:            beaconDB,
-		depositContractAddr: testAcc.ContractAddr,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -203,12 +203,12 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            beaconDB,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -273,12 +273,12 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            beaconDB,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -359,12 +359,12 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            kvStore,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(kvStore),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -452,12 +452,12 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: testAcc.ContractAddr,
-		beaconDB:            kvStore,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(kvStore),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -560,13 +560,12 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-
-	web3Service, err := New(context.Background(), &config{
-		HttpEndpoints:       []string{endpoint},
-		depositContractAddr: eth1Backend.ContractAddr,
-		beaconDB:            beaconDB,
-		depositCache:        depositCache,
-	})
+	web3Service, err := New(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(eth1Backend.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(eth1Backend.ContractAddr, eth1Backend.Backend)
