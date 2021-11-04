@@ -61,6 +61,9 @@ const testSkipPowFlag = "test-skip-pow"
 // 128MB max message size when enabling debug endpoints.
 const debugGrpcMaxMsgSize = 1 << 27
 
+// Used as a struct to keep cli flag options for configuring services
+// for the beacon node. We keep this as a separate struct to not pollute the actual BeaconNode
+// struct, as it is merely used to pass down configuration options into the appropriate services.
 type serviceFlagOpts struct {
 	blockchainFlagOpts []blockchain.Option
 	powchainFlagOpts   []powchain.Option

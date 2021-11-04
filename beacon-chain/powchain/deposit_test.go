@@ -42,6 +42,13 @@ func TestDepositContractAddress_NotHexAddress(t *testing.T) {
 	assert.ErrorContains(t, "invalid deposit contract address given", err)
 }
 
+func TestDepositContractAddress_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	addr, err := DepositContractAddress()
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().DepositContractAddress, addr)
+}
+
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := New(context.Background(),
