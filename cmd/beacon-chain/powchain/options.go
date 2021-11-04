@@ -1,7 +1,6 @@
 package powchaincmd
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/sirupsen/logrus"
@@ -12,13 +11,8 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
-	contractAddress, err := powchain.DepositContractAddress()
-	if err != nil {
-		return nil, err
-	}
 	endpoints := parseHttpEndpoints(c)
 	opts := []powchain.Option{
-		powchain.WithDepositContractAddress(common.HexToAddress(contractAddress)),
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}

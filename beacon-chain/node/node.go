@@ -523,9 +523,14 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if err != nil {
 		return err
 	}
+	depositContractAddr, err := powchain.DepositContractAddress()
+	if err != nil {
+		return err
+	}
 	// skipcq: CRT-D0001
 	opts := append(
 		b.serviceFlagOpts.powchainFlagOpts,
+		powchain.WithDepositContractAddress(common.HexToAddress(depositContractAddr)),
 		powchain.WithDatabase(b.db),
 		powchain.WithDepositCache(b.depositCache),
 		powchain.WithStateNotifier(b),
