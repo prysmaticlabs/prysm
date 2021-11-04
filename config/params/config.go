@@ -174,12 +174,12 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
 
 	// Merge.
-	EnabledMerge                 bool           // EnabledMerge is true if merge feature is enabled.
-	MaxExecutionTransactions     uint64         `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"`       // MaxExecutionTransactions of beacon chain.
-	MaxBytesPerOpaqueTransaction uint64         `yaml:"MAX_BYTES_PER_OPAQUE_TRANSACTION" spec:"true"` // MaxBytesPerOpaqueTransaction of beacon chain.
-	TerminalBlockHash            common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`              // TerminalBlockHash of beacon chain.
-	TerminalTotalDifficulty      uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`        // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
-	FeeRecipient                 common.Address // FeeRecipient where the transaction fee goes to.
+	EnabledMerge              bool           // EnabledMerge is true if merge feature is enabled.
+	MaxTransactionsPerPayload uint64         `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" spec:"true"` // MaxTransactionsPerPayload of beacon chain.
+	MaxBytesPerTransaction    uint64         `yaml:"MAX_BYTES_PER_TRANSACTION" spec:"true"`    // MaxBytesPerTransaction of beacon chain.
+	TerminalBlockHash         common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`          // TerminalBlockHash of beacon chain.
+	TerminalTotalDifficulty   uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`    // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	FeeRecipient              common.Address // FeeRecipient where the transaction fee goes to.
 
 	// Updated Merge penalty values. This moves penalty parameters toward their final, maximum security values.
 	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.

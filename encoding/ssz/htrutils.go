@@ -102,7 +102,7 @@ func TransactionsRoot(txs []*ethpb.Transaction) ([32]byte, error) {
 		listMarshaling = append(listMarshaling, rt[:])
 	}
 
-	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), params.BeaconConfig().MaxExecutionTransactions)
+	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), params.BeaconConfig().MaxTransactionsPerPayload)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
 	}
@@ -122,7 +122,7 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 
-	maxLength := (params.BeaconConfig().MaxBytesPerOpaqueTransaction + 31) / 32
+	maxLength := (params.BeaconConfig().MaxBytesPerTransaction + 31) / 32
 	bytesRoot, err := BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), maxLength)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
