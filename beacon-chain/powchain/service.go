@@ -159,7 +159,6 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
-	finalizedStateAtStartup state.BeaconState
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
