@@ -16,7 +16,6 @@ import (
 
 // NewRegularSyncFuzz service without registering handlers.
 func NewRegularSyncFuzz(opts ...Option) *Service {
-	rLimiter := newRateLimiter(cfg.p2p)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		cfg:                  &config{},
@@ -27,6 +26,7 @@ func NewRegularSyncFuzz(opts ...Option) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		rateLimiter:          rLimiter,
 	}
+	r.rateLimiter = newRateLimiter(cfg.p2p)
 
 	return r
 }
