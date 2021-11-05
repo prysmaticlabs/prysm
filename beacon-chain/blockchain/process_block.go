@@ -125,12 +125,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not get body execution payload")
 			}
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload)); err != nil {
+			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+			if err != nil {
 				return errors.Wrap(err, "could not execute payload")
-			}
-			// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
-			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
-				return errors.Wrap(err, "could not notify consensus validated")
 			}
 
 			mergeBlock, err := execution.IsMergeBlock(postState, body)
@@ -206,31 +203,36 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if executionEnabled {
 			// Spawn the update task, without waiting for it to complete.
 			go func() {
-				//headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
-				//if err != nil {
-				//	log.WithError(err)
-				//	return
-				//}
-				//// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				//finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-				//if err != nil {
-				//	log.WithError(err)
-				//	return
-				//}
-				//finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				//if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
-				//	finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-				//	if err != nil {
-				//		log.WithError(err)
-				//		return
-				//	}
-				//	finalizedBlockHash = finalizedPayload.BlockHash
-				//}
+				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+				if err != nil {
+					log.WithError(err)
+					return
+				}
+				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+				if err != nil {
+					log.WithError(err)
+					return
+				}
+				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+					if err != nil {
+						log.WithError(err)
+						return
+					}
+					finalizedBlockHash = finalizedPayload.BlockHash
+				}
 
-				//if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedBlockHash); err != nil {
-				//	log.WithError(err)
-				//	return
-				//}
+				f := catalyst.ForkchoiceStateV1{
+					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+				}
+				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
+					log.WithError(err)
+					return
+				}
 			}()
 		}
 	}

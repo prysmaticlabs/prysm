@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -153,28 +151,6 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil && !beaconState.IsNil() {
 		log.Info("Blockchain data already exists in DB, initializing...")
-
-		id, err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(context.Background(),
-			catalyst.ForkchoiceStateV1{
-				HeadBlockHash:      common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
-				SafeBlockHash:      common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
-				FinalizedBlockHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
-			}, catalyst.PayloadAttributesV1{
-				ParentHash:   common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
-				Timestamp:    5,
-				Random:       common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
-				FeeRecipient: common.HexToAddress("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-			},
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		data, err := s.cfg.ExecutionEngineCaller.GetPayload(context.Background(), id)
-		if err != nil {
-			return
-		}
-		log.Info(data)
 
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.cfg.AttService.SetGenesisTime(beaconState.GenesisTime())
