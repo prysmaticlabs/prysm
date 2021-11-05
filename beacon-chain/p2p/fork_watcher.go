@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -23,6 +24,12 @@ func (s *Service) forkWatcher() {
 				_, err := addForkEntry(s.dv5Listener.LocalNode(), s.genesisTime, s.genesisValidatorsRoot)
 				if err != nil {
 					log.WithError(err).Error("Could not add fork entry")
+				}
+
+				// from Merge Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10MB.
+				if currEpoch == params.BeaconConfig().MergeForkEpoch {
+					encoder.MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeMerge
+					encoder.MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeMerge
 				}
 			}
 		case <-s.ctx.Done():

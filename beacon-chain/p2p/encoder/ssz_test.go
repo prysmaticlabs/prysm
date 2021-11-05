@@ -80,7 +80,7 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 	c.MaxChunkSize = uint64(5)
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeWithMaxLength(buf, msg)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", params.BeaconNetworkConfig().MaxChunkSize)
+	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", encoder.MaxChunkSize)
 	assert.ErrorContains(t, wanted, err)
 }
 
