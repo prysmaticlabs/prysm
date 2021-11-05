@@ -111,19 +111,19 @@ type ReadOnlyCheckpoint interface {
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.
 type ReadOnlyBlockRoots interface {
 	BlockRoots() *[8192][32]byte
-	BlockRootAtIndex(idx uint64) ([]byte, error)
+	BlockRootAtIndex(idx uint64) ([32]byte, error)
 }
 
 // ReadOnlyStateRoots defines a struct which only has read access to state roots methods.
 type ReadOnlyStateRoots interface {
 	StateRoots() *[8192][32]byte
-	StateRootAtIndex(idx uint64) ([]byte, error)
+	StateRootAtIndex(idx uint64) ([32]byte, error)
 }
 
 // ReadOnlyRandaoMixes defines a struct which only has read access to randao mixes methods.
 type ReadOnlyRandaoMixes interface {
 	RandaoMixes() *[65536][32]byte
-	RandaoMixAtIndex(idx uint64) ([]byte, error)
+	RandaoMixAtIndex(idx uint64) ([32]byte, error)
 	RandaoMixesLength() int
 }
 
