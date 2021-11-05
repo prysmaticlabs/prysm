@@ -230,7 +230,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
+	log.WithField("databasePath", dataDir).Info("Checking beaconDB")
 
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
 		PubKeys:         nil,
@@ -315,7 +315,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
+	log.WithField("databasePath", dataDir).Info("Checking beaconDB")
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
 		PubKeys:         nil,
 		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
@@ -562,22 +562,22 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 		deniedText := "The historical actions database will not be deleted. No changes have been made."
 		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
-			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
+			return errors.Wrapf(err, "Could not clear beaconDB in dir %s", dataDir)
 		}
 	}
 
 	if clearDBConfirmed {
 		valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 		if err != nil {
-			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+			return errors.Wrapf(err, "Could not create beaconDB in dir %s", dataDir)
 		}
 		if err := valDB.Close(); err != nil {
-			return errors.Wrapf(err, "could not close DB in dir %s", dataDir)
+			return errors.Wrapf(err, "could not close beaconDB in dir %s", dataDir)
 		}
 
 		log.Warning("Removing database")
 		if err := valDB.ClearDB(); err != nil {
-			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
+			return errors.Wrapf(err, "Could not clear beaconDB in dir %s", dataDir)
 		}
 	}
 

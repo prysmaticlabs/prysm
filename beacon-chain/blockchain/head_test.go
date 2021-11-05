@@ -117,7 +117,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	}
 	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
-	require.LogsContain(t, hook, "Chain reorg occurred")
+	require.LogsContain(t, hook, "chain reorg occurred")
 }
 
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {

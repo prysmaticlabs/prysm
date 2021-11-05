@@ -126,7 +126,7 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 		for i, rt := range blockRoots {
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
 			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
+				return errors.Wrap(err, "could not update beaconDB indices")
 			}
 			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
 				return err
@@ -186,7 +186,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		for i, rt := range blockRoots {
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
 			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
+				return errors.Wrap(err, "could not update beaconDB indices")
 			}
 
 			// There is a gap when the states that are passed are used outside this
@@ -247,8 +247,8 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for hashStr, validatorEntry := range validatorsEntries {
 			key := []byte(hashStr)
-			// if the entry is not in the cache and not in the DB,
-			// then insert it in the DB and add to the cache.
+			// if the entry is not in the cache and not in the beaconDB,
+			// then insert it in the beaconDB and add to the cache.
 			if _, ok := s.validatorEntryCache.Get(key); !ok {
 				validatorEntryCacheMiss.Inc()
 				if valEntry := valBkt.Get(key); valEntry == nil {
@@ -324,7 +324,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		}
 		indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
+			return errors.Wrap(err, "could not delete root for beaconDB indices")
 		}
 
 		ok, err := s.isStateValidatorMigrationOver()
@@ -477,7 +477,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
-			// get the entry bytes from the cache or from the DB.
+			// get the entry bytes from the cache or from the beaconDB.
 			v, ok := s.validatorEntryCache.Get(key)
 			if ok {
 				valEntry, vType := v.(*ethpb.Validator)
@@ -489,7 +489,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 					return errors.New("validator cache does not have proper object type")
 				}
 			} else {
-				// not in cache, so get it from the DB, decode it and add to the entry list.
+				// not in cache, so get it from the beaconDB, decode it and add to the entry list.
 				valEntryBytes := valBkt.Get(key)
 				if len(valEntryBytes) == 0 {
 					return errors.New("could not find validator entry")
@@ -629,7 +629,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 }
 
 // createStateIndicesFromStateSlot takes in a state slot and returns
-// a map of bolt DB index buckets corresponding to each particular key for indices for
+// a map of bolt beaconDB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
@@ -650,7 +650,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 	return indicesByBucket
 }
 
-// CleanUpDirtyStates removes states in DB that falls to under archived point interval rules.
+// CleanUpDirtyStates removes states in beaconDB that falls to under archived point interval rules.
 // Only following states would be kept:
 // 1.) state_slot % archived_interval == 0. (e.g. archived_interval=2048, states with slot 2048, 4096... etc)
 // 2.) archived_interval - archived_interval/3 < state_slot % archived_interval

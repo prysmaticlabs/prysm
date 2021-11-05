@@ -149,7 +149,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 }
 
 func TestBlocksFetcher_findFork(t *testing.T) {
-	// Chain graph:
+	// chain graph:
 	// A - B - C - D - E
 	//      \
 	//       - C'- D'- E'- F'- G'
@@ -158,7 +158,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
-	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
+	// chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
 	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
 	finalizedSlot := types.Slot(63)
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)

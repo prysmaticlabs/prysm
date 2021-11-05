@@ -13,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// HasState returns true if the state exists in cache or in DB.
+// HasState returns true if the state exists in cache or in beaconDB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	has, err := s.HasStateInCache(ctx, blockRoot)
 	if err != nil {
@@ -42,20 +42,20 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
+	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in beaconDB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
 }
 
-// StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
+// StateByRootInitialSync retrieves the state from the beaconDB for the initial syncing phase.
 // It assumes initial syncing using a block list rather than a block tree hence the returned
 // state is not copied.
 // It invalidates cache for parent root because pre state will get mutated.
 // Do not use this method for anything other than initial syncing purpose or block tree is applied.
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
-	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
+	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in beaconDB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
@@ -111,7 +111,7 @@ func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconS
 }
 
 // This returns the state summary object of a given block root, it first checks the cache
-// then checks the DB. An error is returned if state summary object is nil.
+// then checks the beaconDB. An error is returned if state summary object is nil.
 func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	var summary *ethpb.StateSummary
 	var err error
@@ -127,7 +127,7 @@ func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 	return summary, nil
 }
 
-// RecoverStateSummary recovers state summary object of a given block root by using the saved block in DB.
+// RecoverStateSummary recovers state summary object of a given block root by using the saved block in beaconDB.
 func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	if s.beaconDB.HasBlock(ctx, blockRoot) {
 		b, err := s.beaconDB.Block(ctx, blockRoot)
@@ -140,10 +140,10 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*e
 		}
 		return summary, nil
 	}
-	return nil, errors.New("could not find block in DB")
+	return nil, errors.New("could not find block in beaconDB")
 }
 
-// This loads a beacon state from either the cache or DB then replay blocks up the requested block root.
+// This loads a beacon state from either the cache or beaconDB then replay blocks up the requested block root.
 func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateByRoot")
 	defer span.End()
@@ -163,7 +163,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return cachedInfo.state, nil
 	}
 
-	// Short cut if the cachedState is already in the DB.
+	// Short cut if the cachedState is already in the beaconDB.
 	if s.beaconDB.HasState(ctx, blockRoot) {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
@@ -231,12 +231,12 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.Bea
 
 // This returns the highest available ancestor state of the input block root.
 // It recursively look up block's parent until a corresponding state of the block root
-// is found in the caches or DB.
+// is found in the caches or beaconDB.
 //
 // There's three ways to derive block parent state:
 // 1.) block parent state is the last finalized state
 // 2.) block parent state is the epoch boundary state and exists in epoch boundary cache.
-// 3.) block parent state is in DB.
+// 3.) block parent state is in beaconDB.
 func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
 	defer span.End()
@@ -282,7 +282,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 			return cachedInfo.state, nil
 		}
 
-		// Does the state exists in DB.
+		// Does the state exists in beaconDB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			return s.beaconDB.State(ctx, parentRoot)
 		}

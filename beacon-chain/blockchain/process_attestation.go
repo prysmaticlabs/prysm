@@ -15,7 +15,7 @@ import (
 )
 
 // onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
-// it to the DB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions.
+// it to the beaconDB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions.
 // The delay is handled by the caller in `processAttestations`.
 //
 // Spec pseudocode definition:

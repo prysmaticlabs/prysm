@@ -13,7 +13,7 @@ import (
 
 var migrationOptimalAttesterProtectionKey = []byte("optimal_attester_protection_0")
 
-// Migrate attester protection to a more optimal format in the DB. Given we
+// Migrate attester protection to a more optimal format in the beaconDB. Given we
 // stored attesting history as large, 2Mb arrays per validator, we need to perform
 // this migration differently than the rest, ensuring we perform each expensive bolt
 // update in its own transaction to prevent having everything on the heap.
@@ -111,7 +111,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 	})
 }
 
-// Migrate attester protection from the more optimal format to the old format in the DB.
+// Migrate attester protection from the more optimal format to the old format in the beaconDB.
 func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
 	pubKeys := make([][48]byte, 0)

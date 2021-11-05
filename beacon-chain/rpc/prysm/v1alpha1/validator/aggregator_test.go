@@ -59,7 +59,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	require.NoError(t, err)
 	sig := priv.Sign([]byte{'A'})
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
-	wanted := "Could not locate validator index in DB"
+	wanted := "Could not locate validator index in beaconDB"
 	_, err = server.SubmitAggregateSelectionProof(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 }

@@ -101,7 +101,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 
 // retrieveCommitteesForRoot uses the provided state root to get the current epoch committees.
 // Note: This function is always recommended over retrieveCommitteesForEpoch as states are
-// retrieved from the DB for this function, rather than generated.
+// retrieved from the beaconDB for this function, rather than generated.
 func (bs *Server) retrieveCommitteesForRoot(
 	ctx context.Context,
 	root []byte,

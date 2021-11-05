@@ -31,7 +31,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
 	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
-	require.NoError(t, err, "Failed to instantiate DB")
+	require.NoError(t, err, "Failed to instantiate beaconDB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})
@@ -80,7 +80,7 @@ func TestStore_NestedBackup(t *testing.T) {
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
 	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
-	require.NoError(t, err, "Failed to instantiate DB")
+	require.NoError(t, err, "Failed to instantiate beaconDB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})

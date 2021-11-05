@@ -311,7 +311,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsContain(t, hook, "Entering mode to save hot states in DB")
+	assert.LogsContain(t, hook, "Entering mode to save hot states in beaconDB")
 }
 
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
@@ -325,7 +325,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	s.genesisTime = time.Now()
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsContain(t, hook, "Exiting mode to save hot states in DB")
+	assert.LogsContain(t, hook, "Exiting mode to save hot states in beaconDB")
 }
 
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
@@ -338,5 +338,5 @@ func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	s.genesisTime = time.Now()
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
+	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in beaconDB")
 }

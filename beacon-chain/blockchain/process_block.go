@@ -427,7 +427,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 	return nil
 }
 
-// This saves post state info to DB or cache. This also saves post state info to fork choice store.
+// This saves post state info to beaconDB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
 func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.SignedBeaconBlock, st state.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")

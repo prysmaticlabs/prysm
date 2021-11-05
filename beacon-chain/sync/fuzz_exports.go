@@ -1,3 +1,4 @@
+//go:build libfuzzer
 // +build libfuzzer
 
 package sync
@@ -14,8 +15,8 @@ import (
 )
 
 // NewRegularSyncFuzz service without registering handlers.
-func NewRegularSyncFuzz(cfg *Config) *Service {
-	rLimiter := newRateLimiter(cfg.P2P)
+func NewRegularSyncFuzz(cfg *config) *Service {
+	rLimiter := newRateLimiter(cfg.p2p)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		cfg:                  cfg,

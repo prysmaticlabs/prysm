@@ -16,12 +16,12 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// setupDB instantiates and returns a DB instance for the validator client.
+// setupDB instantiates and returns a beaconDB instance for the validator client.
 func setupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{
 		PubKeys: pubkeys,
 	})
-	require.NoError(t, err, "Failed to instantiate DB")
+	require.NoError(t, err, "Failed to instantiate beaconDB")
 	err = db.UpdatePublicKeysBuckets(pubkeys)
 	require.NoError(t, err, "Failed to create old buckets for public keys")
 	t.Cleanup(func() {

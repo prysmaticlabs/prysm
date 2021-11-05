@@ -89,7 +89,7 @@ func (s *Service) Start() {
 	}
 	currentSlot := slots.Since(genesis)
 	if slots.ToEpoch(currentSlot) == 0 {
-		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
+		log.WithField("genesisTime", genesis).Info("chain started within the last epoch - not syncing")
 		s.markSynced(genesis)
 		return
 	}

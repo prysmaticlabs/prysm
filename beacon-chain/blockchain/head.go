@@ -82,7 +82,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 }
 
 // This saves head info to the local service cache, it also saves the
-// new head root to the DB.
+// new head root to the beaconDB.
 func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
@@ -102,7 +102,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return nil
 	}
 
-	// Get the new head block from DB.
+	// Get the new head block from beaconDB.
 	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
 	if err != nil {
 		return err
@@ -111,10 +111,10 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return err
 	}
 
-	// Get the new head state from cached state or DB.
+	// Get the new head state from cached state or beaconDB.
 	newHeadState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
+		return errors.Wrap(err, "could not retrieve head state in beaconDB")
 	}
 	if newHeadState == nil || newHeadState.IsNil() {
 		return errors.New("cannot save nil head state")
@@ -130,7 +130,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
-		}).Debug("Chain reorg occurred")
+		}).Debug("chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
@@ -155,9 +155,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Cache the new head info.
 	s.setHead(headRoot, newHeadBlock, newHeadState)
 
-	// Save the new head root to DB.
+	// Save the new head root to beaconDB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
+		return errors.Wrap(err, "could not save head root in beaconDB")
 	}
 
 	// Forward an event capturing a new chain head over a common event feed
@@ -172,7 +172,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 }
 
 // This gets called to update canonical root mapping. It does not save head block
-// root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
+// root in beaconDB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b block.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
 	if err := helpers.BeaconBlockIsNil(b); err != nil {

@@ -44,7 +44,7 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, signingRoot)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected DB to keep object the same")
+	require.DeepEqual(t, bytesutil.PadTo([]byte{1}, 32), signingRoot[:], "Expected beaconDB to keep object the same")
 }
 
 func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
@@ -102,7 +102,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 		require.NoError(t, err, "Failed to get proposal history")
 
 		require.NotNil(t, proposalHistory)
-		require.DeepEqual(t, tt.signingRoot, proposalHistory[0].SigningRoot, "Expected DB to keep object the same")
+		require.DeepEqual(t, tt.signingRoot, proposalHistory[0].SigningRoot, "Expected beaconDB to keep object the same")
 		require.NoError(t, db.Close(), "Failed to close database")
 	}
 }
@@ -180,7 +180,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 func TestStore_ProposedPublicKeys(t *testing.T) {
 	ctx := context.Background()
 	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
-	require.NoError(t, err, "Failed to instantiate DB")
+	require.NoError(t, err, "Failed to instantiate beaconDB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
 		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")

@@ -46,7 +46,7 @@ func (v *validator) slashableProposalCheck(
 	}
 
 	// Based on EIP3076, validator should refuse to sign any proposal with slot less
-	// than or equal to the minimum signed proposal present in the DB for that public key.
+	// than or equal to the minimum signed proposal present in the beaconDB for that public key.
 	// In the case the slot of the incoming block is equal to the minimum signed proposal, we
 	// then also check the signing root is different.
 	if lowestProposalExists && signingRootIsDifferent && lowestSignedProposalSlot >= blk.Slot() {

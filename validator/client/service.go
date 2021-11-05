@@ -331,7 +331,7 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 }
 
 // to accounts changes in the keymanager, then updates those keys'
-// buckets in bolt DB if a bucket for a key does not exist.
+// buckets in bolt beaconDB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
 	importedKeymanager, ok := km.(*imported.Keymanager)
 	if !ok {

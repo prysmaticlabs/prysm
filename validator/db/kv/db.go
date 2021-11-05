@@ -155,7 +155,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
-	// Initialize the required public keys into the DB to ensure they're not empty.
+	// Initialize the required public keys into the beaconDB to ensure they're not empty.
 	if config != nil {
 		if err := kv.UpdatePublicKeysBuckets(config.PubKeys); err != nil {
 			return nil, err
@@ -165,7 +165,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	if features.Get().EnableSlashingProtectionPruning {
 		// Prune attesting records older than the current weak subjectivity period.
 		if err := kv.PruneAttestations(ctx); err != nil {
-			return nil, errors.Wrap(err, "could not prune old attestations from DB")
+			return nil, errors.Wrap(err, "could not prune old attestations from beaconDB")
 		}
 	}
 

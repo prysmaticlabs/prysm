@@ -130,7 +130,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				// Write one more entry to the DB with the old format.
+				// Write one more entry to the beaconDB with the old format.
 				var sr [32]byte
 				copy(sr[:], fmt.Sprintf("%d", numEpochs+1))
 				newHist, err = newHist.setTargetData(ctx, numEpochs+1, &deprecatedHistoryData{

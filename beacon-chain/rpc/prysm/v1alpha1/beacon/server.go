@@ -22,7 +22,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// Server defines a server implementation of the gRPC Beacon Chain service,
+// Server defines a server implementation of the gRPC Beacon chain service,
 // providing RPC endpoints to access data relevant to the Ethereum beacon chain.
 type Server struct {
 	BeaconDB                    db.ReadOnlyDatabase

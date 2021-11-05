@@ -310,7 +310,7 @@ func (s *Store) SaveAttestationForPubKey(
 		SigningRoot: signingRoot,
 	}
 	// Subscribe to be notified when the attestation record queued
-	// for saving to the DB is indeed saved. If an error occurred
+	// for saving to the beaconDB is indeed saved. If an error occurred
 	// during the process of saving the attestation record, the sender
 	// will give us that error. We use a buffered channel
 	// to prevent blocking the sender from notifying us of the result.
@@ -326,7 +326,7 @@ func (s *Store) SaveAttestationForPubKey(
 // (a) we have reached a max capacity of batched attestations in the Store or
 // (b) attestationBatchWriteInterval has passed
 // Based on whichever comes first, this function then proceeds
-// to flush the attestations to the DB all at once in a single boltDB
+// to flush the attestations to the beaconDB all at once in a single boltDB
 // transaction for efficiency. Then, batched attestations slice is emptied out.
 func (s *Store) batchAttestationWrites(ctx context.Context) {
 	ticker := time.NewTicker(attestationBatchWriteInterval)
@@ -337,7 +337,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 			s.batchedAttestations.Append(v)
 			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
 				log.WithField("numRecords", numRecords).Debug(
-					"Reached max capacity of batched attestation records, flushing to DB",
+					"Reached max capacity of batched attestation records, flushing to beaconDB",
 				)
 				if s.batchedAttestationsFlushInProgress.IsNotSet() {
 					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
@@ -346,7 +346,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 		case <-ticker.C:
 			if numRecords := s.batchedAttestations.Len(); numRecords > 0 {
 				log.WithField("numRecords", numRecords).Debug(
-					"Batched attestation records write interval reached, flushing to DB",
+					"Batched attestation records write interval reached, flushing to beaconDB",
 				)
 				if s.batchedAttestationsFlushInProgress.IsNotSet() {
 					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
@@ -376,7 +376,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 	err := s.saveAttestationRecords(ctx, records)
 	// If there was any error, retry the records since the TX would have been reverted.
 	if err == nil {
-		log.WithField("duration", time.Since(start)).Debug("Successfully flushed batched attestations to DB")
+		log.WithField("duration", time.Since(start)).Debug("Successfully flushed batched attestations to beaconDB")
 	} else {
 		// This should never happen.
 		log.WithError(err).Error("Failed to batch save attestation records, retrying in queue")

@@ -9,9 +9,9 @@ import (
 )
 
 // lookupValuesForIndices takes in a list of indices and looks up
-// their corresponding values in the DB, returning a list of
+// their corresponding values in the beaconDB, returning a list of
 // roots which can then be used for batch lookups of their corresponding
-// objects from the DB. For example, if we are fetching
+// objects from the beaconDB. For example, if we are fetching
 // attestations and we have an index `[]byte("5")` under the shard indices bucket,
 // we might find roots `0x23` and `0x45` stored under that index. We can then
 // do a batch read for attestations corresponding to those roots.
@@ -33,7 +33,7 @@ func lookupValuesForIndices(ctx context.Context, indicesByBucket map[string][]by
 
 // updateValueForIndices updates the value for each index by appending it to the previous
 // values stored at said index. Typically, indices are roots of data that can then
-// be used for reads or batch reads from the DB.
+// be used for reads or batch reads from the beaconDB.
 func updateValueForIndices(ctx context.Context, indicesByBucket map[string][]byte, root []byte, tx *bolt.Tx) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateValueForIndices")
 	defer span.End()

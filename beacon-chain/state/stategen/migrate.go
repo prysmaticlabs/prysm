@@ -32,7 +32,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	}
 
 	// Start at previous finalized slot, stop at current finalized slot.
-	// If the slot is on archived point, save the state of that slot to the DB.
+	// If the slot is on archived point, save the state of that slot to the beaconDB.
 	for slot := oldFSlot; slot < fSlot; slot++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -69,7 +69,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 					return err
 				}
 				aRoot = missingRoot
-				// There's no need to generate the state if the state already exists on the DB.
+				// There's no need to generate the state if the state already exists on the beaconDB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
 					aState, err = s.StateByRoot(ctx, missingRoot)
@@ -80,7 +80,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			}
 
 			if s.beaconDB.HasState(ctx, aRoot) {
-				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
+				// Remove hot state beaconDB root to prevent it gets deleted later when we turn hot state save beaconDB mode off.
 				s.saveHotStateDB.lock.Lock()
 				roots := s.saveHotStateDB.savedStateRoots
 				for i := 0; i < len(roots); i++ {
@@ -102,7 +102,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				logrus.Fields{
 					"slot": aState.Slot(),
 					"root": hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
-				}).Info("Saved state in DB")
+				}).Info("Saved state in beaconDB")
 		}
 	}
 

@@ -400,7 +400,7 @@ func (s *Store) HighestAttestations(
 	if len(indices) == 0 {
 		return nil, nil
 	}
-	// Sort indices to keep DB interactions short.
+	// Sort indices to keep beaconDB interactions short.
 	sort.SliceStable(indices, func(i, j int) bool {
 		return uint64(indices[i]) < uint64(indices[j])
 	})

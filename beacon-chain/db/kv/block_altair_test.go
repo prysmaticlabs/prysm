@@ -35,7 +35,7 @@ func TestStore_SaveAltairBlock_NoDuplicates(t *testing.T) {
 	block.Block.Slot = slot
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	// Even with a full cache, saving new blocks should not cause
-	// duplicated blocks in the DB.
+	// duplicated blocks in the beaconDB.
 	for i := 0; i < 100; i++ {
 		wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
 		require.NoError(t, err)

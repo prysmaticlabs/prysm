@@ -103,7 +103,7 @@ func TestService_InitStartStop(t *testing.T) {
 				})
 			},
 			assert: func() {
-				assert.LogsContain(t, hook, "Chain started within the last epoch - not syncing")
+				assert.LogsContain(t, hook, "chain started within the last epoch - not syncing")
 				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
 				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},
@@ -139,7 +139,7 @@ func TestService_InitStartStop(t *testing.T) {
 			assert: func() {
 				assert.LogsContain(t, hook, "Starting initial chain sync...")
 				assert.LogsContain(t, hook, "Already synced to the current chain head")
-				assert.LogsDoNotContain(t, hook, "Chain started within the last epoch - not syncing")
+				assert.LogsDoNotContain(t, hook, "chain started within the last epoch - not syncing")
 				assert.LogsDoNotContain(t, hook, "Genesis time has not arrived - not syncing")
 				assert.LogsContain(t, hook, "Waiting for state to be initialized")
 			},

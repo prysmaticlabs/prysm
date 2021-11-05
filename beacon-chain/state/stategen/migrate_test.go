@@ -59,7 +59,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
-	require.LogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in beaconDB")
 }
 
 func TestMigrateToCold_RegeneratePath(t *testing.T) {
@@ -109,7 +109,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
-	require.LogsContain(t, hook, "Saved state in DB")
+	require.LogsContain(t, hook, "Saved state in beaconDB")
 }
 
 func TestMigrateToCold_StateExistsInDB(t *testing.T) {
@@ -133,5 +133,5 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	service.saveHotStateDB.savedStateRoots = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))
 	assert.DeepEqual(t, [][32]byte{{1}, {2}, {3}, {4}}, service.saveHotStateDB.savedStateRoots)
-	assert.LogsDoNotContain(t, hook, "Saved state in DB")
+	assert.LogsDoNotContain(t, hook, "Saved state in beaconDB")
 }

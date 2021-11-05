@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 )
 
-// Server defines a server implementation of the gRPC Beacon Chain service,
-// providing RPC endpoints to access data relevant to the Ethereum Beacon Chain.
+// Server defines a server implementation of the gRPC Beacon chain service,
+// providing RPC endpoints to access data relevant to the Ethereum Beacon chain.
 type Server struct {
 	BeaconDB     db.ReadOnlyDatabase
 	HeadFetcher  blockchain.HeadFetcher

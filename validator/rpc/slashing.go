@@ -44,7 +44,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 }
 
 // ImportSlashingProtection reads an input slashing protection EIP-3076
-// standard JSON string and inserts the data into validator DB.
+// standard JSON string and inserts the data into validator beaconDB.
 //
 // Read the JSON string passed through rpc, then call the func
 // which actually imports the data from the JSON file into our database.

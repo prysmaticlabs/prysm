@@ -29,7 +29,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 		walletDir: defaultWalletPath,
 	}
 
-	// No validator DB provided.
+	// No validator beaconDB provided.
 	_, err := s.ImportSlashingProtection(ctx, req)
 	require.ErrorContains(t, "err finding validator database at path", err)
 
@@ -46,7 +46,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	s.wallet = w
 
 	numValidators := 1
-	// Create public keys for the mock validator DB.
+	// Create public keys for the mock validator beaconDB.
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 
@@ -92,12 +92,12 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	s := &Server{
 		walletDir: defaultWalletPath,
 	}
-	// No validator DB provided.
+	// No validator beaconDB provided.
 	_, err := s.ExportSlashingProtection(ctx, &empty.Empty{})
 	require.ErrorContains(t, "err finding validator database at path", err)
 
 	numValidators := 10
-	// Create public keys for the mock validator DB.
+	// Create public keys for the mock validator beaconDB.
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 
@@ -130,7 +130,7 @@ func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
 	}
 
 	numValidators := 10
-	// Create public keys for the mock validator DB.
+	// Create public keys for the mock validator beaconDB.
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 

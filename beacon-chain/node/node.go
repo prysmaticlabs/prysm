@@ -293,7 +293,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("database-path", dbPath).Info("Checking beaconDB")
 
 	d, err := db.NewDB(b.ctx, dbPath, &kv.Config{
 		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
@@ -391,7 +391,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
-	log.WithField("database-path", dbPath).Info("Checking DB")
+	log.WithField("database-path", dbPath).Info("Checking beaconDB")
 
 	d, err := slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
 		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
@@ -564,24 +564,24 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                      b.db,
-		P2P:                     b.fetchP2P(),
-		Chain:                   chainService,
-		InitialSync:             initSync,
-		StateNotifier:           b,
-		BlockNotifier:           b,
-		AttestationNotifier:     b,
-		OperationNotifier:       b,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		SyncCommsPool:           b.syncCommitteePool,
-		StateGen:                b.stateGen,
-		SlasherAttestationsFeed: b.slasherAttestationsFeed,
-		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
-	})
-
+	rs := regularsync.NewService(
+		b.ctx,
+		regularsync.WithDatabase(b.db),
+		regularsync.WithP2P(b.fetchP2P()),
+		regularsync.WithChainService(chainService),
+		regularsync.WithInitialSync(initSync),
+		regularsync.WithStateNotifier(b),
+		regularsync.WithBlockNotifier(b),
+		regularsync.WithAttestationNotifier(b),
+		regularsync.WithOperationNotifier(b),
+		regularsync.WithAttestationPool(b.attestationPool),
+		regularsync.WithExitPool(b.exitPool),
+		regularsync.WithSlashingPool(b.slashingsPool),
+		regularsync.WithSyncCommsPool(b.syncCommitteePool),
+		regularsync.WithStateGen(b.stateGen),
+		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
+		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
+	)
 	return b.services.RegisterService(rs)
 }
 

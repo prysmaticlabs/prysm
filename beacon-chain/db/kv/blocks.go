@@ -46,7 +46,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 	return blk, err
 }
 
-// HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
+// HeadBlock returns the latest canonical block in the Ethereum Beacon chain.
 func (s *Store) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
 	defer span.End()
@@ -206,7 +206,7 @@ func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		}
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
+			return errors.Wrap(err, "could not delete root for beaconDB indices")
 		}
 		s.blockCache.Del(string(blockRoot[:]))
 		return bkt.Delete(blockRoot[:])
@@ -231,7 +231,7 @@ func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			}
 			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
+				return errors.Wrap(err, "could not delete root for beaconDB indices")
 			}
 			s.blockCache.Del(string(blockRoot[:]))
 			if err := bkt.Delete(blockRoot[:]); err != nil {
@@ -263,7 +263,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 	defer span.End()
 
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
-	// to minimize the time we hold the DB lock.
+	// to minimize the time we hold the beaconDB lock.
 	blockRoots := make([][]byte, len(blocks))
 	encodedBlocks := make([][]byte, len(blocks))
 	indicesForBlocks := make([]map[string][]byte, len(blocks))
@@ -288,7 +288,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 				continue
 			}
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
+				return errors.Wrap(err, "could not update beaconDB indices")
 			}
 			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
@@ -537,7 +537,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]by
 }
 
 // createBlockIndicesFromBlock takes in a beacon block and returns
-// a map of bolt DB index buckets corresponding to each particular key for indices for
+// a map of bolt beaconDB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createBlockIndicesFromBlock(ctx context.Context, block block.BeaconBlock) map[string][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")

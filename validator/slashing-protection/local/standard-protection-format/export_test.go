@@ -88,7 +88,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		lowestSourceEpoch := types.Epoch(0)
 		lowestTargetEpoch := types.Epoch(1000)
 
-		// Next up, we simulate a DB affected by the bug where the next entry
+		// Next up, we simulate a beaconDB affected by the bug where the next entry
 		// has a target epoch less than the previous one.
 		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
 			lowestSourceEpoch,
@@ -130,7 +130,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		lowestSourceEpoch := types.Epoch(1)
 		lowestTargetEpoch := types.Epoch(1000)
 
-		// Next up, we simulate a DB affected by the bug where the next entry
+		// Next up, we simulate a beaconDB affected by the bug where the next entry
 		// has a target epoch less than the previous one.
 		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
 			lowestSourceEpoch,

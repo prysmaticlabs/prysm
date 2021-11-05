@@ -71,9 +71,9 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
-	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
+	// verify nothing was saved to the beaconDB. If there is an error in the import process, we need to make
 	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
-	// data to our DB, or it does not.
+	// data to our beaconDB, or it does not.
 	for i := 0; i < len(publicKeys); i++ {
 		for _, att := range attestingHistory[i] {
 			indexedAtt := &ethpb.IndexedAttestation{

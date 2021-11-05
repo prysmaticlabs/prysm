@@ -24,7 +24,7 @@ func TestCountdownToGenesis(t *testing.T) {
 	t.Run("normal countdown", func(t *testing.T) {
 		defer hook.Reset()
 		firstStringResult := "1s until chain genesis"
-		genesisReached := "Chain genesis time reached"
+		genesisReached := "chain genesis time reached"
 		CountdownToGenesis(
 			context.Background(),
 			prysmTime.Now().Add(2*time.Second),
@@ -52,6 +52,6 @@ func TestCountdownToGenesis(t *testing.T) {
 		require.LogsContain(t, hook, "4s until chain genesis")
 		require.LogsContain(t, hook, "3s until chain genesis")
 		require.LogsContain(t, hook, "Context closed, exiting routine")
-		require.LogsDoNotContain(t, hook, "Chain genesis time reached")
+		require.LogsDoNotContain(t, hook, "chain genesis time reached")
 	})
 }

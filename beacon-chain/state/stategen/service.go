@@ -21,7 +21,7 @@ import (
 var defaultHotStateDBInterval types.Slot = 128
 
 // StateManager represents a management object that handles the internal
-// logic of maintaining both hot and cold states in DB.
+// logic of maintaining both hot and cold states in beaconDB.
 type StateManager interface {
 	Resume(ctx context.Context) (state.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
@@ -61,7 +61,7 @@ type saveHotStateDbConfig struct {
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
-// cold and hot sections of the DB splits.
+// cold and hot sections of the beaconDB splits.
 type finalizedInfo struct {
 	slot  types.Slot
 	root  [32]byte
@@ -83,7 +83,7 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 	}
 }
 
-// Resume resumes a new state management object from previously saved finalized check point in DB.
+// Resume resumes a new state management object from previously saved finalized check point in beaconDB.
 func (s *State) Resume(ctx context.Context) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()

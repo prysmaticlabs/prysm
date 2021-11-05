@@ -148,7 +148,7 @@ func (s *Service) Start() {
 
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil && !beaconState.IsNil() {
-		log.Info("Blockchain data already exists in DB, initializing...")
+		log.Info("Blockchain data already exists in beaconDB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.cfg.AttService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(s.ctx); err != nil {
@@ -329,7 +329,7 @@ func (s *Service) Stop() error {
 		}
 	}
 
-	// Save initial sync cached blocks to the DB before stop.
+	// Save initial sync cached blocks to the beaconDB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
 
@@ -388,7 +388,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	return nil
 }
 
-// This gets called to initialize chain info variables using the finalized checkpoint stored in DB
+// This gets called to initialize chain info variables using the finalized checkpoint stored in beaconDB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
@@ -478,7 +478,7 @@ func (s *Service) resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint *eth
 
 // This returns true if block has been processed before. Two ways to verify the block has been processed:
 // 1.) Check fork choice store.
-// 2.) Check DB.
+// 2.) Check beaconDB.
 // Checking 1.) is ten times faster than checking 2.)
 func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	if s.cfg.ForkChoiceStore.HasNode(root) {
