@@ -1269,7 +1269,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	require.Equal(t, types.Slot(83), mc.HeadSlot())
 	require.Equal(t, chain[83].Block.Slot, mc.HeadSlot())
 
-	// Set head to slot 85, while we do not have block with slot 84 in beaconDB, so block is orphaned.
+	// Set head to slot 85, while we do not have block with slot 84 in DB, so block is orphaned.
 	// Moreover, block with slot 85 is a forked block and should be replaced, with block from peer.
 	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85

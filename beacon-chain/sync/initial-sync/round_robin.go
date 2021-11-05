@@ -298,7 +298,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 	}
 }
 
-// isProcessedBlock checks beaconDB and local cache for presence of a given block, to avoid duplicates.
+// isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
 func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBlock, blkRoot [32]byte) bool {
 	finalizedSlot, err := slots.EpochStart(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {

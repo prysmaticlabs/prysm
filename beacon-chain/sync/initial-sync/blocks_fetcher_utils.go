@@ -21,7 +21,7 @@ import (
 
 // forkData represents alternative chain path supported by a given peer.
 // Blocks are stored in an ascending slot order. The first block is guaranteed to have parent
-// either in beaconDB or initial sync cache.
+// either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
 	blocks []block.SignedBeaconBlock
@@ -231,7 +231,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		return nil, fmt.Errorf("cannot fetch blocks: %w", err)
 	}
 
-	// Traverse blocks, and if we've got one that doesn't have parent in beaconDB, backtrack on it.
+	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
 		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
 		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
