@@ -24,9 +24,8 @@ func NewRegularSyncFuzz(opts ...Option) *Service {
 		slotToPendingBlocks:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		rateLimiter:          rLimiter,
 	}
-	r.rateLimiter = newRateLimiter(cfg.p2p)
+	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	return r
 }
