@@ -20,12 +20,12 @@ import (
 func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
 	// The head state will be too far away to validate any voluntary exit.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -50,7 +50,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationIgnore, nil
 	}
 
-	headState, err := s.cfg.Chain.HeadState(ctx)
+	headState, err := s.cfg.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -70,7 +70,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 
 	// Broadcast the voluntary exit on a feed to notify other services in the beacon node
 	// of a received voluntary exit.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.ExitReceived,
 		Data: &opfeed.ExitReceivedData{
 			Exit: exit,
