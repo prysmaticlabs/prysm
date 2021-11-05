@@ -191,7 +191,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// CurrentEpochAttestations slice root.
 	currAtts, err := state.CurrentEpochAttestations()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get current epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not get current epoch attestations")
 	}
 	currAttsRoot, err := h.epochAttestationsRoot(currAtts)
 	if err != nil {
