@@ -26,7 +26,7 @@ type NetworkConfig struct {
 	SyncCommsSubnetKey         string // SyncCommsSubnetKey is the ENR key of the sync committee subnet bitfield in the enr.
 	MinimumPeersInSubnetSearch uint64 // PeersInSubnetSearch is the required amount of peers that we need to be able to lookup in a subnet search.
 
-	// chain Network Config
+	// Chain Network Config
 	ContractDeploymentBlock uint64   // ContractDeploymentBlock is the eth1 block in which the deposit contract is deployed.
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
 }

@@ -102,7 +102,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 
 	// Ethereum PoW parameters.
-	minimalConfig.DepositChainID = 5   // chain ID of eth1 goerli.
+	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
 	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
 	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
 

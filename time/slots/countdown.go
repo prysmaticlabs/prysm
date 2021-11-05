@@ -31,7 +31,7 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 	for {
 		currentTime := prysmTime.Now()
 		if currentTime.After(genesisTime) {
-			log.WithFields(logFields).Info("chain genesis time reached")
+			log.WithFields(logFields).Info("Chain genesis time reached")
 			return
 		}
 		timeRemaining := genesisTime.Sub(currentTime)

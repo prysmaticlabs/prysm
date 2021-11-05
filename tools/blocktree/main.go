@@ -1,7 +1,7 @@
 /**
  * Block tree graph viz
  *
- * Given a beaconDB, start slot and end slot. This tool computes the graphviz data
+ * Given a DB, start slot and end slot. This tool computes the graphviz data
  * needed to construct the block tree in graphviz data format. Then one can paste
  * the data in a Graph rendering engine (ie. http://www.webgraphviz.com/) to see the visual format.
 

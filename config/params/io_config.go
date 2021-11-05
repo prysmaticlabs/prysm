@@ -16,7 +16,7 @@ type IoConfig struct {
 var defaultIoConfig = &IoConfig{
 	ReadWritePermissions:        0600,            //-rw------- Read and Write permissions for user
 	ReadWriteExecutePermissions: 0700,            //-rwx------ Read Write and Execute (traverse) permissions for user
-	BoltTimeout:                 1 * time.Second, // 1 second for the bolt beaconDB to timeout.
+	BoltTimeout:                 1 * time.Second, // 1 second for the bolt DB to timeout.
 }
 
 var defaultWindowsIoConfig = &IoConfig{

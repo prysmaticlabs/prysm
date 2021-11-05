@@ -1,7 +1,7 @@
 /**
- * Explore beaconDB contents
+ * Explore DB contents
  *
- * Given a beacon-chain beaconDB, This tool provides many option to
+ * Given a beacon-chain DB, This tool provides many option to
  * inspect and explore it. For every non-empty bucket, print
  * the number of rows, bucket size,min/average/max size of values
  */
@@ -387,8 +387,8 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
 	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
 	if openErr != nil {
-		// dirty hack alert: Ignore this prometheus error as we are opening two beaconDB with same metric name
-		// if you want to avoid this then we should pass the metric name when opening the beaconDB which touches
+		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
+		// if you want to avoid this then we should pass the metric name when opening the DB which touches
 		// too many places.
 		if openErr.Error() != "duplicate metrics collector registration attempted" {
 			log.Fatalf("could not open sourceDB, %v", openErr)
@@ -421,7 +421,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.Fatalf("could not get destination db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
 		}
 		if destinationState == nil {
-			log.Infof("could not find state in migrated beaconDB: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s",
+			log.Infof("could not find state in migrated DB: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s",
 				rowCount, sourceState.Slot(), sourceState.Slot()/params.BeaconConfig().SlotsPerEpoch, sourceState.NumValidators(), hexutils.BytesToHex(key))
 			failCount++
 			continue

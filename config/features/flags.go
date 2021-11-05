@@ -21,7 +21,7 @@ var (
 	Mainnet = &cli.BoolFlag{
 		Value: true,
 		Name:  "mainnet",
-		Usage: "Run on Ethereum Beacon chain Main Net. This is the default and can be omitted.",
+		Usage: "Run on Ethereum Beacon Chain Main Net. This is the default and can be omitted.",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -51,7 +51,7 @@ var (
 	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
-		Usage: "Enable experimental p2p peer scorer",
+		Usage: "Enable experimental P2P peer scorer",
 	}
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
@@ -68,7 +68,7 @@ var (
 	}
 	disableAttestingHistoryDBCache = &cli.BoolFlag{
 		Name: "disable-attesting-history-db-cache",
-		Usage: "(Danger): Disables the cache for attesting history in the validator beaconDB, greatly increasing " +
+		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
 			"disk reads and writes as well as increasing time required for attestations to be produced",
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
