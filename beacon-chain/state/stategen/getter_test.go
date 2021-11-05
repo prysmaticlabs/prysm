@@ -16,6 +16,23 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
+func TestStateByRoot_GenesisState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+	b := util.NewBeaconBlock()
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+	loadedState, err := service.StateByRoot(ctx, params.BeaconConfig().ZeroHash) // Zero hash is genesis state root.
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+}
+
 func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -94,6 +111,23 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	service.hotStateCache.put(r, beaconState)
 
 	loadedState, err := service.StateByRoot(ctx, r)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+}
+
+func TestStateByRoot_StateByRootInitialSync(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+	b := util.NewBeaconBlock()
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+	loadedState, err := service.StateByRootInitialSync(ctx, params.BeaconConfig().ZeroHash) // Zero hash is genesis state root.
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
