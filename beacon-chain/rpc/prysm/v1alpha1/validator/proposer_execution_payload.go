@@ -100,7 +100,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	return executableDataToExecutionPayload(data), nil
 }
 
-func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.ExecutionPayload {
+func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *ethpb.ExecutionPayload {
 	txs := make([]*ethpb.Transaction, len(ed.Transactions))
 	for i, t := range ed.Transactions {
 		txs[i] = &ethpb.Transaction{

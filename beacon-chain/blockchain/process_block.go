@@ -206,31 +206,31 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if executionEnabled {
 			// Spawn the update task, without waiting for it to complete.
 			go func() {
-				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
-				if err != nil {
-					log.WithError(err)
-					return
-				}
-				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-				if err != nil {
-					log.WithError(err)
-					return
-				}
-				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
-					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-					if err != nil {
-						log.WithError(err)
-						return
-					}
-					finalizedBlockHash = finalizedPayload.BlockHash
-				}
+				//headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+				//if err != nil {
+				//	log.WithError(err)
+				//	return
+				//}
+				//// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+				//finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+				//if err != nil {
+				//	log.WithError(err)
+				//	return
+				//}
+				//finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+				//if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+				//	finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+				//	if err != nil {
+				//		log.WithError(err)
+				//		return
+				//	}
+				//	finalizedBlockHash = finalizedPayload.BlockHash
+				//}
 
-				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedBlockHash); err != nil {
-					log.WithError(err)
-					return
-				}
+				//if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedBlockHash); err != nil {
+				//	log.WithError(err)
+				//	return
+				//}
 			}()
 		}
 	}
@@ -629,7 +629,7 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 	return totalDifficultyReached && parentTotalDifficultyValid
 }
 
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableData {
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	txs := make([][]byte, len(payload.Transactions))
 	for i, t := range payload.Transactions {
 		txs[i] = t.GetOpaqueTransaction()
@@ -638,7 +638,7 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst
 	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
 	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
 
-	return &catalyst.ExecutableData{
+	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		Coinbase:      common.BytesToAddress(payload.Coinbase),
