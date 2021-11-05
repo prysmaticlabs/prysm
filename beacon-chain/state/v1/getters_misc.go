@@ -33,7 +33,7 @@ func (b *BeaconState) genesisTime() uint64 {
 		return 0
 	}
 
-	return b.state.GenesisTime
+	return b.GenesisTime_
 }
 
 // GenesisValidatorRoot of the beacon state.

@@ -3043,9 +3043,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2687377)
 
-	// Field (0) 'GenesisTime'
-	dst = ssz.MarshalUint64(dst, b.GenesisTime)
-
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
 
@@ -3253,9 +3250,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 	tail := buf
 	var o7, o9, o11, o12, o15, o16 uint64
-
-	// Field (0) 'GenesisTime'
-	b.GenesisTime = ssz.UnmarshallUint64(buf[0:8])
 
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
@@ -3526,9 +3520,6 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
-	// Field (0) 'GenesisTime'
-	hh.PutUint64(b.GenesisTime)
-
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])
 
@@ -3721,9 +3712,6 @@ func (b *BeaconStateAltair) MarshalSSZ() ([]byte, error) {
 func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2736629)
-
-	// Field (0) 'GenesisTime'
-	dst = ssz.MarshalUint64(dst, b.GenesisTime)
 
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
@@ -3933,9 +3921,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	tail := buf
 	var o7, o9, o11, o12, o15, o16, o21 uint64
-
-	// Field (0) 'GenesisTime'
-	b.GenesisTime = ssz.UnmarshallUint64(buf[0:8])
 
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
@@ -4216,9 +4201,6 @@ func (b *BeaconStateAltair) HashTreeRoot() ([32]byte, error) {
 // HashTreeRootWith ssz hashes the BeaconStateAltair object with a hasher
 func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
-
-	// Field (0) 'GenesisTime'
-	hh.PutUint64(b.GenesisTime)
 
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])

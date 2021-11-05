@@ -30,7 +30,7 @@ func (b *BeaconState) genesisTime() uint64 {
 		return 0
 	}
 
-	return b.state.GenesisTime
+	return b.GenesisTime_
 }
 
 // GenesisValidatorRoot of the beacon state.
@@ -74,7 +74,7 @@ func (b *BeaconState) genesisUnixTime() time.Time {
 		return time.Unix(0, 0)
 	}
 
-	return time.Unix(int64(b.state.GenesisTime), 0)
+	return time.Unix(int64(b.GenesisTime_), 0)
 }
 
 // ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.

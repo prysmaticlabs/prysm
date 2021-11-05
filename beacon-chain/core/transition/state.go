@@ -115,7 +115,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	state := &ethpb.BeaconState{
 		// Misc fields.
 		Slot:                  0,
-		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot,
 
 		Fork: &ethpb.Fork{
@@ -177,7 +176,14 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return v1.InitializeFromProto(state)
+	s, err := v1.InitializeFromProto(state)
+	if err != nil {
+		return nil, err
+	}
+
+	s.GenesisTime_ = genesisTime
+
+	return s, nil
 }
 
 // EmptyGenesisState returns an empty beacon state object.
