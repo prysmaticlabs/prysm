@@ -1,4 +1,3 @@
-//go:build libfuzzer
 // +build libfuzzer
 
 package fuzz
@@ -156,18 +155,18 @@ func BeaconFuzzBlock(b []byte) {
 	}
 	chain.Start()
 
-	s := sync.NewRegularSyncFuzz(&sync.config{
-		beaconDB:          db1,
-		p2p:               p2p,
-		chain:             chain,
-		initialSync:       fakeChecker{},
-		stateNotifier:     sn,
-		blockNotifier:     bn,
-		operationNotifier: an,
-		attPool:           ap,
-		exitPool:          ep,
-		slashingPool:      sp,
-		stateGen:          sgen,
+	s := sync.NewRegularSyncFuzz(&sync.Config{
+		DB:                db1,
+		P2P:               p2p,
+		Chain:             chain,
+		InitialSync:       fakeChecker{},
+		StateNotifier:     sn,
+		BlockNotifier:     bn,
+		OperationNotifier: an,
+		AttPool:           ap,
+		ExitPool:          ep,
+		SlashingPool:      sp,
+		StateGen:          sgen,
 	})
 
 	s.InitCaches()

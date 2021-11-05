@@ -43,21 +43,21 @@ func init() {
 	if err := p.Connect(info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	regularsync.NewService(context.Background(), &regularsync.config{
-		p2p:          p,
-		beaconDB:     nil,
-		attPool:      nil,
-		exitPool:     nil,
-		slashingPool: nil,
-		chain: &mock.ChainService{
+	regularsync.NewService(context.Background(), &regularsync.Config{
+		P2P:          p,
+		DB:           nil,
+		AttPool:      nil,
+		ExitPool:     nil,
+		SlashingPool: nil,
+		Chain: &mock.ChainService{
 			Root:                bytesutil.PadTo([]byte("root"), 32),
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 			Fork:                &ethpb.Fork{CurrentVersion: []byte("foo")},
 		},
-		stateNotifier:     (&mock.ChainService{}).StateNotifier(),
-		operationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		initialSync:       &mockSync.Sync{IsSyncing: false},
-		blockNotifier:     nil,
+		StateNotifier:     (&mock.ChainService{}).StateNotifier(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		InitialSync:       &mockSync.Sync{IsSyncing: false},
+		BlockNotifier:     nil,
 	})
 }
 

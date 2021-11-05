@@ -216,7 +216,7 @@ func (r *testRunner) waitForChainStart() {
 	require.NoError(r.t, err)
 
 	r.t.Run("chain started", func(t *testing.T) {
-		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "chain started in sync service"), "chain did not start")
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
 	})
 }
 
