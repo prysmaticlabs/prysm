@@ -34,7 +34,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 
 	validatorIndex, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
-		return nil, status.Error(codes.Internal, "Could not locate validator index in beaconDB")
+		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
 	epoch := slots.ToEpoch(req.Slot)

@@ -80,7 +80,7 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 		return errors.Wrap(errWSBlockNotFound, fmt.Sprintf("missing root %#x", v.root))
 	}
 	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(v.slot + params.BeaconConfig().SlotsPerEpoch)
-	// A node should have the weak subjectivity block corresponds to the correct epoch in the beaconDB.
+	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
 	roots, err := v.db.BlockRoots(ctx, filter)
 	if err != nil {
 		return errors.Wrap(err, "error while retrieving block roots to verify weak subjectivity")

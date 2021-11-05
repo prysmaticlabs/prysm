@@ -44,13 +44,13 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			finalizedEpoch: 1,
 		},
 		{
-			name:           "can't find the block in beaconDB",
+			name:           "can't find the block in DB",
 			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
 			finalizedEpoch: 3,
 			wantErr:        errWSBlockNotFound,
 		},
 		{
-			name:           "can't find the block corresponds to ws epoch in beaconDB",
+			name:           "can't find the block corresponds to ws epoch in DB",
 			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: 2}, // Root belongs in epoch 1.
 			finalizedEpoch: 3,
 			wantErr:        errWSBlockNotFoundInEpoch,

@@ -117,8 +117,8 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 }
 
 // executeStateTransitionStateGen applies state transition on input historical state and block for state gen usages.
-// There's no signature verification involved given state gen only works with stored block and state in beaconDB.
-// If the objects are already in stored in beaconDB, one can omit redundant signature checks and ssz hashing calculations.
+// There's no signature verification involved given state gen only works with stored block and state in DB.
+// If the objects are already in stored in DB, one can omit redundant signature checks and ssz hashing calculations.
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
@@ -164,7 +164,7 @@ func executeStateTransitionStateGen(
 }
 
 // processSlotsStateGen to process old slots for state gen usages.
-// There's no skip slot cache involved given state gen only works with already stored block and state in beaconDB.
+// There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
 func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
@@ -219,7 +219,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 	return state, nil
 }
 
-// This finds the last saved block in beaconDB from searching backwards from input slot,
+// This finds the last saved block in DB from searching backwards from input slot,
 // it returns the block root and the slot of the block.
 // This is used by both hot and cold state management.
 func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, types.Slot, error) {
@@ -255,7 +255,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 	return r, lastSaved[0].Block().Slot(), nil
 }
 
-// This finds the last saved state in beaconDB from searching backwards from input slot,
+// This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
 func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.ReadOnlyBeaconState, error) {

@@ -15,7 +15,7 @@ import (
 
 func TestStore_Backup(t *testing.T) {
 	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
 	head := util.NewBeaconBlock()
@@ -44,7 +44,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
 	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})
@@ -53,7 +53,7 @@ func TestStore_Backup(t *testing.T) {
 
 func TestStore_BackupMultipleBuckets(t *testing.T) {
 	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
 	startSlot := types.Slot(5000)
@@ -86,7 +86,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
 	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})

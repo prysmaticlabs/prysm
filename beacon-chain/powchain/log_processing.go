@@ -121,7 +121,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	s.lastReceivedMerkleIndex = index
 
 	// We then decode the deposit input in order to create a deposit object
-	// we can store in our persistent beaconDB.
+	// we can store in our persistent DB.
 	depositData := &ethpb.Deposit_Data{
 		Amount:                bytesutil.FromBytes8(amount),
 		PublicKey:             pubkey,
@@ -154,7 +154,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		deposit.Proof = proof
 	}
 
-	// We always store all historical deposits in the beaconDB.
+	// We always store all historical deposits in the DB.
 	err = s.cfg.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	if err != nil {
 		return errors.Wrap(err, "unable to insert deposit into cache")

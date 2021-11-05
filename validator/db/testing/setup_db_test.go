@@ -15,10 +15,10 @@ func TestClearDB(t *testing.T) {
 	testDB, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{
 		PubKeys: nil,
 	})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	require.NoError(t, testDB.ClearDB())
 
 	if _, err := os.Stat(filepath.Join(testDB.DatabasePath(), "validator.db")); !os.IsNotExist(err) {
-		t.Fatalf("beaconDB was not cleared: %v", err)
+		t.Fatalf("DB was not cleared: %v", err)
 	}
 }

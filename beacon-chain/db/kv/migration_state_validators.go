@@ -23,8 +23,8 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	if updateErr := db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		// feature flag is not enabled
-		// - migration is complete, don't migrate the beaconDB but warn that this will work as if the flag is enabled.
-		// - migration is not complete, don't migrate the beaconDB.
+		// - migration is complete, don't migrate the DB but warn that this will work as if the flag is enabled.
+		// - migration is not complete, don't migrate the DB.
 		if !features.Get().EnableHistoricalSpaceRepresentation {
 			b := mb.Get(migrationStateValidatorsKey)
 			if bytes.Equal(b, migrationCompleted) {
@@ -41,7 +41,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 			return nil
 		}
 
-		// migrate flag is enabled and beaconDB is not migrated yet
+		// migrate flag is enabled and DB is not migrated yet
 		migrateDB = true
 		return nil
 	}); updateErr != nil {
@@ -49,7 +49,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		return updateErr
 	}
 
-	// do not migrate the beaconDB
+	// do not migrate the DB
 	if !migrateDB {
 		return nil
 	}

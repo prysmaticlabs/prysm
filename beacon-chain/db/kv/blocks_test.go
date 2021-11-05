@@ -32,7 +32,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	block.Block.Slot = slot
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	// Even with a full cache, saving new blocks should not cause
-	// duplicated blocks in the beaconDB.
+	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
 		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
 	}

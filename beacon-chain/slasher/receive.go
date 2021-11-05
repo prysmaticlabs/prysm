@@ -105,7 +105,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
 			); err != nil {
-				log.WithError(err).Error("Could not save attestation records to beaconDB")
+				log.WithError(err).Error("Could not save attestation records to DB")
 				continue
 			}
 

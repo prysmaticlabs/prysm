@@ -396,7 +396,7 @@ func (s *Service) getChunk(
 	if ok {
 		return chunk, nil
 	}
-	// We can ensure we load the appropriate chunk we need by fetching from the beaconDB.
+	// We can ensure we load the appropriate chunk we need by fetching from the DB.
 	diskChunks, err := s.loadChunks(ctx, args, []uint64{chunkIdx})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIdx)

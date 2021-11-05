@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 )
 
-// NewDB initializes a new beaconDB.
+// NewDB initializes a new DB.
 func NewDB(ctx context.Context, dirPath string, config *kv.Config) (Database, error) {
 	return kv.NewKVStore(ctx, dirPath, config)
 }

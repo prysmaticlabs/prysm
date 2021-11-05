@@ -499,7 +499,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, true, s.cfg.BeaconDB.HasBlock(ctx, r), "Block is not in beaconDB")
+		require.Equal(b, true, s.cfg.BeaconDB.HasBlock(ctx, r), "Block is not in DB")
 	}
 }
 

@@ -143,7 +143,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
-// it will attempt to get the head block from beaconDB.
+// it will attempt to get the head block from DB.
 func (s *Service) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
@@ -157,7 +157,7 @@ func (s *Service) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error
 
 // HeadState returns the head state of the chain.
 // If the head is nil from service struct,
-// it will attempt to get the head state from beaconDB.
+// it will attempt to get the head state from DB.
 func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()

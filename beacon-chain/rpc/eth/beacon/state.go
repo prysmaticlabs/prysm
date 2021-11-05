@@ -32,11 +32,11 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 
 	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
 	if genesisTime.IsZero() {
-		return nil, status.Errorf(codes.NotFound, "chain genesis info is not yet known")
+		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
 	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
-		return nil, status.Errorf(codes.NotFound, "chain genesis info is not yet known")
+		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
 	forkVersion := params.BeaconConfig().GenesisForkVersion
 

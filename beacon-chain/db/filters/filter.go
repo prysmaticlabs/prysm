@@ -46,7 +46,7 @@ const (
 )
 
 // QueryFilter defines a generic interface for type-asserting
-// specific filters to use in querying beaconDB objects.
+// specific filters to use in querying DB objects.
 type QueryFilter struct {
 	queries map[FilterType]interface{}
 }

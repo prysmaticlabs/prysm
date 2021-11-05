@@ -214,7 +214,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
 		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
@@ -273,7 +273,7 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	ctx := context.Background()
 	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
-	require.NoError(t, err, "Failed to instantiate beaconDB")
+	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
 		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
@@ -393,10 +393,10 @@ func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	wg.Wait()
 
 	// We verify that we reached the max capacity of batched attestations
-	// before we are required to force flush them to the beaconDB.
+	// before we are required to force flush them to the DB.
 	require.LogsContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsDoNotContain(t, hook, "Batched attestation records write interval reached")
-	require.LogsContain(t, hook, "Successfully flushed batched attestations to beaconDB")
+	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
 	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
@@ -428,7 +428,7 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	defer cancel()
 	// Number of validators equal to half the total capacity
 	// of batch attestation processing. This will allow us to
-	// test force flushing to the beaconDB based on a timer instead
+	// test force flushing to the DB based on a timer instead
 	// of the max capacity being reached.
 	numValidators := attestationBatchCapacity / 2
 	pubKeys := make([][48]byte, numValidators)
@@ -450,10 +450,10 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	wg.Wait()
 
 	// We verify that we reached a timer interval for force flushing records
-	// before we are required to force flush them to the beaconDB.
+	// before we are required to force flush them to the DB.
 	require.LogsDoNotContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsContain(t, hook, "Batched attestation records write interval reached")
-	require.LogsContain(t, hook, "Successfully flushed batched attestations to beaconDB")
+	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
 	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
@@ -503,7 +503,7 @@ func benchCheckSurroundVote(
 	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), &Config{
 		PubKeys: pubKeys,
 	})
-	require.NoError(b, err, "Failed to instantiate beaconDB")
+	require.NoError(b, err, "Failed to instantiate DB")
 	defer func() {
 		require.NoError(b, validatorDB.Close(), "Failed to close database")
 		require.NoError(b, validatorDB.ClearDB(), "Failed to clear database")

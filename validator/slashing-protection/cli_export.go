@@ -60,7 +60,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	}
 	defer func() {
 		if err := validatorDB.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close validator beaconDB")
+			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
 	eipJSON, err := export.ExportStandardProtectionJSON(cliCtx.Context, validatorDB)

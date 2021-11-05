@@ -20,7 +20,7 @@ func MigrateUp(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
-	log.Info("Opening beaconDB")
+	log.Info("Opening DB")
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func MigrateDown(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
-	log.Info("Opening beaconDB")
+	log.Info("Opening DB")
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err

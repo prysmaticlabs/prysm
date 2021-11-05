@@ -14,7 +14,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// This defines how many epochs since finality the run time will begin to save hot state on to the beaconDB.
+// This defines how many epochs since finality the run time will begin to save hot state on to the DB.
 var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
@@ -142,7 +142,7 @@ func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
 	return nil
 }
 
-// This checks whether it's time to start saving hot state to beaconDB.
+// This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())

@@ -20,7 +20,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get genesis validators root from beaconDB")
+		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
 	if genesisValidatorsRoot == nil || bytes.Equal(genesisValidatorsRoot, params.BeaconConfig().ZeroHash[:]) {
 		return nil, errors.New(
@@ -37,11 +37,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve proposer public keys from beaconDB")
+		return nil, errors.Wrap(err, "could not retrieve proposer public keys from DB")
 	}
 	attestedPublicKeys, err := validatorDB.AttestedPublicKeys(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve attested public keys from beaconDB")
+		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
 	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 

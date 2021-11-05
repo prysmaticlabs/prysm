@@ -14,7 +14,7 @@ import (
 // Ensure the kv store implements the interface.
 var _ = ValidatorDB(&kv.Store{})
 
-// ValidatorDB defines the necessary methods for a Prysm validator beaconDB.
+// ValidatorDB defines the necessary methods for a Prysm validator DB.
 type ValidatorDB interface {
 	io.Closer
 	backup.BackupExporter

@@ -52,7 +52,7 @@ type PeerData struct {
 	ConnState     PeerConnectionState
 	Enr           *enr.Record
 	NextValidTime time.Time
-	// chain related data.
+	// Chain related data.
 	MetaData                  metadata.Metadata
 	ChainState                *pb.Status
 	ChainStateLastUpdated     time.Time

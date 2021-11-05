@@ -202,7 +202,7 @@ func (s *Store) ClearDB() error {
 func (s *Store) Close() error {
 	prometheus.Unregister(createBoltCollector(s.db))
 
-	// Before beaconDB closes, we should dump the cached state summary objects to beaconDB.
+	// Before DB closes, we should dump the cached state summary objects to DB.
 	if err := s.saveCachedStateSummariesDB(s.ctx); err != nil {
 		return err
 	}

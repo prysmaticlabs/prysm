@@ -13,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveState saves the state in the cache and/or beaconDB.
+// SaveState saves the state in the cache and/or DB.
 func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
@@ -22,7 +22,7 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconSta
 }
 
 // ForceCheckpoint initiates a cold state save of the given state. This method does not update the
-// "last archived state" but simply saves the specified state from the root argument into the beaconDB.
+// "last archived state" but simply saves the specified state from the root argument into the DB.
 func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
@@ -63,11 +63,11 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		log.WithFields(logrus.Fields{
 			"slot":                   st.Slot(),
 			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
-		}).Info("Saving hot state to beaconDB")
+		}).Info("Saving hot state to DB")
 	}
 	s.saveHotStateDB.lock.Unlock()
 
-	// If the hot state is already in cache, one can be sure the state was processed and in the beaconDB.
+	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.has(blockRoot) {
 		return nil
 	}
@@ -93,7 +93,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 	return nil
 }
 
-// EnableSaveHotStateToDB enters the mode that saves hot beacon state to the beaconDB.
+// EnableSaveHotStateToDB enters the mode that saves hot beacon state to the DB.
 // This usually gets triggered when there's long duration since finality.
 func (s *State) EnableSaveHotStateToDB(_ context.Context) {
 	s.saveHotStateDB.lock.Lock()
@@ -107,10 +107,10 @@ func (s *State) EnableSaveHotStateToDB(_ context.Context) {
 	log.WithFields(logrus.Fields{
 		"enabled":       s.saveHotStateDB.enabled,
 		"slotsInterval": s.saveHotStateDB.duration,
-	}).Warn("Entering mode to save hot states in beaconDB")
+	}).Warn("Entering mode to save hot states in DB")
 }
 
-// DisableSaveHotStateToDB exits the mode that saves beacon state to beaconDB for the hot states.
+// DisableSaveHotStateToDB exits the mode that saves beacon state to DB for the hot states.
 // This usually gets triggered once there's finality after long duration since finality.
 func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 	s.saveHotStateDB.lock.Lock()
@@ -122,9 +122,9 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 	log.WithFields(logrus.Fields{
 		"enabled":          s.saveHotStateDB.enabled,
 		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
-	}).Warn("Exiting mode to save hot states in beaconDB")
+	}).Warn("Exiting mode to save hot states in DB")
 
-	// Delete previous saved states in beaconDB as we are turning this mode off.
+	// Delete previous saved states in DB as we are turning this mode off.
 	s.saveHotStateDB.enabled = false
 	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
 		return err

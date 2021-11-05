@@ -53,7 +53,7 @@ func TestGetGenesis(t *testing.T) {
 			ChainInfoFetcher:   chainService,
 		}
 		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "chain genesis info is not yet known", err)
+		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
 	t.Run("No genesis validator root", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestGetGenesis(t *testing.T) {
 			ChainInfoFetcher:   chainService,
 		}
 		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "chain genesis info is not yet known", err)
+		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 }
 

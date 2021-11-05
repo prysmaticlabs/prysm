@@ -9,7 +9,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveStateSummary saves a state summary object to the beaconDB.
+// SaveStateSummary saves a state summary object to the DB.
 func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
@@ -17,13 +17,13 @@ func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummar
 	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
 }
 
-// SaveStateSummaries saves state summary objects to the beaconDB.
+// SaveStateSummaries saves state summary objects to the DB.
 func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 
 	// When we reach the state summary cache prune count,
-	// dump the cached state summaries to the beaconDB.
+	// dump the cached state summaries to the DB.
 	if s.stateSummaryCache.len() >= stateSummaryCachePruneCount {
 		if err := s.saveCachedStateSummariesDB(ctx); err != nil {
 			return err
@@ -62,7 +62,7 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 	return summary, nil
 }
 
-// HasStateSummary returns true if a state summary exists in beaconDB.
+// HasStateSummary returns true if a state summary exists in DB.
 func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
@@ -85,7 +85,7 @@ func (s *Store) hasStateSummaryBytes(tx *bolt.Tx, blockRoot [32]byte) bool {
 	return len(enc) > 0
 }
 
-// This saves all cached state summary objects to beaconDB, and clears up the cache.
+// This saves all cached state summary objects to DB, and clears up the cache.
 func (s *Store) saveCachedStateSummariesDB(ctx context.Context) error {
 	summaries := s.stateSummaryCache.getAll()
 	encs := make([][]byte, len(summaries))

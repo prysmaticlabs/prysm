@@ -11,7 +11,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// PruneAttestationsAtEpoch deletes all attestations from the slasher beaconDB with target epoch
+// PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,
@@ -82,7 +82,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 	return
 }
 
-// PruneProposalsAtEpoch deletes all proposals from the slasher beaconDB with epoch
+// PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,

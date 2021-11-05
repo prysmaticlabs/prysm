@@ -706,7 +706,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock))) // Saves blocks to beaconDB.
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock))) // Saves blocks to DB.
 	}
 
 	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, [32]byte{}, 0, 0))
@@ -845,7 +845,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 			wantedErr: "nil finalized block",
 		},
 		{
-			name: "could not get finalized block root in beaconDB",
+			name: "could not get finalized block root in DB",
 			args: args{
 				finalizedRoot: r,
 				parentRoot:    [32]byte{'a'},
@@ -980,7 +980,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
 	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
 
-	// The update should persist in beaconDB.
+	// The update should persist in DB.
 	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	require.Equal(t, j.Epoch, service.CurrentJustifiedCheckpt().Epoch)

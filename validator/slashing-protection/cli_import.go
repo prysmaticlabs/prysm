@@ -15,7 +15,7 @@ import (
 )
 
 // ImportSlashingProtectionCLI reads an input slashing protection EIP-3076
-// standard JSON file and attempts to insert its data into our validator beaconDB.
+// standard JSON file and attempts to insert its data into our validator DB.
 //
 // Steps:
 // 1. Parse a path to the validator's datadir from the CLI context.
@@ -51,7 +51,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	}
 	defer func() {
 		if err := valDB.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close validator beaconDB")
+			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
 	protectionFilePath, err := userprompt.InputDirectory(cliCtx, userprompt.SlashingProtectionJSONPromptText, flags.SlashingProtectionJSONFileFlag)

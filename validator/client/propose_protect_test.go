@@ -23,7 +23,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
-	// We save a proposal at the lowest signed slot in the beaconDB.
+	// We save a proposal at the lowest signed slot in the DB.
 	err := validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, lowestSignedSlot, []byte{1})
 	require.NoError(t, err)
 	require.NoError(t, err)
