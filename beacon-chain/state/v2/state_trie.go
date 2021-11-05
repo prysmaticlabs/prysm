@@ -296,7 +296,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+		hRoots := make([][]byte, len(b.state.HistoricalRoots))
+		for i := range hRoots {
+			hRoots[i] = b.state.HistoricalRoots[i][:]
+		}
+		return ssz.ByteArrayRootWithLimit(hRoots, params.BeaconConfig().HistoricalRootsLimit)
 	case eth1Data:
 		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:

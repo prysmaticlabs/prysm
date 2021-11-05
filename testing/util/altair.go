@@ -87,10 +87,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := customtypes.RandaoMixes{}
 	for i := 0; i < len(randaoMixes); i++ {
-		h := make([]byte, 32)
-		copy(h, eth1Data.BlockHash)
+		var h [32]byte
+		copy(h[:], eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
@@ -152,7 +152,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		InactivityScores:           scores,
 
 		// Randomness and committees.
-		RandaoMixes: randaoMixes,
+		RandaoMixes: &randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
@@ -169,7 +169,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots: [][]byte{},
+		HistoricalRoots: [][32]byte{},
 		BlockRoots:      &blockRoots,
 		StateRoots:      &stateRoots,
 		Slashings:       slashings,
@@ -233,7 +233,7 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 		InactivityScores: []uint64{},
 
 		JustificationBits:          []byte{0},
-		HistoricalRoots:            [][]byte{},
+		HistoricalRoots:            [][32]byte{},
 		CurrentEpochParticipation:  []byte{},
 		PreviousEpochParticipation: []byte{},
 

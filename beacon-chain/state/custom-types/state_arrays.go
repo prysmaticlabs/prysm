@@ -124,7 +124,7 @@ var _ fssz.Marshaler = (*RandaoMixes)(nil)
 var _ fssz.Unmarshaler = (*RandaoMixes)(nil)
 
 // Byte32 represents a 32 bytes RandaoMixes object in Ethereum beacon chain consensus.
-type RandaoMixes [randaoMixesSize][32]byte
+type RandaoMixes [65536][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r RandaoMixes) HashTreeRoot() ([32]byte, error) {

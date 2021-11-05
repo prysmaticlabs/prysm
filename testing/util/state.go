@@ -50,7 +50,7 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 		BlockRoots:                 &customtypes.StateRoots{},
 		StateRoots:                 &customtypes.StateRoots{},
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
-		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		RandaoMixes:                &customtypes.RandaoMixes{},
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Eth1Data: &ethpb.Eth1Data{
@@ -62,7 +62,7 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 			CurrentVersion:  make([]byte, 4),
 		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		HistoricalRoots:             make([][]byte, 0),
+		HistoricalRoots:             customtypes.HistoricalRoots{},
 		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),

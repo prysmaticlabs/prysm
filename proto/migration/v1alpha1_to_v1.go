@@ -467,6 +467,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 
 	blockRoots := customtypes.StateRoots(*state.BlockRoots())
 	stateRoots := customtypes.StateRoots(*state.StateRoots())
+	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
@@ -485,7 +486,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		},
 		BlockRoots:      &blockRoots,
 		StateRoots:      &stateRoots,
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2d32Bytes(state.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -495,7 +496,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		Eth1DepositIndex:          state.Eth1DepositIndex(),
 		Validators:                resultValidators,
 		Balances:                  state.Balances(),
-		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
+		RandaoMixes:               &mixes,
 		Slashings:                 state.Slashings(),
 		PreviousEpochAttestations: resultPrevEpochAtts,
 		CurrentEpochAttestations:  resultCurrEpochAtts,
@@ -572,6 +573,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 
 	blockRoots := customtypes.StateRoots(*altairState.BlockRoots())
 	stateRoots := customtypes.StateRoots(*altairState.StateRoots())
+	mixes := customtypes.RandaoMixes(*altairState.RandaoMixes())
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: altairState.GenesisValidatorRoot(),
@@ -590,7 +592,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		},
 		BlockRoots:      &blockRoots,
 		StateRoots:      &stateRoots,
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2d32Bytes(altairState.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -600,7 +602,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		Eth1DepositIndex:           altairState.Eth1DepositIndex(),
 		Validators:                 resultValidators,
 		Balances:                   altairState.Balances(),
-		RandaoMixes:                bytesutil.SafeCopy2dBytes(altairState.RandaoMixes()),
+		RandaoMixes:                &mixes,
 		Slashings:                  altairState.Slashings(),
 		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
 		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),

@@ -37,7 +37,7 @@ type ReadOnlyBeaconState interface {
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][]byte
+	HistoricalRoots() [][32]byte
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
@@ -60,7 +60,7 @@ type WriteOnlyBeaconState interface {
 	SetSlot(val types.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
-	SetHistoricalRoots(val [][]byte) error
+	SetHistoricalRoots(val [][32]byte) error
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
@@ -122,7 +122,7 @@ type ReadOnlyStateRoots interface {
 
 // ReadOnlyRandaoMixes defines a struct which only has read access to randao mixes methods.
 type ReadOnlyRandaoMixes interface {
-	RandaoMixes() [][]byte
+	RandaoMixes() *[65536][32]byte
 	RandaoMixAtIndex(idx uint64) ([]byte, error)
 	RandaoMixesLength() int
 }
@@ -177,8 +177,8 @@ type WriteOnlyBalances interface {
 
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
-	SetRandaoMixes(val [][]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
+	SetRandaoMixes(val *[65536][32]byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.
