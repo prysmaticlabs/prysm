@@ -15,11 +15,11 @@ import (
 )
 
 // NewRegularSyncFuzz service without registering handlers.
-func NewRegularSyncFuzz(cfg *config) *Service {
+func NewRegularSyncFuzz(opts ...Option) *Service {
 	rLimiter := newRateLimiter(cfg.p2p)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
-		cfg:                  cfg,
+		cfg:                  &config{},
 		ctx:                  ctx,
 		cancel:               cancel,
 		slotToPendingBlocks:  gcache.New(time.Second, 2*time.Second),
