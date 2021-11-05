@@ -147,13 +147,13 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
-	r.rateLimiter = newRateLimiter(r.cfg.p2p)
-	r.subHandler = newSubTopicHandler()
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil
 		}
 	}
+	r.subHandler = newSubTopicHandler()
+	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	go r.registerHandlers()
 	go r.verifierRoutine()
