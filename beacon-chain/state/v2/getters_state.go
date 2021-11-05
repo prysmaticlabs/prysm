@@ -2,6 +2,7 @@ package v2
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -58,7 +59,7 @@ func (b *BeaconState) hasInnerState() bool {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() [][]byte {
+func (b *BeaconState) StateRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -69,16 +70,17 @@ func (b *BeaconState) StateRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.stateRoots()
+	roots := [8192][32]byte(*b.stateRoots())
+	return &roots
 }
 
 // StateRoots kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRoots() [][]byte {
+func (b *BeaconState) stateRoots() *customtypes.StateRoots {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.StateRoots)
+	return b.state.StateRoots
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -104,7 +106,11 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.StateRoots, idx)
+	sRoots := make([][]byte, len(b.state.BlockRoots))
+	for i := range sRoots {
+		sRoots[i] = b.state.StateRoots[i][:]
+	}
+	return bytesutil.SafeCopyRootAtIndex(sRoots, idx)
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.

@@ -2,6 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -464,6 +465,8 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
+	blockRoots := customtypes.StateRoots(*state.BlockRoots())
+	stateRoots := customtypes.StateRoots(*state.StateRoots())
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
@@ -480,8 +483,8 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		BlockRoots:      &blockRoots,
+		StateRoots:      &stateRoots,
 		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
@@ -567,6 +570,8 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
+	blockRoots := customtypes.StateRoots(*altairState.BlockRoots())
+	stateRoots := customtypes.StateRoots(*altairState.StateRoots())
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: altairState.GenesisValidatorRoot(),
@@ -583,8 +588,8 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
+		BlockRoots:      &blockRoots,
+		StateRoots:      &stateRoots,
 		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),

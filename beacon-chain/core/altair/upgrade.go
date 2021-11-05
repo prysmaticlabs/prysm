@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -66,6 +67,9 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
+
+	blockRoots := customtypes.StateRoots(*state.BlockRoots())
+	stateRoots := customtypes.StateRoots(*state.StateRoots())
 	s := &ethpb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
@@ -76,8 +80,8 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
-		BlockRoots:                  state.BlockRoots(),
-		StateRoots:                  state.StateRoots(),
+		BlockRoots:                  &blockRoots,
+		StateRoots:                  &stateRoots,
 		HistoricalRoots:             state.HistoricalRoots(),
 		Eth1Data:                    state.Eth1Data(),
 		Eth1DataVotes:               state.Eth1DataVotes(),

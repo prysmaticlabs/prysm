@@ -2,12 +2,13 @@ package v1
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val [][]byte) error {
+func (b *BeaconState) SetStateRoots(val *[8192][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -17,7 +18,8 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	b.state.StateRoots = val
+	roots := customtypes.StateRoots(*val)
+	b.state.StateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true
 	return nil
@@ -44,13 +46,14 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		r = make([][]byte, len(b.state.StateRoots))
-		copy(r, b.state.StateRoots)
+		roots := *b.state.StateRoots
+		rootsCopy := roots
+		r = &rootsCopy
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = stateRoot[:]
+	r[idx] = stateRoot
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)

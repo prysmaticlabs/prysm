@@ -63,7 +63,7 @@ var _ fssz.Marshaler = (*StateRoots)(nil)
 var _ fssz.Unmarshaler = (*StateRoots)(nil)
 
 // Byte32 represents a 32 bytes StateRoots object in Ethereum beacon chain consensus.
-type StateRoots [stateRootsSize][32]byte
+type StateRoots [8192][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r StateRoots) HashTreeRoot() ([32]byte, error) {
