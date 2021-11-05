@@ -239,13 +239,13 @@ func TestFuzzIsSlashableAttestationData_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzslashableAttesterIndices_10000(t *testing.T) {
+func TestFuzzSlashableAttesterIndices_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	attesterSlashing := &eth.AttesterSlashing{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(attesterSlashing)
-		slashableAttesterIndices(attesterSlashing)
+		SlashableAttesterIndices(attesterSlashing)
 	}
 }
 
