@@ -94,11 +94,12 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		DepositContainers: []*ethpb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
-		BeaconDB:        beaconDB,
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: common.Address{},
-	})
+	web3Service, err = powchain.NewService(
+		ctx,
+		powchain.WithDatabase(beaconDB),
+		powchain.WithHttpEndpoints([]string{endpoint}),
+		powchain.WithDepositContractAddress(common.Address{}),
+	)
 	require.NoError(t, err, "Unable to set up web3 service")
 
 	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
