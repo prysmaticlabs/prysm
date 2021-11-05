@@ -22,6 +22,11 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
+	if genesisValidatorsRoot == nil || bytes.Equal(genesisValidatorsRoot, params.BeaconConfig().ZeroHash[:]) {
+		return nil, errors.New(
+			"genesis validators root is empty, perhaps you are not connected to your beacon node",
+		)
+	}
 	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
