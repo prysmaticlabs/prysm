@@ -23,17 +23,17 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisTime()
+	return b.genesisTimeInternal()
 }
 
 // genesisTime of the beacon state as a uint64.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisTime() uint64 {
+func (b *BeaconState) genesisTimeInternal() uint64 {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.GenesisTime_
+	return b.genesisTime
 }
 
 // GenesisValidatorRoot of the beacon state.

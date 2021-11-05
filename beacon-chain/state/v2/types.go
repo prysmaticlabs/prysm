@@ -35,7 +35,7 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	GenesisTime_          uint64
+	genesisTime           uint64
 	state                 *ethpb.BeaconStateAltair
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool

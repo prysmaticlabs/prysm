@@ -3,6 +3,7 @@ package altair
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -103,7 +104,9 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err != nil {
 		return nil, err
 	}
-	newState.GenesisTime_ = state.GenesisTime()
+	if err = newState.SetGenesisTime(state.GenesisTime()); err != nil {
+		return nil, errors.Wrap(err, "could not set genesis time")
+	}
 	prevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err

@@ -178,10 +178,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 	s, err := v1.InitializeFromProto(state)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
 
-	s.GenesisTime_ = genesisTime
+	if err = s.SetGenesisTime(genesisTime); err != nil {
+		return nil, errors.Wrap(err, "could not set genesis time")
+	}
 
 	return s, nil
 }

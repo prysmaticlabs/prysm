@@ -216,10 +216,12 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 
 	s, err := stateAltair.InitializeFromProto(st)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
 
-	s.GenesisTime_ = genesisTime
+	if err = s.SetGenesisTime(genesisTime); err != nil {
+		return nil, errors.Wrap(err, "could not set genesis time")
+	}
 
 	return s, nil
 }

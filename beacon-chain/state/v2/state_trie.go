@@ -92,7 +92,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	dst := &BeaconState{
 		// Primitive types, safe to copy.
-		GenesisTime_: b.GenesisTime_,
+		genesisTime: b.genesisTime,
 		state: &ethpb.BeaconStateAltair{
 			// Primitive types, safe to copy.
 			Slot:             b.state.Slot,
@@ -265,7 +265,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return ssz.Uint64Root(b.GenesisTime_), nil
+		return ssz.Uint64Root(b.genesisTime), nil
 	case genesisValidatorRoot:
 		return b.state.GenesisValidatorsRoot, nil
 	case slot:

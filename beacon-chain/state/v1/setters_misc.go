@@ -43,7 +43,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.GenesisTime_ = val
+	b.genesisTime = val
 	b.markFieldAsDirty(genesisTime)
 	return nil
 }

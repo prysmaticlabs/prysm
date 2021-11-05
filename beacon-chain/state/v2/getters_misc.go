@@ -20,17 +20,17 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisTime()
+	return b.genesisTimeInternal()
 }
 
 // genesisTime of the beacon state as a uint64.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisTime() uint64 {
+func (b *BeaconState) genesisTimeInternal() uint64 {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.GenesisTime_
+	return b.genesisTime
 }
 
 // GenesisValidatorRoot of the beacon state.
@@ -74,7 +74,7 @@ func (b *BeaconState) genesisUnixTime() time.Time {
 		return time.Unix(0, 0)
 	}
 
-	return time.Unix(int64(b.GenesisTime_), 0)
+	return time.Unix(int64(b.genesisTime), 0)
 }
 
 // ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.

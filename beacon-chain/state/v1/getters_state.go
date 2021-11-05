@@ -26,7 +26,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 	defer b.lock.RUnlock()
 	// TODO: Change this to something else, not sure what yet
 	return &ethpb.BeaconState{
-		//GenesisTime:                 b.genesisTime(),
+		//GenesisTime:                 b.genesisTimeInternal(),
 		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		Slot:                        b.slot(),
 		Fork:                        b.fork(),
