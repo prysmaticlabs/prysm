@@ -76,12 +76,12 @@ func (b *BeaconState) blockRoots() *customtypes.StateRoots {
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) BlockRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
 	}
 	if b.state.BlockRoots == nil {
-		return nil, nil
+		return [32]byte{}, nil
 	}
 
 	b.lock.RLock()
@@ -93,13 +93,17 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 // blockRootAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
 	}
 	bRoots := make([][]byte, len(b.state.BlockRoots))
 	for i := range bRoots {
 		bRoots[i] = b.state.BlockRoots[i][:]
 	}
-	return bytesutil.SafeCopyRootAtIndex(bRoots, idx)
+	root, err := bytesutil.SafeCopyRootAtIndex(bRoots, idx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(root), nil
 }

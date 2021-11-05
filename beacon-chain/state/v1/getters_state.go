@@ -82,12 +82,12 @@ func (b *BeaconState) stateRoots() *customtypes.StateRoots {
 
 // StateRootAtIndex retrieves a specific state root based on an
 // input index value.
-func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) StateRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
 	}
 	if b.state.StateRoots == nil {
-		return nil, nil
+		return [32]byte{}, nil
 	}
 
 	b.lock.RLock()
@@ -99,15 +99,19 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 // stateRootAtIndex retrieves a specific state root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRootAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
 	}
 	sRoots := make([][]byte, len(b.state.StateRoots))
 	for i := range sRoots {
 		sRoots[i] = b.state.StateRoots[i][:]
 	}
-	return bytesutil.SafeCopyRootAtIndex(sRoots, idx)
+	root, err := bytesutil.SafeCopyRootAtIndex(sRoots, idx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(root), nil
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.
