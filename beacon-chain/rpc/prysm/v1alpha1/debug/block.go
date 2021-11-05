@@ -3,6 +3,7 @@ package debug
 import (
 	"context"
 	"fmt"
+	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -61,7 +62,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}
 
-	inclusionSlot := types.Slot(1<<64 - 1)
+	inclusionSlot := types.Slot(math.MaxUint64)
 	targetStates := make(map[[32]byte]state.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block().Body().Attestations() {
