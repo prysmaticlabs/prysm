@@ -249,7 +249,7 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
-
+	chainService.cfg.FinalizedStateAtStartUp = s
 	// Test the start function.
 	chainService.Start()
 
