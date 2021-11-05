@@ -159,7 +159,7 @@ func (s *Service) Start() {
 				HeadBlockHash:      common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
 				SafeBlockHash:      common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
 				FinalizedBlockHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
-			},catalyst.PayloadAttributesV1{
+			}, catalyst.PayloadAttributesV1{
 				ParentHash:   common.HexToHash("0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"),
 				Timestamp:    5,
 				Random:       common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
@@ -169,7 +169,12 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info(id)
+
+		data, err := s.cfg.ExecutionEngineCaller.GetPayload(context.Background(), id)
+		if err != nil {
+			return
+		}
+		log.Info(data)
 
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.cfg.AttService.SetGenesisTime(beaconState.GenesisTime())

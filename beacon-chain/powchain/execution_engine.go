@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/pkg/errors"
@@ -35,6 +34,12 @@ type ExecutionEngineCaller interface {
 	ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, error)
 }
 
+type GetPayloadRespond struct {
+	JsonRPC        string                     `json:"jsonrpc"`
+	ExecutableData *catalyst.ExecutableDataV1 `json:"result"`
+	Id             int                        `json:"id"`
+}
+
 type EngineRequest struct {
 	JsonRPC string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
@@ -53,13 +58,13 @@ type PreparePayloadRespond struct {
 }
 
 type ForkchoiceUpdatedRespond struct {
-	JsonRPC string           `json:"jsonrpc"`
+	JsonRPC string                  `json:"jsonrpc"`
 	Result  ForkchoiceUpdatedResult `json:"result"`
-	Id      int              `json:"id"`
+	Id      int                     `json:"id"`
 }
 
 type ForkchoiceUpdatedResult struct {
-	Status string `json:"status"`
+	Status    string `json:"status"`
 	PayloadID string `json:"payloadId"`
 }
 
@@ -162,43 +167,42 @@ func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeSta
 //GetPayload returns the most recent version of the execution payload that has been built since the corresponding
 //call to `PreparePayload` method. It returns the `ExecutionPayload` object.
 //Engine API definition:
-// https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_getpayload
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_getpayloadv1
 func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableDataV1, error) {
-	return nil, nil
-	//reqBody := &EngineRequest{
-	//	JsonRPC: "2.0",
-	//	Method:  "engine_getPayload",
-	//	Params:  []interface{}{hexutil.EncodeUint64(payloadID)},
-	//}
-	//enc, err := json.Marshal(reqBody)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
-	//if err != nil {
-	//	return nil, err
-	//}
-	//req.Header.Set("Content-Type", "application/json")
-	//client := &http.Client{}
-	//res, err := client.Do(req)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer func() {
-	//	if err := res.Body.Close(); err != nil {
-	//		panic(err)
-	//	}
-	//}()
-	//body, err := ioutil.ReadAll(res.Body)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var respond GetPayloadRespond
-	//if err := json.Unmarshal(body, &respond); err != nil {
-	//	return nil, err
-	//}
-	//
-	//return respond.ExecutableData, nil
+	reqBody := &EngineRequest{
+		JsonRPC: "2.0",
+		Method:  "engine_getPayloadV1",
+		Params:  []interface{}{hexutil.EncodeUint64(payloadID)},
+	}
+	enc, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var respond GetPayloadRespond
+	if err := json.Unmarshal(body, &respond); err != nil {
+		return nil, err
+	}
+
+	return respond.ExecutableData, nil
 }
 
 func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
@@ -363,12 +367,12 @@ func (s *Service) NotifyConsensusValidated(ctx context.Context, blockHash []byte
 
 // NotifyForkChoiceValidated notifies execution engine on fork choice updates.
 // Engine API definition:
-// https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md#engine_forkchoiceupdated
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_forkchoiceupdatedv1
 func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1, payloadAttributes catalyst.PayloadAttributesV1) (uint64, error) {
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_forkchoiceUpdatedV1",
-		Params: []interface{}{forkchoiceState, payloadAttributes},
+		Params:  []interface{}{forkchoiceState, payloadAttributes},
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
@@ -399,12 +403,9 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState
 		return 0, err
 	}
 
-	fmt.Println(common.FromHex(respond.Result.PayloadID))
 	id, ok := math.ParseUint64(respond.Result.PayloadID)
 	if !ok {
 		return 0, errors.New("could not parse hex to uint64")
 	}
-	str := strconv.FormatUint(id, 16)
-	fmt.Println(str)
 	return id, nil
 }
