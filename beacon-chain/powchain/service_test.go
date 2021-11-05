@@ -531,7 +531,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 
 	ctx := context.Background()
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(0), Root: headRoot[:]}))
-	s.cfg.FinalizedStateAtStartUp = emptyState
+	s.cfg.finalizedStateAtStartup = emptyState
 
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
