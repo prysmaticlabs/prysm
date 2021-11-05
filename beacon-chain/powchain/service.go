@@ -591,7 +591,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		fState := s.cfg.FinalizedStateAtStartUp
+		fState := s.cfg.finalizedStateAtStartup
 		if fState == nil || fState.IsNil() {
 			return errors.Errorf("finalized state with root %#x is nil", rt)
 		}
