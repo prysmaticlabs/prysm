@@ -138,22 +138,22 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-		cfg:                  &config{},
 		ctx:                  ctx,
 		cancel:               cancel,
 		chainStarted:         abool.New(),
+		cfg:                  &config{},
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		subHandler:           newSubTopicHandler(),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
+	r.rateLimiter = newRateLimiter(r.cfg.p2p)
+	r.subHandler = newSubTopicHandler()
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil
 		}
 	}
-	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	go r.registerHandlers()
 	go r.verifierRoutine()
@@ -251,7 +251,7 @@ func (s *Service) registerHandlers() {
 					if startTime.After(prysmTime.Now()) {
 						time.Sleep(prysmTime.Until(startTime))
 					}
-					log.WithField("starttime", startTime).Debug("chain started in sync service")
+					log.WithField("starttime", startTime).Debug("Chain started in sync service")
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
