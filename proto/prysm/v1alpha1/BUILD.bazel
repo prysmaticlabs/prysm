@@ -159,8 +159,6 @@ go_library(
         "cloners.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
-	"executionpayload.ssz.go",
-        "transaction.ssz.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [
