@@ -131,5 +131,5 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
-// 5fd7c14939d46dccf377b0cbedfb83e84f917c63
-replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211106013214-5fd7c14939d4
+// b48885c210a6c302c5e50adf3677a5518ab1f2a5
+replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211106161133-b48885c210a6
