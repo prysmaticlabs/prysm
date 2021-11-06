@@ -51,9 +51,9 @@ proto_library(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     exclude_objs = [
-        "ExecutionPayloadHeader",
-        "ExecutionPayload",
-        "Transaction",
+        #"ExecutionPayloadHeader",
+        #"ExecutionPayload",
+        #"Transaction",
     ],
     go_proto = ":go_proto",
     includes = [
