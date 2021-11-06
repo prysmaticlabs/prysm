@@ -5623,18 +5623,28 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (15) 'PreviousEpochParticipation'
-	if len(b.PreviousEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
+	{
+		elemIndx := hh.Index()
+		byteLen := uint64(len(PreviousEpochParticipation))
+		if byteLen > 1099511627776 {
+			err = ssz.ErrIncorrectListSize
+			return
+		}
+		hh.Append(PreviousEpochParticipation)
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
-	hh.PutBytes(b.PreviousEpochParticipation)
 
 	// Field (16) 'CurrentEpochParticipation'
-	if len(b.CurrentEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
+	{
+		elemIndx := hh.Index()
+		byteLen := uint64(len(CurrentEpochParticipation))
+		if byteLen > 1099511627776 {
+			err = ssz.ErrIncorrectListSize
+			return
+		}
+		hh.Append(CurrentEpochParticipation)
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
-	hh.PutBytes(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
@@ -7188,18 +7198,28 @@ func (b *BeaconStateMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (15) 'PreviousEpochParticipation'
-	if len(b.PreviousEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
+	{
+		elemIndx := hh.Index()
+		byteLen := uint64(len(PreviousEpochParticipation))
+		if byteLen > 1099511627776 {
+			err = ssz.ErrIncorrectListSize
+			return
+		}
+		hh.Append(PreviousEpochParticipation)
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
-	hh.PutBytes(b.PreviousEpochParticipation)
 
 	// Field (16) 'CurrentEpochParticipation'
-	if len(b.CurrentEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
+	{
+		elemIndx := hh.Index()
+		byteLen := uint64(len(CurrentEpochParticipation))
+		if byteLen > 1099511627776 {
+			err = ssz.ErrIncorrectListSize
+			return
+		}
+		hh.Append(CurrentEpochParticipation)
+		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
-	hh.PutBytes(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
