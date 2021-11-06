@@ -833,7 +833,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",  # keep
-	commit = "b48885c210a6c302c5e50adf3677a5518ab1f2a5",  # keep
+	commit = "9fb4b12560ec4f353f531b25a11d1be8f9513d9b",  # keep
         remote = "https://github.com/kasey/fastssz",  # keep
         nofuzz = True,
         replace = None,  # keep
