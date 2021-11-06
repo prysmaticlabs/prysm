@@ -634,8 +634,8 @@ func (b *BeaconBlockBodyAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.ProposerSlashings[i].HashTreeRootWith(hh); err != nil {
+		for _, elem := range b.ProposerSlashings {
+			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
 		}
@@ -650,8 +650,8 @@ func (b *BeaconBlockBodyAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.AttesterSlashings[i].HashTreeRootWith(hh); err != nil {
+		for _, elem := range b.AttesterSlashings {
+			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
 		}
@@ -666,8 +666,8 @@ func (b *BeaconBlockBodyAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.Attestations[i].HashTreeRootWith(hh); err != nil {
+		for _, elem := range b.Attestations {
+			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
 		}
@@ -682,8 +682,8 @@ func (b *BeaconBlockBodyAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.Deposits[i].HashTreeRootWith(hh); err != nil {
+		for _, elem := range b.Deposits {
+			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
 		}
@@ -698,8 +698,8 @@ func (b *BeaconBlockBodyAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.VoluntaryExits[i].HashTreeRootWith(hh); err != nil {
+		for _, elem := range b.VoluntaryExits {
+			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
 		}
