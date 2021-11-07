@@ -20,5 +20,5 @@ func (s *Service) syncCommitteeMessageSubscriber(_ context.Context, msg proto.Me
 		return errors.New("nil sync committee message")
 	}
 
-	return s.cfg.SyncCommsPool.SaveSyncCommitteeMessage(m)
+	return s.cfg.syncCommsPool.SaveSyncCommitteeMessage(m)
 }

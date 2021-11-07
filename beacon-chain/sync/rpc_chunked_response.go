@@ -20,7 +20,7 @@ import (
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk block.SignedBeaconBlock) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return WriteBlockChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), blk)
+	return WriteBlockChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), blk)
 }
 
 // WriteBlockChunk writes block chunk object to stream.
