@@ -425,7 +425,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
 }
 
-// Ensures that the latest attestion history is retrieved.
+// Ensures that the latest attestation history is retrieved.
 func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
 	if len(recs) == 0 {
 		return nil
