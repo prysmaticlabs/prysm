@@ -1,3 +1,4 @@
+//go:build libfuzzer
 // +build libfuzzer
 
 package sync
@@ -14,18 +15,17 @@ import (
 )
 
 // NewRegularSyncFuzz service without registering handlers.
-func NewRegularSyncFuzz(cfg *Config) *Service {
-	rLimiter := newRateLimiter(cfg.P2P)
+func NewRegularSyncFuzz(opts ...Option) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
-		cfg:                  cfg,
+		cfg:                  &config{},
 		ctx:                  ctx,
 		cancel:               cancel,
 		slotToPendingBlocks:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		rateLimiter:          rLimiter,
 	}
+	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	return r
 }
