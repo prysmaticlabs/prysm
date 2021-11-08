@@ -21,13 +21,13 @@ type ExecutionEngineCaller interface {
 	// PreparePayload is a wrapper on top of `CatalystClient` to abstract out `types.AssembleBlockParams`.
 	PreparePayload(ctx context.Context, parentHash []byte, timeStamp uint64, random []byte, feeRecipient []byte) (uint64, error)
 	// GetPayload is a wrapper on top of `CatalystClient`.
-	GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableData, error)
+	GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableDataV1, error)
 	// NotifyConsensusValidated is the wrapper on top of `CatalystClient` to abstract out `types.ConsensusValidatedParams`.
 	NotifyConsensusValidated(ctx context.Context, blockHash []byte, valid bool) error
 	// NotifyForkChoiceValidated is the wrapper on top of `CatalystClient` to abstract out `types.ConsensusValidatedParams`.
 	NotifyForkChoiceValidated(ctx context.Context, headBlockHash []byte, finalizedBlockHash []byte) error
 	// ExecutePayload is the wrapper on top of `CatalystClient` to abstract out `types.ForkChoiceParams`.
-	ExecutePayload(ctx context.Context, data *catalyst.ExecutableData) error
+	ExecutePayload(ctx context.Context, data *catalyst.ExecutableDataV1) error
 	// LatestExecutionBlock returns the latest execution block of the pow chain.
 	LatestExecutionBlock() (*ExecutionBlock, error)
 	// ExecutionBlockByHash returns the execution block of a given block hash.
@@ -53,7 +53,7 @@ type PreparePayloadRespond struct {
 
 type GetPayloadRespond struct {
 	JsonRPC        string                   `json:"jsonrpc"`
-	ExecutableData *catalyst.ExecutableData `json:"result"`
+	ExecutableData *catalyst.ExecutableDataV1 `json:"result"`
 	Id             int                      `json:"id"`
 }
 
@@ -111,7 +111,7 @@ func (s *Service) PreparePayload(ctx context.Context, parentHash []byte, timeSta
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_preparePayload",
-		Params: []interface{}{catalyst.AssembleBlockParams{
+		Params: []interface{}{catalyst.As{
 			ParentHash:   common.BytesToHash(parentHash),
 			Timestamp:    timeStamp,
 			Random:       common.BytesToHash(random),

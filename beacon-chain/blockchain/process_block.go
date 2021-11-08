@@ -629,7 +629,7 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 	return totalDifficultyReached && parentTotalDifficultyValid
 }
 
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableData {
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	txs := make([][]byte, len(payload.Transactions))
 	for i, t := range payload.Transactions {
 		txs[i] = t.GetOpaqueTransaction()
@@ -638,7 +638,7 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst
 	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
 	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
 
-	return &catalyst.ExecutableData{
+	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		Coinbase:      common.BytesToAddress(payload.Coinbase),

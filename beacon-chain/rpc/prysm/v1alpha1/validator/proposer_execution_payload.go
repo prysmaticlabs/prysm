@@ -25,10 +25,17 @@ import (
 //
 // Spec code:
 // def prepare_execution_payload(state: BeaconState,
-//                              pow_chain: Sequence[PowBlock],
+//                              pow_chain: Dict[Hash32, PowBlock],
+//                              finalized_block_hash: Hash32,
 //                              fee_recipient: ExecutionAddress,
 //                              execution_engine: ExecutionEngine) -> Optional[PayloadId]:
 //    if not is_merge_complete(state):
+//        is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
+//        is_activation_epoch_reached = get_current_epoch(state.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+//        if is_terminal_block_hash_set and not is_activation_epoch_reached:
+//            # Terminal block hash is set but activation epoch is not yet reached, no prepare payload call is needed
+//            return None
+//
 //        terminal_pow_block = get_terminal_pow_block(pow_chain)
 //        if terminal_pow_block is None:
 //            # Pre-merge, no prepare payload call is needed
@@ -39,9 +46,13 @@ import (
 //        # Post-merge, normal payload
 //        parent_hash = state.latest_execution_payload_header.block_hash
 //
-//    timestamp = compute_timestamp_at_slot(state, state.slot)
-//    random = get_randao_mix(state, get_current_epoch(state))
-//    return execution_engine.prepare_payload(parent_hash, timestamp, random, fee_recipient)
+//    # Set the forkchoice head and initiate the payload build process
+//    payload_attributes = PayloadAttributes(
+//        timestamp=compute_timestamp_at_slot(state, state.slot),
+//        random=get_randao_mix(state, get_current_epoch(state)),
+//        fee_recipient=fee_recipient,
+//    )
+//    return execution_engine.notify_forkchoice_updated(parent_hash, finalized_block_hash, payload_attributes)
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*ethpb.ExecutionPayload, error) {
 	// TODO_MERGE: Reuse the same head state as in building phase0 block attestation.
 	st, err := vs.HeadFetcher.HeadState(ctx)
@@ -61,6 +72,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	}
 
 	if !complete {
+		if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{} {
+			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
+			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
+			if !isActivationEpochReached {
+				return execution.EmptyPayload(), nil
+			}
+		}
+
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHash(ctx)
 		if err != nil {
 			return nil, err
@@ -100,7 +119,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	return executableDataToExecutionPayload(data), nil
 }
 
-func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.ExecutionPayload {
+func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *ethpb.ExecutionPayload {
 	txs := make([]*ethpb.Transaction, len(ed.Transactions))
 	for i, t := range ed.Transactions {
 		txs[i] = &ethpb.Transaction{
@@ -129,13 +148,13 @@ func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.Execut
 // This returns the valid terminal block hash with an existence bool value.
 //
 // Spec code:
-// def get_terminal_pow_block(pow_chain: Sequence[PowBlock]) -> Optional[PowBlock]:
+// def get_terminal_pow_block(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
 //    if TERMINAL_BLOCK_HASH != Hash32():
 //        # Terminal block hash override takes precedence over terminal total difficulty
-//        pow_block_overrides = [block for block in pow_chain if block.block_hash == TERMINAL_BLOCK_HASH]
-//        if not any(pow_block_overrides):
+//        if TERMINAL_BLOCK_HASH in pow_chain:
+//            return pow_chain[TERMINAL_BLOCK_HASH]
+//        else:
 //            return None
-//        return pow_block_overrides[0]
 //
 //    return get_pow_block_at_terminal_total_difficulty(pow_chain)
 func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
@@ -159,10 +178,10 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 // This returns the valid terminal block hash based on total difficulty.
 //
 // Spec code:
-// def get_pow_block_at_terminal_total_difficulty(pow_chain: Sequence[PowBlock]) -> Optional[PowBlock]:
+// def get_pow_block_at_terminal_total_difficulty(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
 //    # `pow_chain` abstractly represents all blocks in the PoW chain
 //    for block in pow_chain:
-//        parent = get_pow_block(block.parent_hash)
+//        parent = pow_chain[block.parent_hash]
 //        block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //        parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //        if block_reached_ttd and not parent_reached_ttd:
