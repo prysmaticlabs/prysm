@@ -74,7 +74,6 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
 	s := &ethpb.BeaconStateAltair{
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
-		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
@@ -106,6 +105,9 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	}
 	if err = newState.SetGenesisTime(state.GenesisTime()); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
+	}
+	if err = newState.SetSlot(state.Slot()); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
 	}
 	prevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {

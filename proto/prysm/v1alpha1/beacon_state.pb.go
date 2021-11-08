@@ -36,7 +36,6 @@ type BeaconState struct {
 	unknownFields protoimpl.UnknownFields
 
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
-	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader           *BeaconBlockHeader                                                             `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                  *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.StateRoots     `protobuf:"bytes,2002,opt,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots" ssz-size:"8192,32"`
@@ -94,13 +93,6 @@ func (x *BeaconState) GetGenesisValidatorsRoot() github_com_prysmaticlabs_prysm_
 		return x.GenesisValidatorsRoot
 	}
 	return github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32([32]byte{})
-}
-
-func (x *BeaconState) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
-	if x != nil {
-		return x.Slot
-	}
-	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconState) GetFork() *Fork {
@@ -234,7 +226,6 @@ type BeaconStateAltair struct {
 	sizeCache                   protoimpl.SizeCache
 	unknownFields               protoimpl.UnknownFields
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
-	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader           *BeaconBlockHeader                                                             `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                  *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.StateRoots     `protobuf:"bytes,2002,opt,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots" ssz-size:"8192,32"`
@@ -295,13 +286,6 @@ func (x *BeaconStateAltair) GetGenesisValidatorsRoot() github_com_prysmaticlabs_
 		return x.GenesisValidatorsRoot
 	}
 	return github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32([32]byte{})
-}
-
-func (x *BeaconStateAltair) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
-	if x != nil {
-		return x.Slot
-	}
-	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconStateAltair) GetFork() *Fork {

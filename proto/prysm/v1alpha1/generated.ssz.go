@@ -3046,9 +3046,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
 
-	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3253,9 +3250,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
-
-	// Field (2) 'Slot'
-	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -3523,9 +3517,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])
 
-	// Field (2) 'Slot'
-	hh.PutUint64(uint64(b.Slot))
-
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
 		return
@@ -3715,9 +3706,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
-
-	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -3924,9 +3912,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
-
-	// Field (2) 'Slot'
-	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -4204,9 +4189,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])
-
-	// Field (2) 'Slot'
-	hh.PutUint64(uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
