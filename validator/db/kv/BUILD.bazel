@@ -21,7 +21,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
     visibility = [
         "//cmd:__subpackages__",
-        "//validator:__subpackages__"
+        "//validator:__subpackages__",
     ],
     deps = [
         "//async/abool:go_default_library",
