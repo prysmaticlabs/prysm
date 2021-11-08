@@ -3,12 +3,14 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "doc.go",
         "export.go",
+        "format.go",
         "helpers.go",
         "import.go",
         "log.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format",
+    importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection-history",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//config/params:go_default_library",
@@ -18,7 +20,6 @@ go_library(
         "//proto/prysm/v1alpha1/slashings:go_default_library",
         "//validator/db:go_default_library",
         "//validator/db/kv:go_default_library",
-        "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",
         "@com_github_k0kubun_go_ansi//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -42,7 +43,6 @@ go_test(
         "//testing/require:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
-        "//validator/slashing-protection/local/standard-protection-format/format:go_default_library",
         "//validator/testing:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
