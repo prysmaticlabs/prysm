@@ -1,4 +1,4 @@
-package interchangeformat_test
+package slashingprotectionhistory_test
 
 import (
 	"bytes"
@@ -12,8 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	slashingprotectionhistory "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -31,18 +30,18 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	wanted, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We encode the standard slashing protection struct into a JSON format.
+	// We encode the standard slashing protection struct into a JSON slashingprotectionhistory.
 	blob, err := json.Marshal(wanted)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = slashingprotectionhistory.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
-	eipStandard, err := protectionFormat.ExportStandardProtectionJSON(ctx, validatorDB)
+	eipStandard, err := slashingprotectionhistory.ExportStandardProtectionJSON(ctx, validatorDB)
 	require.NoError(t, err)
 
 	// We compare the metadata fields from import to export.
@@ -52,7 +51,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
 
-	dataByPubKey := make(map[string]*format.ProtectionData)
+	dataByPubKey := make(map[string]*slashingprotectionhistory.ProtectionData)
 	for _, item := range wanted.Data {
 		dataByPubKey[item.Pubkey] = item
 	}
@@ -61,7 +60,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 		require.Equal(t, true, ok)
 		require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
 		require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
-		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
+		wantedAttsByRoot := make(map[string]*slashingprotectionhistory.SignedAttestation)
 		for _, att := range want.SignedAttestations {
 			wantedAttsByRoot[att.SigningRoot] = att
 		}
@@ -80,18 +79,18 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	pubKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, pubKeys)
-	wanted := &format.EIPSlashingProtectionFormat{
+	wanted := &slashingprotectionhistory.EIPSlashingProtectionFormat{
 		Metadata: struct {
 			InterchangeFormatVersion string `json:"interchange_format_version"`
 			GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 		}{
-			InterchangeFormatVersion: format.InterchangeFormatVersion,
+			InterchangeFormatVersion: slashingprotectionhistory.InterchangeFormatVersion,
 			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		Data: []*format.ProtectionData{
+		Data: []*slashingprotectionhistory.ProtectionData{
 			{
 				Pubkey: fmt.Sprintf("%#x", pubKeys[0]),
-				SignedAttestations: []*format.SignedAttestation{
+				SignedAttestations: []*slashingprotectionhistory.SignedAttestation{
 					{
 						SourceEpoch: "1",
 						TargetEpoch: "2",
@@ -101,22 +100,22 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 						TargetEpoch: "9",
 					},
 				},
-				SignedBlocks: make([]*format.SignedBlock, 0),
+				SignedBlocks: make([]*slashingprotectionhistory.SignedBlock, 0),
 			},
 		},
 	}
-	// We encode the standard slashing protection struct into a JSON format.
+	// We encode the standard slashing protection struct into a JSON slashingprotectionhistory.
 	blob, err := json.Marshal(wanted)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = slashingprotectionhistory.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
-	eipStandard, err := protectionFormat.ExportStandardProtectionJSON(ctx, validatorDB)
+	eipStandard, err := slashingprotectionhistory.ExportStandardProtectionJSON(ctx, validatorDB)
 	require.NoError(t, err)
 
 	// We compare the metadata fields from import to export.
@@ -142,13 +141,13 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	standardProtectionFormat, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We encode the standard slashing protection struct into a JSON format.
+	// We encode the standard slashing protection struct into a JSON slashingprotectionhistory.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = slashingprotectionhistory.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
@@ -206,11 +205,11 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey0 := standardProtectionFormat.Data[0].Pubkey
 	standardProtectionFormat.Data[0].SignedBlocks = append(
 		standardProtectionFormat.Data[0].SignedBlocks,
-		&format.SignedBlock{
+		&slashingprotectionhistory.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&format.SignedBlock{
+		&slashingprotectionhistory.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
 		},
@@ -221,12 +220,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey1 := standardProtectionFormat.Data[1].Pubkey
 	standardProtectionFormat.Data[1].SignedAttestations = append(
 		standardProtectionFormat.Data[1].SignedAttestations,
-		&format.SignedAttestation{
+		&slashingprotectionhistory.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&format.SignedAttestation{
+		&slashingprotectionhistory.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
@@ -238,25 +237,25 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey2 := standardProtectionFormat.Data[2].Pubkey
 	standardProtectionFormat.Data[2].SignedAttestations = append(
 		standardProtectionFormat.Data[2].SignedAttestations,
-		&format.SignedAttestation{
+		&slashingprotectionhistory.SignedAttestation{
 			TargetEpoch: "800",
 			SourceEpoch: "805",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{4}),
 		},
-		&format.SignedAttestation{
+		&slashingprotectionhistory.SignedAttestation{
 			TargetEpoch: "801",
 			SourceEpoch: "804",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{5}),
 		},
 	)
 
-	// We encode the standard slashing protection struct into a JSON format.
+	// We encode the standard slashing protection struct into a JSON slashingprotectionhistory.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = slashingprotectionhistory.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Assert the three slashable keys in the imported JSON were saved to the database.
@@ -292,14 +291,14 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// We replace a slot of one of the blocks with junk data.
 	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
 
-	// We encode the standard slashing protection struct into a JSON format.
+	// We encode the standard slashing protection struct into a JSON slashingprotectionhistory.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database and check that
 	// we obtain an error during the import process.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = slashingprotectionhistory.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	assert.NotNil(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and

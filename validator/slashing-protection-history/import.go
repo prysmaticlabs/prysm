@@ -1,4 +1,4 @@
-package interchangeformat
+package slashingprotectionhistory
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -27,7 +26,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
 	}
-	interchangeJSON := &format.EIPSlashingProtectionFormat{}
+	interchangeJSON := &EIPSlashingProtectionFormat{}
 	if err := json.Unmarshal(encodedJSON, interchangeJSON); err != nil {
 		return errors.Wrap(err, "could not unmarshal slashing protection JSON file")
 	}
@@ -137,14 +136,14 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	return nil
 }
 
-func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *format.EIPSlashingProtectionFormat) error {
+func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
-	if version != format.InterchangeFormatVersion {
+	if version != InterchangeFormatVersion {
 		return fmt.Errorf(
 			"slashing protection JSON version '%s' is not supported, wanted '%s'",
 			version,
-			format.InterchangeFormatVersion,
+			InterchangeFormatVersion,
 		)
 	}
 
@@ -186,8 +185,8 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 // "0x2932232930: {
 //   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
 //  }
-func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedBlock, error) {
-	signedBlocksByPubKey := make(map[[48]byte][]*format.SignedBlock)
+func parseBlocksForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedBlock, error) {
+	signedBlocksByPubKey := make(map[[48]byte][]*SignedBlock)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -218,8 +217,8 @@ func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte
 // "0x2932232930: {
 //   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
 //  }
-func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedAttestation, error) {
-	signedAttestationsByPubKey := make(map[[48]byte][]*format.SignedAttestation)
+func parseAttestationsForUniquePublicKeys(data []*ProtectionData) (map[[48]byte][]*SignedAttestation, error) {
+	signedAttestationsByPubKey := make(map[[48]byte][]*SignedAttestation)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -311,7 +310,7 @@ func filterSlashablePubKeysFromAttestations(
 	return slashablePubKeys, nil
 }
 
-func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
+func transformSignedBlocks(ctx context.Context, signedBlocks []*SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := SlotFromString(proposal.Slot)
@@ -336,7 +335,7 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlo
 	}, nil
 }
 
-func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
+func transformSignedAttestations(pubKey [48]byte, atts []*SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := EpochFromString(attestation.TargetEpoch)

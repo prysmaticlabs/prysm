@@ -1,4 +1,4 @@
-package interchangeformat
+package slashingprotectionhistory
 
 import (
 	"fmt"

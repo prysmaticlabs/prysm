@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 )
 
 // MockSlashingProtectionJSON creates a mock, full slashing protection JSON struct
@@ -18,17 +18,17 @@ func MockSlashingProtectionJSON(
 	publicKeys [][48]byte,
 	attestingHistories [][]*kv.AttestationRecord,
 	proposalHistories []kv.ProposalHistoryForPubkey,
-) (*format.EIPSlashingProtectionFormat, error) {
-	standardProtectionFormat := &format.EIPSlashingProtectionFormat{}
+) (*slashingprotection.EIPSlashingProtectionFormat, error) {
+	standardProtectionFormat := &slashingprotection.EIPSlashingProtectionFormat{}
 	standardProtectionFormat.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{32}, 32))
-	standardProtectionFormat.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
+	standardProtectionFormat.Metadata.InterchangeFormatVersion = slashingprotection.InterchangeFormatVersion
 	for i := 0; i < len(publicKeys); i++ {
-		data := &format.ProtectionData{
+		data := &slashingprotection.ProtectionData{
 			Pubkey: fmt.Sprintf("%#x", publicKeys[i]),
 		}
 		if len(attestingHistories) > 0 {
 			for _, att := range attestingHistories[i] {
-				data.SignedAttestations = append(data.SignedAttestations, &format.SignedAttestation{
+				data.SignedAttestations = append(data.SignedAttestations, &slashingprotection.SignedAttestation{
 					TargetEpoch: fmt.Sprintf("%d", att.Target),
 					SourceEpoch: fmt.Sprintf("%d", att.Source),
 					SigningRoot: fmt.Sprintf("%#x", att.SigningRoot),
@@ -37,7 +37,7 @@ func MockSlashingProtectionJSON(
 		}
 		if len(proposalHistories) > 0 {
 			for _, proposal := range proposalHistories[i].Proposals {
-				block := &format.SignedBlock{
+				block := &slashingprotection.SignedBlock{
 					Slot:        fmt.Sprintf("%d", proposal.Slot),
 					SigningRoot: fmt.Sprintf("%#x", proposal.SigningRoot),
 				}

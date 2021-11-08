@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection-history/local/standard-protection-format"
 )
 
 type eip3076TestCase struct {
