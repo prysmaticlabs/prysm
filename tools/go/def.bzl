@@ -58,10 +58,13 @@ def go_library(name, **kwargs):
     if "gc_goopts" in kwargs:
         go_goopts = kwargs["gc_goopts"]
 
-    gc_goopts += select({
-        "@prysm//tools/go:libfuzz_enabled": ["-d=libfuzzer,checkptr"],
-        "//conditions:default": [],
-    })
+    if "nofuzz" not in kwargs or not kwargs["nofuzz"]:
+        gc_goopts += select({
+            "@prysm//tools/go:libfuzz_enabled": ["-d=libfuzzer,checkptr"],
+            "//conditions:default": [],
+        })
+    if "nofuzz" in kwargs:
+        kwargs.pop("nofuzz")
 
     kwargs["gc_goopts"] = gc_goopts
     _go_library(name = name, **kwargs)
