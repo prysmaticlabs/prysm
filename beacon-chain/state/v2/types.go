@@ -36,17 +36,23 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	genesisTime           uint64
-	slot                  eth2types.Slot
-	state                 *ethpb.BeaconStateAltair
-	lock                  sync.RWMutex
-	dirtyFields           map[types.FieldIndex]bool
-	dirtyIndices          map[types.FieldIndex][]uint64
-	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
-	rebuildTrie           map[types.FieldIndex]bool
-	valMapHandler         *stateutil.ValidatorMapHandler
-	merkleLayers          [][][]byte
-	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
+	genesisTime                uint64
+	slot                       eth2types.Slot
+	eth1DepositIndex           uint64
+	balances                   []uint64
+	slashings                  []uint64
+	previousEpochParticipation []byte
+	currentEpochParticipation  []byte
+	inactivityScores           []uint64
+	state                      *ethpb.BeaconStateAltair
+	lock                       sync.RWMutex
+	dirtyFields                map[types.FieldIndex]bool
+	dirtyIndices               map[types.FieldIndex][]uint64
+	stateFieldLeaves           map[types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie                map[types.FieldIndex]bool
+	valMapHandler              *stateutil.ValidatorMapHandler
+	merkleLayers               [][][]byte
+	sharedFieldReferences      map[types.FieldIndex]*stateutil.Reference
 }
 
 // Field Aliases for values from the types package.

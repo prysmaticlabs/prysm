@@ -209,28 +209,28 @@ func (b *BeaconState) Balances() []uint64 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balances()
+	return b.balancesInternal()
 }
 
 // balances of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balances() []uint64 {
+func (b *BeaconState) balancesInternal() []uint64 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return nil
 	}
 
-	res := make([]uint64, len(b.state.Balances))
-	copy(res, b.state.Balances)
+	res := make([]uint64, len(b.balances))
+	copy(res, b.balances)
 	return res
 }
 
@@ -239,17 +239,17 @@ func (b *BeaconState) BalanceAtIndex(idx types.ValidatorIndex) (uint64, error) {
 	if !b.hasInnerState() {
 		return 0, ErrNilInnerState
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return 0, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if uint64(len(b.state.Balances)) <= uint64(idx) {
+	if uint64(len(b.balances)) <= uint64(idx) {
 		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
-	return b.state.Balances[idx], nil
+	return b.balances[idx], nil
 }
 
 // BalancesLength returns the length of the balances slice.
@@ -257,7 +257,7 @@ func (b *BeaconState) BalancesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return 0
 	}
 
@@ -272,43 +272,43 @@ func (b *BeaconState) Slashings() []uint64 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Slashings == nil {
+	if b.slashings == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slashings()
+	return b.slashingsInternal()
 }
 
 // slashings of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slashings() []uint64 {
+func (b *BeaconState) slashingsInternal() []uint64 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Slashings == nil {
+	if b.slashings == nil {
 		return nil
 	}
 
-	res := make([]uint64, len(b.state.Slashings))
-	copy(res, b.state.Slashings)
+	res := make([]uint64, len(b.slashings))
+	copy(res, b.slashings)
 	return res
 }
 
 // inactivityScores of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) inactivityScores() []uint64 {
+func (b *BeaconState) inactivityScoresInternal() []uint64 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.InactivityScores == nil {
+	if b.inactivityScores == nil {
 		return nil
 	}
 
-	res := make([]uint64, len(b.state.InactivityScores))
-	copy(res, b.state.InactivityScores)
+	res := make([]uint64, len(b.inactivityScores))
+	copy(res, b.inactivityScores)
 	return res
 }
 
@@ -317,12 +317,12 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
-	if b.state.InactivityScores == nil {
+	if b.inactivityScores == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScores(), nil
+	return b.inactivityScoresInternal(), nil
 }

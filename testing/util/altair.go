@@ -143,11 +143,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		},
 
 		// Validator registry fields.
-		Validators:                 preState.Validators(),
-		Balances:                   preState.Balances(),
-		PreviousEpochParticipation: prevEpochParticipation,
-		CurrentEpochParticipation:  currEpochParticipation,
-		InactivityScores:           scores,
+		Validators: preState.Validators(),
 
 		// Randomness and committees.
 		RandaoMixes: &randaoMixes,
@@ -170,12 +166,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		HistoricalRoots: [][32]byte{},
 		BlockRoots:      &blockRoots,
 		StateRoots:      &stateRoots,
-		Slashings:       slashings,
 
 		// Eth1 data.
-		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: preState.Eth1DepositIndex(),
+		Eth1Data:      eth1Data,
+		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
@@ -222,7 +216,25 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.Wrap(err, "could not set genesis time")
 	}
 	if err = s.SetSlot(0); err != nil {
-		return nil, errors.Wrap(err, "could not set state")
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = s.SetBalances(preState.Balances()); err != nil {
+		return nil, errors.Wrap(err, "could not set balances")
+	}
+	if err = s.SetPreviousParticipationBits(prevEpochParticipation); err != nil {
+		return nil, errors.Wrap(err, "could not set previous epoch participation")
+	}
+	if err = s.SetCurrentParticipationBits(currEpochParticipation); err != nil {
+		return nil, errors.Wrap(err, "could not set current epoch participation")
+	}
+	if err = s.SetInactivityScores(scores); err != nil {
+		return nil, errors.Wrap(err, "could not set inactivity scores")
+	}
+	if err = s.SetSlashings(slashings); err != nil {
+		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
 	}
 
 	return s, nil
@@ -237,19 +249,13 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 			Epoch:           0,
 		},
 		// Validator registry fields.
-		Validators:       []*ethpb.Validator{},
-		Balances:         []uint64{},
-		InactivityScores: []uint64{},
+		Validators: []*ethpb.Validator{},
 
-		JustificationBits:          []byte{0},
-		HistoricalRoots:            [][32]byte{},
-		CurrentEpochParticipation:  []byte{},
-		PreviousEpochParticipation: []byte{},
-
+		JustificationBits: []byte{0},
+		HistoricalRoots:   [][32]byte{},
 		// Eth1 data.
-		Eth1Data:         &ethpb.Eth1Data{},
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: 0,
+		Eth1Data:      &ethpb.Eth1Data{},
+		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
 	s, err := stateAltair.InitializeFromProto(st)
 	if err != nil {
@@ -259,6 +265,22 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 	if err = s.SetSlot(0); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
 	}
+	if err = s.SetBalances([]uint64{}); err != nil {
+		return nil, errors.Wrap(err, "could not set balances")
+	}
+	if err = s.SetInactivityScores([]uint64{}); err != nil {
+		return nil, errors.Wrap(err, "could not set inactivity scores")
+	}
+	if err = s.SetPreviousParticipationBits([]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set previous participation bits")
+	}
+	if err = s.SetCurrentParticipationBits([]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set current participation bits")
+	}
+	if err = s.SetEth1DepositIndex(0); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+
 	return s, nil
 }
 

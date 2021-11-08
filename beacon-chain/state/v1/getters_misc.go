@@ -153,11 +153,11 @@ func (b *BeaconState) balancesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return 0
 	}
 
-	return len(b.state.Balances)
+	return len(b.balances)
 }
 
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte

@@ -76,16 +76,16 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.eth1DepositIndex()
+	return b.eth1DepositIndexInternal()
 }
 
 // eth1DepositIndex corresponds to the index of the deposit made to the
 // validator deposit contract at the time of this state's eth1 data.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DepositIndex() uint64 {
+func (b *BeaconState) eth1DepositIndexInternal() uint64 {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.state.Eth1DepositIndex
+	return b.eth1DepositIndex
 }

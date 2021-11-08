@@ -140,7 +140,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 
 	// Eth1DepositIndex root.
 	eth1DepositIndexBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(eth1DepositIndexBuf, state.eth1DepositIndex())
+	binary.LittleEndian.PutUint64(eth1DepositIndexBuf, state.eth1DepositIndexInternal())
 	eth1DepositBuf := bytesutil.ToBytes32(eth1DepositIndexBuf)
 	fieldRoots[10] = eth1DepositBuf[:]
 
@@ -152,7 +152,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances())
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balancesInternal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
@@ -170,7 +170,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[13] = randaoRootsRoot[:]
 
 	// Slashings array root.
-	slashingsRootsRoot, err := ssz.SlashingsRoot(state.slashings())
+	slashingsRootsRoot, err := ssz.SlashingsRoot(state.slashingsInternal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute slashings merkleization")
 	}

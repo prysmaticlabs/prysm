@@ -44,6 +44,9 @@ var ErrNilInnerState = errors.New("nil inner state")
 type BeaconState struct {
 	genesisTime           uint64
 	slot                  eth2types.Slot
+	eth1DepositIndex      uint64
+	balances              []uint64
+	slashings             []uint64
 	state                 *ethpb.BeaconState
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
