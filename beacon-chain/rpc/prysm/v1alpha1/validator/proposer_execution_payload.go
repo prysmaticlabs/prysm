@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -107,7 +108,31 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		return nil, err
 	}
 
-	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, parentHash, uint64(t.Unix()), random, params.BeaconConfig().FeeRecipient.Bytes())
+	finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
+	if err != nil {
+		return nil, err
+	}
+	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+	if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+		if err != nil {
+			return nil, err
+		}
+		finalizedBlockHash = finalizedPayload.BlockHash
+	}
+
+	f := catalyst.ForkchoiceStateV1{
+		HeadBlockHash:      common.BytesToHash(parentHash),
+		SafeBlockHash:      common.BytesToHash(parentHash),
+		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+	}
+	p := catalyst.PayloadAttributesV1{
+		ParentHash:   common.BytesToHash(parentHash),
+		Timestamp:    uint64(t.Unix()),
+		Random:       common.BytesToHash(random),
+		FeeRecipient: params.BeaconConfig().FeeRecipient,
+	}
+	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}

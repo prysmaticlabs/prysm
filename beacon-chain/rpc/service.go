@@ -196,6 +196,7 @@ func (s *Service) Start() {
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
+		BeaconDB:               s.cfg.BeaconDB,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
