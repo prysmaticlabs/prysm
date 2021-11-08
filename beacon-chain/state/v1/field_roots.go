@@ -7,7 +7,6 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -49,14 +48,14 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(ctx context.Context, state state.BeaconState) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *BeaconState) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state state.BeaconState) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
 	defer span.End()
 
@@ -67,7 +66,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
 
 	// Genesis time root.
-	genesisRoot := ssz.Uint64Root(state.GenesisTime())
+	genesisRoot := ssz.Uint64Root(state.genesisTimeInternal())
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
