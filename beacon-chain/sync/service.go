@@ -66,23 +66,23 @@ var (
 // Common type for functional p2p validation options.
 type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
-// config to hold dependencies for the sync service.
-type config struct {
-	attestationNotifier     operation.Notifier
-	p2p                     p2p.P2P
-	beaconDB                db.NoHeadAccessDatabase
-	attPool                 attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingPool            slashings.PoolManager
-	syncCommsPool           synccommittee.Pool
-	chain                   blockchainService
-	initialSync             Checker
-	stateNotifier           statefeed.Notifier
-	blockNotifier           blockfeed.Notifier
-	operationNotifier       operation.Notifier
-	stateGen                *stategen.State
-	slasherAttestationsFeed *event.Feed
-	slasherBlockHeadersFeed *event.Feed
+// Config to set up the regular sync service.
+type Config struct {
+	AttestationNotifier     operation.Notifier
+	P2P                     p2p.P2P
+	DB                      db.NoHeadAccessDatabase
+	AttPool                 attestations.Pool
+	ExitPool                voluntaryexits.PoolManager
+	SlashingPool            slashings.PoolManager
+	SyncCommsPool           synccommittee.Pool
+	Chain                   blockchainService
+	InitialSync             Checker
+	StateNotifier           statefeed.Notifier
+	BlockNotifier           blockfeed.Notifier
+	OperationNotifier       operation.Notifier
+	StateGen                *stategen.State
+	SlasherAttestationsFeed *event.Feed
+	SlasherBlockHeadersFeed *event.Feed
 }
 
 // This defines the interface for interacting with block chain service
@@ -100,7 +100,7 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *config
+	cfg                              *Config
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	slotToPendingBlocks              *gcache.Cache
@@ -134,26 +134,23 @@ type Service struct {
 }
 
 // NewService initializes new regular sync service.
-func NewService(ctx context.Context, opts ...Option) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+
+	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
+		cfg:                  cfg,
 		ctx:                  ctx,
 		cancel:               cancel,
 		chainStarted:         abool.New(),
-		cfg:                  &config{},
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		subHandler:           newSubTopicHandler(),
+		rateLimiter:          rLimiter,
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
-	for _, opt := range opts {
-		if err := opt(r); err != nil {
-			return nil
-		}
-	}
-	r.subHandler = newSubTopicHandler()
-	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	go r.registerHandlers()
 	go r.verifierRoutine()
@@ -165,12 +162,12 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 func (s *Service) Start() {
 	s.initCaches()
 
-	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
-	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
+	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
+	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
 		return nil
 	})
-	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
+	s.cfg.P2P.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
@@ -190,11 +187,11 @@ func (s *Service) Stop() error {
 		}
 	}()
 	// Removing RPC Stream handlers.
-	for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-		s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(p))
+	for _, p := range s.cfg.P2P.Host().Mux().Protocols() {
+		s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(p))
 	}
 	// Deregister Topic Subscribers.
-	for _, t := range s.cfg.p2p.PubSub().GetTopics() {
+	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
 		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
@@ -205,8 +202,8 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.chain.CurrentSlot()) &&
-		headEpoch+1 < s.cfg.p2p.Peers().HighestEpoch() {
+	if headEpoch := slots.ToEpoch(s.cfg.Chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.Chain.CurrentSlot()) &&
+		headEpoch+1 < s.cfg.P2P.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
 	return nil
@@ -229,7 +226,7 @@ func (s *Service) initCaches() {
 func (s *Service) registerHandlers() {
 	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	for {
 		select {
@@ -266,7 +263,7 @@ func (s *Service) registerHandlers() {
 					log.WithError(err).Error("Could not retrieve current fork digest")
 					return
 				}
-				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())))
+				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
 				go s.forkWatcher()
 				return

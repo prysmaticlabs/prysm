@@ -38,7 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -47,7 +46,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -96,7 +94,6 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
 }
 
@@ -159,9 +156,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.startStateGen(); err != nil {
-		return nil, err
-	}
+	beacon.startStateGen()
 
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
@@ -434,34 +429,8 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen() error {
+func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db)
-
-	cp, err := b.db.FinalizedCheckpoint(b.ctx)
-	if err != nil {
-		return err
-	}
-
-	r := bytesutil.ToBytes32(cp.Root)
-	// Consider edge case where finalized root are zeros instead of genesis root hash.
-	if r == params.BeaconConfig().ZeroHash {
-		genesisBlock, err := b.db.GenesisBlock(b.ctx)
-		if err != nil {
-			return err
-		}
-		if genesisBlock != nil && !genesisBlock.IsNil() {
-			r, err = genesisBlock.Block().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	b.finalizedStateAtStartUp, err = b.stateGen.StateByRoot(b.ctx, r)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
@@ -541,7 +510,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithAttestationService(attService),
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
-		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 	)
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
@@ -562,7 +530,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if err != nil {
 		return err
 	}
-
 	// skipcq: CRT-D0001
 	opts := append(
 		b.serviceFlagOpts.powchainFlagOpts,
@@ -572,7 +539,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 		powchain.WithStateNotifier(b),
 		powchain.WithStateGen(b.stateGen),
 		powchain.WithBeaconNodeStatsUpdater(bs),
-		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
 	)
 	web3Service, err := powchain.NewService(b.ctx, opts...)
 	if err != nil {
@@ -598,24 +564,24 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	rs := regularsync.NewService(
-		b.ctx,
-		regularsync.WithDatabase(b.db),
-		regularsync.WithP2P(b.fetchP2P()),
-		regularsync.WithChainService(chainService),
-		regularsync.WithInitialSync(initSync),
-		regularsync.WithStateNotifier(b),
-		regularsync.WithBlockNotifier(b),
-		regularsync.WithAttestationNotifier(b),
-		regularsync.WithOperationNotifier(b),
-		regularsync.WithAttestationPool(b.attestationPool),
-		regularsync.WithExitPool(b.exitPool),
-		regularsync.WithSlashingPool(b.slashingsPool),
-		regularsync.WithSyncCommsPool(b.syncCommitteePool),
-		regularsync.WithStateGen(b.stateGen),
-		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
-		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
-	)
+	rs := regularsync.NewService(b.ctx, &regularsync.Config{
+		DB:                      b.db,
+		P2P:                     b.fetchP2P(),
+		Chain:                   chainService,
+		InitialSync:             initSync,
+		StateNotifier:           b,
+		BlockNotifier:           b,
+		AttestationNotifier:     b,
+		OperationNotifier:       b,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		SyncCommsPool:           b.syncCommitteePool,
+		StateGen:                b.stateGen,
+		SlasherAttestationsFeed: b.slasherAttestationsFeed,
+		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
+	})
+
 	return b.services.RegisterService(rs)
 }
 

@@ -77,14 +77,14 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &Service{
-		cfg: &config{
-			p2p: p,
-			chain: &mock.ChainService{
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
 				State:   s,
 				Genesis: time.Now(),
 			},
-			initialSync:       &mockSync.Sync{IsSyncing: false},
-			operationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			InitialSync:       &mockSync.Sync{IsSyncing: false},
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
@@ -105,7 +105,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	// Subscribe to operation notifications.
 	opChannel := make(chan *feed.Event, 1)
-	opSub := r.cfg.operationNotifier.OperationFeed().Subscribe(opChannel)
+	opSub := r.cfg.OperationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
 	res, err := r.validateVoluntaryExit(ctx, "", m)
@@ -139,12 +139,12 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	// Set state slot to 1 to cause exit object fail to verify.
 	require.NoError(t, s.SetSlot(1))
 	r := &Service{
-		cfg: &config{
-			p2p: p,
-			chain: &mock.ChainService{
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
 				State: s,
 			},
-			initialSync: &mockSync.Sync{IsSyncing: false},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
@@ -172,12 +172,12 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &Service{
-		cfg: &config{
-			p2p: p,
-			chain: &mock.ChainService{
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
 				State: s,
 			},
-			initialSync: &mockSync.Sync{IsSyncing: true},
+			InitialSync: &mockSync.Sync{IsSyncing: true},
 		},
 	}
 	buf := new(bytes.Buffer)

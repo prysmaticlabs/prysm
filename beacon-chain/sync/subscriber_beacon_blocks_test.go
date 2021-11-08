@@ -21,23 +21,23 @@ import (
 
 func TestDeleteAttsInPool(t *testing.T) {
 	r := &Service{
-		cfg: &config{attPool: attestations.NewPool()},
+		cfg: &Config{AttPool: attestations.NewPool()},
 	}
 
 	att1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
 	att2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
 	att3 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
 	att4 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att1))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att2))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att3))
-	require.NoError(t, r.cfg.attPool.SaveUnaggregatedAttestation(att4))
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att1))
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att2))
+	require.NoError(t, r.cfg.AttPool.SaveAggregatedAttestation(att3))
+	require.NoError(t, r.cfg.AttPool.SaveUnaggregatedAttestation(att4))
 
 	// Seen 1, 3 and 4 in block.
 	require.NoError(t, r.deleteAttsInPool([]*ethpb.Attestation{att1, att3, att4}))
 
 	// Only 2 should remain.
-	assert.DeepEqual(t, []*ethpb.Attestation{att2}, r.cfg.attPool.AggregatedAttestations(), "Did not get wanted attestations")
+	assert.DeepEqual(t, []*ethpb.Attestation{att2}, r.cfg.AttPool.AggregatedAttestations(), "Did not get wanted attestations")
 }
 
 func TestService_beaconBlockSubscriber(t *testing.T) {
@@ -68,10 +68,10 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			},
 			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
-				if s.cfg.attPool.AggregatedAttestationCount() == 0 {
+				if s.cfg.AttPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
 				}
-				if s.cfg.attPool.UnaggregatedAttestationCount() == 0 {
+				if s.cfg.AttPool.UnaggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 unaggregated attestation in the pool")
 				}
 			},
@@ -81,21 +81,21 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbtest.SetupDB(t)
 			s := &Service{
-				cfg: &config{
-					chain: &chainMock.ChainService{
+				cfg: &Config{
+					Chain: &chainMock.ChainService{
 						DB:   db,
 						Root: make([]byte, 32),
 					},
-					attPool: attestations.NewPool(),
+					AttPool: attestations.NewPool(),
 				},
 			}
 			s.initCaches()
 			// Set up attestation pool.
 			for _, att := range pooledAttestations {
 				if helpers.IsAggregated(att) {
-					assert.NoError(t, s.cfg.attPool.SaveAggregatedAttestation(att))
+					assert.NoError(t, s.cfg.AttPool.SaveAggregatedAttestation(att))
 				} else {
-					assert.NoError(t, s.cfg.attPool.SaveUnaggregatedAttestation(att))
+					assert.NoError(t, s.cfg.AttPool.SaveUnaggregatedAttestation(att))
 				}
 			}
 			// Perform method under test call.
