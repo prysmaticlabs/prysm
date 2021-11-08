@@ -4030,7 +4030,7 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					err = ssz.ErrIncorrectListSize
 					return
 				}
-				hh.Append(elem)
+				hh.AppendBytes32(elem)
 				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
 			}
 		}
