@@ -122,16 +122,15 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
-	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
-	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
-	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
-	currHttpEndpoint        network.Endpoint
-	finalizedStateAtStartup state.BeaconState
+	depositContractAddr    common.Address
+	beaconDB               db.HeadAccessDatabase
+	depositCache           *depositcache.DepositCache
+	stateNotifier          statefeed.Notifier
+	stateGen               *stategen.State
+	eth1HeaderReqLimit     uint64
+	beaconNodeStatsUpdater BeaconNodeStatsUpdater
+	httpEndpoints          []network.Endpoint
+	currHttpEndpoint       network.Endpoint
 }
 
 // Service fetches important information about the canonical
@@ -590,9 +589,12 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		fState := s.cfg.finalizedStateAtStartup
+		fState, err := s.cfg.stateGen.StateByRoot(ctx, rt)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state")
+		}
 		if fState == nil || fState.IsNil() {
-			return errors.Errorf("finalized state with root %#x is nil", rt)
+			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
