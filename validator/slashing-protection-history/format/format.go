@@ -1,4 +1,4 @@
-package slashingprotectionhistory
+package format
 
 // InterchangeFormatVersion specified by https://eips.ethereum.org/EIPS/eip-3076.
 // The version Prysm supports is version 5.

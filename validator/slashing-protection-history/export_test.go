@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 )
 
 func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
@@ -56,7 +57,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 		require.NoError(t, err)
 
-		wanted := []*SignedAttestation{
+		wanted := []*format.SignedAttestation{
 			{
 				SourceEpoch: "0",
 				TargetEpoch: "4",
@@ -103,7 +104,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 		require.NoError(t, err)
 
-		wanted := []*SignedAttestation{
+		wanted := []*format.SignedAttestation{
 			{
 				SourceEpoch: "1",
 				TargetEpoch: "2",
@@ -145,7 +146,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
 		require.NoError(t, err)
 
-		wanted := []*SignedAttestation{
+		wanted := []*format.SignedAttestation{
 			{
 				SourceEpoch: "1",
 				TargetEpoch: "1000",
@@ -191,7 +192,7 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 	// when we attempt to retrieve it from disk.
 	signedBlocks, err = signedBlocksByPubKey(ctx, validatorDB, pubKeys[0])
 	require.NoError(t, err)
-	wanted := []*SignedBlock{
+	wanted := []*format.SignedBlock{
 		{
 			Slot:        "1",
 			SigningRoot: fmt.Sprintf("%#x", dummyRoot1),
