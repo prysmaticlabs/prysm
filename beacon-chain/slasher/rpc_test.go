@@ -83,9 +83,10 @@ func TestIsSlashableAttestation(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: slasherDB,
 		},
-		params:      DefaultParams(),
-		blksQueue:   newBlocksQueue(),
-		genesisTime: genesisTime,
+		params:                         DefaultParams(),
+		blksQueue:                      newBlocksQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	prevAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),

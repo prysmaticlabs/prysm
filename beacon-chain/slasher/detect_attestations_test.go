@@ -240,9 +240,10 @@ func Test_processQueuedAttestations(t *testing.T) {
 					AttestationStateFetcher: mockChain,
 					SlashingPoolInserter:    &slashings.PoolMock{},
 				},
-				params:      DefaultParams(),
-				attsQueue:   newAttestationsQueue(),
-				genesisTime: genesisTime,
+				params:                         DefaultParams(),
+				attsQueue:                      newAttestationsQueue(),
+				genesisTime:                    genesisTime,
+				latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 			}
 			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
@@ -298,9 +299,10 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
+		params:                         slasherParams,
+		attsQueue:                      newAttestationsQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -364,9 +366,10 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
+		params:                         slasherParams,
+		attsQueue:                      newAttestationsQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -407,7 +410,8 @@ func Test_epochUpdateForValidators(t *testing.T) {
 			validatorChunkSize: 2, // 2 validators in a chunk.
 			historyLength:      4,
 		},
-		serviceCfg: &ServiceConfig{Database: slasherDB},
+		serviceCfg:                     &ServiceConfig{Database: slasherDB},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 
 	t.Run("no update if no latest written epoch", func(t *testing.T) {
@@ -416,7 +420,7 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		}
 		currentEpoch := types.Epoch(3)
 		// No last written epoch for both validators.
-		lastWrittenEpochForValidator := map[types.ValidatorIndex]types.Epoch{}
+		s.latestEpochWrittenForValidator = map[types.ValidatorIndex]types.Epoch{}
 
 		// Because the validators have no recorded latest epoch written, we expect
 		// no chunks to be loaded nor updated to.
@@ -429,7 +433,6 @@ func Test_epochUpdateForValidators(t *testing.T) {
 				},
 				updatedChunks,
 				valIdx,
-				lastWrittenEpochForValidator,
 			)
 			require.NoError(t, err)
 		}
@@ -444,7 +447,7 @@ func Test_epochUpdateForValidators(t *testing.T) {
 
 		// Set the latest written epoch for validators to current epoch - 1.
 		latestWrittenEpoch := currentEpoch - 1
-		lastWrittenEpochForValidator := map[types.ValidatorIndex]types.Epoch{
+		s.latestEpochWrittenForValidator = map[types.ValidatorIndex]types.Epoch{
 			1: latestWrittenEpoch,
 			2: latestWrittenEpoch,
 		}
@@ -461,7 +464,6 @@ func Test_epochUpdateForValidators(t *testing.T) {
 				},
 				updatedChunks,
 				valIdx,
-				lastWrittenEpochForValidator,
 			)
 			require.NoError(t, err)
 		}
@@ -481,6 +483,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
 	chunk := EmptyMinSpanChunksSlice(params)
@@ -541,6 +544,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
 	chunk := EmptyMaxSpanChunksSlice(params)
@@ -792,7 +796,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "New slot, processing queued")
+	assert.LogsContain(t, hook, "Processing queued")
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
