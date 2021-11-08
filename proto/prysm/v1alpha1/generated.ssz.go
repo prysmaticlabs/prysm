@@ -3996,7 +3996,7 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(e.ExtraData)
+		hh.PutBytes(e.ExtraData)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 
@@ -5630,7 +5630,7 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(b.PreviousEpochParticipation)
+		hh.PutBytes(b.PreviousEpochParticipation)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
 
@@ -5642,7 +5642,7 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(b.CurrentEpochParticipation)
+		hh.PutBytes(b.CurrentEpochParticipation)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
 
@@ -7205,7 +7205,7 @@ func (b *BeaconStateMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(b.PreviousEpochParticipation)
+		hh.PutBytes(b.PreviousEpochParticipation)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
 
@@ -7217,7 +7217,7 @@ func (b *BeaconStateMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(b.CurrentEpochParticipation)
+		hh.PutBytes(b.CurrentEpochParticipation)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (1099511627776+31)/32)
 	}
 
@@ -7557,7 +7557,7 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		hh.Append(e.ExtraData)
+		hh.PutBytes(e.ExtraData)
 		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
 	}
 

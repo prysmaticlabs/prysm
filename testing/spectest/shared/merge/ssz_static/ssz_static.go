@@ -46,6 +46,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
+
 				if _, ok := object.(*ethpb.BeaconStateMerge); ok {
 					htr = func(s interface{}) ([32]byte, error) {
 						beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateMerge))
@@ -93,7 +94,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		t.Skip("ExecutionPayload debugging")
 		obj = &ethpb.ExecutionPayload{}
 	case "ExecutionPayloadHeader":
 		obj = &ethpb.ExecutionPayloadHeader{}
@@ -114,7 +114,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		t.Skip("ExecutionPayload debugging")
 		obj = &ethpb.BeaconStateMerge{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
@@ -144,6 +143,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
+		t.Skip("ExecutionPayload debugging")
 		obj = &ethpb.SignedBeaconBlockMerge{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
