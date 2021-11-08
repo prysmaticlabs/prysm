@@ -74,17 +74,17 @@ func (b *BeaconState) Slot() types.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slot()
+	return b.slotInternal()
 }
 
 // slot of the current beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slot() types.Slot {
+func (b *BeaconState) slotInternal() types.Slot {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.state.Slot
+	return b.slot
 }
 
 // Fork version of the beacon chain.

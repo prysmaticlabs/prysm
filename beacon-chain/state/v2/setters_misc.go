@@ -65,7 +65,7 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Slot = val
+	b.slot = val
 	b.markFieldAsDirty(slot)
 	return nil
 }

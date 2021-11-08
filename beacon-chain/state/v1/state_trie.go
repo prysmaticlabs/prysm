@@ -91,9 +91,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 	dst := &BeaconState{
 		// Primitive types, safe to copy.
 		genesisTime: b.genesisTime,
+		slot:        b.slot,
 		state: &ethpb.BeaconState{
 			// Primitive types, safe to copy.
-			Slot:             b.state.Slot,
 			Eth1DepositIndex: b.state.Eth1DepositIndex,
 
 			// Large arrays, infrequently changed, constant size.
@@ -264,7 +264,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case genesisValidatorRoot:
 		return b.state.GenesisValidatorsRoot, nil
 	case slot:
-		return ssz.Uint64Root(uint64(b.state.Slot)), nil
+		return ssz.Uint64Root(uint64(b.slot)), nil
 	case eth1DepositIndex:
 		return ssz.Uint64Root(b.state.Eth1DepositIndex), nil
 	case fork:

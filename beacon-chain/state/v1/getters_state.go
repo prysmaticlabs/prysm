@@ -27,8 +27,8 @@ func (b *BeaconState) CloneInnerState() interface{} {
 	// TODO: Change this to something else, not sure what yet
 	return &ethpb.BeaconState{
 		//GenesisTime:                 b.genesisTimeInternal(),
-		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-		Slot:                        b.slot(),
+		GenesisValidatorsRoot: b.genesisValidatorRoot(),
+		//Slot:                        b.slotInternal(),
 		Fork:                        b.fork(),
 		LatestBlockHeader:           b.latestBlockHeader(),
 		BlockRoots:                  b.blockRoots(),
