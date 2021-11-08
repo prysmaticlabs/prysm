@@ -101,13 +101,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 }
 
 func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.ExecutionPayload {
-	txs := make([]*ethpb.Transaction, len(ed.Transactions))
-	for i, t := range ed.Transactions {
-		txs[i] = &ethpb.Transaction{
-			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{OpaqueTransaction: t},
-		}
-	}
-
 	return &ethpb.ExecutionPayload{
 		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
 		Coinbase:      bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
@@ -122,7 +115,7 @@ func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.Execut
 		ExtraData:     ed.ExtraData,
 		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
 		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
-		Transactions:  txs,
+		Transactions:  ed.Transactions,
 	}
 }
 
