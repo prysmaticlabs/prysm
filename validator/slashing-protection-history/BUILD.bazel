@@ -11,7 +11,10 @@ go_library(
         "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection-history",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//cmd:__subpackages__"
+        "//validator:__subpackages__"
+    ],
     deps = [
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
