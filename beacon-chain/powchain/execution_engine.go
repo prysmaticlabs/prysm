@@ -201,7 +201,7 @@ func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableD
 		return nil, err
 	}
 	if respond.Error.Code != 0 {
-		fmt.Errorf("could not call engine_getPayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
+		return nil, fmt.Errorf("could not call engine_getPayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 
 	if respond.Result.Status == catalyst.INVALID.Status {
