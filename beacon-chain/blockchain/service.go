@@ -64,7 +64,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	wsVerified            bool
+	wsVerifier            *WeakSubjectivityVerifier
 }
 
 // config options for the service.
@@ -84,6 +84,7 @@ type config struct {
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	FinalizedStateAtStartUp state.BeaconState
 }
 
 // NewService instantiates a new block service instance that will
@@ -104,39 +105,17 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 	}
+	var err error
+	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
+	if err != nil {
+		return nil, err
+	}
 	return srv, nil
 }
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
-	// For running initial sync with state cache, in an event of restart, we use
-	// last finalized check point as start point to sync instead of head
-	// state. This is because we no longer save state every slot during sync.
-	cp, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
-	if err != nil {
-		log.Fatalf("Could not fetch finalized cp: %v", err)
-	}
-
-	r := bytesutil.ToBytes32(cp.Root)
-	// Before the first finalized epoch, in the current epoch,
-	// the finalized root is defined as zero hashes instead of genesis root hash.
-	// We want to use genesis root to retrieve for state.
-	if r == params.BeaconConfig().ZeroHash {
-		genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(s.ctx)
-		if err != nil {
-			log.Fatalf("Could not fetch finalized cp: %v", err)
-		}
-		if genesisBlock != nil && !genesisBlock.IsNil() {
-			r, err = genesisBlock.Block().HashTreeRoot()
-			if err != nil {
-				log.Fatalf("Could not tree hash genesis block: %v", err)
-			}
-		}
-	}
-	beaconState, err := s.cfg.StateGen.StateByRoot(s.ctx, r)
-	if err != nil {
-		log.Fatalf("Could not fetch beacon state by root: %v", err)
-	}
+	beaconState := s.cfg.FinalizedStateAtStartUp
 
 	// Make sure that attestation processor is subscribed and ready for state initializing event.
 	attestationProcessorSubscribed := make(chan struct{}, 1)
@@ -196,9 +175,11 @@ func (s *Service) Start() {
 			}
 		}
 
-		if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+		// not attempting to save initial sync blocks here, because there shouldn't be until
+		// after the statefeed.Initialized event is fired (below)
+		if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 			// Exit run time if the node failed to verify weak subjectivity checkpoint.
-			log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+			log.Fatalf("could not verify initial checkpoint provided for chain sync, with err=: %v", err)
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -387,8 +368,8 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")
 	}
-	if genesisBlock == nil || genesisBlock.IsNil() {
-		return errors.New("no genesis block in db")
+	if err := helpers.BeaconBlockIsNil(genesisBlock); err != nil {
+		return err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
 	if err != nil {
@@ -408,7 +389,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	var finalizedState state.BeaconState
 
-	finalizedState, err = s.cfg.StateGen.Resume(ctx)
+	finalizedState, err = s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
@@ -430,7 +411,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not hash head block")
 			}
-			finalizedState, err := s.cfg.StateGen.Resume(ctx)
+			finalizedState, err := s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 			if err != nil {
 				return errors.Wrap(err, "could not get finalized state from db")
 			}

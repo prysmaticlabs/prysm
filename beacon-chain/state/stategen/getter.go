@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -43,7 +44,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.State(ctx, blockRoot)
+		return s.beaconDB.GenesisState(ctx)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
 }
@@ -56,7 +57,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.State(ctx, blockRoot)
+		return s.beaconDB.GenesisState(ctx)
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
@@ -248,8 +249,8 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 	if err != nil {
 		return nil, err
 	}
-	if b == nil || b.IsNil() {
-		return nil, errUnknownBlock
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
+		return nil, err
 	}
 
 	for {
