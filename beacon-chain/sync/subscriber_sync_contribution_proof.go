@@ -22,5 +22,5 @@ func (s *Service) syncContributionAndProofSubscriber(_ context.Context, msg prot
 		return errors.New("nil contribution")
 	}
 
-	return s.cfg.SyncCommsPool.SaveSyncCommitteeContribution(sContr.Message.Contribution)
+	return s.cfg.syncCommsPool.SaveSyncCommitteeContribution(sContr.Message.Contribution)
 }

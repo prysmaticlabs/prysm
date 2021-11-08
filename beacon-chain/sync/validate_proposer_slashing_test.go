@@ -114,10 +114,10 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
 	}
@@ -156,10 +156,10 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: state},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: state},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
 	}
@@ -187,10 +187,10 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
-			InitialSync: &mockSync.Sync{IsSyncing: true},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s},
+			initialSync: &mockSync.Sync{IsSyncing: true},
 		},
 	}
 
