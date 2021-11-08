@@ -112,6 +112,9 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	defer func() {
 		require.NoError(t, validatorDB.Close())
 	}()
+	genesisValidatorsRoot := [32]byte{1}
+	err = validatorDB.SaveGenesisValidatorsRoot(ctx, genesisValidatorsRoot[:])
+	require.NoError(t, err)
 
 	_, err = s.ExportSlashingProtection(ctx, &empty.Empty{})
 	require.NoError(t, err)

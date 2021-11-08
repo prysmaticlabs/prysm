@@ -1,4 +1,4 @@
-// Package interopcoldstart allows for spinning up a deterministic
+// Package interopcoldstart allows for spinning up a deterministic-genesis
 // local chain without the need for eth1 deposits useful for
 // local client development and interoperability testing.
 package interopcoldstart
