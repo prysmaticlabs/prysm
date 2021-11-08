@@ -35,7 +35,6 @@ type BeaconState struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	GenesisTime                 uint64                                                                         `protobuf:"varint,1001,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
 	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
@@ -88,13 +87,6 @@ func (x *BeaconState) ProtoReflect() protoreflect.Message {
 // Deprecated: Use BeaconState.ProtoReflect.Descriptor instead.
 func (*BeaconState) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *BeaconState) GetGenesisTime() uint64 {
-	if x != nil {
-		return x.GenesisTime
-	}
-	return 0
 }
 
 func (x *BeaconState) GetGenesisValidatorsRoot() github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32 {
@@ -238,11 +230,9 @@ func (x *BeaconState) GetFinalizedCheckpoint() *Checkpoint {
 }
 
 type BeaconStateAltair struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	GenesisTime                 uint64                                                                         `protobuf:"varint,1001,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	state                       protoimpl.MessageState
+	sizeCache                   protoimpl.SizeCache
+	unknownFields               protoimpl.UnknownFields
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
 	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
@@ -298,13 +288,6 @@ func (x *BeaconStateAltair) ProtoReflect() protoreflect.Message {
 // Deprecated: Use BeaconStateAltair.ProtoReflect.Descriptor instead.
 func (*BeaconStateAltair) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *BeaconStateAltair) GetGenesisTime() uint64 {
-	if x != nil {
-		return x.GenesisTime
-	}
-	return 0
 }
 
 func (x *BeaconStateAltair) GetGenesisValidatorsRoot() github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32 {

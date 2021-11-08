@@ -91,9 +91,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 
 	dst := &BeaconState{
+		// Primitive types, safe to copy.
+		genesisTime: b.genesisTime,
 		state: &ethpb.BeaconStateAltair{
 			// Primitive types, safe to copy.
-			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
 			Eth1DepositIndex: b.state.Eth1DepositIndex,
 
@@ -209,7 +210,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.state)
+		fieldRoots, err := computeFieldRoots(ctx, b)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -264,7 +265,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return ssz.Uint64Root(b.state.GenesisTime), nil
+		return ssz.Uint64Root(b.genesisTime), nil
 	case genesisValidatorRoot:
 		return b.state.GenesisValidatorsRoot, nil
 	case slot:
