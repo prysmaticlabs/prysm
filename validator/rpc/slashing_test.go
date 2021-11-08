@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -171,7 +171,7 @@ func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
 	// Attempt to read the exported data and convert from string to EIP-3076.
 	enc := []byte(reqE.File)
 
-	receivedJSON := &slashingprotectionhistory.EIPSlashingProtectionFormat{}
+	receivedJSON := &format.EIPSlashingProtectionFormat{}
 	err = json.Unmarshal(enc, receivedJSON)
 	require.NoError(t, err)
 
