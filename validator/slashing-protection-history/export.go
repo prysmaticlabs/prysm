@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
 // and packages it into an EIP-3076 compliant, standard
-func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) (*EIPSlashingProtectionFormat, error) {
-	interchangeJSON := &EIPSlashingProtectionFormat{}
+func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) (*format.EIPSlashingProtectionFormat, error) {
+	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
@@ -31,7 +32,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
 	}
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
-	interchangeJSON.Metadata.InterchangeFormatVersion = InterchangeFormatVersion
+	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
@@ -42,7 +43,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
-	dataByPubKey := make(map[[48]byte]*ProtectionData)
+	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
 	bar := progress.InitializeProgressBar(
@@ -57,7 +58,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not retrieve signed blocks for public key %s", pubKeyHex)
 		}
-		dataByPubKey[pubKey] = &ProtectionData{
+		dataByPubKey[pubKey] = &format.ProtectionData{
 			Pubkey:             pubKeyHex,
 			SignedBlocks:       signedBlocks,
 			SignedAttestations: nil,
@@ -83,7 +84,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		if _, ok := dataByPubKey[pubKey]; ok {
 			dataByPubKey[pubKey].SignedAttestations = signedAttestations
 		} else {
-			dataByPubKey[pubKey] = &ProtectionData{
+			dataByPubKey[pubKey] = &format.ProtectionData{
 				Pubkey:             pubKeyHex,
 				SignedBlocks:       nil,
 				SignedAttestations: signedAttestations,
@@ -95,13 +96,13 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	}
 
 	// Next we turn our map into a slice as expected by the EIP-3076 JSON standard.
-	dataList := make([]*ProtectionData, 0)
+	dataList := make([]*format.ProtectionData, 0)
 	for _, item := range dataByPubKey {
 		if item.SignedAttestations == nil {
-			item.SignedAttestations = make([]*SignedAttestation, 0)
+			item.SignedAttestations = make([]*format.SignedAttestation, 0)
 		}
 		if item.SignedBlocks == nil {
-			item.SignedBlocks = make([]*SignedBlock, 0)
+			item.SignedBlocks = make([]*format.SignedBlock, 0)
 		}
 		dataList = append(dataList, item)
 	}
@@ -112,7 +113,7 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	return interchangeJSON, nil
 }
 
-func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedAttestation, error) {
+func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedAttestation, error) {
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
@@ -123,7 +124,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 	if history == nil {
 		return nil, nil
 	}
-	signedAttestations := make([]*SignedAttestation, 0)
+	signedAttestations := make([]*format.SignedAttestation, 0)
 	for i := 0; i < len(history); i++ {
 		att := history[i]
 		// Special edge case due to a bug in Prysm's old slashing protection schema. The bug
@@ -145,7 +146,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 				return nil, errors.Wrap(err, "could not convert signing root to hex string")
 			}
 		}
-		signedAttestations = append(signedAttestations, &SignedAttestation{
+		signedAttestations = append(signedAttestations, &format.SignedAttestation{
 			TargetEpoch: fmt.Sprintf("%d", att.Target),
 			SourceEpoch: fmt.Sprintf("%d", att.Source),
 			SigningRoot: root,
@@ -154,7 +155,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 	return signedAttestations, nil
 }
 
-func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*SignedBlock, error) {
+func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history
@@ -163,7 +164,7 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get proposal history for public key: %#x", pubKey)
 	}
-	signedBlocks := make([]*SignedBlock, 0)
+	signedBlocks := make([]*format.SignedBlock, 0)
 	for _, proposal := range proposalHistory {
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(err, "context canceled")
@@ -172,7 +173,7 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert signing root to hex string")
 		}
-		signedBlocks = append(signedBlocks, &SignedBlock{
+		signedBlocks = append(signedBlocks, &format.SignedBlock{
 			Slot:        fmt.Sprintf("%d", proposal.Slot),
 			SigningRoot: signingRootHex,
 		})

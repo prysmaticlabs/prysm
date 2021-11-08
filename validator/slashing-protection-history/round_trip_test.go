@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	slashingprotectionhistory "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -51,7 +52,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
 
-	dataByPubKey := make(map[string]*slashingprotectionhistory.ProtectionData)
+	dataByPubKey := make(map[string]*format.ProtectionData)
 	for _, item := range wanted.Data {
 		dataByPubKey[item.Pubkey] = item
 	}
@@ -60,7 +61,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 		require.Equal(t, true, ok)
 		require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
 		require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
-		wantedAttsByRoot := make(map[string]*slashingprotectionhistory.SignedAttestation)
+		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
 		for _, att := range want.SignedAttestations {
 			wantedAttsByRoot[att.SigningRoot] = att
 		}
@@ -79,18 +80,18 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	pubKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 	validatorDB := dbtest.SetupDB(t, pubKeys)
-	wanted := &slashingprotectionhistory.EIPSlashingProtectionFormat{
+	wanted := &format.EIPSlashingProtectionFormat{
 		Metadata: struct {
 			InterchangeFormatVersion string `json:"interchange_format_version"`
 			GenesisValidatorsRoot    string `json:"genesis_validators_root"`
 		}{
-			InterchangeFormatVersion: slashingprotectionhistory.InterchangeFormatVersion,
+			InterchangeFormatVersion: format.InterchangeFormatVersion,
 			GenesisValidatorsRoot:    fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		Data: []*slashingprotectionhistory.ProtectionData{
+		Data: []*format.ProtectionData{
 			{
 				Pubkey: fmt.Sprintf("%#x", pubKeys[0]),
-				SignedAttestations: []*slashingprotectionhistory.SignedAttestation{
+				SignedAttestations: []*format.SignedAttestation{
 					{
 						SourceEpoch: "1",
 						TargetEpoch: "2",
@@ -100,7 +101,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 						TargetEpoch: "9",
 					},
 				},
-				SignedBlocks: make([]*slashingprotectionhistory.SignedBlock, 0),
+				SignedBlocks: make([]*format.SignedBlock, 0),
 			},
 		},
 	}
@@ -205,11 +206,11 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey0 := standardProtectionFormat.Data[0].Pubkey
 	standardProtectionFormat.Data[0].SignedBlocks = append(
 		standardProtectionFormat.Data[0].SignedBlocks,
-		&slashingprotectionhistory.SignedBlock{
+		&format.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&slashingprotectionhistory.SignedBlock{
+		&format.SignedBlock{
 			Slot:        "700",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
 		},
@@ -220,12 +221,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey1 := standardProtectionFormat.Data[1].Pubkey
 	standardProtectionFormat.Data[1].SignedAttestations = append(
 		standardProtectionFormat.Data[1].SignedAttestations,
-		&slashingprotectionhistory.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{1}),
 		},
-		&slashingprotectionhistory.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "700",
 			SourceEpoch: "699",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{2}),
@@ -237,12 +238,12 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	pubKey2 := standardProtectionFormat.Data[2].Pubkey
 	standardProtectionFormat.Data[2].SignedAttestations = append(
 		standardProtectionFormat.Data[2].SignedAttestations,
-		&slashingprotectionhistory.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "800",
 			SourceEpoch: "805",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{4}),
 		},
-		&slashingprotectionhistory.SignedAttestation{
+		&format.SignedAttestation{
 			TargetEpoch: "801",
 			SourceEpoch: "804",
 			SigningRoot: fmt.Sprintf("%#x", [32]byte{5}),
