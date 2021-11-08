@@ -20,7 +20,6 @@ func (s *Service) checkSlashableAttestations(
 ) ([]*ethpb.AttesterSlashing, error) {
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
-	// Check for double votes.
 	log.Debug("Checking for double votes")
 	start := time.Now()
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
@@ -30,7 +29,6 @@ func (s *Service) checkSlashableAttestations(
 	log.WithField("elapsed", time.Since(start)).Info("Done checking double votes")
 	slashings = append(slashings, doubleVoteSlashings...)
 
-	// Group by chunk index and check for surround vote slashings.
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
 	log.WithField("numBatches", len(groupedAtts)).Info("Batching attestations by validator chunk index")
 	start = time.Now()
@@ -87,13 +85,9 @@ func (s *Service) detectAllAttesterSlashings(
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
 
-	// Group attestations by chunk index.
-	groupedAtts := s.groupByChunkIndex(attestations)
-
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
-
-	// Get the validator indices in the chunk.
+	groupedAtts := s.groupByChunkIndex(attestations)
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 
 	// Update the min/max span chunks for the change of current epoch.
@@ -134,7 +128,6 @@ func (s *Service) detectAllAttesterSlashings(
 		)
 	}
 
-	// Consolidate all slashings into a slice.
 	slashings := make([]*ethpb.AttesterSlashing, 0, len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
