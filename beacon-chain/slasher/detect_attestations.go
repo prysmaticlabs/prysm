@@ -46,8 +46,8 @@ func (s *Service) checkSlashableAttestations(
 		}
 		slashings = append(slashings, attSlashings...)
 		indices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-		if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
-			return nil, err
+		for _, idx := range indices {
+			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
 		batchTimes = append(batchTimes, time.Since(innerStart))
 	}
@@ -59,10 +59,10 @@ func (s *Service) checkSlashableAttestations(
 		avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
 	}
 	log.WithFields(logrus.Fields{
-		"numAttestations": len(atts),
+		"numAttestations":                 len(atts),
 		"numBatchesByValidatorChunkIndex": len(groupedAtts),
-		"elapsed": time.Since(start),
-		"avgBatchProcessingTime":	avgProcessingTimePerBatch,
+		"elapsed":                         time.Since(start),
+		"avgBatchProcessingTime":          avgProcessingTimePerBatch,
 	}).Info("Done checking slashable attestations")
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
@@ -96,20 +96,9 @@ func (s *Service) detectAllAttesterSlashings(
 	// Get the validator indices in the chunk.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 
-	// Get the latest epoch written for each of the validators. If no epoch is written,
-	// set the epoch to value of 0.
-	lastCurrentEpochs, err := s.serviceCfg.Database.LastEpochWrittenForValidators(ctx, validatorIndices)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get latest epoch attested for validators")
-	}
-	lastWrittenEpochByValidator := make(map[types.ValidatorIndex]types.Epoch, len(validatorIndices))
-	for _, lastEpoch := range lastCurrentEpochs {
-		lastWrittenEpochByValidator[lastEpoch.ValidatorIndex] = lastEpoch.Epoch
-	}
-
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndices {
-		if err := s.epochUpdateForValidator(ctx, args, updatedChunks, validatorIndex, lastWrittenEpochByValidator); err != nil {
+		if err := s.epochUpdateForValidator(ctx, args, updatedChunks, validatorIndex); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"could not update validator index chunks %d",
@@ -228,10 +217,9 @@ func (s *Service) epochUpdateForValidator(
 	args *chunkUpdateArgs,
 	updatedChunks map[uint64]Chunker,
 	validatorIndex types.ValidatorIndex,
-	lastEpochWrittenByValidator map[types.ValidatorIndex]types.Epoch,
 ) error {
-	epoch, ok := lastEpochWrittenByValidator[validatorIndex]
-	if !ok {
+	epoch := s.latestEpochWrittenForValidator[validatorIndex]
+	if epoch == 0 {
 		return nil
 	}
 	for epoch <= args.currentEpoch {

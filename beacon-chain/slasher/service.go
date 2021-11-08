@@ -49,39 +49,41 @@ type SlashingChecker interface {
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params                 *Parameters
-	serviceCfg             *ServiceConfig
-	indexedAttsChan        chan *ethpb.IndexedAttestation
-	beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader
-	attsQueue              *attestationsQueue
-	blksQueue              *blocksQueue
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	genesisTime            time.Time
-	attsSlotTicker         *slots.SlotTicker
-	blocksSlotTicker       *slots.SlotTicker
-	pruningSlotTicker      *slots.SlotTicker
+	params                         *Parameters
+	serviceCfg                     *ServiceConfig
+	indexedAttsChan                chan *ethpb.IndexedAttestation
+	beaconBlockHeadersChan         chan *ethpb.SignedBeaconBlockHeader
+	attsQueue                      *attestationsQueue
+	blksQueue                      *blocksQueue
+	ctx                            context.Context
+	cancel                         context.CancelFunc
+	genesisTime                    time.Time
+	attsSlotTicker                 *slots.SlotTicker
+	blocksSlotTicker               *slots.SlotTicker
+	pruningSlotTicker              *slots.SlotTicker
+	latestEpochWrittenForValidator map[types.ValidatorIndex]types.Epoch
 }
 
 // New instantiates a new slasher from configuration values.
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:                 DefaultParams(),
-		serviceCfg:             srvCfg,
-		indexedAttsChan:        make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader, 1),
-		attsQueue:              newAttestationsQueue(),
-		blksQueue:              newBlocksQueue(),
-		ctx:                    ctx,
-		cancel:                 cancel,
+		params:                         DefaultParams(),
+		serviceCfg:                     srvCfg,
+		indexedAttsChan:                make(chan *ethpb.IndexedAttestation, 1),
+		beaconBlockHeadersChan:         make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		attsQueue:                      newAttestationsQueue(),
+		blksQueue:                      newBlocksQueue(),
+		ctx:                            ctx,
+		cancel:                         cancel,
+		latestEpochWrittenForValidator: make(map[types.ValidatorIndex]types.Epoch),
 	}, nil
 }
 
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	go s.run()
+	go s.run() // Start functions must be non-blocking.
 }
 
 func (s *Service) run() {
@@ -117,9 +119,37 @@ func (s *Service) run() {
 	stateSub.Unsubscribe()
 	s.waitForSync(s.genesisTime)
 
+	log.Info("Completed chain sync, starting slashing detection")
+
+	// Get the latest eopch written for each validator from disk on startup.
+	headState, err := s.serviceCfg.HeadStateFetcher.HeadState(s.ctx)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	numVals := headState.NumValidators()
+	validatorIndices := make([]types.ValidatorIndex, numVals)
+	for i := 0; i < numVals; i++ {
+		validatorIndices[i] = types.ValidatorIndex(i)
+	}
+	start := time.Now()
+	log.Info("Reading last epoch written for each validator...")
+	epochsByValidator, err := s.serviceCfg.Database.LastEpochWrittenForValidators(
+		s.ctx, validatorIndices,
+	)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	for _, item := range epochsByValidator {
+		s.latestEpochWrittenForValidator[item.ValidatorIndex] = item.Epoch
+	}
+	log.WithField("elapsed", time.Since(start)).Info(
+		"Finished retrieving last epoch written per validator",
+	)
+
 	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
-	log.Info("Completed chain sync, starting slashing detection")
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
 	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
 
@@ -134,7 +164,6 @@ func (s *Service) run() {
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
-	s.cancel()
 	if s.attsSlotTicker != nil {
 		s.attsSlotTicker.Done()
 	}
@@ -144,6 +173,18 @@ func (s *Service) Stop() error {
 	if s.pruningSlotTicker != nil {
 		s.pruningSlotTicker.Done()
 	}
+	// Flush the latest epoch written map to disk.
+	start := time.Now()
+	log.Info("Flushing last epoch written for each validator to disk")
+	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
+		s.ctx, s.latestEpochWrittenForValidator,
+	); err != nil {
+		log.Error(err)
+	}
+	log.WithField("elapsed", time.Since(start)).Info(
+		"Finished saving last epoch written per validator",
+	)
+	s.cancel()
 	return nil
 }
 

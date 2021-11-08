@@ -113,6 +113,9 @@ type SlasherDatabase interface {
 	SaveLastEpochWrittenForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 	) error
+	SaveLastEpochsWrittenForValidators(
+		ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
+	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
 		attestations []*slashertypes.IndexedAttestationWrapper,

@@ -42,17 +42,17 @@ func (s *Store) LastEpochWrittenForValidators(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for i, encodedIndex := range encodedIndices {
+			var epoch types.Epoch
 			epochBytes := bkt.Get(encodedIndex)
 			if epochBytes != nil {
-				var epoch types.Epoch
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
-				attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
-					ValidatorIndex: validatorIndices[i],
-					Epoch:          epoch,
-				})
 			}
+			attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+				ValidatorIndex: validatorIndices[i],
+				Epoch:          epoch,
+			})
 		}
 		return nil
 	})
@@ -78,6 +78,34 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for _, encodedIndex := range encodedIndices {
 			if err = bkt.Put(encodedIndex, encodedEpoch); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SaveLastEpochsWrittenForValidators updates the latest epoch a slice
+// of validator indices has attested to.
+func (s *Store) SaveLastEpochsWrittenForValidators(
+	ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
+) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
+	defer span.End()
+	encodedIndices := make([][]byte, 0, len(epochByValidator))
+	encodedEpochs := make([][]byte, 0, len(epochByValidator))
+	for valIdx, epoch := range epochByValidator {
+		encodedEpoch, err := epoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		encodedIndices = append(encodedIndices, encodeValidatorIndex(valIdx))
+		encodedEpochs = append(encodedEpochs, encodedEpoch)
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestedEpochsByValidator)
+		for i, encodedIndex := range encodedIndices {
+			if err := bkt.Put(encodedIndex, encodedEpochs[i]); err != nil {
 				return err
 			}
 		}
