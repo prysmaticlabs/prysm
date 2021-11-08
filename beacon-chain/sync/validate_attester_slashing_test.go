@@ -80,10 +80,10 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),
@@ -116,10 +116,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	ctx := context.Background()
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			InitialSync: &mockSync.Sync{IsSyncing: false},
-			Chain:       &mock.ChainService{Genesis: time.Now()},
+		cfg: &config{
+			p2p:         p,
+			initialSync: &mockSync.Sync{IsSyncing: false},
+			chain:       &mock.ChainService{Genesis: time.Now()},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),
@@ -185,10 +185,10 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: state},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: state},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
@@ -217,10 +217,10 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
-			InitialSync: &mockSync.Sync{IsSyncing: true},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s},
+			initialSync: &mockSync.Sync{IsSyncing: true},
 		},
 	}
 

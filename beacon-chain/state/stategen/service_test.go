@@ -28,7 +28,7 @@ func TestResume(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, service.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: root[:]}))
 
-	resumeState, err := service.Resume(ctx)
+	resumeState, err := service.Resume(ctx, beaconState)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, beaconState.InnerStateUnsafe(), resumeState.InnerStateUnsafe())
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, service.finalizedInfo.slot, "Did not get watned slot")
