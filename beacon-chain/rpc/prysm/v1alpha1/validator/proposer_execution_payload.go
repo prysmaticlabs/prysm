@@ -127,7 +127,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
 	}
 	p := catalyst.PayloadAttributesV1{
-		ParentHash:   common.BytesToHash(parentHash),
 		Timestamp:    uint64(t.Unix()),
 		Random:       common.BytesToHash(random),
 		FeeRecipient: params.BeaconConfig().FeeRecipient,
