@@ -110,9 +110,6 @@ type HeadAccessDatabase interface {
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.
 type SlasherDatabase interface {
 	io.Closer
-	SaveLastEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
-	) error
 	SaveLastEpochsWrittenForValidators(
 		ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
 	) error
