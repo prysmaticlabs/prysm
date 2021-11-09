@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/urfave/cli/v2"
 )
@@ -77,7 +77,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	enc, err := file.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
 	require.NoError(t, err)
 
-	receivedJSON := &slashingprotection.EIPSlashingProtectionFormat{}
+	receivedJSON := &format.EIPSlashingProtectionFormat{}
 	err = json.Unmarshal(enc, receivedJSON)
 	require.NoError(t, err)
 
@@ -86,7 +86,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	//
 	// First, we compare basic data such as the MetadataV0 value in the JSON file.
 	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
-	wantedHistoryByPublicKey := make(map[string]*slashingprotection.ProtectionData)
+	wantedHistoryByPublicKey := make(map[string]*format.ProtectionData)
 	for _, item := range mockJSON.Data {
 		wantedHistoryByPublicKey[item.Pubkey] = item
 	}
@@ -95,7 +95,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	for _, item := range receivedJSON.Data {
 		wanted, ok := wantedHistoryByPublicKey[item.Pubkey]
 		require.Equal(t, true, ok)
-		wantedAttsByRoot := make(map[string]*slashingprotection.SignedAttestation)
+		wantedAttsByRoot := make(map[string]*format.SignedAttestation)
 		for _, att := range wanted.SignedAttestations {
 			wantedAttsByRoot[att.SigningRoot] = att
 		}
@@ -153,7 +153,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	enc, err := file.ReadFileAsBytes(filepath.Join(outputPath, jsonExportFileName))
 	require.NoError(t, err)
 
-	receivedJSON := &slashingprotection.EIPSlashingProtectionFormat{}
+	receivedJSON := &format.EIPSlashingProtectionFormat{}
 	err = json.Unmarshal(enc, receivedJSON)
 	require.NoError(t, err)
 
@@ -162,7 +162,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	//
 	// First, we compare basic data such as the MetadataV0 value in the JSON file.
 	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
-	wantedHistoryByPublicKey := make(map[string]*slashingprotection.ProtectionData)
+	wantedHistoryByPublicKey := make(map[string]*format.ProtectionData)
 	for _, item := range mockJSON.Data {
 		wantedHistoryByPublicKey[item.Pubkey] = item
 	}
@@ -173,7 +173,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 		require.Equal(t, true, ok)
 		require.Equal(t, len(wanted.SignedBlocks), len(item.SignedBlocks))
 		require.Equal(t, len(wanted.SignedAttestations), len(item.SignedAttestations))
-		require.DeepEqual(t, make([]*slashingprotection.SignedBlock, 0), item.SignedBlocks)
-		require.DeepEqual(t, make([]*slashingprotection.SignedAttestation, 0), item.SignedAttestations)
+		require.DeepEqual(t, make([]*format.SignedBlock, 0), item.SignedBlocks)
+		require.DeepEqual(t, make([]*format.SignedAttestation, 0), item.SignedAttestations)
 	}
 }
