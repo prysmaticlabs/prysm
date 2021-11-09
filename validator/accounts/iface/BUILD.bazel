@@ -5,6 +5,7 @@ go_library(
     srcs = ["wallet.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/iface",
     visibility = [
+        "//cmd:__subpackages__",
         "//validator:__pkg__",
         "//validator:__subpackages__",
     ],
