@@ -46,6 +46,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
+
 				if _, ok := object.(*ethpb.BeaconStateMerge); ok {
 					htr = func(s interface{}) ([32]byte, error) {
 						beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateMerge))

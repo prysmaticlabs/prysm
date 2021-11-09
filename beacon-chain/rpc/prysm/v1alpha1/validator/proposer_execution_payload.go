@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -88,7 +89,30 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		return nil, err
 	}
 
-	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, parentHash, uint64(t.Unix()), random, params.BeaconConfig().FeeRecipient.Bytes())
+	finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
+	if err != nil {
+		return nil, err
+	}
+	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+	if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+		if err != nil {
+			return nil, err
+		}
+		finalizedBlockHash = finalizedPayload.BlockHash
+	}
+
+	f := catalyst.ForkchoiceStateV1{
+		HeadBlockHash:      common.BytesToHash(parentHash),
+		SafeBlockHash:      common.BytesToHash(parentHash),
+		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+	}
+	p := catalyst.PayloadAttributesV1{
+		Timestamp:    uint64(t.Unix()),
+		Random:       common.BytesToHash(random),
+		FeeRecipient: params.BeaconConfig().FeeRecipient,
+	}
+	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
@@ -100,14 +124,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	return executableDataToExecutionPayload(data), nil
 }
 
-func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.ExecutionPayload {
-	txs := make([]*ethpb.Transaction, len(ed.Transactions))
-	for i, t := range ed.Transactions {
-		txs[i] = &ethpb.Transaction{
-			TransactionOneof: &ethpb.Transaction_OpaqueTransaction{OpaqueTransaction: t},
-		}
-	}
-
+func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *ethpb.ExecutionPayload {
 	return &ethpb.ExecutionPayload{
 		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
 		Coinbase:      bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
@@ -122,7 +139,7 @@ func executableDataToExecutionPayload(ed *catalyst.ExecutableData) *ethpb.Execut
 		ExtraData:     ed.ExtraData,
 		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
 		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
-		Transactions:  txs,
+		Transactions:  ed.Transactions,
 	}
 }
 

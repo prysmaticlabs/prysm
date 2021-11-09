@@ -124,11 +124,12 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20211009100437-ac736f93f769
+replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20211105101843-b6fafacab71b
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
-replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211006152949-0d1e4983580a
+// fa514f0ef27e963d281ecebff240b36169c2b9e3
+replace github.com/ferranbt/fastssz => github.com/kasey/fastssz v0.0.0-20211108224242-fa514f0ef27e

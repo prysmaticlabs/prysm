@@ -151,6 +151,7 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil && !beaconState.IsNil() {
 		log.Info("Blockchain data already exists in DB, initializing...")
+
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.cfg.AttService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(s.ctx); err != nil {

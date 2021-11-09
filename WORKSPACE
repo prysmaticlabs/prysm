@@ -225,7 +225,7 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.3"
+consensus_spec_version = "v1.1.5"
 
 bls_test_version = "v0.1.1"
 
@@ -241,7 +241,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "e572f8c57e2dbbaeee056a600dc9d08396010dd5134a3a95e43c540470acf6f5",
+    sha256 = "a7d7173d953494c0dfde432c9fc064c25d46d666b024749b3474ae0cdfc50050",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -257,7 +257,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "7e2f62eaae9fd541690cc61d252556d0c5deb585ca1873aacbeb5b02d06f1362",
+    sha256 = "f86872061588c0197516b23025d39e9365b4716c112218a618739dc0d6f4666a",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -273,7 +273,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "05cbb89810c8acd6c57c4773ddfd167305cd4539960e9b4d7b69e1a988b35ad2",
+    sha256 = "7a06975360fd37fbb4694d0e06abb78d2a0835146c1d9b26d33569edff8b98f0",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -288,7 +288,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0cef67b08448f7eb43bf66c464451c9e7a4852df8ef90555cca6d440e3436882",
+    sha256 = "87d8089200163340484d61212fbdffbb5d9d03e1244622761dcb91e641a65761",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
