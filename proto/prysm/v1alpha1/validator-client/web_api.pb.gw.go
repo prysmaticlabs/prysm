@@ -1861,9 +1861,9 @@ func RegisterSlashingProtectionHandlerClient(ctx context.Context, mux *runtime.S
 }
 
 var (
-	pattern_SlashingProtection_ExportSlashingProtection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "slashing-protection-history", "export"}, ""))
+	pattern_SlashingProtection_ExportSlashingProtection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "slashing-protection", "export"}, ""))
 
-	pattern_SlashingProtection_ImportSlashingProtection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "slashing-protection-history", "import"}, ""))
+	pattern_SlashingProtection_ImportSlashingProtection_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "slashing-protection", "import"}, ""))
 )
 
 var (
