@@ -120,12 +120,12 @@ func (b *BeaconState) Copy() state.BeaconState {
 			Validators: b.state.Validators,
 
 			// Everything else, too small to be concerned about, constant size.
-			Fork:                        b.fork(),
-			LatestBlockHeader:           b.latestBlockHeader(),
-			Eth1Data:                    b.eth1Data(),
-			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-			FinalizedCheckpoint:         b.finalizedCheckpoint(),
+			Fork:                        b.forkInternal(),
+			LatestBlockHeader:           b.latestBlockHeaderInternal(),
+			Eth1Data:                    b.eth1DataInternal(),
+			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointInternal(),
+			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointInternal(),
+			FinalizedCheckpoint:         b.finalizedCheckpointInternal(),
 		},
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),

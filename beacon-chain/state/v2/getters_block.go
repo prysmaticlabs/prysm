@@ -11,38 +11,38 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.LatestBlockHeader == nil {
+	if b.latestBlockHeader == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestBlockHeader()
+	return b.latestBlockHeaderInternal()
 }
 
-// latestBlockHeader stored within the beacon state.
+// latestBlockHeaderInternal stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
+func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.LatestBlockHeader == nil {
+	if b.latestBlockHeader == nil {
 		return nil
 	}
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot:          b.state.LatestBlockHeader.Slot,
-		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
+		Slot:          b.latestBlockHeader.Slot,
+		ProposerIndex: b.latestBlockHeader.ProposerIndex,
 	}
 
-	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
-	bodyRoot := make([]byte, len(b.state.LatestBlockHeader.BodyRoot))
-	stateRoot := make([]byte, len(b.state.LatestBlockHeader.StateRoot))
+	parentRoot := make([]byte, len(b.latestBlockHeader.ParentRoot))
+	bodyRoot := make([]byte, len(b.latestBlockHeader.BodyRoot))
+	stateRoot := make([]byte, len(b.latestBlockHeader.StateRoot))
 
-	copy(parentRoot, b.state.LatestBlockHeader.ParentRoot)
-	copy(bodyRoot, b.state.LatestBlockHeader.BodyRoot)
-	copy(stateRoot, b.state.LatestBlockHeader.StateRoot)
+	copy(parentRoot, b.latestBlockHeader.ParentRoot)
+	copy(bodyRoot, b.latestBlockHeader.BodyRoot)
+	copy(stateRoot, b.latestBlockHeader.StateRoot)
 	hdr.ParentRoot = parentRoot
 	hdr.BodyRoot = bodyRoot
 	hdr.StateRoot = stateRoot

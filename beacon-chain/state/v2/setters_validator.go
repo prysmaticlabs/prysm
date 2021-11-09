@@ -17,12 +17,12 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Validators = val
+	b.validators = val
 	b.sharedFieldReferences[validators].MinusRef()
 	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	b.markFieldAsDirty(validators)
 	b.rebuildTrie[validators] = true
-	b.valMapHandler = stateutil.NewValMapHandler(b.state.Validators)
+	b.valMapHandler = stateutil.NewValMapHandler(b.validators)
 	return nil
 }
 
@@ -33,7 +33,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
-	v := b.state.Validators
+	v := b.validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
@@ -55,7 +55,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Validators = v
+	b.validators = v
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, changedVals)
 
@@ -68,13 +68,13 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.Validators)) <= uint64(idx) {
+	if uint64(len(b.validators)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	v := b.state.Validators
+	v := b.validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
@@ -82,7 +82,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 	}
 
 	v[idx] = val
-	b.state.Validators = v
+	b.validators = v
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{uint64(idx)})
 
@@ -184,7 +184,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	vals := b.state.Validators
+	vals := b.validators
 	if b.sharedFieldReferences[validators].Refs() > 1 {
 		vals = b.validatorsReferences()
 		b.sharedFieldReferences[validators].MinusRef()
@@ -192,8 +192,8 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	}
 
 	// append validator to slice
-	b.state.Validators = append(vals, val)
-	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
+	b.validators = append(vals, val)
+	valIdx := types.ValidatorIndex(len(b.validators) - 1)
 
 	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
 

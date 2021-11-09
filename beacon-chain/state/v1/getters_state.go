@@ -25,18 +25,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return &ethpb.BeaconState{
-		Fork:                        b.fork(),
-		LatestBlockHeader:           b.latestBlockHeader(),
-		Eth1Data:                    b.eth1Data(),
-		Eth1DataVotes:               b.eth1DataVotes(),
-		Validators:                  b.validators(),
-		PreviousEpochAttestations:   b.previousEpochAttestations(),
-		CurrentEpochAttestations:    b.currentEpochAttestations(),
-		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         b.finalizedCheckpoint(),
-	}
+	return &ethpb.BeaconState{}
 }
 
 // hasInnerState detects if the internal reference to the state data structure

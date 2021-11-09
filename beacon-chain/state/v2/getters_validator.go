@@ -40,29 +40,29 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.validators()
+	return b.validatorsInternal()
 }
 
-// validators participating in consensus on the beacon chain.
+// validatorsInternal participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validators() []*ethpb.Validator {
+func (b *BeaconState) validatorsInternal() []*ethpb.Validator {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return nil
 	}
 
-	res := make([]*ethpb.Validator, len(b.state.Validators))
+	res := make([]*ethpb.Validator, len(b.validators))
 	for i := 0; i < len(res); i++ {
-		val := b.state.Validators[i]
+		val := b.validators[i]
 		if val == nil {
 			continue
 		}
@@ -78,13 +78,13 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return nil
 	}
 
-	res := make([]*ethpb.Validator, len(b.state.Validators))
+	res := make([]*ethpb.Validator, len(b.validators))
 	for i := 0; i < len(res); i++ {
-		validator := b.state.Validators[i]
+		validator := b.validators[i]
 		if validator == nil {
 			continue
 		}
@@ -99,10 +99,10 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return &ethpb.Validator{}, nil
 	}
-	if uint64(len(b.state.Validators)) <= uint64(idx) {
+	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
 		return nil, &e
 	}
@@ -110,7 +110,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	val := b.state.Validators[idx]
+	val := b.validators[idx]
 	return ethpb.CopyValidator(val), nil
 }
 
@@ -120,10 +120,10 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return nil, ErrNilValidatorsInState
 	}
-	if uint64(len(b.state.Validators)) <= uint64(idx) {
+	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
 		return nil, &e
 	}
@@ -131,7 +131,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return v1.NewValidator(b.state.Validators[idx])
+	return v1.NewValidator(b.validators[idx])
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -141,7 +141,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	numOfVals := len(b.state.Validators)
+	numOfVals := len(b.validators)
 
 	idx, ok := b.valMapHandler.Get(key)
 	if ok && numOfVals <= int(idx) {
@@ -156,16 +156,16 @@ func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if !b.hasInnerState() {
 		return [48]byte{}
 	}
-	if uint64(idx) >= uint64(len(b.state.Validators)) {
+	if uint64(idx) >= uint64(len(b.validators)) {
 		return [48]byte{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.state.Validators[idx] == nil {
+	if b.validators[idx] == nil {
 		return [48]byte{}
 	}
-	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+	return bytesutil.ToBytes48(b.validators[idx].PublicKey)
 }
 
 // NumValidators returns the size of the validator registry.
@@ -176,7 +176,7 @@ func (b *BeaconState) NumValidators() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return len(b.state.Validators)
+	return len(b.validators)
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
@@ -185,11 +185,11 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if b.state.Validators == nil {
+	if b.validators == nil {
 		return errors.New("nil validators in state")
 	}
 	b.lock.RLock()
-	validators := b.state.Validators
+	validators := b.validators
 	b.lock.RUnlock()
 
 	for i, v := range validators {

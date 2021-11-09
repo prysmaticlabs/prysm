@@ -33,17 +33,6 @@ type BeaconState struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
-
-	Fork                        *Fork                 `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
-	LatestBlockHeader           *BeaconBlockHeader    `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
-	Eth1Data                    *Eth1Data             `protobuf:"bytes,3001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	Eth1DataVotes               []*Eth1Data           `protobuf:"bytes,3002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty" ssz-max:"2048"`
-	Validators                  []*Validator          `protobuf:"bytes,4001,rep,name=validators,proto3" json:"validators,omitempty" ssz-max:"1099511627776"`
-	PreviousEpochAttestations   []*PendingAttestation `protobuf:"bytes,7001,rep,name=previous_epoch_attestations,json=previousEpochAttestations,proto3" json:"previous_epoch_attestations,omitempty" ssz-max:"4096"`
-	CurrentEpochAttestations    []*PendingAttestation `protobuf:"bytes,7002,rep,name=current_epoch_attestations,json=currentEpochAttestations,proto3" json:"current_epoch_attestations,omitempty" ssz-max:"4096"`
-	PreviousJustifiedCheckpoint *Checkpoint           `protobuf:"bytes,8002,opt,name=previous_justified_checkpoint,json=previousJustifiedCheckpoint,proto3" json:"previous_justified_checkpoint,omitempty"`
-	CurrentJustifiedCheckpoint  *Checkpoint           `protobuf:"bytes,8003,opt,name=current_justified_checkpoint,json=currentJustifiedCheckpoint,proto3" json:"current_justified_checkpoint,omitempty"`
-	FinalizedCheckpoint         *Checkpoint           `protobuf:"bytes,8004,opt,name=finalized_checkpoint,json=finalizedCheckpoint,proto3" json:"finalized_checkpoint,omitempty"`
 }
 
 func (x *BeaconState) Reset() {
@@ -78,90 +67,10 @@ func (*BeaconState) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *BeaconState) GetFork() *Fork {
-	if x != nil {
-		return x.Fork
-	}
-	return nil
-}
-
-func (x *BeaconState) GetLatestBlockHeader() *BeaconBlockHeader {
-	if x != nil {
-		return x.LatestBlockHeader
-	}
-	return nil
-}
-
-func (x *BeaconState) GetEth1Data() *Eth1Data {
-	if x != nil {
-		return x.Eth1Data
-	}
-	return nil
-}
-
-func (x *BeaconState) GetEth1DataVotes() []*Eth1Data {
-	if x != nil {
-		return x.Eth1DataVotes
-	}
-	return nil
-}
-
-func (x *BeaconState) GetValidators() []*Validator {
-	if x != nil {
-		return x.Validators
-	}
-	return nil
-}
-
-func (x *BeaconState) GetPreviousEpochAttestations() []*PendingAttestation {
-	if x != nil {
-		return x.PreviousEpochAttestations
-	}
-	return nil
-}
-
-func (x *BeaconState) GetCurrentEpochAttestations() []*PendingAttestation {
-	if x != nil {
-		return x.CurrentEpochAttestations
-	}
-	return nil
-}
-
-func (x *BeaconState) GetPreviousJustifiedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.PreviousJustifiedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconState) GetCurrentJustifiedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.CurrentJustifiedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconState) GetFinalizedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.FinalizedCheckpoint
-	}
-	return nil
-}
-
 type BeaconStateAltair struct {
-	state                       protoimpl.MessageState
-	sizeCache                   protoimpl.SizeCache
-	unknownFields               protoimpl.UnknownFields
-	Fork                        *Fork              `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
-	LatestBlockHeader           *BeaconBlockHeader `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
-	Eth1Data                    *Eth1Data          `protobuf:"bytes,3001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	Eth1DataVotes               []*Eth1Data        `protobuf:"bytes,3002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty" ssz-max:"2048"`
-	Validators                  []*Validator       `protobuf:"varint,4002,rep,packed,name=balances,proto3" json:"balances,omitempty" ssz-max:"1099511627776"`
-	PreviousJustifiedCheckpoint *Checkpoint        `protobuf:"bytes,8002,opt,name=previous_justified_checkpoint,json=previousJustifiedCheckpoint,proto3" json:"previous_justified_checkpoint,omitempty"`
-	CurrentJustifiedCheckpoint  *Checkpoint        `protobuf:"bytes,8003,opt,name=current_justified_checkpoint,json=currentJustifiedCheckpoint,proto3" json:"current_justified_checkpoint,omitempty"`
-	FinalizedCheckpoint         *Checkpoint        `protobuf:"bytes,8004,opt,name=finalized_checkpoint,json=finalizedCheckpoint,proto3" json:"finalized_checkpoint,omitempty"`
-	CurrentSyncCommittee        *SyncCommittee     `protobuf:"bytes,9002,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
-	NextSyncCommittee           *SyncCommittee     `protobuf:"bytes,9003,opt,name=next_sync_committee,json=nextSyncCommittee,proto3" json:"next_sync_committee,omitempty"`
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 }
 
 func (x *BeaconStateAltair) Reset() {
@@ -194,76 +103,6 @@ func (x *BeaconStateAltair) ProtoReflect() protoreflect.Message {
 // Deprecated: Use BeaconStateAltair.ProtoReflect.Descriptor instead.
 func (*BeaconStateAltair) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *BeaconStateAltair) GetFork() *Fork {
-	if x != nil {
-		return x.Fork
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetLatestBlockHeader() *BeaconBlockHeader {
-	if x != nil {
-		return x.LatestBlockHeader
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetEth1Data() *Eth1Data {
-	if x != nil {
-		return x.Eth1Data
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetEth1DataVotes() []*Eth1Data {
-	if x != nil {
-		return x.Eth1DataVotes
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetValidators() []*Validator {
-	if x != nil {
-		return x.Validators
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetPreviousJustifiedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.PreviousJustifiedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetCurrentJustifiedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.CurrentJustifiedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetFinalizedCheckpoint() *Checkpoint {
-	if x != nil {
-		return x.FinalizedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetCurrentSyncCommittee() *SyncCommittee {
-	if x != nil {
-		return x.CurrentSyncCommittee
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetNextSyncCommittee() *SyncCommittee {
-	if x != nil {
-		return x.NextSyncCommittee
-	}
-	return nil
 }
 
 type Fork struct {

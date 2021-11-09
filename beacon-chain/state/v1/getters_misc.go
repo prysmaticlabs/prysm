@@ -92,34 +92,34 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Fork == nil {
+	if b.fork == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.fork()
+	return b.forkInternal()
 }
 
-// fork version of the beacon chain.
+// forkInternal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) fork() *ethpb.Fork {
+func (b *BeaconState) forkInternal() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Fork == nil {
+	if b.fork == nil {
 		return nil
 	}
 
-	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
-	copy(prevVersion, b.state.Fork.PreviousVersion)
-	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
-	copy(currVersion, b.state.Fork.CurrentVersion)
+	prevVersion := make([]byte, len(b.fork.PreviousVersion))
+	copy(prevVersion, b.fork.PreviousVersion)
+	currVersion := make([]byte, len(b.fork.CurrentVersion))
+	copy(currVersion, b.fork.CurrentVersion)
 	return &ethpb.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
-		Epoch:           b.state.Fork.Epoch,
+		Epoch:           b.fork.Epoch,
 	}
 }
 

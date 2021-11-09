@@ -38,29 +38,40 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	genesisTime                uint64
-	genesisValidatorsRoot      customtypes.Byte32
-	slot                       eth2types.Slot
-	blockRoots                 *customtypes.StateRoots
-	stateRoots                 *customtypes.StateRoots
-	historicalRoots            customtypes.HistoricalRoots
-	eth1DepositIndex           uint64
-	balances                   []uint64
-	randaoMixes                *customtypes.RandaoMixes
-	slashings                  []uint64
-	previousEpochParticipation []byte
-	currentEpochParticipation  []byte
-	justificationBits          bitfield.Bitvector4
-	inactivityScores           []uint64
-	state                      *ethpb.BeaconStateAltair
-	lock                       sync.RWMutex
-	dirtyFields                map[types.FieldIndex]bool
-	dirtyIndices               map[types.FieldIndex][]uint64
-	stateFieldLeaves           map[types.FieldIndex]*fieldtrie.FieldTrie
-	rebuildTrie                map[types.FieldIndex]bool
-	valMapHandler              *stateutil.ValidatorMapHandler
-	merkleLayers               [][][]byte
-	sharedFieldReferences      map[types.FieldIndex]*stateutil.Reference
+	genesisTime                 uint64
+	genesisValidatorsRoot       customtypes.Byte32
+	slot                        eth2types.Slot
+	fork                        *ethpb.Fork
+	latestBlockHeader           *ethpb.BeaconBlockHeader
+	blockRoots                  *customtypes.StateRoots
+	stateRoots                  *customtypes.StateRoots
+	historicalRoots             customtypes.HistoricalRoots
+	eth1Data                    *ethpb.Eth1Data
+	eth1DataVotes               []*ethpb.Eth1Data
+	eth1DepositIndex            uint64
+	validators                  []*ethpb.Validator
+	balances                    []uint64
+	randaoMixes                 *customtypes.RandaoMixes
+	slashings                   []uint64
+	previousEpochParticipation  []byte
+	currentEpochParticipation   []byte
+	justificationBits           bitfield.Bitvector4
+	previousJustifiedCheckpoint *ethpb.Checkpoint
+	currentJustifiedCheckpoint  *ethpb.Checkpoint
+	finalizedCheckpoint         *ethpb.Checkpoint
+	inactivityScores            []uint64
+	currentSyncCommittee        *ethpb.SyncCommittee
+	nextSyncCommittee           *ethpb.SyncCommittee
+
+	state                 *ethpb.BeaconStateAltair
+	lock                  sync.RWMutex
+	dirtyFields           map[types.FieldIndex]bool
+	dirtyIndices          map[types.FieldIndex][]uint64
+	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie           map[types.FieldIndex]bool
+	valMapHandler         *stateutil.ValidatorMapHandler
+	merkleLayers          [][][]byte
+	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
 
 // Field Aliases for values from the types package.
