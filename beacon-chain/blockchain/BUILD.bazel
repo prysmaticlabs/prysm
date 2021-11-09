@@ -102,6 +102,7 @@ go_test(
         "receive_block_test.go",
         "service_test.go",
         "weak_subjectivity_checks_test.go",
+	"mock_test.go",
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
@@ -144,6 +145,7 @@ go_test(
         "init_test.go",
         "receive_block_test.go",
         "service_norace_test.go",
+	"mock_test.go",
     ],
     embed = [":go_default_library"],
     gc_goopts = [
