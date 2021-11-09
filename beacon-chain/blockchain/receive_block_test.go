@@ -273,7 +273,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	opts := testServiceOptsNoDB(t)
+	opts := testServiceOptsNoDB()
 	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)

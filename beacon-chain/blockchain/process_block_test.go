@@ -730,7 +730,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 
 func TestEnsureRootNotZeroHashes(t *testing.T) {
 	ctx := context.Background()
-	opts := testServiceOptsNoDB(t)
+	opts := testServiceOptsNoDB()
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.genesisRoot = [32]byte{'a'}
@@ -933,7 +933,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	ctx := context.Background()
-	opts := testServiceOptsNoDB(t)
+	opts := testServiceOptsNoDB()
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
@@ -947,7 +947,7 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	ctx := context.Background()
-	opts := testServiceOptsNoDB(t)
+	opts := testServiceOptsNoDB()
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 

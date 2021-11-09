@@ -63,8 +63,8 @@ type Service struct {
 	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	//justifiedBalances     []uint64
-	justifiedBalances     *stateBalanceCache
-	wsVerifier            *WeakSubjectivityVerifier
+	justifiedBalances *stateBalanceCache
+	wsVerifier        *WeakSubjectivityVerifier
 }
 
 // config options for the service.
