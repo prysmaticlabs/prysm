@@ -8,9 +8,9 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
     visibility = [
+        "//cmd:__pkg__",
         "//tools:__subpackages__",
         "//validator:__pkg__",
-        "//cmd:__pkg__",
         "//validator:__subpackages__",
     ],
     deps = [
