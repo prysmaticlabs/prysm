@@ -8,10 +8,10 @@ import (
 	util "github.com/wealdtech/go-eth2-util"
 )
 
-// RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
+// RecoverKeystoresFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
 // from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
 // to disk. Then, the mnemonic is never stored nor used by the validator.
-func (km *Keymanager) RecoverAccountsFromMnemonic(
+func (km *Keymanager) RecoverKeystoresFromMnemonic(
 	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
 ) error {
 	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)

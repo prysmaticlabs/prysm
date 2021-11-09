@@ -88,6 +88,12 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		accountsStore:       &accountStore{},
 		accountsChangedFeed: new(event.Feed),
 	}
+	if strings.Contains(cfg.Wallet.AccountsDir(), "imported") ||
+		strings.Contains(cfg.Wallet.AccountsDir(), "derived") {
+		return nil, errors.New(
+			"keymanager kind found in wallet is not compatible as a local keymanager",
+		)
+	}
 
 	if err := k.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to initialize account store")

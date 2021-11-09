@@ -27,7 +27,7 @@ func TestImportedKeymanager_Recover_25Words(t *testing.T) {
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "mnemonicpass", numAccounts)
+	err = km.RecoverKeystoresFromMnemonic(ctx, constant.TestMnemonic, "mnemonicpass", numAccounts)
 	require.NoError(t, err)
 	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestImportedKeymanager_Recover_25Words(t *testing.T) {
 	})
 	require.NoError(t, err)
 	// No mnemonic passphrase this time.
-	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverKeystoresFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
