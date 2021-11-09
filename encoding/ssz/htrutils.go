@@ -93,7 +93,7 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 }
 
 const (
-	maxBytesPerTransaction = 1073741824
+	maxBytesPerTransaction    = 1073741824
 	maxTransactionsPerPayload = 1048576
 )
 
