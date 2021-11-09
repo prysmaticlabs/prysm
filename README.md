@@ -18,10 +18,9 @@ To participate in staking, you can join the [official eth2 launchpad](https://la
 
 ## Contributing
 ### Branches
-Prysm maintains two permanent branches:
+Prysm maintains a single persistent branch named `develop`, which is the default branch for our git repository. This branch is the target for Pull Requests and always contains the latest merged PRs planned for the next release. Developers should base their PRs on this branch.
 
-* [master](https://github.com/prysmaticlabs/prysm/tree/master): This points to the latest stable release. It is ideal for most users.
-* [develop](https://github.com/prysmaticlabs/prysm/tree/develop): This is used for development, it contains the latest PRs. Developers should base their PRs on this branch.
+Our releases are cut from `develop` by tagging commits with semantic version numbers. The latest stable release can be found on the [release page](https://github.com/prysmaticlabs/prysm/releases/).
 
 ### Guide
 Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.network/docs/contribute/contribution-guidelines/) to learn more!
