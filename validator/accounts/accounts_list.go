@@ -100,7 +100,7 @@ func listImportedKeymanagerAccounts(
 	}
 	fmt.Println(
 		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts list --show-deposit-data`"),
+			"by running `lukso-validator accounts list --show-deposit-data`"),
 	)
 
 	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)

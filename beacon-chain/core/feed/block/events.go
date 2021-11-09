@@ -3,9 +3,7 @@
 package block
 
 import (
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
-	vanTypes "github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const (
@@ -25,11 +23,4 @@ type ReceivedBlockData struct {
 // UnConfirmedBlockData is the data sent to orchestrator
 type UnConfirmedBlockData struct {
 	Block interfaces.BeaconBlock
-}
-
-// ConfirmedData is the data which is sent after getting confirmation from orchestrator
-type ConfirmedData struct {
-	Slot          types.Slot
-	BlockRootHash [32]byte
-	Status        vanTypes.Status
 }

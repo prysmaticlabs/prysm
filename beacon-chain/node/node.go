@@ -623,9 +623,8 @@ func (b *BeaconNode) registerRPCService() error {
 		MaxMsgSize:              maxMsgSize,
 
 		// vanguard: EnableVanguardNode and UnconfirmedBlockFetcher is used for vanguard chain
-		EnableVanguardNode:      b.cliCtx.Bool(cmd.VanguardNetwork.Name),
-		UnconfirmedBlockFetcher: chainService,
-		PendingQueueFetcher:     chainService,
+		EnableVanguardNode:  b.cliCtx.Bool(cmd.VanguardNetwork.Name),
+		PendingQueueFetcher: chainService,
 	})
 
 	return b.services.RegisterService(rpcService)

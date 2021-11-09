@@ -149,6 +149,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		}
 
 		reorgCount.Inc()
+		if s.enableVanguardNode {
+			s.setLatestSentEpoch(helpers.SlotToEpoch(newHeadSlot))
+		}
 	}
 
 	// Cache the new head info.

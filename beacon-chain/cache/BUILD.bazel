@@ -13,7 +13,6 @@ go_library(
         "skip_slot_cache.go",
         "subnet_ids.go",
         "proposer_indices_type.go",
-        "van_pending_blocks.go",
     ] + select({
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",
@@ -61,7 +60,6 @@ go_test(
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
         "proposer_indices_test.go",
-        "van_pending_blocks_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

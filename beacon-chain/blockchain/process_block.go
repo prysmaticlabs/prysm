@@ -104,16 +104,16 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	// Vanguard: Validated by vanguard node. Now intercepting the execution and publishing the block
 	// and waiting for confirmation from orchestrator. If Lukso vanguard flag is enabled then these segment of code will be executed
 	if s.enableVanguardNode {
-		curEpoch := helpers.CurrentEpoch(postState)
+		curEpoch := helpers.CurrentEpoch(preState)
 		nextEpoch := curEpoch + 1
-		if s.latestSentEpoch < nextEpoch {
+		if s.getLatestSentEpoch() < nextEpoch {
 			proposerIndices, pubKeys, err := helpers.ProposerIndicesInCache(postState.Copy(), nextEpoch)
 			if err != nil {
 				return errors.Wrap(err, "could not get proposer indices for publishing")
 			}
 			log.WithField("nextEpoch", nextEpoch).WithField("latestSentEpoch", s.latestSentEpoch).Debug("publishing latest epoch info")
 			s.publishEpochInfo(signed.Block().Slot(), proposerIndices, pubKeys)
-			s.latestSentEpoch = nextEpoch
+			s.setLatestSentEpoch(nextEpoch)
 		}
 		// publish block to orchestrator and rpc service for sending minimal consensus info
 		s.publishBlock(signed)
@@ -123,7 +123,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 				return errors.Wrap(err, "could not verify pandora shard info onBlock")
 			}
 			// waiting for orchestrator confirmation in live-sync mode
-			if err := s.waitForConfirmation(ctx, signed); err != nil {
+			if err := s.waitForConfirmation(signed); err != nil {
 				return errors.Wrap(err, "could not publish and verified by orchestrator client onBlock")
 			}
 		}
@@ -275,14 +275,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		if s.enableVanguardNode {
 			curEpoch := helpers.CurrentEpoch(preState)
 			nextEpoch := curEpoch + 1
-			if s.latestSentEpoch < nextEpoch {
+			if s.getLatestSentEpoch() < nextEpoch {
 				proposerIndices, pubKeys, err := helpers.ProposerIndicesInCache(preState.Copy(), nextEpoch)
 				if err != nil {
 					return nil, nil, errors.Wrap(err, "could not get proposer indices for publishing")
 				}
 				log.WithField("nextEpoch", nextEpoch).WithField("latestSentEpoch", s.latestSentEpoch).Debug("publishing latest epoch info")
 				s.publishEpochInfo(b.Block().Slot(), proposerIndices, pubKeys)
-				s.latestSentEpoch = nextEpoch
+				s.setLatestSentEpoch(nextEpoch)
 			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()

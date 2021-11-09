@@ -139,7 +139,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, err
 	}
 	log.WithField("wallet-path", w.AccountsDir()).Infof(
-		"Successfully recovered HD wallet with %d accounts. Please use `accounts list` to view details for your accounts",
+		"Successfully recovered HD wallet with %d accounts. Please use `lukso accounts list` to view details for your accounts",
 		cfg.NumAccounts,
 	)
 	return w, nil

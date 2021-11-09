@@ -94,9 +94,9 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		return err
 	}
 	log.WithField("publicKeys", allAccountStr).Warn(
-		"Attempted to delete accounts. IMPORTANT: please run `validator accounts list` to ensure " +
+		"Attempted to delete accounts. IMPORTANT: please run `lukso accounts list` to ensure " +
 			"the public keys are indeed deleted. If they are still there, please file an issue at " +
-			"https://github.com/prysmaticlabs/prysm/issues/new")
+			"https://github.com/lukso-network/vanguard-consensus-engine/issues/new")
 	return nil
 }
 

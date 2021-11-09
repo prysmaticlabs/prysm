@@ -128,7 +128,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 		(keymanager kind) imported wallet
 
 		Showing 5 validator accounts
-		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
+		View the eth1 deposit transaction data for your accounts by running `lukso-validator accounts list --show-deposit-data
 
 		Account 0 | fully-evolving-fawn
 		[validating public key] 0xa6669aa0381c06470b9a6faf8abf4194ad5148a62e461cbef5a6bc4d292026f58b992c4cf40e50552d301cef19da75b9

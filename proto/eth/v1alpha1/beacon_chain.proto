@@ -919,6 +919,9 @@ message Reorg {
     bytes van_parent_hash = 1;
     // pan_parent_hash is the hash of pandora sharding block of the parent block re-org new block
     bytes pan_parent_hash = 2;
+    // new_slot is the new head slot after re-org
+    uint64 new_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
 }
 
 message StreamPendingBlocksRequest {

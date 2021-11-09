@@ -66,12 +66,16 @@ func (bs *Server) StreamMinimalConsensusInfo(
 	}
 	startEpoch := req.FromEpoch
 	endEpoch := cp.Epoch
-	if startEpoch == 0 || startEpoch < endEpoch {
+	if startEpoch <= endEpoch {
 		if err := batchSender(startEpoch, endEpoch, nil); err != nil {
 			return err
 		}
-		log.WithField("startEpoch", startEpoch).WithField("endEpoch", endEpoch).
-			Debug("successfully published previous epoch infos")
+		log.WithField("requestedEpoch", req.FromEpoch).WithField("finalizedEpoch", cp.Epoch).
+			Debug("Successfully published previous epoch infos")
+	} else {
+		endEpoch = req.FromEpoch
+		log.WithField("requestedEpoch", req.FromEpoch).WithField("finalizedEpoch", cp.Epoch).
+			Debug("Requested epoch is greater than finalized epoch")
 	}
 
 	stateChannel := make(chan *feed.Event, 1)
@@ -94,6 +98,7 @@ func (bs *Server) StreamMinimalConsensusInfo(
 				// Executes for once. It sends leftover epochs to orchestrator.
 				// Leftover epoch will start from endEpoch+1 to current epoch
 				if firstTime {
+					firstTime = false
 					if endEpoch < curEpoch {
 						if err := batchSender(endEpoch+1, curEpoch, nil); err != nil {
 							return err
@@ -101,7 +106,6 @@ func (bs *Server) StreamMinimalConsensusInfo(
 						log.WithField("startEpoch", endEpoch+1).WithField("endEpoch", curEpoch).
 							Debug("successfully published left over epoch infos")
 					}
-					firstTime = false
 					log.WithField("liveSyncEpoch", nextEpoch).Debug("start publishing live epoch info")
 				}
 				// only first time, sends current epoch. then every time it sends next epoch info. if current epoch is n then
@@ -125,7 +129,7 @@ func (bs *Server) StreamMinimalConsensusInfo(
 					Debug("Encountered a reorg. Re-sending updated epoch info")
 
 				// Get re-org info from DB
-				reorgInfo, err := bs.getVanPanParentHash(data)
+				reorgInfo, err := bs.prepareReorgInfo(data)
 				if err != nil {
 					log.WithError(err).Error("Failed re-org handling")
 					return err
@@ -188,7 +192,7 @@ func (bs *Server) prepareEpochInfo(
 }
 
 // getVanPanParentHash prepares re-org info for pandora and orchestrator
-func (bs *Server) getVanPanParentHash(reorgInfo *ethpbv1.EventChainReorg) (*ethpb.Reorg, error) {
+func (bs *Server) prepareReorgInfo(reorgInfo *ethpbv1.EventChainReorg) (*ethpb.Reorg, error) {
 	var newHeadRoot32Bytes [32]byte
 	copy(newHeadRoot32Bytes[:], reorgInfo.NewHeadBlock)
 	// Get the new head block from DB.
@@ -216,5 +220,6 @@ func (bs *Server) getVanPanParentHash(reorgInfo *ethpbv1.EventChainReorg) (*ethp
 	return &ethpb.Reorg{
 		VanParentHash: vanParentBlockHash,
 		PanParentHash: panHeaderHash,
+		NewSlot:       reorgInfo.Slot,
 	}, nil
 }
