@@ -72,6 +72,6 @@ func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interfac
 	assertions.NotEmpty(tb.Fatalf, obj, msg...)
 }
 
-func ErrorIs(tb assertions.AssertionTestingTB, err error, target error, msg ...interface{}) {
+func ErrorIs(tb assertions.AssertionTestingTB, err, target error, msg ...interface{}) {
 	assertions.ErrorIs(tb.Fatalf, err, target, msg)
 }
