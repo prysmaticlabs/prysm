@@ -64,7 +64,6 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	//justifiedBalances     []uint64
 	justifiedBalances     *stateBalanceCache
-	justifiedBalancesLock sync.RWMutex
 	wsVerifier            *WeakSubjectivityVerifier
 }
 
