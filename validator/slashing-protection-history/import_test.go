@@ -1,4 +1,4 @@
-package interchangeformat
+package history
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	valtest "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
