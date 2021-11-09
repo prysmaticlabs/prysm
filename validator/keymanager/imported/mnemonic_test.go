@@ -1,4 +1,4 @@
-package derived
+package imported
 
 import (
 	"testing"

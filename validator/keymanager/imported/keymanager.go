@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
+	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"go.opencensus.io/trace"
 )
@@ -27,6 +28,15 @@ var (
 	lock              sync.RWMutex
 	orderedPublicKeys = make([][48]byte, 0)
 	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
+)
+
+const (
+	// DerivationPathFormat describes the structure of how keys are derived from a master key.
+	DerivationPathFormat = "m / purpose / coin_type / account_index / withdrawal_key / validating_key"
+	// ValidatingKeyDerivationPathTemplate defining the hierarchical path for validating
+	// keys for Prysm Ethereum validators. According to EIP-2334, the format is as follows:
+	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
+	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )
 
 const (
@@ -355,4 +365,29 @@ func (km *Keymanager) CreateAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
+}
+
+// RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
+// from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
+// to disk. Then, the mnemonic is never stored nor used by the validator.
+func (km *Keymanager) RecoverAccountsFromMnemonic(
+	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
+) error {
+	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)
+	if err != nil {
+		return errors.Wrap(err, "could not initialize new wallet seed file")
+	}
+	privKeys := make([][]byte, numAccounts)
+	pubKeys := make([][]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		privKey, err := util.PrivateKeyFromSeedAndPath(
+			seed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i),
+		)
+		if err != nil {
+			return err
+		}
+		privKeys[i] = privKey.Marshal()
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+	return km.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
 }
