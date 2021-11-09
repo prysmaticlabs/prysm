@@ -34,7 +34,7 @@ func (b *BeaconState) SetBlockRoots(val *[8192][32]byte) error {
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
 	roots := customtypes.StateRoots(*val)
-	b.state.BlockRoots = &roots
+	b.blockRoots = &roots
 	b.markFieldAsDirty(blockRoots)
 	b.rebuildTrie[blockRoots] = true
 	return nil
@@ -46,16 +46,16 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.BlockRoots)) <= idx {
+	if uint64(len(b.blockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	r := b.state.BlockRoots
+	r := b.blockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		roots := *b.state.BlockRoots
+		roots := *b.blockRoots
 		rootsCopy := roots
 		r = &rootsCopy
 		ref.MinusRef()
@@ -63,7 +63,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	}
 
 	r[idx] = blockRoot
-	b.state.BlockRoots = r
+	b.blockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
 	b.addDirtyIndices(blockRoots, []uint64{idx})

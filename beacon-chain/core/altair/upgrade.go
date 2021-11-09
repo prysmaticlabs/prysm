@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -69,25 +68,16 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 
 	numValidators := state.NumValidators()
 
-	blockRoots := customtypes.StateRoots(*state.BlockRoots())
-	stateRoots := customtypes.StateRoots(*state.StateRoots())
-	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
 	s := &ethpb.BeaconStateAltair{
-		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
-		BlockRoots:                  &blockRoots,
-		StateRoots:                  &stateRoots,
-		HistoricalRoots:             state.HistoricalRoots(),
 		Eth1Data:                    state.Eth1Data(),
 		Eth1DataVotes:               state.Eth1DataVotes(),
 		Validators:                  state.Validators(),
-		RandaoMixes:                 &mixes,
-		JustificationBits:           state.JustificationBits(),
 		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
@@ -97,11 +87,24 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err != nil {
 		return nil, err
 	}
+
 	if err = newState.SetGenesisTime(state.GenesisTime()); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
 	}
+	if err = newState.SetGenesisValidatorRoot(state.GenesisValidatorRoot()); err != nil {
+		return nil, errors.Wrap(err, "could not set genesis validators root")
+	}
 	if err = newState.SetSlot(state.Slot()); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = newState.SetBlockRoots(state.BlockRoots()); err != nil {
+		return nil, errors.Wrap(err, "could not set block roots")
+	}
+	if err = newState.SetStateRoots(state.StateRoots()); err != nil {
+		return nil, errors.Wrap(err, "could not set state roots")
+	}
+	if err = newState.SetHistoricalRoots(state.HistoricalRoots()); err != nil {
+		return nil, errors.Wrap(err, "could not set historical roots")
 	}
 	if err = newState.SetEth1DepositIndex(state.Eth1DepositIndex()); err != nil {
 		return nil, errors.Wrap(err, "could not set eth1 deposit index")
@@ -109,8 +112,14 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err = newState.SetBalances(state.Balances()); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
 	}
+	if err = newState.SetRandaoMixes(state.RandaoMixes()); err != nil {
+		return nil, errors.Wrap(err, "could not set randao mixes")
+	}
 	if err = newState.SetSlashings(state.Slashings()); err != nil {
 		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = newState.SetJustificationBits(state.JustificationBits()); err != nil {
+		return nil, errors.Wrap(err, "could not set justification bits")
 	}
 	if err = newState.SetPreviousParticipationBits(make([]byte, numValidators)); err != nil {
 		return nil, errors.Wrap(err, "could not set previous participation bits")
@@ -121,6 +130,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err = newState.SetInactivityScores(make([]uint64, numValidators)); err != nil {
 		return nil, errors.Wrap(err, "could not set inactivity scores")
 	}
+
 	prevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err

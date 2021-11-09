@@ -24,19 +24,12 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	// TODO: Change this to something else, not sure what yet
 	return &ethpb.BeaconStateAltair{
-		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		Fork:                        b.fork(),
 		LatestBlockHeader:           b.latestBlockHeader(),
-		BlockRoots:                  b.blockRoots(),
-		StateRoots:                  b.stateRoots(),
-		HistoricalRoots:             b.historicalRoots(),
 		Eth1Data:                    b.eth1Data(),
 		Eth1DataVotes:               b.eth1DataVotes(),
 		Validators:                  b.validators(),
-		RandaoMixes:                 b.randaoMixes(),
-		JustificationBits:           b.justificationBits(),
 		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.finalizedCheckpoint(),
@@ -56,24 +49,24 @@ func (b *BeaconState) StateRoots() *[8192][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.StateRoots == nil {
+	if b.stateRoots == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [8192][32]byte(*b.stateRoots())
+	roots := [8192][32]byte(*b.stateRootsInternal())
 	return &roots
 }
 
-// StateRoots kept track of in the beacon state.
+// stateRootsInternal kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRoots() *customtypes.StateRoots {
+func (b *BeaconState) stateRootsInternal() *customtypes.StateRoots {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return b.state.StateRoots
+	return b.stateRoots
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -82,7 +75,7 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-	if b.state.StateRoots == nil {
+	if b.stateRoots == nil {
 		return [32]byte{}, nil
 	}
 
@@ -99,9 +92,9 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-	sRoots := make([][]byte, len(b.state.BlockRoots))
+	sRoots := make([][]byte, len(b.stateRoots))
 	for i := range sRoots {
-		sRoots[i] = b.state.StateRoots[i][:]
+		sRoots[i] = b.stateRoots[i][:]
 	}
 	root, err := bytesutil.SafeCopyRootAtIndex(sRoots, idx)
 	if err != nil {

@@ -13,7 +13,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.JustificationBits = val
+	b.justificationBits = val
 	b.markFieldAsDirty(justificationBits)
 	return nil
 }

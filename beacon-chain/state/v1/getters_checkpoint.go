@@ -13,28 +13,28 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.JustificationBits == nil {
+	if b.justificationBits == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.justificationBits()
+	return b.justificationBitsInternal()
 }
 
-// justificationBits marking which epochs have been justified in the beacon chain.
+// justificationBitsInternal marking which epochs have been justified in the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) justificationBits() bitfield.Bitvector4 {
+func (b *BeaconState) justificationBitsInternal() bitfield.Bitvector4 {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.JustificationBits == nil {
+	if b.justificationBits == nil {
 		return nil
 	}
 
-	res := make([]byte, len(b.state.JustificationBits.Bytes()))
-	copy(res, b.state.JustificationBits.Bytes())
+	res := make([]byte, len(b.justificationBits.Bytes()))
+	copy(res, b.justificationBits.Bytes())
 	return res
 }
 

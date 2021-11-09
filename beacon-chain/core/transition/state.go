@@ -7,7 +7,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -80,7 +79,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := customtypes.RandaoMixes{}
+	var randaoMixes [65536][32]byte
 	for i := 0; i < len(randaoMixes); i++ {
 		var h [32]byte
 		copy(h[:], eth1Data.BlockHash)
@@ -95,12 +94,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := customtypes.StateRoots{}
+	var blockRoots [8192][32]byte
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash32
 	}
 
-	stateRoots := customtypes.StateRoots{}
+	var stateRoots [8192][32]byte
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash32
 	}
@@ -113,9 +112,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	}
 
 	state := &ethpb.BeaconState{
-		// Misc fields.
-		GenesisValidatorsRoot: genesisValidatorsRoot,
-
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -124,9 +120,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 		// Validator registry fields.
 		Validators: preState.Validators(),
-
-		// Randomness and committees.
-		RandaoMixes: &randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
@@ -137,15 +130,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-		JustificationBits: []byte{0},
 		FinalizedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
-
-		HistoricalRoots:           [][32]byte{},
-		BlockRoots:                &blockRoots,
-		StateRoots:                &stateRoots,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
@@ -180,14 +168,32 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	if err = s.SetGenesisTime(genesisTime); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
 	}
+	if err = s.SetGenesisValidatorRoot(genesisValidatorsRoot); err != nil {
+		return nil, errors.Wrap(err, "could not set genesis validators root")
+	}
 	if err = s.SetSlot(0); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = s.SetBlockRoots(&blockRoots); err != nil {
+		return nil, errors.Wrap(err, "could not set block roots")
+	}
+	if err = s.SetStateRoots(&stateRoots); err != nil {
+		return nil, errors.Wrap(err, "could not set state roots")
+	}
+	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set historical roots")
 	}
 	if err = s.SetBalances(preState.Balances()); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
 	}
+	if err = s.SetRandaoMixes(&randaoMixes); err != nil {
+		return nil, errors.Wrap(err, "could not set randao mixes")
+	}
 	if err = s.SetSlashings(slashings); err != nil {
 		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = s.SetJustificationBits([]byte{0}); err != nil {
+		return nil, errors.Wrap(err, "could not set justification bits")
 	}
 	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
 		return nil, errors.Wrap(err, "could not set eth1 deposit index")
@@ -208,8 +214,6 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		// Validator registry fields.
 		Validators: []*ethpb.Validator{},
 
-		JustificationBits:         []byte{0},
-		HistoricalRoots:           [][32]byte{},
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
@@ -226,11 +230,17 @@ func EmptyGenesisState() (state.BeaconState, error) {
 	if err = s.SetSlot(0); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
 	}
+	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set historical roots")
+	}
 	if err = s.SetBalances([]uint64{}); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
 	}
 	if err = s.SetEth1DepositIndex(0); err != nil {
 		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+	if err = s.SetJustificationBits([]byte{0}); err != nil {
+		return nil, errors.Wrap(err, "could not set justification bits")
 	}
 
 	return s, nil

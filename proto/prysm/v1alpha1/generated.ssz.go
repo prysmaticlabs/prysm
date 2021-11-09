@@ -3043,9 +3043,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2687377)
 
-	// Field (1) 'GenesisValidatorsRoot'
-	dst = append(dst, b.GenesisValidatorsRoot[:]...)
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3061,20 +3058,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	if dst, err = b.LatestBlockHeader.MarshalSSZTo(dst); err != nil {
 		return
 	}
-
-	// Field (5) 'BlockRoots'
-	for ii := 0; ii < 8192; ii++ {
-		dst = append(dst, b.BlockRoots[ii][:]...)
-	}
-
-	// Field (6) 'StateRoots'
-	for ii := 0; ii < 8192; ii++ {
-		dst = append(dst, b.StateRoots[ii][:]...)
-	}
-
-	// Offset (7) 'HistoricalRoots'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.HistoricalRoots) * 32
 
 	// Field (8) 'Eth1Data'
 	if b.Eth1Data == nil {
@@ -3092,11 +3075,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Validators) * 121
 
-	// Field (13) 'RandaoMixes'
-	for ii := 0; ii < 65536; ii++ {
-		dst = append(dst, b.RandaoMixes[ii][:]...)
-	}
-
 	// Offset (15) 'PreviousEpochAttestations'
 	dst = ssz.WriteOffset(dst, offset)
 	for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
@@ -3110,13 +3088,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		offset += 4
 		offset += b.CurrentEpochAttestations[ii].SizeSSZ()
 	}
-
-	// Field (17) 'JustificationBits'
-	if len(b.JustificationBits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.JustificationBits...)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if b.PreviousJustifiedCheckpoint == nil {
@@ -3140,15 +3111,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 	if dst, err = b.FinalizedCheckpoint.MarshalSSZTo(dst); err != nil {
 		return
-	}
-
-	// Field (7) 'HistoricalRoots'
-	if len(b.HistoricalRoots) > 16777216 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.HistoricalRoots); ii++ {
-		dst = append(dst, b.HistoricalRoots[ii][:]...)
 	}
 
 	// Field (9) 'Eth1DataVotes'
@@ -3223,9 +3185,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	tail := buf
 	var o7, o9, o11, o12, o15, o16 uint64
 
-	// Field (1) 'GenesisValidatorsRoot'
-	copy(b.GenesisValidatorsRoot[:], buf[8:40])
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3240,18 +3199,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	}
 	if err = b.LatestBlockHeader.UnmarshalSSZ(buf[64:176]); err != nil {
 		return err
-	}
-
-	// Field (5) 'BlockRoots'
-
-	for ii := 0; ii < 8192; ii++ {
-		copy(b.BlockRoots[ii][:], buf[176:262320][ii*32:(ii+1)*32])
-	}
-
-	// Field (6) 'StateRoots'
-
-	for ii := 0; ii < 8192; ii++ {
-		copy(b.StateRoots[ii][:], buf[262320:524464][ii*32:(ii+1)*32])
 	}
 
 	// Offset (7) 'HistoricalRoots'
@@ -3286,12 +3233,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	// Field (13) 'RandaoMixes'
-
-	for ii := 0; ii < 65536; ii++ {
-		copy(b.RandaoMixes[ii][:], buf[524560:2621712][ii*32:(ii+1)*32])
-	}
-
 	// Offset (15) 'PreviousEpochAttestations'
 	if o15 = ssz.ReadOffset(buf[2687248:2687252]); o15 > size || o12 > o15 {
 		return ssz.ErrOffset
@@ -3301,12 +3242,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	if o16 = ssz.ReadOffset(buf[2687252:2687256]); o16 > size || o15 > o16 {
 		return ssz.ErrOffset
 	}
-
-	// Field (17) 'JustificationBits'
-	if cap(b.JustificationBits) == 0 {
-		b.JustificationBits = make([]byte, 0, len(buf[2687256:2687257]))
-	}
-	b.JustificationBits = append(b.JustificationBits, buf[2687256:2687257]...)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if b.PreviousJustifiedCheckpoint == nil {
@@ -3330,19 +3265,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	}
 	if err = b.FinalizedCheckpoint.UnmarshalSSZ(buf[2687337:2687377]); err != nil {
 		return err
-	}
-
-	// Field (7) 'HistoricalRoots'
-	{
-		buf = tail[o7:o9]
-		num, err := ssz.DivideInt2(len(buf), 32, 16777216)
-		if err != nil {
-			return err
-		}
-		b.HistoricalRoots = make([][32]byte, num)
-		for ii := 0; ii < num; ii++ {
-			copy(b.HistoricalRoots[ii][:], buf[ii*32:(ii+1)*32])
-		}
 	}
 
 	// Field (9) 'Eth1DataVotes'
@@ -3431,9 +3353,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 func (b *BeaconState) SizeSSZ() (size int) {
 	size = 2687377
 
-	// Field (7) 'HistoricalRoots'
-	size += len(b.HistoricalRoots) * 32
-
 	// Field (9) 'Eth1DataVotes'
 	size += len(b.Eth1DataVotes) * 72
 
@@ -3464,9 +3383,6 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
-	// Field (1) 'GenesisValidatorsRoot'
-	hh.PutBytes(b.GenesisValidatorsRoot[:])
-
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
 		return
@@ -3475,38 +3391,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (4) 'LatestBlockHeader'
 	if err = b.LatestBlockHeader.HashTreeRootWith(hh); err != nil {
 		return
-	}
-
-	// Field (5) 'BlockRoots'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.BlockRoots {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (6) 'StateRoots'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.StateRoots {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (7) 'HistoricalRoots'
-	{
-		if len(b.HistoricalRoots) > 16777216 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.HistoricalRoots {
-			hh.Append(i[:])
-		}
-		numItems := uint64(len(b.HistoricalRoots))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(16777216, numItems, 32))
 	}
 
 	// Field (8) 'Eth1Data'
@@ -3546,15 +3430,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
 	}
 
-	// Field (13) 'RandaoMixes'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.RandaoMixes {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
 	// Field (15) 'PreviousEpochAttestations'
 	{
 		subIndx := hh.Index()
@@ -3587,13 +3462,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 4096)
 	}
 
-	// Field (17) 'JustificationBits'
-	if len(b.JustificationBits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.JustificationBits)
-
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if err = b.PreviousJustifiedCheckpoint.HashTreeRootWith(hh); err != nil {
 		return
@@ -3623,9 +3491,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2736629)
 
-	// Field (1) 'GenesisValidatorsRoot'
-	dst = append(dst, b.GenesisValidatorsRoot[:]...)
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3642,20 +3507,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
-	// Field (5) 'BlockRoots'
-	for ii := 0; ii < 8192; ii++ {
-		dst = append(dst, b.BlockRoots[ii][:]...)
-	}
-
-	// Field (6) 'StateRoots'
-	for ii := 0; ii < 8192; ii++ {
-		dst = append(dst, b.StateRoots[ii][:]...)
-	}
-
-	// Offset (7) 'HistoricalRoots'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.HistoricalRoots) * 32
-
 	// Field (8) 'Eth1Data'
 	if b.Eth1Data == nil {
 		b.Eth1Data = new(Eth1Data)
@@ -3671,18 +3522,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Offset (11) 'Validators'
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Validators) * 121
-
-	// Field (13) 'RandaoMixes'
-	for ii := 0; ii < 65536; ii++ {
-		dst = append(dst, b.RandaoMixes[ii][:]...)
-	}
-
-	// Field (17) 'JustificationBits'
-	if len(b.JustificationBits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.JustificationBits...)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if b.PreviousJustifiedCheckpoint == nil {
@@ -3724,15 +3563,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
-	// Field (7) 'HistoricalRoots'
-	if len(b.HistoricalRoots) > 16777216 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.HistoricalRoots); ii++ {
-		dst = append(dst, b.HistoricalRoots[ii][:]...)
-	}
-
 	// Field (9) 'Eth1DataVotes'
 	if len(b.Eth1DataVotes) > 2048 {
 		err = ssz.ErrListTooBig
@@ -3769,9 +3599,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	tail := buf
 	var o7, o9, o11, o12, o15, o16, o21 uint64
 
-	// Field (1) 'GenesisValidatorsRoot'
-	copy(b.GenesisValidatorsRoot[:], buf[8:40])
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3786,18 +3613,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	}
 	if err = b.LatestBlockHeader.UnmarshalSSZ(buf[64:176]); err != nil {
 		return err
-	}
-
-	// Field (5) 'BlockRoots'
-
-	for ii := 0; ii < 8192; ii++ {
-		copy(b.BlockRoots[ii][:], buf[176:262320][ii*32:(ii+1)*32])
-	}
-
-	// Field (6) 'StateRoots'
-
-	for ii := 0; ii < 8192; ii++ {
-		copy(b.StateRoots[ii][:], buf[262320:524464][ii*32:(ii+1)*32])
 	}
 
 	// Offset (7) 'HistoricalRoots'
@@ -3832,12 +3647,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	// Field (13) 'RandaoMixes'
-
-	for ii := 0; ii < 65536; ii++ {
-		copy(b.RandaoMixes[ii][:], buf[524560:2621712][ii*32:(ii+1)*32])
-	}
-
 	// Offset (15) 'PreviousEpochParticipation'
 	if o15 = ssz.ReadOffset(buf[2687248:2687252]); o15 > size || o12 > o15 {
 		return ssz.ErrOffset
@@ -3847,12 +3656,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	if o16 = ssz.ReadOffset(buf[2687252:2687256]); o16 > size || o15 > o16 {
 		return ssz.ErrOffset
 	}
-
-	// Field (17) 'JustificationBits'
-	if cap(b.JustificationBits) == 0 {
-		b.JustificationBits = make([]byte, 0, len(buf[2687256:2687257]))
-	}
-	b.JustificationBits = append(b.JustificationBits, buf[2687256:2687257]...)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if b.PreviousJustifiedCheckpoint == nil {
@@ -3899,19 +3702,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 		return err
 	}
 
-	// Field (7) 'HistoricalRoots'
-	{
-		buf = tail[o7:o9]
-		num, err := ssz.DivideInt2(len(buf), 32, 16777216)
-		if err != nil {
-			return err
-		}
-		b.HistoricalRoots = make([][32]byte, num)
-		for ii := 0; ii < num; ii++ {
-			copy(b.HistoricalRoots[ii][:], buf[ii*32:(ii+1)*32])
-		}
-	}
-
 	// Field (9) 'Eth1DataVotes'
 	{
 		buf = tail[o9:o11]
@@ -3955,9 +3745,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 func (b *BeaconStateAltair) SizeSSZ() (size int) {
 	size = 2736629
 
-	// Field (7) 'HistoricalRoots'
-	size += len(b.HistoricalRoots) * 32
-
 	// Field (9) 'Eth1DataVotes'
 	size += len(b.Eth1DataVotes) * 72
 
@@ -3976,9 +3763,6 @@ func (b *BeaconStateAltair) HashTreeRoot() ([32]byte, error) {
 func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
-	// Field (1) 'GenesisValidatorsRoot'
-	hh.PutBytes(b.GenesisValidatorsRoot[:])
-
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
 		return
@@ -3987,38 +3771,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (4) 'LatestBlockHeader'
 	if err = b.LatestBlockHeader.HashTreeRootWith(hh); err != nil {
 		return
-	}
-
-	// Field (5) 'BlockRoots'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.BlockRoots {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (6) 'StateRoots'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.StateRoots {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (7) 'HistoricalRoots'
-	{
-		if len(b.HistoricalRoots) > 16777216 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.HistoricalRoots {
-			hh.Append(i[:])
-		}
-		numItems := uint64(len(b.HistoricalRoots))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(16777216, numItems, 32))
 	}
 
 	// Field (8) 'Eth1Data'
@@ -4057,22 +3809,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
 	}
-
-	// Field (13) 'RandaoMixes'
-	{
-		subIndx := hh.Index()
-		for _, i := range b.RandaoMixes {
-			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (17) 'JustificationBits'
-	if len(b.JustificationBits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.JustificationBits)
 
 	// Field (18) 'PreviousJustifiedCheckpoint'
 	if err = b.PreviousJustifiedCheckpoint.HashTreeRootWith(hh); err != nil {
