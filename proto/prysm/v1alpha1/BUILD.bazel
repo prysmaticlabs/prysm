@@ -51,9 +51,9 @@ proto_library(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     exclude_objs = [
-        "ExecutionPayloadHeader",
-        "ExecutionPayload",
-        "Transaction",
+        #"ExecutionPayloadHeader",
+        #"ExecutionPayload",
+        #"Transaction",
     ],
     go_proto = ":go_proto",
     includes = [
@@ -159,8 +159,6 @@ go_library(
         "cloners.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
-	"executionpayload.ssz.go",
-        "transaction.ssz.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [

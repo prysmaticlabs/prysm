@@ -1074,17 +1074,10 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 1"),
-		},
-	})
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 2"),
-		},
-	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -1154,17 +1147,10 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 1"),
-		},
-	})
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 2"),
-		},
-	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -1233,17 +1219,10 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 1"),
-		},
-	})
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 2"),
-		},
-	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -1312,17 +1291,10 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("InvalidHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 1"),
-		},
-	})
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, &ethpb.Transaction{
-		TransactionOneof: &ethpb.Transaction_OpaqueTransaction{
-			OpaqueTransaction: []byte("transaction 2"),
-		},
-	})
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -1359,8 +1331,8 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	}
 
 	// set the max payload size to small value to test
-	params.BeaconConfig().MaxExecutionTransactions = 1
-	params.BeaconConfig().MaxBytesPerOpaqueTransaction = 9
+	//params.BeaconConfig().MaxExecutionTransactions = 1
+	//params.BeaconConfig().MaxBytesPerOpaqueTransaction = 9
 
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
 	require.NotNil(t, err)

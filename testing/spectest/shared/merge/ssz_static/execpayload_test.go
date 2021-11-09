@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path"
@@ -54,17 +55,6 @@ func TestExecPayload(t *testing.T) {
 	}
 }
 
-func getSSZSnappy(path string) ([]byte, error) {
-	fh, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fh.Close()
-	buf := bytes.NewBuffer(nil)
-	_, err = buf.ReadFrom(fh)
-	return snappy.Decode(nil, buf.Bytes())
-}
-
 type TestCase struct {
 	path     string
 	config   string
@@ -78,9 +68,15 @@ func (tc *TestCase) MarshaledBytes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() {
+		err := fh.Close()
+		log.Error(err)
+	}()
 	buf := bytes.NewBuffer(nil)
 	_, err = buf.ReadFrom(fh)
+	if err != nil {
+		return nil, err
+	}
 	return snappy.Decode(nil, buf.Bytes())
 }
 
@@ -89,7 +85,10 @@ func (tc *TestCase) Value() (*SSZValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() {
+		err := fh.Close()
+		log.Error(err)
+	}()
 	d := json.NewDecoder(fh)
 	v := &SSZValue{}
 	err = d.Decode(v)
@@ -101,7 +100,10 @@ func (tc *TestCase) Roots() (*SSZRoots, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() {
+		err := fh.Close()
+		log.Error(err)
+	}()
 	//d := json.NewDecoder(fh)
 	b, err := ioutil.ReadAll(fh)
 	if err != nil {
@@ -122,6 +124,6 @@ func (tc *TestCase) RootBytes() ([32]byte, error) {
 	if err != nil {
 		return b, err
 	}
-	copy(b[:], rootBytes[:])
+	copy(b[:], rootBytes)
 	return b, nil
 }

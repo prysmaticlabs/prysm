@@ -441,19 +441,6 @@ func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
 		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  CopyTransactions(payload.Transactions),
+		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
 	}
-}
-
-// CopyTransactions copies the transactions.
-func CopyTransactions(txs []*Transaction) []*Transaction {
-	newTxs := make([]*Transaction, len(txs))
-	for i := range txs {
-		newTxs[i] = &Transaction{
-			TransactionOneof: &Transaction_OpaqueTransaction{
-				bytesutil.SafeCopyBytes(txs[i].GetOpaqueTransaction()),
-			},
-		}
-	}
-	return newTxs
 }
