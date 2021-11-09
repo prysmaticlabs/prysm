@@ -12,6 +12,7 @@ go_library(
         "accounts_list.go",
         "doc.go",
         "log.go",
+        "options.go",
         "wallet_create.go",
         "wallet_edit.go",
         "wallet_recover.go",
