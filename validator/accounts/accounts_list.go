@@ -5,78 +5,75 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
-	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 )
 
-// ListAccountsCli displays all available validator accounts in a Prysm wallet.
-func ListAccountsCli(cliCtx *cli.Context) error {
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, wallet.ErrNoWalletFound
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
-		return errors.New("wrong wallet password entered")
-	}
-	if err != nil {
-		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
-	}
-	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
-	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
-	listIndices := cliCtx.Bool(flags.ListValidatorIndices.Name)
-
-	if listIndices {
-		client, _, err := prepareClients(cliCtx)
+// List allows for listing all accounts in the wallet and pretty-printing them.
+func (acc *AccountsCLIManager) List(ctx context.Context) error {
+	if acc.listValidatorIndices {
+		client, _, err := acc.prepareBeaconClients(ctx)
 		if err != nil {
 			return err
 		}
-		return listValidatorIndices(cliCtx.Context, km, *client)
+		return listValidatorIndices(ctx, acc.keymanager, *client)
 	}
 
-	switch w.KeymanagerKind() {
+	switch acc.wallet.KeymanagerKind() {
 	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
+		km, ok := acc.keymanager.(*imported.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listImportedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
+		if err := listImportedKeymanagerAccounts(ctx, acc.showDepositData, acc.showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
 		}
 	case keymanager.Derived:
-		km, ok := km.(*derived.Keymanager)
+		km, ok := acc.keymanager.(*derived.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showPrivateKeys, km); err != nil {
+		if err := listDerivedKeymanagerAccounts(ctx, acc.showPrivateKeys, km); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case keymanager.Remote:
-		km, ok := km.(*remote.Keymanager)
+		km, ok := acc.keymanager.(*remote.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listRemoteKeymanagerAccounts(cliCtx.Context, w, km, km.KeymanagerOpts()); err != nil {
+		if err := listRemoteKeymanagerAccounts(ctx, acc.wallet, km, km.KeymanagerOpts()); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
-		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
+		return fmt.Errorf(errKeymanagerNotSupported, acc.wallet.KeymanagerKind().String())
 	}
 	return nil
+}
+
+func (acc *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
+	if acc.dialOpts == nil {
+		return nil, nil, errors.New("failed to construct dial options")
+	}
+
+	ctx = grpcutil.AppendHeaders(ctx, acc.grpcHeaders)
+
+	conn, err := grpc.DialContext(ctx, acc.beaconRPCProvider, acc.dialOpts...)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", acc.beaconRPCProvider)
+	}
+	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
+	nodeClient := ethpb.NewNodeClient(conn)
+	return &validatorClient, &nodeClient, nil
 }
 
 func listImportedKeymanagerAccounts(

@@ -70,11 +70,14 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				features.ConfigureValidator(cliCtx)
+				return nil
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.ListAccountsCli(cliCtx); err != nil {
+				if err := accountsList(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
@@ -83,7 +86,7 @@ var Commands = &cli.Command{
 		{
 			Name: "backup",
 			Description: "backup accounts into EIP-2335 compliant keystore.json files zipped into a backup.zip file " +
-				"at a desired output directory. Accounts to backup can also " +
+				"at a desired output directory. AccountsCLIManager to backup can also " +
 				"be specified programmatically via a --backup-for-public-keys flag which specifies a comma-separated " +
 				"list of hex string public keys",
 			Flags: cmd.WrapFlags([]cli.Flag{
