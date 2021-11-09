@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -38,18 +37,6 @@ func GenerateGenesisState(ctx context.Context, genesisTime, numValidators uint64
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
 	return GenerateGenesisStateFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots)
-}
-
-func GenerateGenesisStateMerge(ctx context.Context, genesisTime, numValidators uint64) (*ethpb.BeaconStateMerge, []*ethpb.Deposit, error) {
-	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
-	}
-	depositDataItems, depositDataRoots, err := DepositDataFromKeys(privKeys, pubKeys)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
-	}
-	return GenerateGenesisStateMergeFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots)
 }
 
 // GenerateGenesisStateFromDepositData creates a genesis state given a list of
@@ -79,37 +66,6 @@ func GenerateGenesisStateFromDepositData(
 	}
 
 	pbState, err := v1.ProtobufBeaconState(beaconState.CloneInnerState())
-	if err != nil {
-		return nil, nil, err
-	}
-	return pbState, deposits, nil
-}
-
-func GenerateGenesisStateMergeFromDepositData(
-	ctx context.Context, genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
-) (*ethpb.BeaconStateMerge, []*ethpb.Deposit, error) {
-	trie, err := trie.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
-	}
-	deposits, err := GenerateDepositsFromData(depositData, trie)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
-	}
-	root := trie.HashTreeRoot()
-	if genesisTime == 0 {
-		genesisTime = uint64(time.Now().Unix())
-	}
-	beaconState, err := coreState.GenesisBeaconStateMerge(ctx, deposits, genesisTime, &ethpb.Eth1Data{
-		DepositRoot:  root[:],
-		DepositCount: uint64(len(deposits)),
-		BlockHash:    mockEth1BlockHash,
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate genesis state")
-	}
-
-	pbState, err := v3.ProtobufBeaconState(beaconState.CloneInnerState())
 	if err != nil {
 		return nil, nil, err
 	}
