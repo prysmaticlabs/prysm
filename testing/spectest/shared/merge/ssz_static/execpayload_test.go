@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 

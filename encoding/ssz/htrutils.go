@@ -3,6 +3,7 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
+
 	ssz "github.com/ferranbt/fastssz"
 
 	"github.com/pkg/errors"
