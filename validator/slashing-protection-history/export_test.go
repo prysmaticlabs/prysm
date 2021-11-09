@@ -1,4 +1,4 @@
-package slashingprotectionhistory
+package history
 
 import (
 	"context"

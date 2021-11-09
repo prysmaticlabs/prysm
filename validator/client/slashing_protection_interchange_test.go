@@ -88,7 +88,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 				validator, _, _, _ := setup(t)
 
 				if tt.GenesisValidatorsRoot != "" {
-					r, err := slashingprotectionhistory.RootFromHex(tt.GenesisValidatorsRoot)
+					r, err := history.RootFromHex(tt.GenesisValidatorsRoot)
 					require.NoError(t, validator.db.SaveGenesisValidatorsRoot(context.Background(), r[:]))
 					require.NoError(t, err)
 				}
@@ -100,7 +100,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					t.Fatal(err)
 				}
 				b := bytes.NewBuffer(interchangeBytes)
-				if err := slashingprotectionhistory.ImportStandardProtectionJSON(context.Background(), validator.db, b); err != nil {
+				if err := history.ImportStandardProtectionJSON(context.Background(), validator.db, b); err != nil {
 					if step.ShouldSucceed {
 						t.Fatal(err)
 					}
@@ -110,9 +110,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of block signings to attempt after importing the interchange data above.
 				for _, sb := range step.Blocks {
-					bSlot, err := slashingprotectionhistory.SlotFromString(sb.Slot)
+					bSlot, err := history.SlotFromString(sb.Slot)
 					require.NoError(t, err)
-					pk, err := slashingprotectionhistory.PubKeyFromHex(sb.Pubkey)
+					pk, err := history.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)
 					b := util.NewBeaconBlock()
 					b.Block.Slot = bSlot
@@ -134,11 +134,11 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of attestation signings to attempt after importing the interchange data above.
 				for _, sa := range step.Attestations {
-					target, err := slashingprotectionhistory.EpochFromString(sa.TargetEpoch)
+					target, err := history.EpochFromString(sa.TargetEpoch)
 					require.NoError(t, err)
-					source, err := slashingprotectionhistory.EpochFromString(sa.SourceEpoch)
+					source, err := history.EpochFromString(sa.SourceEpoch)
 					require.NoError(t, err)
-					pk, err := slashingprotectionhistory.PubKeyFromHex(sa.Pubkey)
+					pk, err := history.PubKeyFromHex(sa.Pubkey)
 					require.NoError(t, err)
 					ia := &ethpb.IndexedAttestation{
 						Data: &ethpb.AttestationData{

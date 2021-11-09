@@ -1,5 +1,5 @@
-package slashingprotectioncmd
+package historycmd
 
 import "github.com/sirupsen/logrus"
 
-var log = logrus.WithField("prefix", "slashingprotectioncmd")
+var log = logrus.WithField("prefix", "historycmd")

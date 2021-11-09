@@ -1,4 +1,4 @@
-package slashingprotectioncmd
+package historycmd
 
 import (
 	"github.com/prysmaticlabs/prysm/cmd"
