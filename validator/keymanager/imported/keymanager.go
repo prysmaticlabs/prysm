@@ -101,8 +101,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return k, nil
 }
 
-// NewInteropKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
-func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
+// NewDeterministicKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
+func NewDeterministicKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
 	}
@@ -134,6 +134,67 @@ func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
 	}
 	lock.RUnlock()
 	return names, nil
+}
+
+// CreateAccountsKeystore creates a new keystore holding the provided keys.
+func (km *Keymanager) CreateAccountsKeystore(
+	_ context.Context,
+	privateKeys, publicKeys [][]byte,
+) (*AccountsKeystoreRepresentation, error) {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	if len(privateKeys) != len(publicKeys) {
+		return nil, fmt.Errorf(
+			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
+		)
+	}
+	if km.accountsStore == nil {
+		km.accountsStore = &accountStore{
+			PrivateKeys: privateKeys,
+			PublicKeys:  publicKeys,
+		}
+	} else {
+		existingPubKeys := make(map[string]bool)
+		existingPrivKeys := make(map[string]bool)
+		for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
+			existingPrivKeys[string(km.accountsStore.PrivateKeys[i])] = true
+			existingPubKeys[string(km.accountsStore.PublicKeys[i])] = true
+		}
+		// We append to the accounts store keys only
+		// if the private/secret key do not already exist, to prevent duplicates.
+		for i := 0; i < len(privateKeys); i++ {
+			sk := privateKeys[i]
+			pk := publicKeys[i]
+			_, privKeyExists := existingPrivKeys[string(sk)]
+			_, pubKeyExists := existingPubKeys[string(pk)]
+			if privKeyExists || pubKeyExists {
+				continue
+			}
+			km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys, pk)
+			km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys, sk)
+		}
+	}
+	err = km.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize keys caches")
+	}
+	encodedStore, err := json.MarshalIndent(km.accountsStore, "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	cryptoFields, err := encryptor.Encrypt(encodedStore, km.wallet.Password())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt accounts")
+	}
+	return &AccountsKeystoreRepresentation{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}, nil
 }
 
 // Initialize public and secret key caches that are used to speed up the functions
@@ -196,65 +257,4 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 		return errors.Wrap(err, "failed to initialize keys caches")
 	}
 	return err
-}
-
-// CreateAccountsKeystore creates a new keystore holding the provided keys.
-func (km *Keymanager) CreateAccountsKeystore(
-	_ context.Context,
-	privateKeys, publicKeys [][]byte,
-) (*AccountsKeystoreRepresentation, error) {
-	encryptor := keystorev4.New()
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-	if len(privateKeys) != len(publicKeys) {
-		return nil, fmt.Errorf(
-			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
-		)
-	}
-	if km.accountsStore == nil {
-		km.accountsStore = &accountStore{
-			PrivateKeys: privateKeys,
-			PublicKeys:  publicKeys,
-		}
-	} else {
-		existingPubKeys := make(map[string]bool)
-		existingPrivKeys := make(map[string]bool)
-		for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
-			existingPrivKeys[string(km.accountsStore.PrivateKeys[i])] = true
-			existingPubKeys[string(km.accountsStore.PublicKeys[i])] = true
-		}
-		// We append to the accounts store keys only
-		// if the private/secret key do not already exist, to prevent duplicates.
-		for i := 0; i < len(privateKeys); i++ {
-			sk := privateKeys[i]
-			pk := publicKeys[i]
-			_, privKeyExists := existingPrivKeys[string(sk)]
-			_, pubKeyExists := existingPubKeys[string(pk)]
-			if privKeyExists || pubKeyExists {
-				continue
-			}
-			km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys, pk)
-			km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys, sk)
-		}
-	}
-	err = km.initializeKeysCachesFromKeystore()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize keys caches")
-	}
-	encodedStore, err := json.MarshalIndent(km.accountsStore, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, km.wallet.Password())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not encrypt accounts")
-	}
-	return &AccountsKeystoreRepresentation{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}, nil
 }

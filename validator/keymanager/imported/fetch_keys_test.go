@@ -1,7 +1,13 @@
 package imported
 
 import (
+	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 )
 

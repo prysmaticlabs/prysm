@@ -1,8 +1,12 @@
 package imported
 
 import (
+	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/tyler-smith/go-bip39"
@@ -10,7 +14,7 @@ import (
 
 // We test that using a '25th word' mnemonic passphrase leads to different
 // public keys derived than not specifying the passphrase.
-func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
+func TestImportedKeymanager_Recover_25Words(t *testing.T) {
 	ctx := context.Background()
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -48,7 +52,7 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 	}
 }
 
-func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
+func TestImportedKeymanager_Recover_RoundTrip(t *testing.T) {
 	mnemonicEntropy := make([]byte, 32)
 	n, err := rand.NewGenerator().Read(mnemonicEntropy)
 	require.NoError(t, err)

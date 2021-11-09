@@ -177,7 +177,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+		keyManager, err = imported.NewDeterministicKeymanager(cliCtx.Context, offset, numValidatorKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not generate interop keys")
 		}
