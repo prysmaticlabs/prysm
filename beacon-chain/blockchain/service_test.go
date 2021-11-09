@@ -521,4 +521,3 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 		require.Equal(b, true, s.cfg.ForkChoiceStore.HasNode(r), "Block is not in fork choice store")
 	}
 }
-
