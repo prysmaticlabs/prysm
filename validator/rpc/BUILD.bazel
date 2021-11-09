@@ -104,7 +104,7 @@ go_test(
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
-        "//validator/slashing-protection-history:go_default_library",
+        "//validator/slashing-protection-history/format:go_default_library",
         "//validator/testing:go_default_library",
         "@com_github_golang_jwt_jwt//:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
