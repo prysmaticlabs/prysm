@@ -28,9 +28,9 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -73,9 +73,9 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -148,10 +148,10 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -166,7 +166,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
@@ -193,10 +193,10 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -211,7 +211,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
