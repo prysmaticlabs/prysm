@@ -545,8 +545,9 @@ func testServiceOptsNoDB(t *testing.T) []Option {
 
 type mockStateByRooter struct {
 	state state.BeaconState
-	err error
+	err   error
 }
+
 var _ stateByRooter = &mockStateByRooter{}
 
 func (m mockStateByRooter) StateByRoot(ctx context.Context, i [32]byte) (state.BeaconState, error) {

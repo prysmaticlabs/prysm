@@ -17,7 +17,7 @@ import (
 
 type mockStateByRoot struct {
 	state state.BeaconState
-	err error
+	err   error
 }
 
 func (m *mockStateByRoot) StateByRoot(context.Context, [32]byte) (state.BeaconState, error) {
@@ -69,30 +69,30 @@ func testWithAfterExit(v *ethpb.Validator, slot types.Slot) {
 func oddValidatorsExpired(currentSlot types.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
 		pki := binary.LittleEndian.Uint64(v.PublicKey)
-		if pki % 2 == 0 {
-			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))+1)
+		if pki%2 == 0 {
+			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		} else {
-			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))-1)
+			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
 		}
 	}
 }
 
 func oddValidatorsQueued(currentSlot types.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
-		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))+1)
+		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		pki := binary.LittleEndian.Uint64(v.PublicKey)
-		if pki % 2 == 0 {
-			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))-1)
+		if pki%2 == 0 {
+			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
 		} else {
-			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))+1)
+			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		}
 	}
 }
 
 func allValidatorsValid(currentSlot types.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
-		v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))-1)
-		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot))+1)
+		v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
+		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 	}
 }
 
@@ -102,21 +102,21 @@ func balanceIsKeyTimes2(v *ethpb.Validator) {
 }
 
 func testHalfExpiredValidators() ([]*ethpb.Validator, []uint64) {
-	balances := []uint64{0,0,4,0,8,0,12,0,16,0}
+	balances := []uint64{0, 0, 4, 0, 8, 0, 12, 0, 16, 0}
 	return generateTestValidators(10,
 		oddValidatorsExpired(types.Slot(99)),
 		balanceIsKeyTimes2), balances
 }
 
 func testHalfQueuedValidators() ([]*ethpb.Validator, []uint64) {
-	balances := []uint64{0,0,4,0,8,0,12,0,16,0}
+	balances := []uint64{0, 0, 4, 0, 8, 0, 12, 0, 16, 0}
 	return generateTestValidators(10,
 		oddValidatorsQueued(types.Slot(99)),
 		balanceIsKeyTimes2), balances
 }
 
 func testAllValidValidators() ([]*ethpb.Validator, []uint64) {
-	balances := []uint64{0,2,4,6,8,10,12,14,16,18}
+	balances := []uint64{0, 2, 4, 6, 8, 10, 12, 14, 16, 18}
 	return generateTestValidators(10,
 		allValidatorsValid(types.Slot(99)),
 		balanceIsKeyTimes2), balances
@@ -124,26 +124,26 @@ func testAllValidValidators() ([]*ethpb.Validator, []uint64) {
 
 func TestStateBalanceCache(t *testing.T) {
 	type sbcTestCase struct {
-		err error
-		root [32]byte
-		sbc *stateBalanceCache
+		err      error
+		root     [32]byte
+		sbc      *stateBalanceCache
 		balances []uint64
-		name string
+		name     string
 	}
 	sentinelCacheMiss := errors.New("Cache missed, as expected!")
-	sentinelBalances := []uint64{1,2,3,4,5}
+	sentinelBalances := []uint64{1, 2, 3, 4, 5}
 	halfExpiredValidators, halfExpiredBalances := testHalfExpiredValidators()
 	halfQueuedValidators, halfQueuedBalances := testHalfQueuedValidators()
 	allValidValidators, allValidBalances := testAllValidValidators()
 	cases := []sbcTestCase{
 		{
-			root: bytesutil.ToBytes32([]byte{'A'}),
+			root:     bytesutil.ToBytes32([]byte{'A'}),
 			balances: sentinelBalances,
 			sbc: &stateBalanceCache{
 				stateGen: &mockStateByRooter{
 					err: sentinelCacheMiss,
 				},
-				root: bytesutil.ToBytes32([]byte{'A'}),
+				root:     bytesutil.ToBytes32([]byte{'A'}),
 				balances: sentinelBalances,
 			},
 			name: "cache hit",
@@ -159,16 +159,16 @@ func TestStateBalanceCache(t *testing.T) {
 				},
 				root: bytesutil.ToBytes32([]byte{'B'}),
 			},
-			err: sentinelCacheMiss,
+			err:  sentinelCacheMiss,
 			root: bytesutil.ToBytes32([]byte{'A'}),
 			name: "cache miss",
 		},
 		{
 			sbc: &stateBalanceCache{
 				stateGen: &mockStateByRooter{},
-				root: bytesutil.ToBytes32([]byte{'B'}),
+				root:     bytesutil.ToBytes32([]byte{'B'}),
 			},
-			err: errNilStateFromStategen,
+			err:  errNilStateFromStategen,
 			root: bytesutil.ToBytes32([]byte{'A'}),
 			name: "error for nil state upon cache miss",
 		},
@@ -181,8 +181,8 @@ func TestStateBalanceCache(t *testing.T) {
 				},
 			},
 			balances: halfExpiredBalances,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "test filtering by exit epoch",
+			root:     bytesutil.ToBytes32([]byte{'A'}),
+			name:     "test filtering by exit epoch",
 		},
 		{
 			sbc: &stateBalanceCache{
@@ -193,8 +193,8 @@ func TestStateBalanceCache(t *testing.T) {
 				},
 			},
 			balances: halfQueuedBalances,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "test filtering by activation epoch",
+			root:     bytesutil.ToBytes32([]byte{'A'}),
+			name:     "test filtering by activation epoch",
 		},
 		{
 			sbc: &stateBalanceCache{
@@ -205,8 +205,8 @@ func TestStateBalanceCache(t *testing.T) {
 				},
 			},
 			balances: allValidBalances,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "happy path",
+			root:     bytesutil.ToBytes32([]byte{'A'}),
+			name:     "happy path",
 		},
 	}
 	ctx := context.Background()

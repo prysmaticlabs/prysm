@@ -15,9 +15,9 @@ var errNilStateFromStategen = errors.New("justified state can't be nil")
 
 type stateBalanceCache struct {
 	sync.Mutex
-	balances	[]uint64
-	root		[32]byte
-	stateGen	stateByRooter
+	balances []uint64
+	root     [32]byte
+	stateGen stateByRooter
 }
 
 type stateByRooter interface {
