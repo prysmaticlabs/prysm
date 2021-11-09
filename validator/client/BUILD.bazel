@@ -19,7 +19,10 @@ go_library(
         "wait_for_activation.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/client",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//validator:__subpackages__",
+        "//cmd:__subpackages__"
+    ],
     deps = [
         "//api/grpc:go_default_library",
         "//async:go_default_library",

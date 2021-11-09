@@ -10,6 +10,7 @@ go_library(
     visibility = [
         "//tools:__subpackages__",
         "//validator:__pkg__",
+        "//cmd:__pkg__",
         "//validator:__subpackages__",
     ],
     deps = [
