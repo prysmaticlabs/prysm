@@ -1,7 +1,6 @@
 package imported
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,15 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/sirupsen/logrus"
-	util "github.com/wealdtech/go-eth2-util"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	"go.opencensus.io/trace"
 )
 
 var (
@@ -130,13 +125,6 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 	return k, nil
 }
 
-// SubscribeAccountChanges creates an event subscription for a channel
-// to listen for public key changes at runtime, such as when new validator accounts
-// are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
-	return km.accountsChangedFeed.Subscribe(pubKeysChan)
-}
-
 // ValidatingAccountNames for a imported keymanager.
 func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
@@ -166,102 +154,6 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 		secretKeysCache[publicKey48] = secretKey
 	}
 	return nil
-}
-
-// DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
-func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	for _, publicKey := range publicKeys {
-		var index int
-		var found bool
-		for i, pubKey := range km.accountsStore.PublicKeys {
-			if bytes.Equal(pubKey, publicKey) {
-				index = i
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("could not find public key %#x", publicKey)
-		}
-		deletedPublicKey := km.accountsStore.PublicKeys[index]
-		accountName := petnames.DeterministicName(deletedPublicKey, "-")
-		km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys[:index], km.accountsStore.PrivateKeys[index+1:]...)
-		km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys[:index], km.accountsStore.PublicKeys[index+1:]...)
-
-		newStore, err := km.CreateAccountsKeystore(ctx, km.accountsStore.PrivateKeys, km.accountsStore.PublicKeys)
-		if err != nil {
-			return errors.Wrap(err, "could not rewrite accounts keystore")
-		}
-
-		// Write the encoded keystore.
-		encoded, err := json.MarshalIndent(newStore, "", "\t")
-		if err != nil {
-			return err
-		}
-		if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
-			return errors.Wrap(err, "could not write keystore file for accounts")
-		}
-
-		log.WithFields(logrus.Fields{
-			"name":      accountName,
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
-		}).Info("Successfully deleted validator account")
-		err = km.initializeKeysCachesFromKeystore()
-		if err != nil {
-			return errors.Wrap(err, "failed to initialize keys caches")
-		}
-	}
-	return nil
-}
-
-// FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
-	defer span.End()
-
-	lock.RLock()
-	keys := orderedPublicKeys
-	result := make([][48]byte, len(keys))
-	copy(result, keys)
-	lock.RUnlock()
-	return result, nil
-}
-
-// FetchValidatingPrivateKeys fetches the list of private keys from the secret keys cache
-func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
-	lock.RLock()
-	defer lock.RUnlock()
-	privKeys := make([][32]byte, len(secretKeysCache))
-	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve public keys")
-	}
-	for i, pk := range pubKeys {
-		seckey, ok := secretKeysCache[pk]
-		if !ok {
-			return nil, errors.New("Could not fetch private key")
-		}
-		privKeys[i] = bytesutil.ToBytes32(seckey.Marshal())
-	}
-	return privKeys, nil
-}
-
-// Sign signs a message using a validator key.
-func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
-	defer span.End()
-
-	publicKey := req.PublicKey
-	if publicKey == nil {
-		return nil, errors.New("nil public key in request")
-	}
-	lock.RLock()
-	secretKey, ok := secretKeysCache[bytesutil.ToBytes48(publicKey)]
-	lock.RUnlock()
-	if !ok {
-		return nil, errors.New("no signing key found in keys cache")
-	}
-	return secretKey.Sign(req.SigningRoot), nil
 }
 
 func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
@@ -365,29 +257,4 @@ func (km *Keymanager) CreateAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
-}
-
-// RecoverAccountsFromMnemonic given a mnemonic phrase, is able to regenerate N accounts
-// from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
-// to disk. Then, the mnemonic is never stored nor used by the validator.
-func (km *Keymanager) RecoverAccountsFromMnemonic(
-	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
-) error {
-	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize new wallet seed file")
-	}
-	privKeys := make([][]byte, numAccounts)
-	pubKeys := make([][]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		privKey, err := util.PrivateKeyFromSeedAndPath(
-			seed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i),
-		)
-		if err != nil {
-			return err
-		}
-		privKeys[i] = privKey.Marshal()
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-	return km.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
 }

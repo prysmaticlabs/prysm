@@ -9,13 +9,38 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
-// IKeymanager defines a general keymanager interface for Prysm wallets.
+// IKeymanager defines a struct which can be used to manage keys with important
+// actions such as listing public keys, signing data, and subscribing to key changes.
 type IKeymanager interface {
-	// FetchValidatingPublicKeys fetches the list of active public keys that should be used to validate with.
+	KeysFetcher
+	Signer
+	Importer
+	KeyChangeSubscriber
+}
+
+// KeysFetcher for validating private and public keys.
+type KeysFetcher interface {
+	FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error)
+	PublicKeysFetcher
+}
+
+// PublicKeysFetcher for validating public keys.
+type PublicKeysFetcher interface {
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
-	// Sign signs a message using a validator key.
+}
+
+// Signer allows signing messages using a validator private key.
+type Signer interface {
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
-	// SubscribeAccountChanges subscribes to changes made to the underlying keys.
+}
+
+// Importer can import new keystores into the keymanager.
+type Importer interface {
+	ImportKeystores(ctx context.Context, keystores []*Keystore, importsPassword string) error
+}
+
+// KeyChangeSubscriber allows subscribing to changes made to the underlying keys.
+type KeyChangeSubscriber interface {
 	SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription
 }
 

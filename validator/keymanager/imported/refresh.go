@@ -9,6 +9,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -16,6 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
+
+// SubscribeAccountChanges creates an event subscription for a channel
+// to listen for public key changes at runtime, such as when new validator accounts
+// are imported into the keymanager while the validator process is running.
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return km.accountsChangedFeed.Subscribe(pubKeysChan)
+}
 
 // Listen for changes to the all-accounts.keystore.json file in our wallet
 // to load in new keys we observe into our keymanager. This uses the fsnotify
