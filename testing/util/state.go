@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -17,7 +17,7 @@ import (
 // FillRootsNaturalOpt is meant to be used as an option when calling NewBeaconState.
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
-func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
+func FillRootsNaturalOpt(state state.BeaconState) error {
 	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 	roots := make([][]byte, rootsLen)
 	for i := types.Slot(0); i < rootsLen; i++ {
@@ -32,25 +32,26 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 		}
 		roots[j] = h
 	}
-	var stateRoots customtypes.StateRoots
+	var stateRoots [8192][32]byte
 	for i := range stateRoots {
 		stateRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
-	state.StateRoots = &stateRoots
-	var blockRoots customtypes.StateRoots
+	if err := state.SetStateRoots(&stateRoots); err != nil {
+		return errors.Wrap(err, "could not set state roots")
+	}
+	var blockRoots [8192][32]byte
 	for i := range blockRoots {
 		blockRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
-	state.BlockRoots = &blockRoots
+	if err := state.SetBlockRoots(&blockRoots); err != nil {
+		return errors.Wrap(err, "could not set block roots")
+	}
 	return nil
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
 	seed := &ethpb.BeaconState{
-		BlockRoots:                 &customtypes.StateRoots{},
-		StateRoots:                 &customtypes.StateRoots{},
-		RandaoMixes:                &customtypes.RandaoMixes{},
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Eth1Data: &ethpb.Eth1Data{
@@ -62,8 +63,6 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 			CurrentVersion:  make([]byte, 4),
 		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		HistoricalRoots:             customtypes.HistoricalRoots{},
-		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
 		PreviousEpochAttestations:   make([]*ethpb.PendingAttestation, 0),
@@ -75,8 +74,24 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 	if err != nil {
 		return nil, err
 	}
+
+	if err = st.SetHistoricalRoots([][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set historical roots")
+	}
+	if err = st.SetBlockRoots(&[8192][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set block roots")
+	}
+	if err = st.SetStateRoots(&[8192][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set state roots")
+	}
+	if err = st.SetRandaoMixes(&[65536][32]byte{}); err != nil {
+		return nil, errors.Wrap(err, "could not set randao mixes")
+	}
 	if err = st.SetSlashings(make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector)); err != nil {
 		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = st.SetJustificationBits(bitfield.Bitvector4{0x0}); err != nil {
+		return nil, errors.Wrap(err, "could not set justification bits")
 	}
 
 	for _, opt := range options {

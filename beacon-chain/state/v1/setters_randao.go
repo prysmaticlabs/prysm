@@ -19,7 +19,7 @@ func (b *BeaconState) SetRandaoMixes(val *[65536][32]byte) error {
 	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 
 	mixes := customtypes.RandaoMixes(*val)
-	b.state.RandaoMixes = &mixes
+	b.randaoMixes = &mixes
 	b.markFieldAsDirty(randaoMixes)
 	b.rebuildTrie[randaoMixes] = true
 	return nil
@@ -31,16 +31,16 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.RandaoMixes)) <= idx {
+	if uint64(len(b.randaoMixes)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	mixes := b.state.RandaoMixes
+	mixes := b.randaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].Refs(); refs > 1 {
 		// Copy elements in underlying array by reference.
-		m := *b.state.RandaoMixes
+		m := *b.randaoMixes
 		mCopy := m
 		mixes = &mCopy
 		b.sharedFieldReferences[randaoMixes].MinusRef()
@@ -48,7 +48,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
 	}
 
 	mixes[idx] = val
-	b.state.RandaoMixes = mixes
+	b.randaoMixes = mixes
 	b.markFieldAsDirty(randaoMixes)
 	b.addDirtyIndices(randaoMixes, []uint64{idx})
 

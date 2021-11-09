@@ -52,7 +52,7 @@ func (b *BeaconState) SetGenesisValidatorRoot(val [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.GenesisValidatorsRoot = val
+	b.genesisValidatorsRoot = val
 	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
 }
@@ -99,7 +99,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][32]byte) error {
 	b.sharedFieldReferences[historicalRoots].MinusRef()
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	b.state.HistoricalRoots = val
+	b.historicalRoots = val
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }
@@ -113,15 +113,15 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	roots := b.state.HistoricalRoots
+	roots := b.historicalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		roots = make([][32]byte, len(b.state.HistoricalRoots))
-		copy(roots, b.state.HistoricalRoots)
+		roots = make([][32]byte, len(b.historicalRoots))
+		copy(roots, b.historicalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 	}
 
-	b.state.HistoricalRoots = append(roots, root)
+	b.historicalRoots = append(roots, root)
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }

@@ -5,6 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	eth2types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
@@ -37,12 +39,18 @@ var ErrNilInnerState = errors.New("nil inner state")
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
 	genesisTime                uint64
+	genesisValidatorsRoot      customtypes.Byte32
 	slot                       eth2types.Slot
+	blockRoots                 *customtypes.StateRoots
+	stateRoots                 *customtypes.StateRoots
+	historicalRoots            customtypes.HistoricalRoots
 	eth1DepositIndex           uint64
 	balances                   []uint64
+	randaoMixes                *customtypes.RandaoMixes
 	slashings                  []uint64
 	previousEpochParticipation []byte
 	currentEpochParticipation  []byte
+	justificationBits          bitfield.Bitvector4
 	inactivityScores           []uint64
 	state                      *ethpb.BeaconStateAltair
 	lock                       sync.RWMutex

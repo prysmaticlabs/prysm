@@ -70,7 +70,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
-	genesisValidatorsRoot := state.genesisValidatorRoot()
+	genesisValidatorsRoot := state.genesisValidatorRootInternal()
 	fieldRoots[1] = genesisValidatorsRoot[:]
 
 	// Slot root.
@@ -92,9 +92,9 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	bRoots := make([][]byte, len(state.blockRoots()))
+	bRoots := make([][]byte, len(state.blockRootsInternal()))
 	for i := range bRoots {
-		bRoots[i] = state.blockRoots()[i][:]
+		bRoots[i] = state.blockRootsInternal()[i][:]
 	}
 	blockRootsRoot, err := h.arraysRoot(bRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	if err != nil {
@@ -103,9 +103,9 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := make([][]byte, len(state.stateRoots()))
+	sRoots := make([][]byte, len(state.stateRootsInternal()))
 	for i := range sRoots {
-		sRoots[i] = state.stateRoots()[i][:]
+		sRoots[i] = state.stateRootsInternal()[i][:]
 	}
 	stateRootsRoot, err := h.arraysRoot(sRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	if err != nil {
@@ -114,9 +114,9 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	hRoots := make([][]byte, len(state.historicalRoots()))
+	hRoots := make([][]byte, len(state.historicalRootsInternal()))
 	for i := range hRoots {
-		hRoots[i] = state.historicalRoots()[i][:]
+		hRoots[i] = state.historicalRootsInternal()[i][:]
 	}
 	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(hRoots, params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
@@ -159,9 +159,9 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := make([][]byte, len(state.randaoMixes()))
+	mixes := make([][]byte, len(state.randaoMixesInternal()))
 	for i := range mixes {
-		mixes[i] = state.randaoMixes()[i][:]
+		mixes[i] = state.randaoMixesInternal()[i][:]
 	}
 	randaoRootsRoot, err := h.arraysRoot(mixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
 	if err != nil {
@@ -191,7 +191,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	fieldRoots[16] = currAttsRoot[:]
 
 	// JustificationBits root.
-	justifiedBitsRoot := bytesutil.ToBytes32(state.justificationBits())
+	justifiedBitsRoot := bytesutil.ToBytes32(state.justificationBitsInternal())
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.

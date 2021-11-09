@@ -45,17 +45,17 @@ func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisValidatorRoot()
+	return b.genesisValidatorRootInternal()
 }
 
-// genesisValidatorRoot of the beacon state.
+// genesisValidatorRootInternal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRoot() [32]byte {
+func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
 	if !b.hasInnerState() {
 		return params.BeaconConfig().ZeroHash
 	}
 
-	return b.state.GenesisValidatorsRoot
+	return b.genesisValidatorsRoot
 }
 
 // Version of the beacon state. This method
@@ -128,23 +128,23 @@ func (b *BeaconState) HistoricalRoots() [][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.HistoricalRoots == nil {
+	if b.historicalRoots == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.historicalRoots()
+	return b.historicalRootsInternal()
 }
 
-// historicalRoots based on epochs stored in the beacon state.
+// historicalRootsInternal based on epochs stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRoots() customtypes.HistoricalRoots {
+func (b *BeaconState) historicalRootsInternal() customtypes.HistoricalRoots {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2d32Bytes(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
 }
 
 // balancesLength returns the length of the balances slice.

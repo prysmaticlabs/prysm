@@ -10,25 +10,25 @@ func (b *BeaconState) RandaoMixes() *[65536][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := [65536][32]byte(*b.randaoMixes())
+	mixes := [65536][32]byte(*b.randaoMixesInternal())
 	return &mixes
 }
 
-// randaoMixes of block proposers on the beacon chain.
+// randaoMixesInternal of block proposers on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixes() *customtypes.RandaoMixes {
+func (b *BeaconState) randaoMixesInternal() *customtypes.RandaoMixes {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return b.state.RandaoMixes
+	return b.randaoMixes
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
@@ -37,7 +37,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return [32]byte{}, nil
 	}
 
@@ -55,9 +55,9 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 		return [32]byte{}, ErrNilInnerState
 	}
 
-	mixes := make([][]byte, len(b.state.RandaoMixes))
+	mixes := make([][]byte, len(b.randaoMixes))
 	for i := range mixes {
-		mixes[i] = b.state.RandaoMixes[i][:]
+		mixes[i] = b.randaoMixes[i][:]
 	}
 	root, err := bytesutil.SafeCopyRootAtIndex(mixes, idx)
 	if err != nil {
@@ -71,7 +71,7 @@ func (b *BeaconState) RandaoMixesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return 0
 	}
 
@@ -87,9 +87,9 @@ func (b *BeaconState) randaoMixesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return 0
 	}
 
-	return len(b.state.RandaoMixes)
+	return len(b.randaoMixes)
 }
