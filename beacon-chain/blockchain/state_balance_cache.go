@@ -24,9 +24,9 @@ type stateByRooter interface {
 	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
 }
 
-// stateBalanceCache wants a stagegen for updating the cache in the readpath,
-// so NewStateBalanceCache exists to remind us it needs that bit of special setup.
-func NewStateBalanceCache(sg *stategen.State) *stateBalanceCache {
+// newStateBalanceCache exists to remind us that stateBalanceCache needs a stagegen
+// to avoid nil pointer bugs when updating the cache in the read path (get())
+func newStateBalanceCache(sg *stategen.State) *stateBalanceCache {
 	return &stateBalanceCache{stateGen: sg}
 }
 

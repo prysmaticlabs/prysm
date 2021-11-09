@@ -107,7 +107,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		if srv.cfg.StateGen == nil {
 			return nil, errors.New("Can't initialize state balance cache without stategen")
 		}
-		srv.justifiedBalances = NewStateBalanceCache(srv.cfg.StateGen)
+		srv.justifiedBalances = newStateBalanceCache(srv.cfg.StateGen)
 	}
 	var err error
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
