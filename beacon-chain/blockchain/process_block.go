@@ -125,12 +125,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not get body execution payload")
 			}
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			if err := s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload)); err != nil {
+			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+			if err != nil {
 				return errors.Wrap(err, "could not execute payload")
-			}
-			// Inform execution engine that consensus block which contained `payload.blockhash` is VALID.
-			if err := s.cfg.ExecutionEngineCaller.NotifyConsensusValidated(ctx, payload.BlockHash, true); err != nil {
-				return errors.Wrap(err, "could not notify consensus validated")
 			}
 
 			mergeBlock, err := execution.IsMergeBlock(postState, body)
@@ -227,7 +224,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					finalizedBlockHash = finalizedPayload.BlockHash
 				}
 
-				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, headPayload.BlockHash, finalizedBlockHash); err != nil {
+				f := catalyst.ForkchoiceStateV1{
+					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+				}
+				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
 					log.WithError(err)
 					return
 				}
@@ -629,12 +631,12 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 	return totalDifficultyReached && parentTotalDifficultyValid
 }
 
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableData {
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	baseFeePerGas := new(big.Int)
 	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
 	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
 
-	return &catalyst.ExecutableData{
+	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		Coinbase:      common.BytesToAddress(payload.Coinbase),
