@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
@@ -49,7 +50,6 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 	seed := &ethpb.BeaconState{
 		BlockRoots:                 &customtypes.StateRoots{},
 		StateRoots:                 &customtypes.StateRoots{},
-		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                &customtypes.RandaoMixes{},
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -71,16 +71,19 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 
-	for _, opt := range options {
-		err := opt(seed)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	var st, err = v1.InitializeFromProtoUnsafe(seed)
 	if err != nil {
 		return nil, err
+	}
+	if err = st.SetSlashings(make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector)); err != nil {
+		return nil, errors.Wrap(err, "could not set slashings")
+	}
+
+	for _, opt := range options {
+		err = opt(seed)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return st.Copy().(*v1.BeaconState), nil

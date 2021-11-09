@@ -26,9 +26,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 	defer b.lock.RUnlock()
 	// TODO: Change this to something else, not sure what yet
 	return &ethpb.BeaconState{
-		//GenesisTime:                 b.genesisTimeInternal(),
 		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-		Slot:                        b.slot(),
 		Fork:                        b.fork(),
 		LatestBlockHeader:           b.latestBlockHeader(),
 		BlockRoots:                  b.blockRoots(),
@@ -36,11 +34,8 @@ func (b *BeaconState) CloneInnerState() interface{} {
 		HistoricalRoots:             b.historicalRoots(),
 		Eth1Data:                    b.eth1Data(),
 		Eth1DataVotes:               b.eth1DataVotes(),
-		Eth1DepositIndex:            b.eth1DepositIndex(),
 		Validators:                  b.validators(),
-		Balances:                    b.balances(),
 		RandaoMixes:                 b.randaoMixes(),
-		Slashings:                   b.slashings(),
 		PreviousEpochAttestations:   b.previousEpochAttestations(),
 		CurrentEpochAttestations:    b.currentEpochAttestations(),
 		JustificationBits:           b.justificationBits(),

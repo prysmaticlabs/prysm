@@ -74,7 +74,6 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
 	s := &ethpb.BeaconStateAltair{
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
-		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
@@ -86,18 +85,12 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		HistoricalRoots:             state.HistoricalRoots(),
 		Eth1Data:                    state.Eth1Data(),
 		Eth1DataVotes:               state.Eth1DataVotes(),
-		Eth1DepositIndex:            state.Eth1DepositIndex(),
 		Validators:                  state.Validators(),
-		Balances:                    state.Balances(),
 		RandaoMixes:                 &mixes,
-		Slashings:                   state.Slashings(),
-		PreviousEpochParticipation:  make([]byte, numValidators),
-		CurrentEpochParticipation:   make([]byte, numValidators),
 		JustificationBits:           state.JustificationBits(),
 		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
-		InactivityScores:            make([]uint64, numValidators),
 	}
 
 	newState, err := statealtair.InitializeFromProto(s)
@@ -106,6 +99,27 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	}
 	if err = newState.SetGenesisTime(state.GenesisTime()); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
+	}
+	if err = newState.SetSlot(state.Slot()); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = newState.SetEth1DepositIndex(state.Eth1DepositIndex()); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+	if err = newState.SetBalances(state.Balances()); err != nil {
+		return nil, errors.Wrap(err, "could not set balances")
+	}
+	if err = newState.SetSlashings(state.Slashings()); err != nil {
+		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = newState.SetPreviousParticipationBits(make([]byte, numValidators)); err != nil {
+		return nil, errors.Wrap(err, "could not set previous participation bits")
+	}
+	if err = newState.SetCurrentParticipationBits(make([]byte, numValidators)); err != nil {
+		return nil, errors.Wrap(err, "could not set current participation bits")
+	}
+	if err = newState.SetInactivityScores(make([]uint64, numValidators)); err != nil {
+		return nil, errors.Wrap(err, "could not set inactivity scores")
 	}
 	prevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {

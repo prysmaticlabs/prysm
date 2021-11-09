@@ -36,7 +36,6 @@ type BeaconState struct {
 	unknownFields protoimpl.UnknownFields
 
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
-	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader           *BeaconBlockHeader                                                             `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                  *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.StateRoots     `protobuf:"bytes,2002,opt,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots" ssz-size:"8192,32"`
@@ -44,11 +43,8 @@ type BeaconState struct {
 	HistoricalRoots             github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.HistoricalRoots `protobuf:"bytes,2004,opt,name=historical_roots,json=historicalRoots,proto3" json:"historical_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.HistoricalRoots" ssz-max:"16777216" ssz-size:"?,32"`
 	Eth1Data                    *Eth1Data                                                                      `protobuf:"bytes,3001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
 	Eth1DataVotes               []*Eth1Data                                                                    `protobuf:"bytes,3002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty" ssz-max:"2048"`
-	Eth1DepositIndex            uint64                                                                         `protobuf:"varint,3003,opt,name=eth1_deposit_index,json=eth1DepositIndex,proto3" json:"eth1_deposit_index,omitempty"`
 	Validators                  []*Validator                                                                   `protobuf:"bytes,4001,rep,name=validators,proto3" json:"validators,omitempty" ssz-max:"1099511627776"`
-	Balances                    []uint64                                                                       `protobuf:"varint,4002,rep,packed,name=balances,proto3" json:"balances,omitempty" ssz-max:"1099511627776"`
 	RandaoMixes                 *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.RandaoMixes    `protobuf:"bytes,5001,opt,name=randao_mixes,json=randaoMixes,proto3" json:"randao_mixes,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.RandaoMixes" ssz-size:"65536,32"`
-	Slashings                   []uint64                                                                       `protobuf:"varint,6001,rep,packed,name=slashings,proto3" json:"slashings,omitempty" ssz-size:"8192"`
 	PreviousEpochAttestations   []*PendingAttestation                                                          `protobuf:"bytes,7001,rep,name=previous_epoch_attestations,json=previousEpochAttestations,proto3" json:"previous_epoch_attestations,omitempty" ssz-max:"4096"`
 	CurrentEpochAttestations    []*PendingAttestation                                                          `protobuf:"bytes,7002,rep,name=current_epoch_attestations,json=currentEpochAttestations,proto3" json:"current_epoch_attestations,omitempty" ssz-max:"4096"`
 	JustificationBits           github_com_prysmaticlabs_go_bitfield.Bitvector4                                `protobuf:"bytes,8001,opt,name=justification_bits,json=justificationBits,proto3" json:"justification_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
@@ -94,13 +90,6 @@ func (x *BeaconState) GetGenesisValidatorsRoot() github_com_prysmaticlabs_prysm_
 		return x.GenesisValidatorsRoot
 	}
 	return github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32([32]byte{})
-}
-
-func (x *BeaconState) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
-	if x != nil {
-		return x.Slot
-	}
-	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconState) GetFork() *Fork {
@@ -152,23 +141,9 @@ func (x *BeaconState) GetEth1DataVotes() []*Eth1Data {
 	return nil
 }
 
-func (x *BeaconState) GetEth1DepositIndex() uint64 {
-	if x != nil {
-		return x.Eth1DepositIndex
-	}
-	return 0
-}
-
 func (x *BeaconState) GetValidators() []*Validator {
 	if x != nil {
 		return x.Validators
-	}
-	return nil
-}
-
-func (x *BeaconState) GetBalances() []uint64 {
-	if x != nil {
-		return x.Balances
 	}
 	return nil
 }
@@ -178,13 +153,6 @@ func (x *BeaconState) GetRandaoMixes() *github_com_prysmaticlabs_prysm_beacon_ch
 		return x.RandaoMixes
 	}
 	return (*github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.RandaoMixes)(nil)
-}
-
-func (x *BeaconState) GetSlashings() []uint64 {
-	if x != nil {
-		return x.Slashings
-	}
-	return nil
 }
 
 func (x *BeaconState) GetPreviousEpochAttestations() []*PendingAttestation {
@@ -234,7 +202,6 @@ type BeaconStateAltair struct {
 	sizeCache                   protoimpl.SizeCache
 	unknownFields               protoimpl.UnknownFields
 	GenesisValidatorsRoot       github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32          `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.Byte32" ssz-size:"32"`
-	Slot                        github_com_prysmaticlabs_eth2_types.Slot                                       `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
 	Fork                        *Fork                                                                          `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader           *BeaconBlockHeader                                                             `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                  *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.StateRoots     `protobuf:"bytes,2002,opt,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.StateRoots" ssz-size:"8192,32"`
@@ -242,18 +209,12 @@ type BeaconStateAltair struct {
 	HistoricalRoots             github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.HistoricalRoots `protobuf:"bytes,2004,opt,name=historical_roots,json=historicalRoots,proto3" json:"historical_roots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.HistoricalRoots" ssz-max:"16777216" ssz-size:"?,32"`
 	Eth1Data                    *Eth1Data                                                                      `protobuf:"bytes,3001,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
 	Eth1DataVotes               []*Eth1Data                                                                    `protobuf:"bytes,3002,rep,name=eth1_data_votes,json=eth1DataVotes,proto3" json:"eth1_data_votes,omitempty" ssz-max:"2048"`
-	Eth1DepositIndex            uint64                                                                         `protobuf:"varint,3003,opt,name=eth1_deposit_index,json=eth1DepositIndex,proto3" json:"eth1_deposit_index,omitempty"`
-	Validators                  []*Validator                                                                   `protobuf:"bytes,4001,rep,name=validators,proto3" json:"validators,omitempty" ssz-max:"1099511627776"`
-	Balances                    []uint64                                                                       `protobuf:"varint,4002,rep,packed,name=balances,proto3" json:"balances,omitempty" ssz-max:"1099511627776"`
+	Validators                  []*Validator                                                                   `protobuf:"varint,4002,rep,packed,name=balances,proto3" json:"balances,omitempty" ssz-max:"1099511627776"`
 	RandaoMixes                 *github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.RandaoMixes    `protobuf:"bytes,5001,opt,name=randao_mixes,json=randaoMixes,proto3" json:"randao_mixes,omitempty" cast-type:"github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types.RandaoMixes" ssz-size:"65536,32"`
-	Slashings                   []uint64                                                                       `protobuf:"varint,6001,rep,packed,name=slashings,proto3" json:"slashings,omitempty" ssz-size:"8192"`
-	PreviousEpochParticipation  []byte                                                                         `protobuf:"bytes,7001,opt,name=previous_epoch_participation,json=previousEpochParticipation,proto3" json:"previous_epoch_participation,omitempty" ssz-max:"1099511627776"`
-	CurrentEpochParticipation   []byte                                                                         `protobuf:"bytes,7002,opt,name=current_epoch_participation,json=currentEpochParticipation,proto3" json:"current_epoch_participation,omitempty" ssz-max:"1099511627776"`
 	JustificationBits           github_com_prysmaticlabs_go_bitfield.Bitvector4                                `protobuf:"bytes,8001,opt,name=justification_bits,json=justificationBits,proto3" json:"justification_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitvector4" ssz-size:"1"`
 	PreviousJustifiedCheckpoint *Checkpoint                                                                    `protobuf:"bytes,8002,opt,name=previous_justified_checkpoint,json=previousJustifiedCheckpoint,proto3" json:"previous_justified_checkpoint,omitempty"`
 	CurrentJustifiedCheckpoint  *Checkpoint                                                                    `protobuf:"bytes,8003,opt,name=current_justified_checkpoint,json=currentJustifiedCheckpoint,proto3" json:"current_justified_checkpoint,omitempty"`
 	FinalizedCheckpoint         *Checkpoint                                                                    `protobuf:"bytes,8004,opt,name=finalized_checkpoint,json=finalizedCheckpoint,proto3" json:"finalized_checkpoint,omitempty"`
-	InactivityScores            []uint64                                                                       `protobuf:"varint,9001,rep,packed,name=inactivity_scores,json=inactivityScores,proto3" json:"inactivity_scores,omitempty" ssz-max:"1099511627776"`
 	CurrentSyncCommittee        *SyncCommittee                                                                 `protobuf:"bytes,9002,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
 	NextSyncCommittee           *SyncCommittee                                                                 `protobuf:"bytes,9003,opt,name=next_sync_committee,json=nextSyncCommittee,proto3" json:"next_sync_committee,omitempty"`
 }
@@ -295,13 +256,6 @@ func (x *BeaconStateAltair) GetGenesisValidatorsRoot() github_com_prysmaticlabs_
 		return x.GenesisValidatorsRoot
 	}
 	return github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.Byte32([32]byte{})
-}
-
-func (x *BeaconStateAltair) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
-	if x != nil {
-		return x.Slot
-	}
-	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconStateAltair) GetFork() *Fork {
@@ -353,23 +307,9 @@ func (x *BeaconStateAltair) GetEth1DataVotes() []*Eth1Data {
 	return nil
 }
 
-func (x *BeaconStateAltair) GetEth1DepositIndex() uint64 {
-	if x != nil {
-		return x.Eth1DepositIndex
-	}
-	return 0
-}
-
 func (x *BeaconStateAltair) GetValidators() []*Validator {
 	if x != nil {
 		return x.Validators
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetBalances() []uint64 {
-	if x != nil {
-		return x.Balances
 	}
 	return nil
 }
@@ -379,27 +319,6 @@ func (x *BeaconStateAltair) GetRandaoMixes() *github_com_prysmaticlabs_prysm_bea
 		return x.RandaoMixes
 	}
 	return (*github_com_prysmaticlabs_prysm_beacon_chain_state_custom_types.RandaoMixes)(nil)
-}
-
-func (x *BeaconStateAltair) GetSlashings() []uint64 {
-	if x != nil {
-		return x.Slashings
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetPreviousEpochParticipation() []byte {
-	if x != nil {
-		return x.PreviousEpochParticipation
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetCurrentEpochParticipation() []byte {
-	if x != nil {
-		return x.CurrentEpochParticipation
-	}
-	return nil
 }
 
 func (x *BeaconStateAltair) GetJustificationBits() github_com_prysmaticlabs_go_bitfield.Bitvector4 {
@@ -426,13 +345,6 @@ func (x *BeaconStateAltair) GetCurrentJustifiedCheckpoint() *Checkpoint {
 func (x *BeaconStateAltair) GetFinalizedCheckpoint() *Checkpoint {
 	if x != nil {
 		return x.FinalizedCheckpoint
-	}
-	return nil
-}
-
-func (x *BeaconStateAltair) GetInactivityScores() []uint64 {
-	if x != nil {
-		return x.InactivityScores
 	}
 	return nil
 }

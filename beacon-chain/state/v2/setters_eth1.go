@@ -44,7 +44,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Eth1DepositIndex = val
+	b.eth1DepositIndex = val
 	b.markFieldAsDirty(eth1DepositIndex)
 	return nil
 }

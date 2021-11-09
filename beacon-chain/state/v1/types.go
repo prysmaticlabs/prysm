@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -42,6 +43,10 @@ var ErrNilInnerState = errors.New("nil inner state")
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
 	genesisTime           uint64
+	slot                  eth2types.Slot
+	eth1DepositIndex      uint64
+	balances              []uint64
+	slashings             []uint64
 	state                 *ethpb.BeaconState
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool

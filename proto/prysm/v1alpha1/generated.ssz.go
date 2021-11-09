@@ -3046,9 +3046,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
 
-	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3091,29 +3088,13 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Eth1DataVotes) * 72
 
-	// Field (10) 'Eth1DepositIndex'
-	dst = ssz.MarshalUint64(dst, b.Eth1DepositIndex)
-
 	// Offset (11) 'Validators'
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Validators) * 121
 
-	// Offset (12) 'Balances'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.Balances) * 8
-
 	// Field (13) 'RandaoMixes'
 	for ii := 0; ii < 65536; ii++ {
 		dst = append(dst, b.RandaoMixes[ii][:]...)
-	}
-
-	// Field (14) 'Slashings'
-	if len(b.Slashings) != 8192 {
-		err = ssz.ErrVectorLength
-		return
-	}
-	for ii := 0; ii < 8192; ii++ {
-		dst = ssz.MarshalUint64(dst, b.Slashings[ii])
 	}
 
 	// Offset (15) 'PreviousEpochAttestations'
@@ -3192,15 +3173,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		}
 	}
 
-	// Field (12) 'Balances'
-	if len(b.Balances) > 1099511627776 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.Balances); ii++ {
-		dst = ssz.MarshalUint64(dst, b.Balances[ii])
-	}
-
 	// Field (15) 'PreviousEpochAttestations'
 	if len(b.PreviousEpochAttestations) > 4096 {
 		err = ssz.ErrListTooBig
@@ -3254,9 +3226,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
 
-	// Field (2) 'Slot'
-	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3307,9 +3276,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	// Field (10) 'Eth1DepositIndex'
-	b.Eth1DepositIndex = ssz.UnmarshallUint64(buf[524544:524552])
-
 	// Offset (11) 'Validators'
 	if o11 = ssz.ReadOffset(buf[524552:524556]); o11 > size || o9 > o11 {
 		return ssz.ErrOffset
@@ -3324,12 +3290,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 	for ii := 0; ii < 65536; ii++ {
 		copy(b.RandaoMixes[ii][:], buf[524560:2621712][ii*32:(ii+1)*32])
-	}
-
-	// Field (14) 'Slashings'
-	b.Slashings = ssz.ExtendUint64(b.Slashings, 8192)
-	for ii := 0; ii < 8192; ii++ {
-		b.Slashings[ii] = ssz.UnmarshallUint64(buf[2621712:2687248][ii*8 : (ii+1)*8])
 	}
 
 	// Offset (15) 'PreviousEpochAttestations'
@@ -3421,19 +3381,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		}
 	}
 
-	// Field (12) 'Balances'
-	{
-		buf = tail[o12:o15]
-		num, err := ssz.DivideInt2(len(buf), 8, 1099511627776)
-		if err != nil {
-			return err
-		}
-		b.Balances = ssz.ExtendUint64(b.Balances, num)
-		for ii := 0; ii < num; ii++ {
-			b.Balances[ii] = ssz.UnmarshallUint64(buf[ii*8 : (ii+1)*8])
-		}
-	}
-
 	// Field (15) 'PreviousEpochAttestations'
 	{
 		buf = tail[o15:o16]
@@ -3493,9 +3440,6 @@ func (b *BeaconState) SizeSSZ() (size int) {
 	// Field (11) 'Validators'
 	size += len(b.Validators) * 121
 
-	// Field (12) 'Balances'
-	size += len(b.Balances) * 8
-
 	// Field (15) 'PreviousEpochAttestations'
 	for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
 		size += 4
@@ -3522,9 +3466,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])
-
-	// Field (2) 'Slot'
-	hh.PutUint64(uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
@@ -3589,9 +3530,6 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 2048)
 	}
 
-	// Field (10) 'Eth1DepositIndex'
-	hh.PutUint64(b.Eth1DepositIndex)
-
 	// Field (11) 'Validators'
 	{
 		subIndx := hh.Index()
@@ -3608,39 +3546,11 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
 	}
 
-	// Field (12) 'Balances'
-	{
-		if len(b.Balances) > 1099511627776 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.Balances {
-			hh.AppendUint64(i)
-		}
-		hh.FillUpTo32()
-		numItems := uint64(len(b.Balances))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1099511627776, numItems, 8))
-	}
-
 	// Field (13) 'RandaoMixes'
 	{
 		subIndx := hh.Index()
 		for _, i := range b.RandaoMixes {
 			hh.Append(i[:])
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (14) 'Slashings'
-	{
-		if len(b.Slashings) != 8192 {
-			err = ssz.ErrVectorLength
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.Slashings {
-			hh.AppendUint64(i)
 		}
 		hh.Merkleize(subIndx)
 	}
@@ -3716,9 +3626,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (1) 'GenesisValidatorsRoot'
 	dst = append(dst, b.GenesisValidatorsRoot[:]...)
 
-	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
-
 	// Field (3) 'Fork'
 	if b.Fork == nil {
 		b.Fork = new(Fork)
@@ -3761,38 +3668,14 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Eth1DataVotes) * 72
 
-	// Field (10) 'Eth1DepositIndex'
-	dst = ssz.MarshalUint64(dst, b.Eth1DepositIndex)
-
 	// Offset (11) 'Validators'
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.Validators) * 121
-
-	// Offset (12) 'Balances'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.Balances) * 8
 
 	// Field (13) 'RandaoMixes'
 	for ii := 0; ii < 65536; ii++ {
 		dst = append(dst, b.RandaoMixes[ii][:]...)
 	}
-
-	// Field (14) 'Slashings'
-	if len(b.Slashings) != 8192 {
-		err = ssz.ErrVectorLength
-		return
-	}
-	for ii := 0; ii < 8192; ii++ {
-		dst = ssz.MarshalUint64(dst, b.Slashings[ii])
-	}
-
-	// Offset (15) 'PreviousEpochParticipation'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.PreviousEpochParticipation)
-
-	// Offset (16) 'CurrentEpochParticipation'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
@@ -3824,10 +3707,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	if dst, err = b.FinalizedCheckpoint.MarshalSSZTo(dst); err != nil {
 		return
 	}
-
-	// Offset (21) 'InactivityScores'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.InactivityScores) * 8
 
 	// Field (22) 'CurrentSyncCommittee'
 	if b.CurrentSyncCommittee == nil {
@@ -3876,38 +3755,6 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		}
 	}
 
-	// Field (12) 'Balances'
-	if len(b.Balances) > 1099511627776 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.Balances); ii++ {
-		dst = ssz.MarshalUint64(dst, b.Balances[ii])
-	}
-
-	// Field (15) 'PreviousEpochParticipation'
-	if len(b.PreviousEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.PreviousEpochParticipation...)
-
-	// Field (16) 'CurrentEpochParticipation'
-	if len(b.CurrentEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.CurrentEpochParticipation...)
-
-	// Field (21) 'InactivityScores'
-	if len(b.InactivityScores) > 1099511627776 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.InactivityScores); ii++ {
-		dst = ssz.MarshalUint64(dst, b.InactivityScores[ii])
-	}
-
 	return
 }
 
@@ -3924,9 +3771,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	copy(b.GenesisValidatorsRoot[:], buf[8:40])
-
-	// Field (2) 'Slot'
-	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -3978,9 +3822,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	// Field (10) 'Eth1DepositIndex'
-	b.Eth1DepositIndex = ssz.UnmarshallUint64(buf[524544:524552])
-
 	// Offset (11) 'Validators'
 	if o11 = ssz.ReadOffset(buf[524552:524556]); o11 > size || o9 > o11 {
 		return ssz.ErrOffset
@@ -3995,12 +3836,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	for ii := 0; ii < 65536; ii++ {
 		copy(b.RandaoMixes[ii][:], buf[524560:2621712][ii*32:(ii+1)*32])
-	}
-
-	// Field (14) 'Slashings'
-	b.Slashings = ssz.ExtendUint64(b.Slashings, 8192)
-	for ii := 0; ii < 8192; ii++ {
-		b.Slashings[ii] = ssz.UnmarshallUint64(buf[2621712:2687248][ii*8 : (ii+1)*8])
 	}
 
 	// Offset (15) 'PreviousEpochParticipation'
@@ -4113,55 +3948,6 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 		}
 	}
 
-	// Field (12) 'Balances'
-	{
-		buf = tail[o12:o15]
-		num, err := ssz.DivideInt2(len(buf), 8, 1099511627776)
-		if err != nil {
-			return err
-		}
-		b.Balances = ssz.ExtendUint64(b.Balances, num)
-		for ii := 0; ii < num; ii++ {
-			b.Balances[ii] = ssz.UnmarshallUint64(buf[ii*8 : (ii+1)*8])
-		}
-	}
-
-	// Field (15) 'PreviousEpochParticipation'
-	{
-		buf = tail[o15:o16]
-		if len(buf) > 1099511627776 {
-			return ssz.ErrBytesLength
-		}
-		if cap(b.PreviousEpochParticipation) == 0 {
-			b.PreviousEpochParticipation = make([]byte, 0, len(buf))
-		}
-		b.PreviousEpochParticipation = append(b.PreviousEpochParticipation, buf...)
-	}
-
-	// Field (16) 'CurrentEpochParticipation'
-	{
-		buf = tail[o16:o21]
-		if len(buf) > 1099511627776 {
-			return ssz.ErrBytesLength
-		}
-		if cap(b.CurrentEpochParticipation) == 0 {
-			b.CurrentEpochParticipation = make([]byte, 0, len(buf))
-		}
-		b.CurrentEpochParticipation = append(b.CurrentEpochParticipation, buf...)
-	}
-
-	// Field (21) 'InactivityScores'
-	{
-		buf = tail[o21:]
-		num, err := ssz.DivideInt2(len(buf), 8, 1099511627776)
-		if err != nil {
-			return err
-		}
-		b.InactivityScores = ssz.ExtendUint64(b.InactivityScores, num)
-		for ii := 0; ii < num; ii++ {
-			b.InactivityScores[ii] = ssz.UnmarshallUint64(buf[ii*8 : (ii+1)*8])
-		}
-	}
 	return err
 }
 
@@ -4178,18 +3964,6 @@ func (b *BeaconStateAltair) SizeSSZ() (size int) {
 	// Field (11) 'Validators'
 	size += len(b.Validators) * 121
 
-	// Field (12) 'Balances'
-	size += len(b.Balances) * 8
-
-	// Field (15) 'PreviousEpochParticipation'
-	size += len(b.PreviousEpochParticipation)
-
-	// Field (16) 'CurrentEpochParticipation'
-	size += len(b.CurrentEpochParticipation)
-
-	// Field (21) 'InactivityScores'
-	size += len(b.InactivityScores) * 8
-
 	return
 }
 
@@ -4204,9 +3978,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (1) 'GenesisValidatorsRoot'
 	hh.PutBytes(b.GenesisValidatorsRoot[:])
-
-	// Field (2) 'Slot'
-	hh.PutUint64(uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
@@ -4271,9 +4042,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 2048)
 	}
 
-	// Field (10) 'Eth1DepositIndex'
-	hh.PutUint64(b.Eth1DepositIndex)
-
 	// Field (11) 'Validators'
 	{
 		subIndx := hh.Index()
@@ -4290,21 +4058,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
 	}
 
-	// Field (12) 'Balances'
-	{
-		if len(b.Balances) > 1099511627776 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.Balances {
-			hh.AppendUint64(i)
-		}
-		hh.FillUpTo32()
-		numItems := uint64(len(b.Balances))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1099511627776, numItems, 8))
-	}
-
 	// Field (13) 'RandaoMixes'
 	{
 		subIndx := hh.Index()
@@ -4313,33 +4066,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		}
 		hh.Merkleize(subIndx)
 	}
-
-	// Field (14) 'Slashings'
-	{
-		if len(b.Slashings) != 8192 {
-			err = ssz.ErrVectorLength
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.Slashings {
-			hh.AppendUint64(i)
-		}
-		hh.Merkleize(subIndx)
-	}
-
-	// Field (15) 'PreviousEpochParticipation'
-	if len(b.PreviousEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.PreviousEpochParticipation)
-
-	// Field (16) 'CurrentEpochParticipation'
-	if len(b.CurrentEpochParticipation) > 1099511627776 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
@@ -4361,21 +4087,6 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (20) 'FinalizedCheckpoint'
 	if err = b.FinalizedCheckpoint.HashTreeRootWith(hh); err != nil {
 		return
-	}
-
-	// Field (21) 'InactivityScores'
-	{
-		if len(b.InactivityScores) > 1099511627776 {
-			err = ssz.ErrListTooBig
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range b.InactivityScores {
-			hh.AppendUint64(i)
-		}
-		hh.FillUpTo32()
-		numItems := uint64(len(b.InactivityScores))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1099511627776, numItems, 8))
 	}
 
 	// Field (22) 'CurrentSyncCommittee'

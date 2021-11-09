@@ -114,7 +114,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 	state := &ethpb.BeaconState{
 		// Misc fields.
-		Slot:                  0,
 		GenesisValidatorsRoot: genesisValidatorsRoot,
 
 		Fork: &ethpb.Fork{
@@ -125,7 +124,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 		// Validator registry fields.
 		Validators: preState.Validators(),
-		Balances:   preState.Balances(),
 
 		// Randomness and committees.
 		RandaoMixes: &randaoMixes,
@@ -148,14 +146,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		HistoricalRoots:           [][32]byte{},
 		BlockRoots:                &blockRoots,
 		StateRoots:                &stateRoots,
-		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
 		// Eth1 data.
-		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: preState.Eth1DepositIndex(),
+		Eth1Data:      eth1Data,
+		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBody{
@@ -184,6 +180,18 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	if err = s.SetGenesisTime(genesisTime); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
 	}
+	if err = s.SetSlot(0); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = s.SetBalances(preState.Balances()); err != nil {
+		return nil, errors.Wrap(err, "could not set balances")
+	}
+	if err = s.SetSlashings(slashings); err != nil {
+		return nil, errors.Wrap(err, "could not set slashings")
+	}
+	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
 
 	return s, nil
 }
@@ -192,7 +200,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 func EmptyGenesisState() (state.BeaconState, error) {
 	state := &ethpb.BeaconState{
 		// Misc fields.
-		Slot: 0,
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -200,7 +207,6 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		},
 		// Validator registry fields.
 		Validators: []*ethpb.Validator{},
-		Balances:   []uint64{},
 
 		JustificationBits:         []byte{0},
 		HistoricalRoots:           [][32]byte{},
@@ -208,11 +214,26 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
 		// Eth1 data.
-		Eth1Data:         &ethpb.Eth1Data{},
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: 0,
+		Eth1Data:      &ethpb.Eth1Data{},
+		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
-	return v1.InitializeFromProto(state)
+	s, err := v1.InitializeFromProto(state)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize state from proto state")
+	}
+
+	if err = s.SetSlot(0); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+	if err = s.SetBalances([]uint64{}); err != nil {
+		return nil, errors.Wrap(err, "could not set balances")
+	}
+	if err = s.SetEth1DepositIndex(0); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+
+	return s, nil
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

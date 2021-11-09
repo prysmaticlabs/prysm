@@ -92,26 +92,28 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	dst := &BeaconState{
 		// Primitive types, safe to copy.
-		genesisTime: b.genesisTime,
-		state: &ethpb.BeaconStateAltair{
-			// Primitive types, safe to copy.
-			Slot:             b.state.Slot,
-			Eth1DepositIndex: b.state.Eth1DepositIndex,
+		genesisTime:      b.genesisTime,
+		slot:             b.slot,
+		eth1DepositIndex: b.eth1DepositIndex,
 
+		// Large arrays, infrequently changed, constant size.
+		slashings: b.slashings,
+
+		// Large arrays, increases over time.
+		balances:                   b.balances,
+		previousEpochParticipation: b.previousEpochParticipation,
+		currentEpochParticipation:  b.currentEpochParticipation,
+		inactivityScores:           b.inactivityScores,
+		state: &ethpb.BeaconStateAltair{
 			// Large arrays, infrequently changed, constant size.
 			RandaoMixes:   b.state.RandaoMixes,
 			StateRoots:    b.state.StateRoots,
 			BlockRoots:    b.state.BlockRoots,
-			Slashings:     b.state.Slashings,
 			Eth1DataVotes: b.state.Eth1DataVotes,
 
 			// Large arrays, increases over time.
-			Validators:                 b.state.Validators,
-			Balances:                   b.state.Balances,
-			HistoricalRoots:            b.state.HistoricalRoots,
-			PreviousEpochParticipation: b.state.PreviousEpochParticipation,
-			CurrentEpochParticipation:  b.state.CurrentEpochParticipation,
-			InactivityScores:           b.state.InactivityScores,
+			Validators:      b.state.Validators,
+			HistoricalRoots: b.state.HistoricalRoots,
 
 			// Everything else, too small to be concerned about, constant size.
 			Fork:                        b.fork(),
@@ -269,9 +271,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case genesisValidatorRoot:
 		return b.state.GenesisValidatorsRoot, nil
 	case slot:
-		return ssz.Uint64Root(uint64(b.state.Slot)), nil
+		return ssz.Uint64Root(uint64(b.slot)), nil
 	case eth1DepositIndex:
-		return ssz.Uint64Root(b.state.Eth1DepositIndex), nil
+		return ssz.Uint64Root(b.eth1DepositIndex), nil
 	case fork:
 		return ssz.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
@@ -329,7 +331,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
@@ -341,11 +343,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
-		return ssz.SlashingsRoot(b.state.Slashings)
+		return ssz.SlashingsRoot(b.slashings)
 	case previousEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.state.PreviousEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.previousEpochParticipation)
 	case currentEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.state.CurrentEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.currentEpochParticipation)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
@@ -355,7 +357,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case finalizedCheckpoint:
 		return ssz.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	case inactivityScores:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.state.InactivityScores)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
 	case currentSyncCommittee:
 		return stateutil.SyncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:
