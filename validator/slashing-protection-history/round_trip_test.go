@@ -31,7 +31,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	wanted, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We encode the standard slashing protection struct into a JSON history.
+	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(wanted)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
@@ -105,7 +105,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 			},
 		},
 	}
-	// We encode the standard slashing protection struct into a JSON history.
+	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(wanted)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
@@ -142,7 +142,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	standardProtectionFormat, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We encode the standard slashing protection struct into a JSON history.
+	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
@@ -250,7 +250,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 		},
 	)
 
-	// We encode the standard slashing protection struct into a JSON history.
+	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
@@ -292,7 +292,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// We replace a slot of one of the blocks with junk data.
 	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
 
-	// We encode the standard slashing protection struct into a JSON history.
+	// We encode the standard slashing protection struct into a JSON format.
 	blob, err := json.Marshal(standardProtectionFormat)
 	require.NoError(t, err)
 	buf := bytes.NewBuffer(blob)
