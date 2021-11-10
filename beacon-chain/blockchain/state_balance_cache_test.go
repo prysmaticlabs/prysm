@@ -62,10 +62,6 @@ func generateTestValidators(count int, opts ...func(*ethpb.Validator)) []*ethpb.
 	return vs
 }
 
-func testWithAfterExit(v *ethpb.Validator, slot types.Slot) {
-	v.ExitEpoch = slots.ToEpoch(types.Slot(int(slot) - 1))
-}
-
 func oddValidatorsExpired(currentSlot types.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
 		pki := binary.LittleEndian.Uint64(v.PublicKey)
