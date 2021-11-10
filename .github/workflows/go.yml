@@ -45,6 +45,14 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
           horusec start -p="./" -e="true" -i="**/crypto/bls/herumi/**, **/**/*_test.go, **/third_party/afl/**, **/crypto/keystore/key.go"
+          
+      - name: WriteGoList
+        run: go list -json -m all > go.list
+      
+      - name: Nancy
+        uses: sonatype-nexus-community/nancy-github-action@main
+        with:
+          nancyCommand: sleuth
 
   build:
     name: Build
