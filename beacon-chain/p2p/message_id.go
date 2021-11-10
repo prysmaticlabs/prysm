@@ -46,7 +46,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 		return string(msg)
 	}
 	if fEpoch >= params.BeaconConfig().AltairForkEpoch {
-		return altairMsgID(pmsg, fEpoch)
+		return postAltairMsgID(pmsg, fEpoch)
 	}
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {
@@ -70,7 +70,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 // + message.topic + snappy_decompress(message.data))[:20]. Otherwise, set message-id to the first 20 bytes of the SHA256 hash of the concatenation
 // of the following data: MESSAGE_DOMAIN_INVALID_SNAPPY, the length of the topic byte string (encoded as little-endian uint64),
 // the topic byte string, and the raw message data: i.e. SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(uint64(len(message.topic))) + message.topic + message.data)[:20].
-func altairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
+func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
 	topic := *pmsg.Topic
 	topicLen := uint64(len(topic))
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
