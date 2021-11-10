@@ -3,11 +3,12 @@ package blockchain
 import (
 	"context"
 	"errors"
+	"testing"
+
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"testing"
 )
 
 func testServiceOptsWithDB(t *testing.T) []Option {
