@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -57,7 +56,7 @@ func TestServer_ListKeystores(t *testing.T) {
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 	expectedKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -106,7 +105,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
 	publicKeys, err := km.FetchValidatingPublicKeys(ctx)
