@@ -410,9 +410,9 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	return buildDuplicateError(resp.Responses)
 }
 
-func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
 	duplicates := make([][]byte, 0)
-	for _, valRes := range respones {
+	for _, valRes := range response {
 		if valRes.DuplicateExists {
 			copiedKey := [48]byte{}
 			copy(copiedKey[:], valRes.PublicKey)
@@ -425,7 +425,7 @@ func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorRespons
 	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
 }
 
-// Ensures that the latest attestion history is retrieved.
+// Ensures that the latest attestation history is retrieved.
 func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
 	if len(recs) == 0 {
 		return nil

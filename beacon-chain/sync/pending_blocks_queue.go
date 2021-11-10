@@ -48,7 +48,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
-	pids := s.cfg.P2P.Peers().Connected()
+	pids := s.cfg.p2p.Peers().Connected()
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
@@ -64,7 +64,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	for _, slot := range slots {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
-		if slot > s.cfg.Chain.CurrentSlot() {
+		if slot > s.cfg.chain.CurrentSlot() {
 			continue
 		}
 
@@ -117,10 +117,10 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			inDB := s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			inDB := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
 			hasPeer := len(pids) != 0
 
-			// Only request for missing parent block if it's not in DB, not in pending cache
+			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
 			if !inPendingQueue && !inDB && hasPeer {
 				log.WithFields(logrus.Fields{
@@ -148,7 +148,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.cfg.Chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
@@ -161,7 +161,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			if err := s.cfg.P2P.Broadcast(ctx, b.Proto()); err != nil {
+			if err := s.cfg.p2p.Broadcast(ctx, b.Proto()); err != nil {
 				log.WithError(err).Debug("Could not broadcast block")
 			}
 
@@ -191,7 +191,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		return nil
 	}
 
-	_, bestPeers := s.cfg.P2P.Peers().BestFinalized(maxPeerRequest, s.cfg.Chain.FinalizedCheckpt().Epoch)
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
@@ -252,7 +252,7 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	finalizedEpoch := s.cfg.Chain.FinalizedCheckpt().Epoch
+	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}

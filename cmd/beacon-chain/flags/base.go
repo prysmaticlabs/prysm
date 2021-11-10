@@ -110,10 +110,10 @@ var (
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
-	// section of DB.
+	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
 		Name:  "slots-per-archive-point",
-		Usage: "The slot durations of when an archived state gets saved in the DB.",
+		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
 	}
 	// DisableDiscv5 disables running discv5.
