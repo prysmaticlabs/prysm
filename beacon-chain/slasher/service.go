@@ -83,40 +83,11 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	go s.run() // Start functions must be non-blocking.
+	//go s.run() // Start functions must be non-blocking.
 }
 
 func (s *Service) run() {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	stateEvent := <-stateChannel
-
-	// Wait for us to receive the genesis time via a chain started notification.
-	if stateEvent.Type == statefeed.ChainStarted {
-		data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
-		if !ok {
-			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
-			return
-		}
-		s.genesisTime = data.StartTime
-		log.WithField("genesisTime", s.genesisTime).Info("Starting slasher, received chain start event")
-	} else if stateEvent.Type == statefeed.Initialized {
-		// Alternatively, if the chain has already started, we then read the genesis
-		// time value from this data.
-		data, ok := stateEvent.Data.(*statefeed.InitializedData)
-		if !ok {
-			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
-			return
-		}
-		s.genesisTime = data.StartTime
-		log.WithField("genesisTime", s.genesisTime).Info("Starting slasher, chain already initialized")
-	} else {
-		// This should not happen.
-		log.Error("Could start slasher, could not receive chain start event")
-		return
-	}
-
-	stateSub.Unsubscribe()
+	s.waitForChainInitialization()
 	s.waitForSync(s.genesisTime)
 
 	log.Info("Completed chain sync, starting slashing detection")
@@ -191,6 +162,48 @@ func (s *Service) Stop() error {
 // Status of the slasher service.
 func (s *Service) Status() error {
 	return nil
+}
+
+func (s *Service) waitForChainInitialization() {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case stateEvent := <-stateChannel:
+			// Wait for us to receive the genesis time via a chain started notification.
+			if stateEvent.Type == statefeed.ChainStarted {
+				data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
+				if !ok {
+					log.Error(
+						"Could not receive chain start notification, want *statefeed.ChainStartedData",
+					)
+					return
+				}
+				s.genesisTime = data.StartTime
+				log.WithField("genesisTime", s.genesisTime).Info(
+					"Slasher received chain start event",
+				)
+			} else if stateEvent.Type == statefeed.Initialized {
+				// Alternatively, if the chain has already started, we then read the genesis
+				// time value from this data.
+				data, ok := stateEvent.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Error(
+						"Could not receive chain start notification, want *statefeed.ChainStartedData",
+					)
+					return
+				}
+				s.genesisTime = data.StartTime
+				log.WithField("genesisTime", s.genesisTime).Info(
+					"Slasher received chain initialization event",
+				)
+			}
+		case <-s.ctx.Done():
+			return
+		}
+	}
+
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {
