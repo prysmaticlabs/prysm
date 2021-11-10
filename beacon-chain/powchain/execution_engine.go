@@ -168,6 +168,10 @@ func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.E
 // Engine API definition:
 // 	https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_executepayloadv1
 func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableDataV1) ([]byte, error) {
+	// TODO: Fix this. Somehow transactions becomes nil with grpc call server->client
+	if data.Transactions == nil {
+		data.Transactions = [][]byte{}
+	}
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_executePayloadV1",
@@ -201,7 +205,7 @@ func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableD
 		return nil, err
 	}
 	if respond.Error.Code != 0 {
-		return nil, fmt.Errorf("could not call engine_getPayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
+		return nil, fmt.Errorf("could not call engine_executePayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 
 	if respond.Result.Status == catalyst.INVALID.Status {
@@ -252,7 +256,7 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState
 		return err
 	}
 	if respond.Error.Code != 0 {
-		return fmt.Errorf("could not call engine_getPayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
+		return fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
 		return errSyncing
@@ -300,7 +304,7 @@ func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.F
 		return 0, err
 	}
 	if respond.Error.Code != 0 {
-		return 0, fmt.Errorf("could not call engine_getPayloadV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
+		return 0, fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
 		return 0, errSyncing
