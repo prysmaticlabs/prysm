@@ -146,13 +146,13 @@ func (s *Service) Stop() error {
 	}
 	// Flush the latest epoch written map to disk.
 	start := time.Now()
-	log.Info("Flushing last epoch written for each validator to disk")
+	log.Info("Flushing last epoch written for each validator to disk, please wait")
 	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
 		s.ctx, s.latestEpochWrittenForValidator,
 	); err != nil {
 		log.Error(err)
 	}
-	log.WithField("elapsed", time.Since(start)).Info(
+	log.WithField("elapsed", time.Since(start)).Debug(
 		"Finished saving last epoch written per validator",
 	)
 	s.cancel()

@@ -26,11 +26,11 @@ func (s *Service) checkSlashableAttestations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check slashable double votes")
 	}
-	log.WithField("elapsed", time.Since(start)).Info("Done checking double votes")
+	log.WithField("elapsed", time.Since(start)).Debug("Done checking double votes")
 	slashings = append(slashings, doubleVoteSlashings...)
 
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
-	log.WithField("numBatches", len(groupedAtts)).Info("Batching attestations by validator chunk index")
+	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
 	start = time.Now()
 	batchTimes := make([]time.Duration, 0, len(groupedAtts))
 	for validatorChunkIdx, batch := range groupedAtts {
@@ -63,7 +63,7 @@ func (s *Service) checkSlashableAttestations(
 		"avgBatchProcessingTime":          avgProcessingTimePerBatch,
 	}).Info("Done checking slashable attestations")
 	if len(slashings) > 0 {
-		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
+		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
 	return slashings, nil
 }
