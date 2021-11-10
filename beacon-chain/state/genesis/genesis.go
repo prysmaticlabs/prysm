@@ -35,6 +35,5 @@ func load(b []byte) (*state.BeaconState, error) {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return nil, err
 	}
-	// TODO: Change to beaconState.Validators after regenerating state
-	return state.InitializeFromProtoUnsafe(nil)
+	return state.InitializeFromProtoUnsafe(st)
 }

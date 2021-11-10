@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
@@ -30,24 +31,104 @@ var (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(vals []*ethpb.Validator) (*BeaconState, error) {
-	cloned := make([]*ethpb.Validator, len(vals))
-	for i, v := range vals {
-		cloned[i] = proto.Clone(v).(*ethpb.Validator)
-	}
-	return InitializeFromProtoUnsafe(cloned)
+func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(vals []*ethpb.Validator) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+	if st == nil {
+		return nil, errors.New("received nil state")
+	}
+
+	var bRoots customtypes.StateRoots
+	for i, r := range st.BlockRoots {
+		bRoots[i] = bytesutil.ToBytes32(r)
+	}
+	var sRoots customtypes.StateRoots
+	for i, r := range st.StateRoots {
+		sRoots[i] = bytesutil.ToBytes32(r)
+	}
+	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
+	for i, r := range st.HistoricalRoots {
+		hRoots[i] = bytesutil.ToBytes32(r)
+	}
+	var mixes customtypes.RandaoMixes
+	for i, m := range st.RandaoMixes {
+		mixes[i] = bytesutil.ToBytes32(m)
+	}
+
+	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+	b := &BeaconState{
+		genesisTime:                 st.GenesisTime,
+		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
+		slot:                        st.Slot,
+		fork:                        st.Fork,
+		latestBlockHeader:           st.LatestBlockHeader,
+		blockRoots:                  &bRoots,
+		stateRoots:                  &sRoots,
+		historicalRoots:             hRoots,
+		eth1Data:                    st.Eth1Data,
+		eth1DataVotes:               st.Eth1DataVotes,
+		eth1DepositIndex:            st.Eth1DepositIndex,
+		validators:                  st.Validators,
+		balances:                    st.Balances,
+		randaoMixes:                 &mixes,
+		slashings:                   st.Slashings,
+		previousEpochParticipation:  st.PreviousEpochParticipation,
+		currentEpochParticipation:   st.CurrentEpochParticipation,
+		justificationBits:           st.JustificationBits,
+		previousJustifiedCheckpoint: st.PreviousJustifiedCheckpoint,
+		currentJustifiedCheckpoint:  st.CurrentJustifiedCheckpoint,
+		finalizedCheckpoint:         st.FinalizedCheckpoint,
+		inactivityScores:            st.InactivityScores,
+		currentSyncCommittee:        st.CurrentSyncCommittee,
+		nextSyncCommittee:           st.NextSyncCommittee,
+
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+	}
+
+	var err error
+	for i := 0; i < fieldCount; i++ {
+		b.dirtyFields[types.FieldIndex(i)] = true
+		b.rebuildTrie[types.FieldIndex(i)] = true
+		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
+		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Initialize field reference tracking for shared data.
+	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
+	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
+	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
+	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
+
+	stateCount.Inc()
+	return b, nil
+}
+
+func Initialize(vals []*ethpb.Validator) (*BeaconState, error) {
 	if vals == nil {
 		return nil, errors.New("received nil validators")
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	b := &BeaconState{
-		state:                 &ethpb.BeaconStateAltair{},
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
@@ -129,7 +210,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 		currentSyncCommittee:        b.currentSyncCommittee,
 		nextSyncCommittee:           b.nextSyncCommittee,
 
-		state:                 &ethpb.BeaconStateAltair{},
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
@@ -259,7 +339,7 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // IsNil checks if the state and the underlying proto
 // object are nil.
 func (b *BeaconState) IsNil() bool {
-	return b == nil || b.state == nil
+	return b == nil
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {

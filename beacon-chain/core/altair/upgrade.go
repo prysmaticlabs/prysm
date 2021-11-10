@@ -68,8 +68,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 
 	numValidators := state.NumValidators()
 
-	// TODO: Somehow pass validators?
-	newState, err := statealtair.InitializeFromProto(nil)
+	newState, err := statealtair.Initialize(state.Validators())
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +110,6 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err = newState.SetEth1DepositIndex(state.Eth1DepositIndex()); err != nil {
 		return nil, errors.Wrap(err, "could not set eth1 deposit index")
 	}
-	// TODO: Pass validators to InitializeFromProto instead?
 	if err = newState.SetValidators(state.Validators()); err != nil {
 		return nil, errors.Wrap(err, "could not set validators")
 	}

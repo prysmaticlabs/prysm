@@ -50,11 +50,8 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 }
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
-	seed := &ethpb.BeaconState{}
-
-	// TODO: Somehow pass validators?
-	var st, err = v1.InitializeFromProtoUnsafe(nil)
+func NewBeaconState(options ...func(state *v1.BeaconState) error) (*v1.BeaconState, error) {
+	var st, err = v1.Initialize(make([]*ethpb.Validator, 0))
 	if err != nil {
 		return nil, err
 	}
@@ -108,9 +105,8 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 		return nil, errors.Wrap(err, "could not set finalized checkpoint")
 	}
 
-	// TODO: use options on st variable
 	for _, opt := range options {
-		err = opt(seed)
+		err = opt(st)
 		if err != nil {
 			return nil, err
 		}

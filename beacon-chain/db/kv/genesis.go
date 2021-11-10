@@ -60,8 +60,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return err
 	}
-	// TODO: Change to beaconState.Validators after regenerating state
-	gs, err := statev1.InitializeFromProtoUnsafe(nil)
+	gs, err := statev1.InitializeFromProtoUnsafe(st)
 	if err != nil {
 		return err
 	}
