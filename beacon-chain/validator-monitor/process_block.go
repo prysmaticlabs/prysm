@@ -44,8 +44,8 @@ func (s *Service) processBlock(b block.SignedBeaconBlock) {
 	}
 
 	s.processProposedBlock(state, root, blk)
-	s.processAttestations(state, root, blk)
-	s.processSyncAggregate(state, root, blk)
+	s.processAttestations(state, blk)
+	s.processSyncAggregate(state, blk)
 }
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
@@ -86,7 +86,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 // processAttestations logs the event that one of our tracked validators'
 // attestations was included in a block
-func (s *Service) processAttestations(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
+func (s *Service) processAttestations(state state.BeaconState, blk block.BeaconBlock) {
 	for _, attestation := range blk.Body().Attestations() {
 		s.processAttestation(state, attestation, true)
 	}

@@ -193,7 +193,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerValidatorMonitorService(cliCtx); err != nil {
+	if err := beacon.registerValidatorMonitorService(); err != nil {
 		return nil, err
 	}
 
@@ -826,7 +826,7 @@ func (b *BeaconNode) registerInteropServices() error {
 	return nil
 }
 
-func (b *BeaconNode) registerValidatorMonitorService(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerValidatorMonitorService() error {
 	cliSlice := cmd.ValidatorMonitorIndicesFlag.Value.Value()
 	if cliSlice == nil {
 		return nil

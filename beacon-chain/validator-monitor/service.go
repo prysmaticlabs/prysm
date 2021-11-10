@@ -121,7 +121,6 @@ type ValidatorLatestPerformance struct {
 	timelySource  bool
 	timelyTarget  bool
 	timelyHead    bool
-	timeStamp     uint64
 	balance       uint64
 	balanceChange uint64
 }
@@ -249,8 +248,7 @@ func (s *Service) waitForSync() error {
 	for {
 		select {
 		case event := <-stateChannel:
-			switch event.Type {
-			case statefeed.Synced:
+			if event.Type == statefeed.Synced {
 				_, ok := event.Data.(*statefeed.SyncedData)
 				if !ok {
 					return errorNotSyncedData
@@ -283,8 +281,7 @@ func (s *Service) monitorRoutine() {
 	for {
 		select {
 		case event := <-stateChannel:
-			switch event.Type {
-			case statefeed.BlockProcessed:
+			if event.Type == statefeed.BlockProcessed {
 				data, ok := event.Data.(*statefeed.BlockProcessedData)
 				if !ok {
 					log.Error("Event feed data is not of type *statefeed.BlockProcessedData")

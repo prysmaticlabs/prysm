@@ -26,7 +26,7 @@ func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedCon
 
 // processSyncAggregate logs the event that one of our tracked validators is a sync-committee member and its
 // contribution was included
-func (s *Service) processSyncAggregate(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
+func (s *Service) processSyncAggregate(state state.BeaconState, blk block.BeaconBlock) {
 	bits, err := blk.Body().SyncAggregate()
 	if err != nil {
 		log.WithError(err).Error("Cannot get SyncAggregate")
