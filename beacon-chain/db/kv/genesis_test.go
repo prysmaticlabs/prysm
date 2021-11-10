@@ -22,12 +22,6 @@ func TestStore_SaveGenesisData(t *testing.T) {
 	assert.NoError(t, db.SaveGenesisData(ctx, gs))
 
 	testGenesisDataSaved(t, db)
-	var zeroRoot [32]byte
-	copy(zeroRoot[:], params.BeaconConfig().ZeroHash[:])
-	st, err := db.State(ctx, zeroRoot)
-	assert.NoError(t, err)
-	assert.NotNil(t, st)
-	assert.Equal(t, false, st.IsNil())
 }
 
 func testGenesisDataSaved(t *testing.T, db iface.Database) {
