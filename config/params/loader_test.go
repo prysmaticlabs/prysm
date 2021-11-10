@@ -16,6 +16,7 @@ import (
 
 var placeholderFields = []string{
 	"TERMINAL_TOTAL_DIFFICULTY",
+	"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",
 	"TERMINAL_BLOCK_HASH",
 }
 
