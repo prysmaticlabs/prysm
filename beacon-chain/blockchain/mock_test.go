@@ -37,7 +37,7 @@ type mockStateByRooter struct {
 
 var _ stateByRooter = &mockStateByRooter{}
 
-func (m mockStateByRooter) StateByRoot(ctx context.Context, i [32]byte) (state.BeaconState, error) {
+func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.BeaconState, error) {
 	return m.state, m.err
 }
 
