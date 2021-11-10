@@ -66,7 +66,6 @@ type BeaconState struct {
 	currentJustifiedCheckpoint  *ethpb.Checkpoint
 	finalizedCheckpoint         *ethpb.Checkpoint
 
-	state                 *ethpb.BeaconState
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64

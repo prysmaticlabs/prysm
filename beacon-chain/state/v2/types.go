@@ -63,7 +63,6 @@ type BeaconState struct {
 	currentSyncCommittee        *ethpb.SyncCommittee
 	nextSyncCommittee           *ethpb.SyncCommittee
 
-	state                 *ethpb.BeaconStateAltair
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
