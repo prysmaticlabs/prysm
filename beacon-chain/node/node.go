@@ -193,7 +193,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.startValidatorMonitorService(cliCtx); err != nil {
+	if err := beacon.registerValidatorMonitorService(cliCtx); err != nil {
 		return nil, err
 	}
 
@@ -826,11 +826,11 @@ func (b *BeaconNode) registerInteropServices() error {
 	return nil
 }
 
-func (b *BeaconNode) startValidatorMonitorService(cliCtx *cli.Context) error {
-	if !cmd.ValidatorMonitorIndicesFlag.HasBeenSet {
+func (b *BeaconNode) registerValidatorMonitorService(cliCtx *cli.Context) error {
+	cliSlice := cmd.ValidatorMonitorIndicesFlag.Value.Value()
+	if cliSlice == nil {
 		return nil
 	}
-	cliSlice := cmd.ValidatorMonitorIndicesFlag.Value.Value()
 	tracked := make([]types.ValidatorIndex, len(cliSlice))
 	for i := range tracked {
 		tracked[i] = types.ValidatorIndex(cliSlice[i])
