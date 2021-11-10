@@ -44,7 +44,7 @@ jobs:
       - name: Horusec security scanner
         run: |
           curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
-          horusec start -p="./" -e="true"   
+          horusec start -p="./" -e="true" -i="**/crypto/bls/herumi/**, **/**/*_test.go, **/third_party/afl/**, **/crypto/keystore/key.go"
 
   build:
     name: Build
