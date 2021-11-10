@@ -55,6 +55,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not fetch Merge beacon block: %v", err)
 	}
 
+	log.Info("Sending block to client, transaction field is nil: ", blk.Body.ExecutionPayload.Transactions == nil)
+
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Merge{Merge: blk}}, nil
 }
 

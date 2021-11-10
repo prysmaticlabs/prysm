@@ -168,10 +168,6 @@ func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.E
 // Engine API definition:
 // 	https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_executepayloadv1
 func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableDataV1) ([]byte, error) {
-	// TODO: Fix this. Somehow transactions becomes nil with grpc call server->client
-	if data.Transactions == nil {
-		data.Transactions = [][]byte{}
-	}
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_executePayloadV1",

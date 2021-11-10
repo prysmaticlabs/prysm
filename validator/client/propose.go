@@ -572,6 +572,8 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
 	})
+
+	log.Info("Received block from server, transaction field is nil: ", b.GetMerge().Body.ExecutionPayload.Transactions == nil)
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
