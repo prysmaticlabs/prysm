@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -32,6 +33,7 @@ type ServiceConfig struct {
 	StateGen                    stategen.StateManager
 	SlashingsPool               slashings.PoolManager
 	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
+	SyncChecker                 sync.Checker
 }
 
 // Parameters for a slasher simulator.
@@ -90,6 +92,7 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
+		SyncChecker:             srvConfig.SyncChecker,
 	})
 	if err != nil {
 		return nil, err
