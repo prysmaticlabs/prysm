@@ -83,7 +83,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	//go s.run() // Start functions must be non-blocking.
+	go s.run() // Start functions must be non-blocking.
 }
 
 func (s *Service) run() {

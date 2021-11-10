@@ -99,5 +99,5 @@ func TestService_StartStop_ChainAlreadyInitialized(t *testing.T) {
 	srv.pruningSlotTicker = &slots.SlotTicker{}
 	require.NoError(t, srv.Stop())
 	require.NoError(t, srv.Status())
-	require.LogsContain(t, hook, "chain already initialized")
+	require.LogsContain(t, hook, "received chain initialization")
 }
