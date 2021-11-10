@@ -96,11 +96,11 @@ func (s *Service) processAttestation(state state.BeaconState, att *ethpb.Attesta
 					}
 					if latestPerf.timelyHead {
 						aggregatedPerf.totalCorrectHead++
-						timelySourceCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
+						timelyHeadCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
 					}
 					if latestPerf.timelyTarget {
 						aggregatedPerf.totalCorrectTarget++
-						timelySourceCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
+						timelyTargetCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
 					}
 				}
 				logFields["CorrectHead"] = latestPerf.timelyHead

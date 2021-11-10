@@ -164,6 +164,7 @@ type Service struct {
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
 	isRunning                   bool
+	lastSyncedEpoch             types.Epoch
 }
 
 // NewService sets up a new validator monitor instance when given a list of
@@ -223,6 +224,7 @@ func (s *Service) Start() {
 		}
 	}
 	s.isRunning = true
+	s.lastSyncedEpoch = epoch
 	go s.monitorRoutine()
 }
 

@@ -39,9 +39,7 @@ func (s *Service) processBlock(b block.SignedBeaconBlock) {
 		return
 	}
 	currEpoch := slots.ToEpoch(blk.Slot())
-	prevSlotEpoch := slots.ToEpoch(blk.Slot() - 1)
-
-	if currEpoch != prevSlotEpoch && slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(prevSlotEpoch) {
+	if currEpoch != s.lastSyncedEpoch && slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(s.lastSyncedEpoch) {
 		s.updateSyncCommitteeTrackedVals(state)
 	}
 

@@ -23,6 +23,11 @@ func NewMockService() *MockStateManager {
 	}
 }
 
+// StateByRootIfCached
+func (m *MockStateManager) StateByRootIfCached(_ context.Context, _ [32]byte) (state.BeaconState, error) {
+	panic("implement me")
+}
+
 // Resume --
 func (m *MockStateManager) Resume(_ context.Context) (state.BeaconState, error) {
 	panic("implement me")
