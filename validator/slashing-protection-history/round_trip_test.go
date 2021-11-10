@@ -128,6 +128,67 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	require.DeepEqual(t, wanted.Data, eipStandard.Data)
 }
 
+func TestImportExport_FilterKeys(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 10
+	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
+	require.NoError(t, err)
+	wanted, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(wanted)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.NoError(t, err)
+
+	// Next up, we export our slashing protection database into the EIP standard file.
+	// Next, we attempt to import it into our validator database.
+	rawKeys := make([][]byte, 5)
+	for i := 0; i < len(rawKeys); i++ {
+		rawKeys[i] = publicKeys[i][:]
+	}
+	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB, rawKeys...)
+	require.NoError(t, err)
+
+	// We compare the metadata fields from import to export.
+	require.Equal(t, wanted.Metadata, eipStandard.Metadata)
+
+	// The values in the data field of the EIP struct are not guaranteed to be sorted,
+	// so we create a map to verify we have the data we expected.
+	require.Equal(t, len(rawKeys), len(eipStandard.Data))
+	//
+	//dataByPubKey := make(map[string]*format.ProtectionData)
+	//for _, item := range wanted.Data {
+	//	dataByPubKey[item.Pubkey] = item
+	//}
+	//for _, item := range eipStandard.Data {
+	//	want, ok := dataByPubKey[item.Pubkey]
+	//	require.Equal(t, true, ok)
+	//	require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
+	//	require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
+	//	wantedAttsByRoot := make(map[string]*format.SignedAttestation)
+	//	for _, att := range want.SignedAttestations {
+	//		wantedAttsByRoot[att.SigningRoot] = att
+	//	}
+	//	for _, att := range item.SignedAttestations {
+	//		wantedAtt, ok := wantedAttsByRoot[att.SigningRoot]
+	//		require.Equal(t, true, ok)
+	//		require.DeepEqual(t, wantedAtt, att)
+	//	}
+	//	require.DeepEqual(t, want.SignedBlocks, item.SignedBlocks)
+	//}
+}
+
 func TestImportInterchangeData_OK(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 10

@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -39,7 +40,7 @@ type Importer interface {
 
 // Deleter can delete keystores from the keymanager.
 type Deleter interface {
-	DeleteAccounts(ctx context.Context, publicKeys [][]byte) error
+	DeleteKeystores(ctx context.Context, publicKeys [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error)
 }
 
 // KeyChangeSubscriber allows subscribing to changes made to the underlying keys.
