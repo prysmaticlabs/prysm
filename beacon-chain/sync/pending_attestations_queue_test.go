@@ -327,8 +327,8 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	s := &Service{
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		cfg: &Config{
-			Chain: &mock.ChainService{Genesis: time.Now()},
+		cfg: &config{
+			chain: &mock.ChainService{Genesis: time.Now()},
 		},
 	}
 
@@ -389,7 +389,7 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
 	s := &Service{
-		cfg:                  &Config{P2P: p1, DB: db, Chain: &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}},
+		cfg:                  &config{p2p: p1, beaconDB: db, chain: &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		chainStarted:         abool.New(),
 	}

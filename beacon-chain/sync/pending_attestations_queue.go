@@ -53,14 +53,14 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 			}
 			aggValid := pubsub.ValidationAccept == valRes
 			if aggValid && s.validateBlockInAttestation(ctx, signedAtt) {
-				if err := s.cfg.AttPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
+				if err := s.cfg.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue
 				}
 				s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 				// Broadcasting the signed attestation again once a node is able to process it.
-				if err := s.cfg.P2P.Broadcast(ctx, signedAtt); err != nil {
+				if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
 					log.WithError(err).Debug("Could not broadcast")
 				}
 			}
@@ -68,15 +68,15 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 			// This is an important validation before retrieving attestation pre state to defend against
 			// attestation's target intentionally reference checkpoint that's long ago.
 			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-			if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
+			if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
 				log.WithError(err).Debug("Could not verify finalized consistency")
 				continue
 			}
-			if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
+			if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
 				log.WithError(err).Debug("Could not verify FFG consistency")
 				continue
 			}
-			preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
 			if err != nil {
 				log.WithError(err).Debug("Could not retrieve attestation prestate")
 				continue
@@ -88,7 +88,7 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 				continue
 			}
 			if valid == pubsub.ValidationAccept {
-				if err := s.cfg.AttPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+				if err := s.cfg.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
 					log.WithError(err).Debug("Could not save unaggregated attestation")
 					continue
 				}
@@ -100,7 +100,7 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 					continue
 				}
 				// Broadcasting the signed attestation again once a node is able to process it.
-				if err := s.cfg.P2P.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
+				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
 					log.WithError(err).Debug("Could not broadcast")
 				}
 			}
@@ -137,7 +137,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
 
 		log.WithFields(logrus.Fields{
-			"currentSlot": s.cfg.Chain.CurrentSlot(),
+			"currentSlot": s.cfg.chain.CurrentSlot(),
 			"attSlot":     att.Message.Aggregate.Data.Slot,
 			"blockRoot":   hex.EncodeToString(bytesutil.Trunc(root[:])),
 		}).Debug("Requesting block for pending attestation")
