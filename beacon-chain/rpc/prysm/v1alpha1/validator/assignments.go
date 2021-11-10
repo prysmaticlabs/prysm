@@ -13,6 +13,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -117,6 +118,10 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
 	epochStartSlot, err := slots.EpochStart(req.Epoch)
@@ -124,9 +129,16 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, err
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+		if features.Get().EnableNextSlotStateCache {
+			s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+			}
+		} else {
+			s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+			}
 		}
 	}
 	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)

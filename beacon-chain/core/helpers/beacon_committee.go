@@ -199,7 +199,7 @@ func CommitteeAssignments(
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
-	validatorIndexToCommittee := make(map[types.ValidatorIndex]*CommitteeAssignmentContainer, params.BeaconConfig().SlotsPerEpoch.Mul(numCommitteesPerSlot))
+	validatorIndexToCommittee := make(map[types.ValidatorIndex]*CommitteeAssignmentContainer, len(activeValidatorIndices))
 
 	// Compute all committees for all slots.
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
