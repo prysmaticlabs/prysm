@@ -1,4 +1,4 @@
-package interchangeformat
+package history
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
