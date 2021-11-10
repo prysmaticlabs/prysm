@@ -35,26 +35,24 @@ func (s *Service) processAttestation(state state.BeaconState, att *ethpb.Attesta
 			latestPerf := s.latestPerformance[types.ValidatorIndex(idx)]
 			aggregatedPerf := s.aggregatedPerformance[types.ValidatorIndex(idx)]
 
-			balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
-			if err != nil {
-				log.Error("Could not get balance")
-				return
-			}
-			balanceChg := balance - latestPerf.balance
-
 			logFields := logrus.Fields{
 				"ValidatorIndex": idx,
 				"Slot":           att.Data.Slot,
 				"Source":         fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.Source.Root)),
 				"Target":         fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.Target.Root)),
 				"Head":           fmt.Sprintf("%#x", bytesutil.Trunc(att.Data.BeaconBlockRoot)),
-				"NewBalance":     balance,
-				"BalanceChange":  balanceChg,
 			}
 			var logMessage string
 			if !included {
 				logMessage = "Attestation processed"
 			} else {
+				balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
+				if err != nil {
+					log.Error("Could not get balance")
+					return
+				}
+				balanceChg := balance - latestPerf.balance
+
 				aggregatedPerf.totalAttestedCount++
 				aggregatedPerf.totalRequestedCount++
 
@@ -107,6 +105,8 @@ func (s *Service) processAttestation(state state.BeaconState, att *ethpb.Attesta
 				logFields["CorrectSource"] = latestPerf.timelySource
 				logFields["CorrectTarget"] = latestPerf.timelyTarget
 				logFields["Inclusion Slot"] = latestPerf.inclusionSlot
+				logFields["NewBalance"] = balance
+				logFields["BalanceChange"] = balanceChg
 
 				logMessage = "Attestation Included"
 

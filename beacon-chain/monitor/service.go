@@ -1,4 +1,4 @@
-// Package validator-monitor defines a runtime service which receives
+// Package monitor defines a runtime service which receives
 // notifications triggered by events related to performance of tracked
 // validating keys. It then logs and emits metrics for a user to keep finely
 // detailed performance measures.
@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	log = logrus.WithField("prefix", "validator-monitor")
+	log = logrus.WithField("prefix", "monitor")
 	// TODO: The Prometheus gauge vectors and counters in this package deprecate the
 	// corresponding gauge vectors and counters in the validator client.
 
@@ -143,7 +143,7 @@ type ValidatorAggregatedPerformance struct {
 }
 
 // ValidatorMonitorConfig contains the list of validator indices that the
-// validator-monitor service tracks, as well as the event feed notifier that the
+// monitor service tracks, as well as the event feed notifier that the
 // monitor needs to subscribe.
 type ValidatorMonitorConfig struct {
 	TrackedValidators   []types.ValidatorIndex
@@ -232,7 +232,7 @@ func (s *Service) Status() error {
 	if s.isRunning {
 		return nil
 	}
-	return errors.New("Validator monitor not running")
+	return errors.New("not running")
 }
 
 // Stop stops the service
