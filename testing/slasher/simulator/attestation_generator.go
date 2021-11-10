@@ -32,9 +32,7 @@ func (s *Simulator) generateAttestationsForSlot(
 	if currentEpoch < 2 {
 		return nil, nil, nil
 	}
-
-	var sourceEpoch types.Epoch = 0
-	sourceEpoch = currentEpoch - 1
+	sourceEpoch := currentEpoch - 1
 
 	var slashedIndices []uint64
 	startIdx := valsPerSlot * uint64(slot%s.srvConfig.Params.SlotsPerEpoch)
