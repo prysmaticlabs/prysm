@@ -48,7 +48,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
+        "//testing:__subpackages__",
     ],
     deps = [
         "//async:go_default_library",
