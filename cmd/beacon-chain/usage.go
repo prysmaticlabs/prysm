@@ -73,6 +73,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreSourceFileFlag,
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.ValidatorMonitorIndicesFlag,
 		},
 	},
 	{

@@ -31,7 +31,7 @@ var (
 	// inclusionSlotGauge used to track attestation inclusion distance
 	inclusionSlotGauge = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "validator-monitor",
+			Namespace: "monitor",
 			Name:      "inclusion_slot",
 			Help:      "Attestations inclusion slot",
 		},
@@ -42,7 +42,7 @@ var (
 	// timelyHeadCounter used to track attestation timely head flags
 	timelyHeadCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
+			Namespace: "monitor",
 			Name:      "timely_head",
 			Help:      "Attestation timely Head flag",
 		},
@@ -53,8 +53,8 @@ var (
 	// timelyTargetCounter used to track attestation timely head flags
 	timelyTargetCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
-			Name:      "timely_head",
+			Namespace: "monitor",
+			Name:      "timely_target",
 			Help:      "Attestation timely Target flag",
 		},
 		[]string{
@@ -64,8 +64,8 @@ var (
 	// timelySourceCounter used to track attestation timely head flags
 	timelySourceCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
-			Name:      "timely_head",
+			Namespace: "monitor",
+			Name:      "timely_source",
 			Help:      "Attestation timely Source flag",
 		},
 		[]string{
@@ -76,7 +76,7 @@ var (
 	// proposedSlotsCounter used to track proposed blocks
 	proposedSlotsCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
+			Namespace: "monitor",
 			Name:      "proposed_slots",
 			Help:      "Number of proposed blocks included",
 		},
@@ -87,7 +87,7 @@ var (
 	// aggregationCounter used to track aggregations
 	aggregationCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
+			Namespace: "monitor",
 			Name:      "aggregations",
 			Help:      "Number of aggregation duties performed",
 		},
@@ -99,7 +99,7 @@ var (
 	// contributions
 	syncCommitteeContributionCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "validator-monitor",
+			Namespace: "monitor",
 			Name:      "sync_committee_contributions",
 			Help:      "Number of Sync committee contributions performed",
 		},
@@ -163,6 +163,7 @@ type Service struct {
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
+	isRunning                   bool
 }
 
 // NewService sets up a new validator monitor instance when given a list of
@@ -177,43 +178,65 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig) (*Service, 
 		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
 		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
 	}
+	return r, nil
+}
+
+// Start waits until the beacon is synced and starts the monitoring system
+func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
-		"ValidatorIndices": config.TrackedValidators,
+		"ValidatorIndices": s.config.TrackedValidators,
 	}).Info("Started service")
 
-	if err := r.waitForSync(); err != nil {
-		return nil, err
+	if err := s.waitForSync(); err != nil {
+		log.WithError(err)
+		s.isRunning = false
+		return
 	}
 
-	state, err := config.HeadFetcher.HeadState(ctx)
+	state, err := s.config.HeadFetcher.HeadState(s.ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get head state")
+		log.WithError(err).Error("could not get head state")
+		s.isRunning = false
+		return
 	}
 	epoch := slots.ToEpoch(state.Slot())
 
-	for _, idx := range config.TrackedValidators {
+	for _, idx := range s.config.TrackedValidators {
 		balance, err := state.BalanceAtIndex(idx)
 		if err != nil {
 			log.WithError(err).WithField("ValidatorIndex", idx).Error("Aggregated report will be wrong")
 		}
-		r.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
+		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
 			startEpoch:   epoch,
 			startBalance: balance,
 		}
-		r.latestPerformance[idx] = ValidatorLatestPerformance{
+		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: balance,
 		}
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
 			log.WithError(err).WithField("ValidatorIndex", idx).Error(
 				"Validator sync committee assignments will report wrong")
-			r.trackedSyncCommitteeIndices[idx] = nil
+			s.trackedSyncCommitteeIndices[idx] = nil
 		} else {
-			r.trackedSyncCommitteeIndices[idx] = syncIdx
+			s.trackedSyncCommitteeIndices[idx] = syncIdx
 		}
 	}
-	go r.monitorRoutine()
-	return r, nil
+	s.isRunning = true
+	go s.monitorRoutine()
+}
+
+// Status retrieves the status of the service
+func (s *Service) Status() error {
+	if s.isRunning {
+		return nil
+	}
+	return errors.New("Validator monitor not running")
+}
+
+// Stop stops the service
+func (s *Service) Stop() error {
+	return nil
 }
 
 // waitForSync waits until the beacon node is synced to the latest head
