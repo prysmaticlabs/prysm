@@ -60,6 +60,16 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	return epochStart && altairEpoch
 }
 
+// CanUpgradeToMerge returns true if the input `slot` can upgrade to Merge fork.
+//
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == MERGE_FORK_EPOCH
+func CanUpgradeToMerge(slot types.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	mergeEpoch := slots.ToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
+	return epochStart && mergeEpoch
+}
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch.
 //
