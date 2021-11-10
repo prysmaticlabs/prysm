@@ -2,7 +2,6 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -465,12 +464,26 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
-	blockRoots := customtypes.StateRoots(*state.BlockRoots())
-	stateRoots := customtypes.StateRoots(*state.StateRoots())
-	mixes := customtypes.RandaoMixes(*state.RandaoMixes())
+	gvr := state.GenesisValidatorRoot()
+	bRoots := make([][]byte, len(state.BlockRoots()))
+	for i, r := range state.BlockRoots() {
+		bRoots[i] = r[:]
+	}
+	sRoots := make([][]byte, len(state.StateRoots()))
+	for i, r := range state.StateRoots() {
+		sRoots[i] = r[:]
+	}
+	hRoots := make([][]byte, len(state.HistoricalRoots()))
+	for i, r := range state.HistoricalRoots() {
+		hRoots[i] = r[:]
+	}
+	mixes := make([][]byte, len(state.RandaoMixes()))
+	for i, m := range state.RandaoMixes() {
+		mixes[i] = m[:]
+	}
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: gvr[:],
 		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
@@ -484,9 +497,9 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      &blockRoots,
-		StateRoots:      &stateRoots,
-		HistoricalRoots: bytesutil.SafeCopy2d32Bytes(state.HistoricalRoots()),
+		BlockRoots:      bRoots,
+		StateRoots:      sRoots,
+		HistoricalRoots: hRoots,
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -496,7 +509,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		Eth1DepositIndex:          state.Eth1DepositIndex(),
 		Validators:                resultValidators,
 		Balances:                  state.Balances(),
-		RandaoMixes:               &mixes,
+		RandaoMixes:               mixes,
 		Slashings:                 state.Slashings(),
 		PreviousEpochAttestations: resultPrevEpochAtts,
 		CurrentEpochAttestations:  resultCurrEpochAtts,
@@ -571,12 +584,26 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
-	blockRoots := customtypes.StateRoots(*altairState.BlockRoots())
-	stateRoots := customtypes.StateRoots(*altairState.StateRoots())
-	mixes := customtypes.RandaoMixes(*altairState.RandaoMixes())
+	gvr := altairState.GenesisValidatorRoot()
+	bRoots := make([][]byte, len(altairState.BlockRoots()))
+	for i, r := range altairState.BlockRoots() {
+		bRoots[i] = r[:]
+	}
+	sRoots := make([][]byte, len(altairState.StateRoots()))
+	for i, r := range altairState.StateRoots() {
+		sRoots[i] = r[:]
+	}
+	hRoots := make([][]byte, len(altairState.HistoricalRoots()))
+	for i, r := range altairState.HistoricalRoots() {
+		hRoots[i] = r[:]
+	}
+	mixes := make([][]byte, len(altairState.RandaoMixes()))
+	for i, m := range altairState.RandaoMixes() {
+		mixes[i] = m[:]
+	}
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
-		GenesisValidatorsRoot: altairState.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: gvr[:],
 		Slot:                  altairState.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
@@ -590,9 +617,9 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      &blockRoots,
-		StateRoots:      &stateRoots,
-		HistoricalRoots: bytesutil.SafeCopy2d32Bytes(altairState.HistoricalRoots()),
+		BlockRoots:      bRoots,
+		StateRoots:      sRoots,
+		HistoricalRoots: hRoots,
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -602,7 +629,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		Eth1DepositIndex:           altairState.Eth1DepositIndex(),
 		Validators:                 resultValidators,
 		Balances:                   altairState.Balances(),
-		RandaoMixes:                &mixes,
+		RandaoMixes:                mixes,
 		Slashings:                  altairState.Slashings(),
 		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
 		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
