@@ -1,4 +1,4 @@
-package interchangeformat
+package history
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 )
 
 func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
