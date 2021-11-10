@@ -115,7 +115,7 @@ func DeleteAccount(ctx context.Context, cfg *Config) error {
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, cfg.DeletePublicKeys); err != nil {
+		if _, err := km.DeleteKeystores(ctx, cfg.DeletePublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	case keymanager.Derived:
@@ -128,7 +128,7 @@ func DeleteAccount(ctx context.Context, cfg *Config) error {
 		} else {
 			log.Info("Deleting accounts...")
 		}
-		if err := km.DeleteAccounts(ctx, cfg.DeletePublicKeys); err != nil {
+		if _, err := km.DeleteKeystores(ctx, cfg.DeletePublicKeys); err != nil {
 			return errors.Wrap(err, "could not delete accounts")
 		}
 	default:
