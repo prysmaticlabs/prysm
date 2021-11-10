@@ -1,4 +1,4 @@
-package validator_monitor
+package monitor
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

@@ -2,7 +2,7 @@
 // notifications triggered by events related to performance of tracked
 // validating keys. It then logs and emits metrics for a user to keep finely
 // detailed performance measures.
-package validator_monitor
+package monitor
 
 import (
 	"context"

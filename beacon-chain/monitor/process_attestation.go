@@ -1,4 +1,4 @@
-package validator_monitor
+package monitor
 
 import (
 	"fmt"
