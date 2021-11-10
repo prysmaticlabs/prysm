@@ -51,30 +51,23 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.BeaconState, error) {
-	seed := &ethpb.BeaconState{
-		Validators:                 make([]*ethpb.Validator, 0),
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
-			BlockHash:   make([]byte, 32),
-		},
-		Fork: &ethpb.Fork{
-			PreviousVersion: make([]byte, 4),
-			CurrentVersion:  make([]byte, 4),
-		},
-		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
-		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		PreviousEpochAttestations:   make([]*ethpb.PendingAttestation, 0),
-		CurrentEpochAttestations:    make([]*ethpb.PendingAttestation, 0),
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-	}
+	seed := &ethpb.BeaconState{}
 
-	var st, err = v1.InitializeFromProtoUnsafe(seed)
+	// TODO: Somehow pass validators?
+	var st, err = v1.InitializeFromProtoUnsafe(nil)
 	if err != nil {
 		return nil, err
 	}
 
+	if err = st.SetFork(&ethpb.Fork{
+		PreviousVersion: make([]byte, 4),
+		CurrentVersion:  make([]byte, 4),
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set fork")
+	}
+	if err = st.SetLatestBlockHeader(HydrateBeaconHeader(&ethpb.BeaconBlockHeader{})); err != nil {
+		return nil, errors.Wrap(err, "could not set latest block header")
+	}
 	if err = st.SetHistoricalRoots([][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
 	}
@@ -83,6 +76,18 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 	}
 	if err = st.SetStateRoots(&[8192][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set state roots")
+	}
+	if err = st.SetEth1Data(&ethpb.Eth1Data{
+		DepositRoot: make([]byte, 32),
+		BlockHash:   make([]byte, 32),
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data")
+	}
+	if err = st.SetEth1DataVotes(make([]*ethpb.Eth1Data, 0)); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data votes")
+	}
+	if err = st.SetValidators(make([]*ethpb.Validator, 0)); err != nil {
+		return nil, errors.Wrap(err, "could not set validators")
 	}
 	if err = st.SetRandaoMixes(&[65536][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set randao mixes")
@@ -93,7 +98,17 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 	if err = st.SetJustificationBits(bitfield.Bitvector4{0x0}); err != nil {
 		return nil, errors.Wrap(err, "could not set justification bits")
 	}
+	if err = st.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
+	}
+	if err = st.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+		return nil, errors.Wrap(err, "could not set current justified checkpoint")
+	}
+	if err = st.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+		return nil, errors.Wrap(err, "could not set finalized checkpoint")
+	}
 
+	// TODO: use options on st variable
 	for _, opt := range options {
 		err = opt(seed)
 		if err != nil {

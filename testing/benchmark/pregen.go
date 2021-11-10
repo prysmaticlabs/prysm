@@ -53,7 +53,8 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}
-	return v1.InitializeFromProto(beaconState)
+	// TODO: Change to beaconState.Validators after regenerating state
+	return v1.InitializeFromProto(nil)
 }
 
 // PreGenstateFullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
@@ -70,7 +71,8 @@ func PreGenstateFullEpochs() (state.BeaconState, error) {
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}
-	return v1.InitializeFromProto(beaconState)
+	// TODO: Change to beaconState.Validators after regenerating state
+	return v1.InitializeFromProto(nil)
 }
 
 // PreGenFullBlock unmarshals the pre-generated signed beacon block containing an epochs worth of attestations and returns it.
