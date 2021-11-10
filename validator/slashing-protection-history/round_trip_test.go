@@ -166,27 +166,6 @@ func TestImportExport_FilterKeys(t *testing.T) {
 	// The values in the data field of the EIP struct are not guaranteed to be sorted,
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(rawKeys), len(eipStandard.Data))
-	//
-	//dataByPubKey := make(map[string]*format.ProtectionData)
-	//for _, item := range wanted.Data {
-	//	dataByPubKey[item.Pubkey] = item
-	//}
-	//for _, item := range eipStandard.Data {
-	//	want, ok := dataByPubKey[item.Pubkey]
-	//	require.Equal(t, true, ok)
-	//	require.Equal(t, len(want.SignedAttestations), len(item.SignedAttestations))
-	//	require.Equal(t, len(want.SignedBlocks), len(item.SignedBlocks))
-	//	wantedAttsByRoot := make(map[string]*format.SignedAttestation)
-	//	for _, att := range want.SignedAttestations {
-	//		wantedAttsByRoot[att.SigningRoot] = att
-	//	}
-	//	for _, att := range item.SignedAttestations {
-	//		wantedAtt, ok := wantedAttsByRoot[att.SigningRoot]
-	//		require.Equal(t, true, ok)
-	//		require.DeepEqual(t, wantedAtt, att)
-	//	}
-	//	require.DeepEqual(t, want.SignedBlocks, item.SignedBlocks)
-	//}
 }
 
 func TestImportInterchangeData_OK(t *testing.T) {
