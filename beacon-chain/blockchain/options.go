@@ -133,6 +133,7 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 func withStateBalanceCache(c *stateBalanceCache) Option {
 	return func(s *Service) error {
 		s.justifiedBalances = c
+		return nil
 	}
 }
 
