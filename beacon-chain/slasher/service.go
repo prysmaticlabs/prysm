@@ -199,6 +199,11 @@ func (s *Service) waitForChainInitialization() {
 					"Slasher received chain initialization event",
 				)
 			}
+		case err := <-stateSub.Err():
+			log.WithError(err).Error(
+				"Slasher could not subscribe to state events",
+			)
+			return
 		case <-s.ctx.Done():
 			return
 		}
