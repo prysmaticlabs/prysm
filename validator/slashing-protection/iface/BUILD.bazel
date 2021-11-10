@@ -1,9 +1,0 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["protector.go"],
-    importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface",
-    visibility = ["//validator:__subpackages__"],
-    deps = ["//proto/prysm/v1alpha1:go_default_library"],
-)
