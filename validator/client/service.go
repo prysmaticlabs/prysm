@@ -259,6 +259,29 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 	}
 }
 
+
+func fixNilTransactions(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	err := invoker(ctx, method, req, reply, cc, opts...)
+	if err != nil {
+		return err
+	}
+	if method == "/ethereum.eth.v1alpha1.BeaconNodeValidator/GetBeaconBlock" {
+		rp := reply.(*ethpb.GenericBeaconBlock)
+		mb := rp.GetMerge()
+		// not a merge block
+		if mb == nil {
+			return nil
+		}
+		if mb.Body.ExecutionPayload.Transactions == nil {
+			mb.Body.ExecutionPayload.Transactions = make([][]byte, 0)
+			reply = ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Merge{Merge: mb},
+			}
+		}
+	}
+	return nil
+}
+
 // ConstructDialOptions constructs a list of grpc dial options
 func ConstructDialOptions(
 	maxCallRecvMsgSize int,
@@ -299,6 +322,7 @@ func ConstructDialOptions(
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
 			grpcutil.LogRequests,
+			fixNilTransactions,
 		)),
 		grpc.WithChainStreamInterceptor(
 			grpcutil.LogStream,
