@@ -279,7 +279,7 @@ service BeaconChain {
 
     // Server-side stream of all unconfirmed blocks as they are received by
     // the beacon chain node.
-    rpc StreamNewPendingBlocks(StreamPendingBlocksRequest) returns (stream BeaconBlock) {
+    rpc StreamNewPendingBlocks(StreamPendingBlocksRequest) returns (stream StreamPendingBlockInfo) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/vanguard/pending_blocks/stream"
         };
@@ -911,7 +911,6 @@ message MinimalConsensusInfo {
     google.protobuf.Duration slot_time_duration = 4;
     // reorg contains info of the reorg event
     Reorg reorg_info = 5;
-
 }
 
 message Reorg {
@@ -921,7 +920,6 @@ message Reorg {
     bytes pan_parent_hash = 2;
     // new_slot is the new head slot after re-org
     uint64 new_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-
 }
 
 message StreamPendingBlocksRequest {
@@ -929,4 +927,12 @@ message StreamPendingBlocksRequest {
     bytes block_root = 1;
 
     uint64 from_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message StreamPendingBlockInfo {
+    BeaconBlock block = 1;
+    // Most recent slot that contains the finalized block.
+    uint64 finalized_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    // Epoch of the finalized block.
+    uint64 finalized_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }

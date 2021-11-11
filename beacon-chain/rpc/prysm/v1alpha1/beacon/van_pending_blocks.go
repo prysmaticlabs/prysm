@@ -16,6 +16,23 @@ func (bs *Server) StreamNewPendingBlocks(
 	request *ethpb.StreamPendingBlocksRequest,
 	stream ethpb.BeaconChain_StreamNewPendingBlocksServer,
 ) error {
+	// prepareResponse prepares pending block info response
+	prepareBlockInfo := func(block *ethpb.BeaconBlock) (*ethpb.StreamPendingBlockInfo, error) {
+		// retrieving finalized epoch and slot
+		finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
+		fSlot, err := helpers.StartSlot(finalizedCheckpoint.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not send over stream: %v", err)
+		}
+
+		// sending block info with finalized slot and epoch
+		return &ethpb.StreamPendingBlockInfo{
+			Block:          block,
+			FinalizedSlot:  fSlot,
+			FinalizedEpoch: finalizedCheckpoint.Epoch,
+		}, nil
+	}
+
 	// batchSender sends blocks from specific start epoch to end epoch
 	batchSender := func(start, end types.Epoch) error {
 		for i := start; i <= end; i++ {
@@ -32,7 +49,13 @@ func (bs *Server) StreamNewPendingBlocks(
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not send over of previous blocks stream: %v", err)
 				}
-				if err := stream.Send(unwrappedBlk.Block); err != nil {
+
+				blockInfo, err := prepareBlockInfo(unwrappedBlk.Block)
+				if err != nil {
+					return err
+				}
+
+				if err := stream.Send(blockInfo); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over of previous blocks stream: %v", err)
 				}
 			}
@@ -55,7 +78,13 @@ func (bs *Server) StreamNewPendingBlocks(
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not send over stream: %v", err)
 			}
-			if err := stream.Send(unwrappedBlk.Block); err != nil {
+
+			blockInfo, err := prepareBlockInfo(unwrappedBlk.Block)
+			if err != nil {
+				return err
+			}
+
+			if err := stream.Send(blockInfo); err != nil {
 				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 			}
 		}
@@ -125,11 +154,19 @@ func (bs *Server) StreamNewPendingBlocks(
 						}
 					}
 				}
+				// Unwrapping beacon block
 				unwrappedBlk, err := data.Block.PbPhase0UnsignedBlock()
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not send over stream: %v", err)
 				}
-				if err := stream.Send(unwrappedBlk); err != nil {
+
+				blockInfo, err := prepareBlockInfo(unwrappedBlk)
+				if err != nil {
+					return err
+				}
+
+				// sending block info with finalized slot and epoch
+				if err := stream.Send(blockInfo); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 				log.WithField("slot", data.Block.Slot()).Debug("Sent block to orchestrator")
