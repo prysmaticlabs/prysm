@@ -36,7 +36,7 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk block.Beacon
 		if len(committeeIndices) > 0 {
 			contrib := 0
 			for _, idx := range committeeIndices {
-				if bits.SyncCommitteeBits[idx] == 1 {
+				if bits.SyncCommitteeBits.BitAt(uint64(idx)) {
 					contrib++
 				}
 			}

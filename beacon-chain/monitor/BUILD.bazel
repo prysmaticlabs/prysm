@@ -3,6 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "doc.go",
+        "metrics.go",
         "process_attestation.go",
         "process_block.go",
         "process_exit.go",

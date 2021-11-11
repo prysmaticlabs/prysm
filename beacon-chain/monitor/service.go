@@ -1,7 +1,3 @@
-// Package monitor defines a runtime service which receives
-// notifications triggered by events related to performance of tracked
-// validating keys. It then logs and emits metrics for a user to keep finely
-// detailed performance measures.
 package monitor
 
 import (
@@ -9,8 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -24,89 +18,6 @@ import (
 )
 
 var (
-	log = logrus.WithField("prefix", "monitor")
-	// TODO: The Prometheus gauge vectors and counters in this package deprecate the
-	// corresponding gauge vectors and counters in the validator client.
-
-	// inclusionSlotGauge used to track attestation inclusion distance
-	inclusionSlotGauge = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "monitor",
-			Name:      "inclusion_slot",
-			Help:      "Attestations inclusion slot",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-	// timelyHeadCounter used to track attestation timely head flags
-	timelyHeadCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "timely_head",
-			Help:      "Attestation timely Head flag",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-	// timelyTargetCounter used to track attestation timely head flags
-	timelyTargetCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "timely_target",
-			Help:      "Attestation timely Target flag",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-	// timelySourceCounter used to track attestation timely head flags
-	timelySourceCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "timely_source",
-			Help:      "Attestation timely Source flag",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-
-	// proposedSlotsCounter used to track proposed blocks
-	proposedSlotsCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "proposed_slots",
-			Help:      "Number of proposed blocks included",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-	// aggregationCounter used to track aggregations
-	aggregationCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "aggregations",
-			Help:      "Number of aggregation duties performed",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
-	// syncCommitteeContributionCounter used to track sync committee
-	// contributions
-	syncCommitteeContributionCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "monitor",
-			Name:      "sync_committee_contributions",
-			Help:      "Number of Sync committee contributions performed",
-		},
-		[]string{
-			"validator_index",
-		},
-	)
 	// Error when event feed data is not statefeed.SyncedData
 	errorNotSyncedData = errors.New("Event feed data is not of type *statefeed.SyncedData")
 
