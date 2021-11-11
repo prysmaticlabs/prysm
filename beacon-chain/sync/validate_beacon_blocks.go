@@ -34,12 +34,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	receivedTime := prysmTime.Now()
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
 	// We should not attempt to process blocks until fully synced, but propagation is OK.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -66,7 +66,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Broadcast the block on a feed to notify other services in the beacon node
 	// of a received block (even if it does not process correctly through a state transition).
-	s.cfg.BlockNotifier.BlockFeed().Send(&feed.Event{
+	s.cfg.blockNotifier.BlockFeed().Send(&feed.Event{
 		Type: blockfeed.ReceivedBlock,
 		Data: &blockfeed.ReceivedBlockData{
 			SignedBlock: blk,
@@ -81,7 +81,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			if err != nil {
 				log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Could not extract block header")
 			}
-			s.cfg.SlasherBlockHeadersFeed.Send(blockHeader)
+			s.cfg.slasherBlockHeadersFeed.Send(blockHeader)
 		}()
 	}
 
@@ -95,7 +95,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
 	}
-	if s.cfg.DB.HasBlock(ctx, blockRoot) {
+	if s.cfg.beaconDB.HasBlock(ctx, blockRoot) {
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check if parent is a bad block and then reject the block.
@@ -115,7 +115,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
 	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
 	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
-	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
+	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
 	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
@@ -127,7 +127,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	startSlot, err := slots.EpochStart(s.cfg.Chain.FinalizedCheckpt().Epoch)
+	startSlot, err := slots.EpochStart(s.cfg.chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
@@ -146,12 +146,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return pubsub.ValidationIgnore, err
 		}
 		s.pendingQueueLock.Unlock()
-		e := fmt.Errorf("early block, with current slot %d < block slot %d", s.cfg.Chain.CurrentSlot(), blk.Block().Slot())
+		e := fmt.Errorf("early block, with current slot %d < block slot %d", s.cfg.chain.CurrentSlot(), blk.Block().Slot())
 		return pubsub.ValidationIgnore, e
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) && !s.cfg.Chain.HasInitSyncBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) && !s.cfg.chain.HasInitSyncBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -185,19 +185,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.Chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 
-	hasStateSummaryDB := s.cfg.DB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	hasStateSummaryDB := s.cfg.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
 	if !hasStateSummaryDB {
-		_, err := s.cfg.StateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+		_, err := s.cfg.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
 		if err != nil {
 			return err
 		}
 	}
-	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ go_library(
         "execution_engine.go",
         "log.go",
         "log_processing.go",
+        "options.go",
         "prometheus.go",
         "provider.go",
         "service.go",
@@ -16,6 +17,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd/beacon-chain:__subpackages__",
         "//contracts:__subpackages__",
     ],
     deps = [
@@ -98,7 +100,6 @@ go_test(
         "//network:go_default_library",
         "//network/authorization:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",

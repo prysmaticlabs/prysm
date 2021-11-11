@@ -416,8 +416,8 @@ func TestPrevSlot(t *testing.T) {
 		},
 		{
 			name: "max",
-			slot: 1<<64 - 1,
-			want: 1<<64 - 1 - 1,
+			slot: math.MaxUint64,
+			want: math.MaxUint64 - 1,
 		},
 	}
 	for _, tt := range tests {

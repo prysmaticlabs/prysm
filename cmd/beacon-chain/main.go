@@ -16,6 +16,7 @@ import (
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -233,8 +234,13 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return nil
 	}
+	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
+		node.WithPowchainFlagOptions(powchainFlagOpts),
 	}
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {

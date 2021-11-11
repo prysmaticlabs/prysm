@@ -49,12 +49,12 @@ func (s *Service) validateSyncCommitteeMessage(
 	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
 	defer span.End()
 
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
 	// Basic validations before proceeding.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 	if msg.Topic == nil {
@@ -72,14 +72,14 @@ func (s *Service) validateSyncCommitteeMessage(
 	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
-		s.cfg.Chain.GenesisTime(),
+		s.cfg.chain.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
 
-	committeeIndices, err := s.cfg.Chain.HeadSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
+	committeeIndices, err := s.cfg.chain.HeadSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -212,7 +212,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// Ignore the message if it is not possible to retrieve the signing root.
 		// For internal errors, the correct behaviour is to ignore rather than reject outright,
 		// since the failure is locally derived.
-		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Slot)
+		d, err := s.cfg.chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
@@ -226,7 +226,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 
 		// Reject for a validator index that is not found, as we should not remain peered with a node
 		// that is on such a different fork than our chain.
-		pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
+		pubKey, err := s.cfg.chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err

@@ -17,7 +17,6 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	Version() int
 	FutureForkStub
 }
 
@@ -44,6 +43,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	Version() int
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

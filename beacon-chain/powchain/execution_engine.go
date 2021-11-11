@@ -133,7 +133,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.E
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("POST", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableD
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("POST", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("POST", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.F
 	if err != nil {
 		return 0, err
 	}
-	req, err := http.NewRequest("POST", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("POST", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return 0, err
 	}
@@ -327,7 +327,7 @@ func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("GET", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +363,7 @@ func (s *Service) ExecutionBlockByHash(blockHash common.Hash) (*ExecutionBlock, 
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("GET", s.currHttpEndpoint.Url, bytes.NewBuffer(enc))
+	req, err := http.NewRequest("GET", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
 		return nil, err
 	}

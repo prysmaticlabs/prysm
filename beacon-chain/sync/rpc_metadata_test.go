@@ -40,10 +40,10 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain: &mock.ChainService{
 				ValidatorsRoot: [32]byte{},
 			},
 		},
@@ -60,7 +60,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := new(pb.MetaDataV0)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, p1.LocalMetadata.InnerObject(), out, "MetadataV0 unequal")
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
@@ -92,25 +92,25 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p2,
-			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p2,
+			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
 
 	// Setup streams
-	pcl := protocol.ID(p2p.RPCMetaDataTopicV1 + r.cfg.P2P.Encoding().ProtocolSuffix())
+	pcl := protocol.ID(p2p.RPCMetaDataTopicV1 + r.cfg.p2p.Encoding().ProtocolSuffix())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	r2.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
@@ -159,25 +159,25 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p2,
-			Chain: &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p2,
+			chain:    &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
 
 	// Setup streams
-	pcl := protocol.ID(p2p.RPCMetaDataTopicV2 + r.cfg.P2P.Encoding().ProtocolSuffix())
+	pcl := protocol.ID(p2p.RPCMetaDataTopicV2 + r.cfg.p2p.Encoding().ProtocolSuffix())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(2, 2, false)
 	r2.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(2, 2, false)

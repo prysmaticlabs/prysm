@@ -89,7 +89,7 @@ service Beacon {
         ethereum.eth.v1alpha1.ValidatorPerformanceRequest
     ) returns (ethereum.eth.v1alpha1.ValidatorPerformanceResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/beacon/performance"
+            get: "/v2/validator/beacon/summary"
         };
     }
     rpc GetValidators(

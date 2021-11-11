@@ -125,6 +125,20 @@ type RPCClient interface {
 	BatchCall(b []gethRPC.BatchElem) error
 }
 
+// config defines a config struct for dependencies into the service.
+type config struct {
+	depositContractAddr     common.Address
+	beaconDB                db.HeadAccessDatabase
+	depositCache            *depositcache.DepositCache
+	stateNotifier           statefeed.Notifier
+	stateGen                *stategen.State
+	eth1HeaderReqLimit      uint64
+	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
+	httpEndpoints           []network.Endpoint
+	currHttpEndpoint        network.Endpoint
+	finalizedStateAtStartup state.BeaconState
+}
+
 // Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
@@ -135,12 +149,10 @@ type Service struct {
 	connectedETH1           bool
 	isRunning               bool
 	processingLock          sync.RWMutex
-	cfg                     *Web3ServiceConfig
+	cfg                     *config
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
-	httpEndpoints           []network.Endpoint
-	currHttpEndpoint        network.Endpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
@@ -152,24 +164,10 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
-	bsUpdater               BeaconNodeStatsUpdater
 }
 
-// Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
-type Web3ServiceConfig struct {
-	HttpEndpoints          []string
-	DepositContract        common.Address
-	BeaconDB               db.HeadAccessDatabase
-	DepositCache           *depositcache.DepositCache
-	StateNotifier          statefeed.Notifier
-	StateGen               *stategen.State
-	Eth1HeaderReqLimit     uint64
-	BeaconNodeStatsUpdater BeaconNodeStatsUpdater
-}
-
-// NewService sets up a new instance with an ethclient when
-// given a web3 endpoint as a string in the config.
-func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
+// NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
+func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -182,27 +180,13 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		return nil, errors.Wrap(err, "could not setup genesis state")
 	}
 
-	if config.Eth1HeaderReqLimit == 0 {
-		config.Eth1HeaderReqLimit = defaultEth1HeaderReqLimit
-	}
-
-	stringEndpoints := dedupEndpoints(config.HttpEndpoints)
-	endpoints := make([]network.Endpoint, len(stringEndpoints))
-	for i, e := range stringEndpoints {
-		endpoints[i] = HttpEndpoint(e)
-	}
-
-	// Select first http endpoint in the provided list.
-	var currEndpoint network.Endpoint
-	if len(config.HttpEndpoints) > 0 {
-		currEndpoint = endpoints[0]
-	}
 	s := &Service{
-		ctx:              ctx,
-		cancel:           cancel,
-		cfg:              config,
-		httpEndpoints:    endpoints,
-		currHttpEndpoint: currEndpoint,
+		ctx:    ctx,
+		cancel: cancel,
+		cfg: &config{
+			beaconNodeStatsUpdater: &NopBeaconNodeStatsUpdater{},
+			eth1HeaderReqLimit:     defaultEth1HeaderReqLimit,
+		},
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,
@@ -218,26 +202,25 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
-		// use the nop updater by default, rely on upstream set up to pass in an appropriate impl
-		bsUpdater: config.BeaconNodeStatsUpdater,
 	}
 
-	if config.BeaconNodeStatsUpdater == nil {
-		s.bsUpdater = &NopBeaconNodeStatsUpdater{}
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
 
-	eth1Data, err := config.BeaconDB.PowchainData(ctx)
+	eth1Data, err := s.cfg.beaconDB.PowchainData(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
 	}
-
 	return s, nil
 }
 
@@ -245,10 +228,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.currHttpEndpoint.Url == "" {
+	if !s.chainStartData.Chainstarted && s.cfg.currHttpEndpoint.Url == "" {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
-		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
+		genState, err := s.cfg.beaconDB.GenesisState(s.ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -258,7 +241,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint.Url == "" {
+	if s.cfg.currHttpEndpoint.Url == "" {
 		return
 	}
 	go func() {
@@ -319,7 +302,7 @@ func (s *Service) Status() error {
 
 func (s *Service) updateBeaconNodeStats() {
 	bs := clientstats.BeaconNodeStats{}
-	if len(s.httpEndpoints) > 1 {
+	if len(s.cfg.httpEndpoints) > 1 {
 		bs.SyncEth1FallbackConfigured = true
 	}
 	if s.IsConnectedToETH1() {
@@ -329,11 +312,11 @@ func (s *Service) updateBeaconNodeStats() {
 			bs.SyncEth1FallbackConnected = true
 		}
 	}
-	s.bsUpdater.Update(bs)
+	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
 
 func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
-	s.currHttpEndpoint = endpoint
+	s.cfg.currHttpEndpoint = endpoint
 	s.updateBeaconNodeStats()
 }
 
@@ -379,7 +362,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 		return false, errors.Wrap(err, "could not get deposit count")
 	}
 	count := bytesutil.FromBytes8(countByte)
-	deposits := s.cfg.DepositCache.AllDeposits(s.ctx, nil)
+	deposits := s.cfg.depositCache.AllDeposits(s.ctx, nil)
 	if count != uint64(len(deposits)) {
 		return false, nil
 	}
@@ -397,12 +380,12 @@ func (s *Service) followBlockHeight(_ context.Context) (uint64, error) {
 }
 
 func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes(s.currHttpEndpoint)
+	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
 
-	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.DepositContract, httpClient)
+	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, httpClient)
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit contract caller")
 	}
@@ -498,7 +481,7 @@ func (s *Service) waitForConnection() {
 			s.updateConnectedETH1(true)
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": logs.MaskCredentialsLogging(s.currHttpEndpoint.Url),
+				"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -527,7 +510,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.currHttpEndpoint.Url))
+			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -546,7 +529,7 @@ func (s *Service) waitForConnection() {
 				s.updateConnectedETH1(true)
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": logs.MaskCredentialsLogging(s.currHttpEndpoint.Url),
+					"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -592,32 +575,29 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if len(ctrs) == 0 {
 		return nil
 	}
-	s.cfg.DepositCache.InsertDepositContainers(ctx, ctrs)
+	s.cfg.depositCache.InsertDepositContainers(ctx, ctrs)
 	if !s.chainStartData.Chainstarted {
 		// do not add to pending cache
 		// if no genesis state exists.
 		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex()))
 		return nil
 	}
-	genesisState, err := s.cfg.BeaconDB.GenesisState(ctx)
+	genesisState, err := s.cfg.beaconDB.GenesisState(ctx)
 	if err != nil {
 		return err
 	}
 	// Default to all deposits post-genesis deposits in
 	// the event we cannot find a finalized state.
 	currIndex := genesisState.Eth1DepositIndex()
-	chkPt, err := s.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	chkPt, err := s.cfg.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
 	rt := bytesutil.ToBytes32(chkPt.Root)
 	if rt != [32]byte{} {
-		fState, err := s.cfg.StateGen.StateByRoot(ctx, rt)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state")
-		}
+		fState := s.cfg.finalizedStateAtStartup
 		if fState == nil || fState.IsNil() {
-			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
+			return errors.Errorf("finalized state with root %#x is nil", rt)
 		}
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
@@ -626,9 +606,9 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		// accumulates. we finalize them here before we are ready to receive a block.
 		// Otherwise, the first few blocks will be slower to compute as we will
 		// hold the lock and be busy finalizing the deposits.
-		s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
+		s.cfg.depositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
-		if err = s.cfg.DepositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
+		if err = s.cfg.depositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
 			return errors.Wrap(err, "could not prune deposit proofs")
 		}
 	}
@@ -637,7 +617,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
 		for _, c := range ctrs[currIndex:] {
-			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+			s.cfg.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
 		}
 	}
 	return nil
@@ -925,10 +905,10 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
 func (s *Service) checkDefaultEndpoint() {
-	primaryEndpoint := s.httpEndpoints[0]
+	primaryEndpoint := s.cfg.httpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
-	if s.currHttpEndpoint.Equals(primaryEndpoint) {
+	if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
 		return
 	}
 
@@ -954,11 +934,11 @@ func (s *Service) checkDefaultEndpoint() {
 // This is an inefficient way to search for the next endpoint, but given N is expected to be
 // small ( < 25), it is fine to search this way.
 func (s *Service) fallbackToNextEndpoint() {
-	currEndpoint := s.currHttpEndpoint
+	currEndpoint := s.cfg.currHttpEndpoint
 	currIndex := 0
-	totalEndpoints := len(s.httpEndpoints)
+	totalEndpoints := len(s.cfg.httpEndpoints)
 
-	for i, endpoint := range s.httpEndpoints {
+	for i, endpoint := range s.cfg.httpEndpoints {
 		if endpoint.Equals(currEndpoint) {
 			currIndex = i
 			break
@@ -968,9 +948,9 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex >= totalEndpoints {
 		nextIndex = 0
 	}
-	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
+	s.updateCurrHttpEndpoint(s.cfg.httpEndpoints[nextIndex])
 	if nextIndex != currIndex {
-		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.currHttpEndpoint.Url))
+		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 	}
 }
 
@@ -1026,7 +1006,7 @@ func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bo
 // validates the current powchain data saved and makes sure that any
 // embedded genesis state is correctly accounted for.
 func (s *Service) ensureValidPowchainData(ctx context.Context) error {
-	genState, err := s.cfg.BeaconDB.GenesisState(ctx)
+	genState, err := s.cfg.beaconDB.GenesisState(ctx)
 	if err != nil {
 		return err
 	}
@@ -1034,7 +1014,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	if genState == nil || genState.IsNil() {
 		return nil
 	}
-	eth1Data, err := s.cfg.BeaconDB.PowchainData(ctx)
+	eth1Data, err := s.cfg.beaconDB.PowchainData(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
@@ -1055,9 +1035,9 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			ChainstartData:    s.chainStartData,
 			BeaconState:       pbState,
 			Trie:              s.depositTrie.ToProto(),
-			DepositContainers: s.cfg.DepositCache.AllDepositContainers(ctx),
+			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
-		return s.cfg.BeaconDB.SavePowchainData(ctx, eth1Data)
+		return s.cfg.beaconDB.SavePowchainData(ctx, eth1Data)
 	}
 	return nil
 }
@@ -1084,5 +1064,5 @@ func eth1HeadIsBehind(timestamp uint64) bool {
 }
 
 func (s *Service) primaryConnected() bool {
-	return s.currHttpEndpoint.Equals(s.httpEndpoints[0])
+	return s.cfg.currHttpEndpoint.Equals(s.cfg.httpEndpoints[0])
 }

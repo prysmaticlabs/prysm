@@ -69,13 +69,13 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Root:  make([]byte, 32),
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -109,12 +109,12 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -167,13 +167,13 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -231,13 +231,13 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 		InitSyncBlockRoots: map[[32]byte]bool{bRoot: true},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -295,13 +295,13 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -361,13 +361,13 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -428,13 +428,13 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -478,12 +478,12 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: true},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: true},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 	}
 
@@ -534,13 +534,13 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 			Root:  make([]byte, 32),
 		}}
 	r := &Service{
-		cfg: &Config{
-			P2P:           p,
-			DB:            db,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			p2p:           p,
+			beaconDB:      db,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		chainStarted:        abool.New(),
 		seenBlockCache:      lruwrpr.New(10),
@@ -586,12 +586,12 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		cfg: &Config{
-			P2P:           p,
-			DB:            db,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			p2p:           p,
+			beaconDB:      db,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
 		seenBlockCache:      lruwrpr.New(10),
@@ -637,12 +637,12 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -692,12 +692,12 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -740,13 +740,13 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			Chain:         chain,
-			BlockNotifier: chain.BlockNotifier(),
-			AttPool:       attestations.NewPool(),
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			chain:         chain,
+			blockNotifier: chain.BlockNotifier(),
+			attPool:       attestations.NewPool(),
+			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -821,13 +821,13 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -886,13 +886,13 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -987,13 +987,13 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),

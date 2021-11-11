@@ -24,7 +24,7 @@ func NewMockService() *MockStateManager {
 }
 
 // Resume --
-func (m *MockStateManager) Resume(_ context.Context) (state.BeaconState, error) {
+func (m *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state.BeaconState, error) {
 	panic("implement me")
 }
 
