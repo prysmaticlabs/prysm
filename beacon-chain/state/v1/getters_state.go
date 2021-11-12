@@ -172,15 +172,6 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	return bytesutil.ToBytes32(root), nil
 }
 
-// MarshalSSZ marshals the underlying beacon state to bytes.
-func (b *BeaconState) MarshalSSZ() ([]byte, error) {
-	if !b.hasInnerState() {
-		return nil, errors.New("nil beacon state")
-	}
-	// TODO: Fix
-	return []byte{}, nil
-}
-
 // ProtobufBeaconState transforms an input into beacon state in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
 func ProtobufBeaconState(s interface{}) (*ethpb.BeaconState, error) {

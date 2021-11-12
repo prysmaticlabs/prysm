@@ -44,27 +44,27 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	genesisTime                 uint64
-	genesisValidatorsRoot       customtypes.Byte32
-	slot                        eth2types.Slot
-	fork                        *ethpb.Fork
-	latestBlockHeader           *ethpb.BeaconBlockHeader
-	blockRoots                  *customtypes.StateRoots
-	stateRoots                  *customtypes.StateRoots
-	historicalRoots             customtypes.HistoricalRoots
-	eth1Data                    *ethpb.Eth1Data
-	eth1DataVotes               []*ethpb.Eth1Data
-	eth1DepositIndex            uint64
-	validators                  []*ethpb.Validator
-	balances                    []uint64
-	randaoMixes                 *customtypes.RandaoMixes
-	slashings                   []uint64
-	previousEpochAttestations   []*ethpb.PendingAttestation
-	currentEpochAttestations    []*ethpb.PendingAttestation
-	justificationBits           bitfield.Bitvector4
-	previousJustifiedCheckpoint *ethpb.Checkpoint
-	currentJustifiedCheckpoint  *ethpb.Checkpoint
-	finalizedCheckpoint         *ethpb.Checkpoint
+	genesisTime                 uint64                      `ssz-gen:"true"`
+	genesisValidatorsRoot       customtypes.Byte32          `ssz-gen:"true" ssz-size:"32"`
+	slot                        eth2types.Slot              `ssz-gen:"true"`
+	fork                        *ethpb.Fork                 `ssz-gen:"true"`
+	latestBlockHeader           *ethpb.BeaconBlockHeader    `ssz-gen:"true"`
+	blockRoots                  *customtypes.StateRoots     `ssz-gen:"true" ssz-size:"8192,32"`
+	stateRoots                  *customtypes.StateRoots     `ssz-gen:"true" ssz-size:"8192,32"`
+	historicalRoots             customtypes.HistoricalRoots `ssz-gen:"true" ssz-size:"?,32" ssz-max:"16777216"`
+	eth1Data                    *ethpb.Eth1Data             `ssz-gen:"true"`
+	eth1DataVotes               []*ethpb.Eth1Data           `ssz-gen:"true" ssz-max:"2048"`
+	eth1DepositIndex            uint64                      `ssz-gen:"true"`
+	validators                  []*ethpb.Validator          `ssz-gen:"true" ssz-max:"1099511627776"`
+	balances                    []uint64                    `ssz-gen:"true" ssz-max:"1099511627776"`
+	randaoMixes                 *customtypes.RandaoMixes    `ssz-gen:"true" ssz-size:"65536,32"`
+	slashings                   []uint64                    `ssz-gen:"true" ssz-size:"8192"`
+	previousEpochAttestations   []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"1099511627776"`
+	currentEpochAttestations    []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"1099511627776"`
+	justificationBits           bitfield.Bitvector4         `ssz-gen:"true" ssz-size:"1"`
+	previousJustifiedCheckpoint *ethpb.Checkpoint           `ssz-gen:"true"`
+	currentJustifiedCheckpoint  *ethpb.Checkpoint           `ssz-gen:"true"`
+	finalizedCheckpoint         *ethpb.Checkpoint           `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
