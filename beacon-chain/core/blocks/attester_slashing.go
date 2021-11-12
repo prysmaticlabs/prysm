@@ -152,6 +152,7 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	return isDoubleVote || isSurroundVote
 }
 
+// SlashableAttesterIndices returns the intersection of attester indices from both attestations in this slashing.
 func SlashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
 		return nil
