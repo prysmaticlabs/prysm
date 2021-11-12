@@ -20,7 +20,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["process_block_test.go"],
+    srcs = [
+        "process_block_test.go",
+        "service_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//config/params:go_default_library",
