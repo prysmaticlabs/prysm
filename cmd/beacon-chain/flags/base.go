@@ -206,7 +206,7 @@ var (
 	}
 	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
 	TerminalBlockHashActivationEpochOverride = &cli.Uint64Flag{
-		Name: "terminal-block-hash-epoch-override`",
+		Name: "terminal-block-hash-epoch-override",
 		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value." +
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch." +
 			"Incorrect usage will result in your node experience consensus failure.",
