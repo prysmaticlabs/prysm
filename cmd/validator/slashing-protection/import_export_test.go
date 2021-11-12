@@ -1,4 +1,4 @@
-package slashingprotection
+package historycmd
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/urfave/cli/v2"
 )
@@ -66,11 +66,11 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
 
 	// We import the slashing protection history file via CLI.
-	err = ImportSlashingProtectionCLI(cliCtx)
+	err = importSlashingProtectionJSON(cliCtx)
 	require.NoError(t, err)
 
 	// We export the slashing protection history file via CLI.
-	err = ExportSlashingProtectionJSONCli(cliCtx)
+	err = exportSlashingProtectionJSON(cliCtx)
 	require.NoError(t, err)
 
 	// Attempt to read the exported file from the output directory.
@@ -142,11 +142,11 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
 
 	// We import the slashing protection history file via CLI.
-	err = ImportSlashingProtectionCLI(cliCtx)
+	err = importSlashingProtectionJSON(cliCtx)
 	require.NoError(t, err)
 
 	// We export the slashing protection history file via CLI.
-	err = ExportSlashingProtectionJSONCli(cliCtx)
+	err = exportSlashingProtectionJSON(cliCtx)
 	require.NoError(t, err)
 
 	// Attempt to read the exported file from the output directory.

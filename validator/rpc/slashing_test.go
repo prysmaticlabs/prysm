@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
